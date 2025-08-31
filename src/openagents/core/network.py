@@ -201,6 +201,10 @@ class AgentNetwork:
                 # Register agent connection resolver for routing messages by agent_id
                 if hasattr(transport, 'register_agent_connection_resolver'):
                     transport.register_agent_connection_resolver(self._resolve_agent_connection)
+                
+                # Set network instance reference for gRPC transport
+                if hasattr(transport, 'set_network_instance'):
+                    transport.set_network_instance(self)
         
         # Register network-level message handlers
         self.message_handlers["mod_message"] = [self._handle_mod_message]
@@ -329,6 +333,34 @@ class AgentNetwork:
             bool: True if message sent successfully
         """
         try:
+            # Check if this is a mod message response that needs to be queued for HTTP polling
+            if isinstance(message, ModMessage) and hasattr(message, 'relevant_agent_id'):
+                target_agent_id = message.relevant_agent_id
+                
+                # Check if the target agent is connected via gRPC HTTP adapter
+                if hasattr(self.topology, 'transport_manager'):
+                    transport = self.topology.transport_manager.get_active_transport()
+                    if transport and hasattr(transport, 'http_adapter') and transport.http_adapter:
+                        # Queue the message for HTTP polling
+                        command = self._extract_command_from_mod_message(message)
+                        response_message = {
+                            'message_type': 'system_response',
+                            'command': command,
+                            'data': message.content,
+                            'timestamp': message.timestamp
+                        }
+                        
+                        logger.info(f"🔧 Queuing mod response: command={command}, data_keys={list(message.content.keys())}")
+                        if 'channel' in message.content:
+                            logger.info(f"🔧 Channel in response: {message.content['channel']}")
+                        
+                        if target_agent_id not in transport.http_adapter.message_queues:
+                            transport.http_adapter.message_queues[target_agent_id] = []
+                        transport.http_adapter.message_queues[target_agent_id].append(response_message)
+                        
+                        logger.debug(f"Queued mod response for HTTP agent {target_agent_id}")
+                        return True
+            
             # Convert to transport message
             transport_message = self._convert_to_transport_message(message)
             
@@ -337,6 +369,68 @@ class AgentNetwork:
         except Exception as e:
             logger.error(f"Failed to send message: {e}")
             return False
+    
+    def _extract_command_from_mod_message(self, message: ModMessage) -> str:
+        """Extract the appropriate command name from a mod message for HTTP responses."""
+        try:
+            content = message.content
+            action = content.get('action', '')
+            message_type = content.get('message_type', '')
+            
+            # Map mod actions to HTTP command responses
+            if action == 'retrieve_channel_messages_response':
+                return 'get_channel_messages'
+            elif action == 'list_channels_response':
+                return 'list_channels'
+            elif action == 'retrieve_direct_messages_response':
+                return 'get_direct_messages'
+            elif action == 'reaction_response':
+                return 'react_to_message'
+            # Shared document response mappings
+            elif action == 'document_created':
+                return 'create_document'
+            elif action == 'document_opened':
+                return 'open_document'
+            elif action == 'document_closed':
+                return 'close_document'
+            elif action == 'document_list_response':
+                return 'list_documents'
+            elif action == 'document_content_response':
+                return 'get_document_content'
+            elif action == 'document_history_response':
+                return 'get_document_history'
+            elif action == 'agent_presence_response':
+                return 'get_agent_presence'
+            elif action == 'lines_inserted':
+                return 'insert_lines'
+            elif action == 'lines_removed':
+                return 'remove_lines'
+            elif action == 'lines_replaced':
+                return 'replace_lines'
+            elif action == 'comment_added':
+                return 'add_comment'
+            elif action == 'comment_removed':
+                return 'remove_comment'
+            elif action == 'cursor_updated':
+                return 'update_cursor_position'
+            # Shared document message_type mappings (these use message_type instead of action)
+            elif message_type == 'document_operation_response':
+                # For operation responses, we need to determine the original command
+                # This is a generic response, so we'll return a default
+                return 'document_operation'
+            elif message_type == 'document_list_response':
+                return 'list_documents'
+            elif message_type == 'document_content_response':
+                return 'get_document_content'
+            elif message_type == 'document_history_response':
+                return 'get_document_history'
+            elif message_type == 'agent_presence_response':
+                return 'get_agent_presence'
+            else:
+                # Default to the action name
+                return action.replace('_response', '') if action.endswith('_response') else action
+        except Exception:
+            return 'unknown'
     
     async def discover_agents(self, capabilities: Optional[List[str]] = None) -> List[AgentInfo]:
         """Discover agents in the network.
@@ -555,19 +649,19 @@ class AgentNetwork:
             
             # Handle system requests
             if command == REGISTER_AGENT:
-                await handle_register_agent(command, message, connection, self)
+                await handle_register_agent(command, message.get("data", {}), connection, self)
             elif command == LIST_AGENTS:
-                await handle_list_agents(command, message, connection, self)
+                await handle_list_agents(command, message.get("data", {}), connection, self)
             elif command == LIST_MODS:
-                await handle_list_mods(command, message, connection, self)
+                await handle_list_mods(command, message.get("data", {}), connection, self)
             elif command == GET_NETWORK_INFO:
-                await handle_get_network_info(command, message, connection, self)
+                await handle_get_network_info(command, message.get("data", {}), connection, self)
             elif command == PING_AGENT:
-                await handle_ping_agent(command, message, connection, self)
+                await handle_ping_agent(command, message.get("data", {}), connection, self)
             elif command == CLAIM_AGENT_ID:
-                await handle_claim_agent_id(command, message, connection, self)
+                await handle_claim_agent_id(command, message.get("data", {}), connection, self)
             elif command == VALIDATE_CERTIFICATE:
-                await handle_validate_certificate(command, message, connection, self)
+                await handle_validate_certificate(command, message.get("data", {}), connection, self)
             else:
                 logger.warning(f"Unhandled system command: {command}")
         except Exception as e:

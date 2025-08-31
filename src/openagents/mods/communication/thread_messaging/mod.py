@@ -271,8 +271,6 @@ class ThreadMessagingNetworkMod(BaseMod):
         Args:
             message: The mod message to process
         """
-        self._add_to_history(message)
-        
         # Extract the inner message from the ModMessage content
         try:
             content = message.content
@@ -283,33 +281,41 @@ class ThreadMessagingNetworkMod(BaseMod):
                 if 'quoted_message_id' in content and content['quoted_message_id']:
                     content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
                 inner_message = ReplyMessage(**content)
+                self._add_to_history(inner_message)
                 await self._process_reply_message(inner_message)
             elif message_type == "file_upload":
                 inner_message = FileUploadMessage(**content)
+                self._add_to_history(inner_message)
                 await self._process_file_upload(inner_message)
             elif message_type == "file_operation":
                 inner_message = FileOperationMessage(**content)
+                self._add_to_history(inner_message)
                 await self._process_file_operation(inner_message)
             elif message_type == "channel_info" or message_type == "channel_info_message":
                 inner_message = ChannelInfoMessage(**content)
+                self._add_to_history(inner_message)
                 await self._process_channel_info_request(inner_message)
             elif message_type == "message_retrieval":
                 inner_message = MessageRetrievalMessage(**content)
+                self._add_to_history(inner_message)
                 await self._process_message_retrieval_request(inner_message)
             elif message_type == "reaction":
                 inner_message = ReactionMessage(**content)
+                self._add_to_history(inner_message)
                 await self._process_reaction_message(inner_message)
             elif message_type == "direct_message":
                 # Populate quoted_text if quoted_message_id is provided
                 if 'quoted_message_id' in content and content['quoted_message_id']:
                     content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
                 inner_message = DirectMessage(**content)
+                self._add_to_history(inner_message)
                 await self._process_direct_message(inner_message)
             elif message_type == "channel_message":
                 # Populate quoted_text if quoted_message_id is provided
                 if 'quoted_message_id' in content and content['quoted_message_id']:
                     content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
                 inner_message = ChannelMessage(**content)
+                self._add_to_history(inner_message)
                 await self._process_channel_message(inner_message)
             else:
                 logger.warning(f"Unknown message type in mod message: {message_type}")
@@ -390,7 +396,6 @@ class ThreadMessagingNetworkMod(BaseMod):
         Args:
             message: The direct message to process
         """
-        self._add_to_history(message)
         logger.debug(f"Processing direct message from {message.sender_id} to {message.target_agent_id}")
     
     async def _process_reply_message(self, message: ReplyMessage) -> None:
@@ -399,8 +404,6 @@ class ThreadMessagingNetworkMod(BaseMod):
         Args:
             message: The reply message to process
         """
-        self._add_to_history(message)
-        
         reply_to_id = message.reply_to_id
         
         # Check if the original message exists
@@ -755,7 +758,7 @@ class ThreadMessagingNetworkMod(BaseMod):
         # Send response
         response = ModMessage(
             sender_id=self.network.network_id,
-            mod="thread_messaging",
+            mod="openagents.mods.communication.thread_messaging",
             content={
                 "action": "retrieve_channel_messages_response",
                 "success": True,
@@ -877,7 +880,7 @@ class ThreadMessagingNetworkMod(BaseMod):
         # Send response
         response = ModMessage(
             sender_id=self.network.network_id,
-            mod="thread_messaging",
+            mod="openagents.mods.communication.thread_messaging",
             content={
                 "action": "retrieve_direct_messages_response",
                 "success": True,
@@ -967,7 +970,7 @@ class ThreadMessagingNetworkMod(BaseMod):
         # Send response
         response = ModMessage(
             sender_id=self.network.network_id,
-            mod="thread_messaging",
+            mod="openagents.mods.communication.thread_messaging",
             content={
                 "action": "reaction_response",
                 "success": success,
