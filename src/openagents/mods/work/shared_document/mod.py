@@ -31,6 +31,9 @@ from .document_messages import (
     GetDocumentHistoryMessage,
     ListDocumentsMessage,
     GetAgentPresenceMessage,
+    AcquireLineLockMessage,
+    ReleaseLineLockMessage,
+    LineLockResponse,
     DocumentOperationResponse,
     DocumentContentResponse,
     DocumentListResponse,
@@ -59,6 +62,16 @@ class SharedDocument:
         
         # Document content (list of lines)
         self.content: List[str] = initial_content.split('\n') if initial_content else [""]
+        
+        # Line authorship tracking (line_number -> agent_id)
+        self.line_authors: Dict[int, str] = {}
+        initial_lines = len(self.content)
+        for i in range(1, initial_lines + 1):
+            self.line_authors[i] = creator_agent_id  # Creator owns all initial lines
+        
+        # Line locking mechanism (line_number -> {agent_id, timestamp, timeout})
+        self.line_locks: Dict[int, Dict[str, Any]] = {}
+        self.lock_timeout_seconds = 30  # Locks expire after 30 seconds of inactivity
         
         # Document metadata
         self.comments: Dict[int, List[DocumentComment]] = {}  # line_number -> [comments]
@@ -221,8 +234,26 @@ class SharedDocument:
             if start_line < 1 or end_line < 1 or start_line > end_line:
                 raise ValueError(f"Invalid line range: {start_line}-{end_line}")
             
-            if start_line > len(self.content) or end_line > len(self.content):
-                raise ValueError(f"Line range exceeds document length: {len(self.content)}")
+            # Allow expanding the document - only check that start_line is valid
+            if start_line > len(self.content) + 1:
+                raise ValueError(f"Start line {start_line} exceeds document length + 1: {len(self.content) + 1}")
+            
+            # Check for line locks - prevent editing locked lines
+            locked_lines = []
+            for line_num in range(start_line, min(end_line + 1, len(self.content) + 1)):
+                if self.is_line_locked_by_other(agent_id, line_num):
+                    locked_lines.append(line_num)
+            
+            if locked_lines:
+                lock_info = []
+                for line_num in locked_lines:
+                    lock_agent = self.line_locks[line_num]['agent_id']
+                    lock_info.append(f"line {line_num} (locked by {lock_agent})")
+                raise ValueError(f"Cannot edit locked lines: {', '.join(lock_info)}")
+            
+            # If end_line exceeds current content, we'll expand the document
+            if end_line > len(self.content):
+                logger.info(f"Expanding document from {len(self.content)} lines to accommodate {end_line} lines")
             
             # Remove comments in the range being replaced
             for line_num in range(start_line, end_line + 1):
@@ -233,8 +264,39 @@ class SharedDocument:
             start_index = start_line - 1
             end_index = end_line - 1
             
-            # Replace the content
-            self.content[start_index:end_index + 1] = content
+            # If we're expanding beyond current content, adjust the slice
+            if end_index >= len(self.content):
+                # Expanding the document - replace from start_index to end of current content
+                self.content[start_index:] = content
+            else:
+                # Normal replacement within existing content
+                self.content[start_index:end_index + 1] = content
+            
+            # Update line authorship for replaced lines
+            # Clear old authorship for replaced range
+            for line_num in range(start_line, end_line + 1):
+                if line_num in self.line_authors:
+                    del self.line_authors[line_num]
+            
+            # Set new authorship for all new content lines
+            for i, _ in enumerate(content):
+                line_num = start_line + i
+                self.line_authors[line_num] = agent_id
+            
+            # Shift authorship for lines after the replacement if document length changed
+            lines_added = len(content)
+            lines_removed = end_line - start_line + 1
+            line_shift = lines_added - lines_removed
+            
+            if line_shift != 0:
+                # Shift line authorship for lines after the replacement
+                old_authors = dict(self.line_authors)
+                for line_num in sorted(old_authors.keys(), reverse=True):
+                    if line_num > end_line:
+                        new_line_num = line_num + line_shift
+                        if new_line_num > 0:
+                            self.line_authors[new_line_num] = old_authors[line_num]
+                        del self.line_authors[line_num]
             
             # Update version and metadata
             self.version += 1
@@ -352,8 +414,141 @@ class SharedDocument:
                 for agent_id, presence in self.agent_presence.items()
             },
             "last_modified": self.last_modified.isoformat(),
-            "active_agents": list(self.active_agents)
+            "active_agents": list(self.active_agents),
+            "line_locks": self._get_active_line_locks()
         }
+    
+    def _get_active_line_locks(self) -> Dict[int, str]:
+        """Get currently active line locks (line_number -> agent_id)."""
+        current_time = datetime.now()
+        active_locks = {}
+        
+        # Clean up expired locks and collect active ones
+        expired_locks = []
+        for line_number, lock_info in self.line_locks.items():
+            lock_time = lock_info.get('timestamp', current_time)
+            if isinstance(lock_time, str):
+                lock_time = datetime.fromisoformat(lock_time)
+            
+            time_diff = (current_time - lock_time).total_seconds()
+            if time_diff > self.lock_timeout_seconds:
+                expired_locks.append(line_number)
+            else:
+                active_locks[line_number] = lock_info['agent_id']
+        
+        # Remove expired locks
+        for line_number in expired_locks:
+            del self.line_locks[line_number]
+        
+        return active_locks
+    
+    def acquire_line_lock(self, agent_id: str, line_number: int) -> bool:
+        """Acquire a lock on a specific line. Returns True if successful."""
+        try:
+            # Validate line number
+            if line_number < 1 or line_number > len(self.content):
+                return False
+            
+            current_time = datetime.now()
+            
+            # Check if line is already locked by another agent
+            if line_number in self.line_locks:
+                existing_lock = self.line_locks[line_number]
+                existing_agent = existing_lock['agent_id']
+                lock_time = existing_lock.get('timestamp', current_time)
+                
+                if isinstance(lock_time, str):
+                    lock_time = datetime.fromisoformat(lock_time)
+                
+                # If locked by same agent, refresh the lock
+                if existing_agent == agent_id:
+                    self.line_locks[line_number]['timestamp'] = current_time
+                    return True
+                
+                # Check if existing lock has expired
+                time_diff = (current_time - lock_time).total_seconds()
+                if time_diff <= self.lock_timeout_seconds:
+                    return False  # Line is locked by another agent
+                
+                # Lock has expired, remove it
+                del self.line_locks[line_number]
+            
+            # Acquire the lock
+            self.line_locks[line_number] = {
+                'agent_id': agent_id,
+                'timestamp': current_time
+            }
+            
+            logger.info(f"Agent {agent_id} acquired lock on line {line_number}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to acquire line lock: {e}")
+            return False
+    
+    def release_line_lock(self, agent_id: str, line_number: int) -> bool:
+        """Release a lock on a specific line. Returns True if successful."""
+        try:
+            if line_number not in self.line_locks:
+                return True  # Already unlocked
+            
+            lock_info = self.line_locks[line_number]
+            if lock_info['agent_id'] != agent_id:
+                return False  # Can't release someone else's lock
+            
+            del self.line_locks[line_number]
+            logger.info(f"Agent {agent_id} released lock on line {line_number}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to release line lock: {e}")
+            return False
+    
+    def release_all_agent_locks(self, agent_id: str) -> int:
+        """Release all locks held by an agent. Returns number of locks released."""
+        try:
+            released_count = 0
+            locks_to_remove = []
+            
+            for line_number, lock_info in self.line_locks.items():
+                if lock_info['agent_id'] == agent_id:
+                    locks_to_remove.append(line_number)
+            
+            for line_number in locks_to_remove:
+                del self.line_locks[line_number]
+                released_count += 1
+            
+            if released_count > 0:
+                logger.info(f"Released {released_count} locks for agent {agent_id}")
+            
+            return released_count
+            
+        except Exception as e:
+            logger.error(f"Failed to release agent locks: {e}")
+            return 0
+    
+    def is_line_locked_by_other(self, agent_id: str, line_number: int) -> bool:
+        """Check if a line is locked by another agent."""
+        if line_number not in self.line_locks:
+            return False
+        
+        lock_info = self.line_locks[line_number]
+        if lock_info['agent_id'] == agent_id:
+            return False  # Locked by same agent
+        
+        # Check if lock has expired
+        current_time = datetime.now()
+        lock_time = lock_info.get('timestamp', current_time)
+        if isinstance(lock_time, str):
+            lock_time = datetime.fromisoformat(lock_time)
+        
+        time_diff = (current_time - lock_time).total_seconds()
+        if time_diff > self.lock_timeout_seconds:
+            # Lock expired, remove it
+            del self.line_locks[line_number]
+            return False
+        
+        return True  # Locked by another agent
 
 class SharedDocumentNetworkMod(BaseMod):
     """Network-level shared document mod implementation.
@@ -366,9 +561,9 @@ class SharedDocumentNetworkMod(BaseMod):
     - Agent presence tracking
     """
     
-    def __init__(self):
+    def __init__(self, mod_name: str = "shared_document"):
         """Initialize the shared document mod."""
-        super().__init__(mod_name="shared_document")
+        super().__init__(mod_name=mod_name)
         
         # Document storage
         self.documents: Dict[str, SharedDocument] = {}
@@ -393,43 +588,116 @@ class SharedDocumentNetworkMod(BaseMod):
         logger.info("Shutting down SharedDocument network mod")
         return True
     
-    async def process_message(self, message: BaseMessage, source_agent_id: str) -> None:
-        """Process incoming messages."""
+    async def process_mod_message(self, message: ModMessage) -> None:
+        """Process incoming mod messages."""
         try:
-            if isinstance(message, CreateDocumentMessage):
-                await self._handle_create_document(message, source_agent_id)
-            elif isinstance(message, OpenDocumentMessage):
-                await self._handle_open_document(message, source_agent_id)
-            elif isinstance(message, CloseDocumentMessage):
-                await self._handle_close_document(message, source_agent_id)
-            elif isinstance(message, InsertLinesMessage):
-                await self._handle_insert_lines(message, source_agent_id)
-            elif isinstance(message, RemoveLinesMessage):
-                await self._handle_remove_lines(message, source_agent_id)
-            elif isinstance(message, ReplaceLinesMessage):
-                await self._handle_replace_lines(message, source_agent_id)
-            elif isinstance(message, AddCommentMessage):
-                await self._handle_add_comment(message, source_agent_id)
-            elif isinstance(message, RemoveCommentMessage):
-                await self._handle_remove_comment(message, source_agent_id)
-            elif isinstance(message, UpdateCursorPositionMessage):
-                await self._handle_update_cursor_position(message, source_agent_id)
-            elif isinstance(message, GetDocumentContentMessage):
-                await self._handle_get_document_content(message, source_agent_id)
-            elif isinstance(message, GetDocumentHistoryMessage):
-                await self._handle_get_document_history(message, source_agent_id)
-            elif isinstance(message, ListDocumentsMessage):
-                await self._handle_list_documents(message, source_agent_id)
-            elif isinstance(message, GetAgentPresenceMessage):
-                await self._handle_get_agent_presence(message, source_agent_id)
+            source_agent_id = message.sender_id or message.relevant_agent_id or "unknown"
+            logger.info(f"Processing mod message from {source_agent_id}: {type(message)} - {message}")
+            
+            # Extract the actual message content from the mod message
+            content = message.content if hasattr(message, 'content') else message
+            message_type = content.get('message_type') if isinstance(content, dict) else getattr(content, 'message_type', None)
+            
+            # Extract request_id from the ModMessage for response matching
+            request_id = getattr(message, 'request_id', None)
+            
+            logger.info(f"Message type: {message_type}, Content: {content}, Request ID: {request_id}")
+            
+            # Parse the content into the appropriate message type
+            if message_type == "create_document":
+                doc_message = CreateDocumentMessage(**content)
+                await self._handle_create_document(doc_message, source_agent_id, request_id)
+            elif message_type == "list_documents":
+                doc_message = ListDocumentsMessage(**content)
+                await self._handle_list_documents(doc_message, source_agent_id, request_id)
+            elif message_type == "open_document":
+                doc_message = OpenDocumentMessage(**content)
+                await self._handle_open_document(doc_message, source_agent_id, request_id)
+            elif message_type == "close_document":
+                doc_message = CloseDocumentMessage(**content)
+                await self._handle_close_document(doc_message, source_agent_id, request_id)
+            elif message_type == "insert_lines":
+                doc_message = InsertLinesMessage(**content)
+                await self._handle_insert_lines(doc_message, source_agent_id, request_id)
+            elif message_type == "remove_lines":
+                doc_message = RemoveLinesMessage(**content)
+                await self._handle_remove_lines(doc_message, source_agent_id, request_id)
+            elif message_type == "replace_lines":
+                doc_message = ReplaceLinesMessage(**content)
+                await self._handle_replace_lines(doc_message, source_agent_id, request_id)
+            elif message_type == "add_comment":
+                doc_message = AddCommentMessage(**content)
+                await self._handle_add_comment(doc_message, source_agent_id, request_id)
+            elif message_type == "remove_comment":
+                doc_message = RemoveCommentMessage(**content)
+                await self._handle_remove_comment(doc_message, source_agent_id, request_id)
+            elif message_type == "update_cursor_position":
+                doc_message = UpdateCursorPositionMessage(**content)
+                await self._handle_update_cursor_position(doc_message, source_agent_id, request_id)
+            elif message_type == "acquire_line_lock":
+                doc_message = AcquireLineLockMessage(**content)
+                await self._handle_acquire_line_lock(doc_message, source_agent_id, request_id)
+            elif message_type == "release_line_lock":
+                doc_message = ReleaseLineLockMessage(**content)
+                await self._handle_release_line_lock(doc_message, source_agent_id, request_id)
+            elif message_type == "get_document_content":
+                doc_message = GetDocumentContentMessage(**content)
+                await self._handle_get_document_content(doc_message, source_agent_id, request_id)
+            elif message_type == "get_document_history":
+                doc_message = GetDocumentHistoryMessage(**content)
+                await self._handle_get_document_history(doc_message, source_agent_id, request_id)
+            elif message_type == "get_agent_presence":
+                doc_message = GetAgentPresenceMessage(**content)
+                await self._handle_get_agent_presence(doc_message, source_agent_id, request_id)
             else:
-                logger.warning(f"Unknown message type: {type(message)}")
+                logger.warning(f"Unknown message type: {message_type}")
+                
+        except Exception as e:
+            logger.error(f"Error processing mod message from {source_agent_id}: {e}")
+            await self._send_error_response(source_agent_id, str(e))
+
+    async def process_message(self, message: BaseMessage, source_agent_id: str) -> None:
+        """Legacy process_message method - delegates to process_mod_message."""
+        try:
+            if isinstance(message, ModMessage):
+                await self.process_mod_message(message)
+            else:
+                logger.warning(f"Received non-mod message: {type(message)}")
+                
+                if isinstance(message, CreateDocumentMessage):
+                    await self._handle_create_document(message, source_agent_id)
+                elif isinstance(message, OpenDocumentMessage):
+                    await self._handle_open_document(message, source_agent_id)
+                elif isinstance(message, CloseDocumentMessage):
+                    await self._handle_close_document(message, source_agent_id)
+                elif isinstance(message, InsertLinesMessage):
+                    await self._handle_insert_lines(message, source_agent_id)
+                elif isinstance(message, RemoveLinesMessage):
+                    await self._handle_remove_lines(message, source_agent_id)
+                elif isinstance(message, ReplaceLinesMessage):
+                    await self._handle_replace_lines(message, source_agent_id)
+                elif isinstance(message, AddCommentMessage):
+                    await self._handle_add_comment(message, source_agent_id)
+                elif isinstance(message, RemoveCommentMessage):
+                    await self._handle_remove_comment(message, source_agent_id)
+                elif isinstance(message, UpdateCursorPositionMessage):
+                    await self._handle_update_cursor_position(message, source_agent_id)
+                elif isinstance(message, GetDocumentContentMessage):
+                    await self._handle_get_document_content(message, source_agent_id)
+                elif isinstance(message, GetDocumentHistoryMessage):
+                    await self._handle_get_document_history(message, source_agent_id)
+                elif isinstance(message, ListDocumentsMessage):
+                    await self._handle_list_documents(message, source_agent_id)
+                elif isinstance(message, GetAgentPresenceMessage):
+                    await self._handle_get_agent_presence(message, source_agent_id)
+                else:
+                    logger.warning(f"Unknown message type: {type(message)}")
                 
         except Exception as e:
             logger.error(f"Error processing message from {source_agent_id}: {e}")
             await self._send_error_response(source_agent_id, str(e))
     
-    async def _handle_create_document(self, message: CreateDocumentMessage, source_agent_id: str) -> None:
+    async def _handle_create_document(self, message: CreateDocumentMessage, source_agent_id: str, request_id: str = None) -> None:
         """Handle document creation."""
         try:
             document_id = str(uuid.uuid4())
@@ -461,10 +729,10 @@ class SharedDocumentNetworkMod(BaseMod):
             response = DocumentOperationResponse(
                 operation_id=document_id,
                 success=True,
-                sender_id=self.network.node_id
+                sender_id=self.network.network_id
             )
             
-            await self._send_response(source_agent_id, response)
+            await self._send_response(source_agent_id, response, request_id)
             
             logger.info(f"Created document {document_id} by agent {source_agent_id}")
             
@@ -472,7 +740,7 @@ class SharedDocumentNetworkMod(BaseMod):
             logger.error(f"Failed to create document: {e}")
             await self._send_error_response(source_agent_id, str(e))
     
-    async def _handle_open_document(self, message: OpenDocumentMessage, source_agent_id: str) -> None:
+    async def _handle_open_document(self, message: OpenDocumentMessage, source_agent_id: str, request_id: str = None) -> None:
         """Handle document opening."""
         try:
             document_id = message.document_id
@@ -495,7 +763,13 @@ class SharedDocumentNetworkMod(BaseMod):
                 self.agent_sessions[source_agent_id] = set()
             self.agent_sessions[source_agent_id].add(document_id)
             
-            # Send document content
+            # Send document content with properly serialized agent presence
+            serialized_presence = []
+            for presence in document.agent_presence.values():
+                # Use model_dump with mode='json' to properly serialize datetime objects
+                presence_dict = presence.model_dump(mode='json')
+                serialized_presence.append(presence_dict)
+            
             response = DocumentContentResponse(
                 document_id=document_id,
                 content=document.content.copy(),
@@ -503,12 +777,14 @@ class SharedDocumentNetworkMod(BaseMod):
                     comment for comments in document.comments.values()
                     for comment in comments
                 ],
-                agent_presence=list(document.agent_presence.values()),
+                agent_presence=serialized_presence,
                 version=document.version,
-                sender_id=self.network.node_id
+                line_authors=document.line_authors.copy(),
+                line_locks=document._get_active_line_locks(),
+                sender_id=self.network.network_id
             )
             
-            await self._send_response(source_agent_id, response)
+            await self._send_response(source_agent_id, response, request_id)
             
             # Notify other agents about new presence
             await self._broadcast_presence_update(document_id, source_agent_id)
@@ -519,7 +795,7 @@ class SharedDocumentNetworkMod(BaseMod):
             logger.error(f"Failed to open document: {e}")
             await self._send_error_response(source_agent_id, str(e))
     
-    async def _handle_close_document(self, message: CloseDocumentMessage, source_agent_id: str) -> None:
+    async def _handle_close_document(self, message: CloseDocumentMessage, source_agent_id: str, request_id: str = None) -> None:
         """Handle document closing."""
         try:
             document_id = message.document_id
@@ -536,10 +812,10 @@ class SharedDocumentNetworkMod(BaseMod):
             response = DocumentOperationResponse(
                 operation_id=str(uuid.uuid4()),
                 success=True,
-                sender_id=self.network.node_id
+                sender_id=self.network.network_id
             )
             
-            await self._send_response(source_agent_id, response)
+            await self._send_response(source_agent_id, response, request_id)
             
             # Notify other agents about presence change
             if document_id in self.documents:
@@ -551,7 +827,7 @@ class SharedDocumentNetworkMod(BaseMod):
             logger.error(f"Failed to close document: {e}")
             await self._send_error_response(source_agent_id, str(e))
     
-    async def _handle_insert_lines(self, message: InsertLinesMessage, source_agent_id: str) -> None:
+    async def _handle_insert_lines(self, message: InsertLinesMessage, source_agent_id: str, request_id: str = None) -> None:
         """Handle line insertion."""
         try:
             document_id = message.document_id
@@ -572,10 +848,10 @@ class SharedDocumentNetworkMod(BaseMod):
             response = DocumentOperationResponse(
                 operation_id=operation.operation_id,
                 success=True,
-                sender_id=self.network.node_id
+                sender_id=self.network.network_id
             )
             
-            await self._send_response(source_agent_id, response)
+            await self._send_response(source_agent_id, response, request_id)
             
             # Broadcast operation to other agents
             await self._broadcast_operation(document_id, message, source_agent_id)
@@ -586,7 +862,7 @@ class SharedDocumentNetworkMod(BaseMod):
             logger.error(f"Failed to insert lines: {e}")
             await self._send_error_response(source_agent_id, str(e))
     
-    async def _handle_remove_lines(self, message: RemoveLinesMessage, source_agent_id: str) -> None:
+    async def _handle_remove_lines(self, message: RemoveLinesMessage, source_agent_id: str, request_id: str = None) -> None:
         """Handle line removal."""
         try:
             document_id = message.document_id
@@ -607,10 +883,10 @@ class SharedDocumentNetworkMod(BaseMod):
             response = DocumentOperationResponse(
                 operation_id=operation.operation_id,
                 success=True,
-                sender_id=self.network.node_id
+                sender_id=self.network.network_id
             )
             
-            await self._send_response(source_agent_id, response)
+            await self._send_response(source_agent_id, response, request_id)
             
             # Broadcast operation to other agents
             await self._broadcast_operation(document_id, message, source_agent_id)
@@ -621,7 +897,7 @@ class SharedDocumentNetworkMod(BaseMod):
             logger.error(f"Failed to remove lines: {e}")
             await self._send_error_response(source_agent_id, str(e))
     
-    async def _handle_replace_lines(self, message: ReplaceLinesMessage, source_agent_id: str) -> None:
+    async def _handle_replace_lines(self, message: ReplaceLinesMessage, source_agent_id: str, request_id: str = None) -> None:
         """Handle line replacement."""
         try:
             document_id = message.document_id
@@ -642,10 +918,10 @@ class SharedDocumentNetworkMod(BaseMod):
             response = DocumentOperationResponse(
                 operation_id=operation.operation_id,
                 success=True,
-                sender_id=self.network.node_id
+                sender_id=self.network.network_id
             )
             
-            await self._send_response(source_agent_id, response)
+            await self._send_response(source_agent_id, response, request_id)
             
             # Broadcast operation to other agents
             await self._broadcast_operation(document_id, message, source_agent_id)
@@ -656,7 +932,7 @@ class SharedDocumentNetworkMod(BaseMod):
             logger.error(f"Failed to replace lines: {e}")
             await self._send_error_response(source_agent_id, str(e))
     
-    async def _handle_add_comment(self, message: AddCommentMessage, source_agent_id: str) -> None:
+    async def _handle_add_comment(self, message: AddCommentMessage, source_agent_id: str, request_id: str = None) -> None:
         """Handle comment addition."""
         try:
             document_id = message.document_id
@@ -677,10 +953,10 @@ class SharedDocumentNetworkMod(BaseMod):
             response = DocumentOperationResponse(
                 operation_id=comment.comment_id,
                 success=True,
-                sender_id=self.network.node_id
+                sender_id=self.network.network_id
             )
             
-            await self._send_response(source_agent_id, response)
+            await self._send_response(source_agent_id, response, request_id)
             
             # Broadcast comment to other agents
             await self._broadcast_operation(document_id, message, source_agent_id)
@@ -691,7 +967,7 @@ class SharedDocumentNetworkMod(BaseMod):
             logger.error(f"Failed to add comment: {e}")
             await self._send_error_response(source_agent_id, str(e))
     
-    async def _handle_remove_comment(self, message: RemoveCommentMessage, source_agent_id: str) -> None:
+    async def _handle_remove_comment(self, message: RemoveCommentMessage, source_agent_id: str, request_id: str = None) -> None:
         """Handle comment removal."""
         try:
             document_id = message.document_id
@@ -708,10 +984,10 @@ class SharedDocumentNetworkMod(BaseMod):
             response = DocumentOperationResponse(
                 operation_id=message.comment_id,
                 success=success,
-                sender_id=self.network.node_id
+                sender_id=self.network.network_id
             )
             
-            await self._send_response(source_agent_id, response)
+            await self._send_response(source_agent_id, response, request_id)
             
             # Broadcast comment removal to other agents
             await self._broadcast_operation(document_id, message, source_agent_id)
@@ -722,7 +998,7 @@ class SharedDocumentNetworkMod(BaseMod):
             logger.error(f"Failed to remove comment: {e}")
             await self._send_error_response(source_agent_id, str(e))
     
-    async def _handle_update_cursor_position(self, message: UpdateCursorPositionMessage, source_agent_id: str) -> None:
+    async def _handle_update_cursor_position(self, message: UpdateCursorPositionMessage, source_agent_id: str, request_id: str = None) -> None:
         """Handle cursor position update."""
         try:
             document_id = message.document_id
@@ -741,7 +1017,7 @@ class SharedDocumentNetworkMod(BaseMod):
         except Exception as e:
             logger.error(f"Failed to update cursor position: {e}")
     
-    async def _handle_get_document_content(self, message: GetDocumentContentMessage, source_agent_id: str) -> None:
+    async def _handle_get_document_content(self, message: GetDocumentContentMessage, source_agent_id: str, request_id: str = None) -> None:
         """Handle document content request."""
         try:
             document_id = message.document_id
@@ -773,16 +1049,18 @@ class SharedDocumentNetworkMod(BaseMod):
                 comments=comments,
                 agent_presence=agent_presence,
                 version=document.version,
-                sender_id=self.network.node_id
+                line_authors=document.line_authors.copy(),
+                line_locks=document._get_active_line_locks(),
+                sender_id=self.network.network_id
             )
             
-            await self._send_response(source_agent_id, response)
+            await self._send_response(source_agent_id, response, request_id)
             
         except Exception as e:
             logger.error(f"Failed to get document content: {e}")
             await self._send_error_response(source_agent_id, str(e))
     
-    async def _handle_get_document_history(self, message: GetDocumentHistoryMessage, source_agent_id: str) -> None:
+    async def _handle_get_document_history(self, message: GetDocumentHistoryMessage, source_agent_id: str, request_id: str = None) -> None:
         """Handle document history request."""
         try:
             document_id = message.document_id
@@ -810,16 +1088,16 @@ class SharedDocumentNetworkMod(BaseMod):
                 document_id=document_id,
                 operations=operations,
                 total_operations=total_operations,
-                sender_id=self.network.node_id
+                sender_id=self.network.network_id
             )
             
-            await self._send_response(source_agent_id, response)
+            await self._send_response(source_agent_id, response, request_id)
             
         except Exception as e:
             logger.error(f"Failed to get document history: {e}")
             await self._send_error_response(source_agent_id, str(e))
     
-    async def _handle_list_documents(self, message: ListDocumentsMessage, source_agent_id: str) -> None:
+    async def _handle_list_documents(self, message: ListDocumentsMessage, source_agent_id: str, request_id: str = None) -> None:
         """Handle document list request."""
         try:
             documents = []
@@ -844,16 +1122,16 @@ class SharedDocumentNetworkMod(BaseMod):
             
             response = DocumentListResponse(
                 documents=documents,
-                sender_id=self.network.node_id
+                sender_id=self.network.network_id
             )
             
-            await self._send_response(source_agent_id, response)
+            await self._send_response(source_agent_id, response, request_id)
             
         except Exception as e:
             logger.error(f"Failed to list documents: {e}")
             await self._send_error_response(source_agent_id, str(e))
     
-    async def _handle_get_agent_presence(self, message: GetAgentPresenceMessage, source_agent_id: str) -> None:
+    async def _handle_get_agent_presence(self, message: GetAgentPresenceMessage, source_agent_id: str, request_id: str = None) -> None:
         """Handle agent presence request."""
         try:
             document_id = message.document_id
@@ -870,10 +1148,10 @@ class SharedDocumentNetworkMod(BaseMod):
             response = AgentPresenceResponse(
                 document_id=document_id,
                 agent_presence=list(document.agent_presence.values()),
-                sender_id=self.network.node_id
+                sender_id=self.network.network_id
             )
             
-            await self._send_response(source_agent_id, response)
+            await self._send_response(source_agent_id, response, request_id)
             
         except Exception as e:
             logger.error(f"Failed to get agent presence: {e}")
@@ -893,10 +1171,10 @@ class SharedDocumentNetworkMod(BaseMod):
                     mod_message = ModMessage(
                         mod="shared_document",
                         content=operation_message.model_dump(),
-                        sender_id=self.network.node_id,
+                        sender_id=self.network.network_id,
                         relevant_agent_id=agent_id
                     )
-                    await self.network.send_message(agent_id, mod_message)
+                    await self.network.send_message(mod_message)
                 except Exception as e:
                     logger.error(f"Failed to broadcast operation to agent {agent_id}: {e}")
     
@@ -912,7 +1190,7 @@ class SharedDocumentNetworkMod(BaseMod):
         
         presence_message = GetAgentPresenceMessage(
             document_id=document_id,
-            source_agent_id=self.network.node_id
+            sender_id=self.network.network_id
         )
         
         # Send to all active agents except the one whose presence changed
@@ -922,23 +1200,35 @@ class SharedDocumentNetworkMod(BaseMod):
                     mod_message = ModMessage(
                         mod="shared_document",
                         content=presence_message.model_dump(),
-                        sender_id=self.network.node_id,
+                        sender_id=self.network.network_id,
                         relevant_agent_id=other_agent_id
                     )
-                    await self.network.send_message(other_agent_id, mod_message)
+                    await self.network.send_message(mod_message)
                 except Exception as e:
                     logger.error(f"Failed to broadcast presence update to agent {other_agent_id}: {e}")
     
-    async def _send_response(self, target_agent_id: str, response: BaseMessage) -> None:
+    async def _send_response(self, target_agent_id: str, response: BaseMessage, request_id: str = None) -> None:
         """Send a response message to an agent."""
         try:
+            # Include request_id in the content for proper matching
+            content = response.model_dump(mode='json')
+            logger.info(f"🔧 _send_response - Original content keys: {list(content.keys())}")
+            logger.info(f"🔧 _send_response - Received request_id: {request_id}")
+            
+            if request_id:
+                content['request_id'] = request_id
+                logger.info(f"🔧 _send_response - Added request_id to content: {request_id}")
+            
+            logger.info(f"🔧 _send_response - Final content keys: {list(content.keys())}")
+            logger.info(f"🔧 _send_response - Final content request_id: {content.get('request_id', 'NOT_FOUND')}")
+            
             mod_message = ModMessage(
-                mod="shared_document",
-                content=response.model_dump(),
-                sender_id=self.network.node_id,
+                mod="openagents.mods.work.shared_document",
+                content=content,
+                sender_id=self.network.network_id,
                 relevant_agent_id=target_agent_id
             )
-            await self.network.send_message(target_agent_id, mod_message)
+            await self.network.send_message(mod_message)
         except Exception as e:
             logger.error(f"Failed to send response to agent {target_agent_id}: {e}")
     
@@ -949,7 +1239,7 @@ class SharedDocumentNetworkMod(BaseMod):
                 operation_id=str(uuid.uuid4()),
                 success=False,
                 error_message=error_message,
-                sender_id=self.network.node_id
+                sender_id=self.network.network_id
             )
             await self._send_response(target_agent_id, response)
         except Exception as e:
@@ -976,3 +1266,124 @@ class SharedDocumentNetworkMod(BaseMod):
                 logger.info(f"Removed inactive agent {agent_id} from document {document.document_id}")
         
         self.last_cleanup = now
+    
+    async def _handle_acquire_line_lock(self, message: AcquireLineLockMessage, source_agent_id: str, request_id: str = None) -> None:
+        """Handle line lock acquisition request."""
+        try:
+            document_id = message.document_id
+            line_number = message.line_number
+            
+            if document_id not in self.documents:
+                await self._send_error_response(source_agent_id, f"Document {document_id} not found", request_id)
+                return
+            
+            document = self.documents[document_id]
+            
+            # Attempt to acquire the lock
+            success = document.acquire_line_lock(source_agent_id, line_number)
+            
+            # Determine who holds the lock if acquisition failed
+            locked_by = None
+            error_message = None
+            if not success:
+                if line_number in document.line_locks:
+                    locked_by = document.line_locks[line_number]['agent_id']
+                    error_message = f"Line {line_number} is locked by {locked_by}"
+                else:
+                    error_message = f"Failed to acquire lock on line {line_number}"
+            
+            # Send response
+            response = LineLockResponse(
+                document_id=document_id,
+                line_number=line_number,
+                success=success,
+                locked_by=locked_by,
+                error_message=error_message,
+                sender_id=self.network.network_id
+            )
+            
+            await self._send_response(source_agent_id, response, request_id)
+            
+            # If lock was acquired, broadcast the update to other agents
+            if success:
+                await self._broadcast_line_lock_update(document_id, line_number, source_agent_id, 'acquired')
+            
+        except Exception as e:
+            logger.error(f"Failed to handle acquire line lock: {e}")
+            await self._send_error_response(source_agent_id, str(e), request_id)
+    
+    async def _handle_release_line_lock(self, message: ReleaseLineLockMessage, source_agent_id: str, request_id: str = None) -> None:
+        """Handle line lock release request."""
+        try:
+            document_id = message.document_id
+            line_number = message.line_number
+            
+            if document_id not in self.documents:
+                await self._send_error_response(source_agent_id, f"Document {document_id} not found", request_id)
+                return
+            
+            document = self.documents[document_id]
+            
+            # Attempt to release the lock
+            success = document.release_line_lock(source_agent_id, line_number)
+            
+            error_message = None
+            if not success:
+                if line_number in document.line_locks:
+                    current_holder = document.line_locks[line_number]['agent_id']
+                    if current_holder != source_agent_id:
+                        error_message = f"Cannot release lock held by {current_holder}"
+                    else:
+                        error_message = f"Failed to release lock on line {line_number}"
+                else:
+                    error_message = f"Line {line_number} is not locked"
+            
+            # Send response
+            response = LineLockResponse(
+                document_id=document_id,
+                line_number=line_number,
+                success=success,
+                locked_by=None,
+                error_message=error_message,
+                sender_id=self.network.network_id
+            )
+            
+            await self._send_response(source_agent_id, response, request_id)
+            
+            # If lock was released, broadcast the update to other agents
+            if success:
+                await self._broadcast_line_lock_update(document_id, line_number, source_agent_id, 'released')
+            
+        except Exception as e:
+            logger.error(f"Failed to handle release line lock: {e}")
+            await self._send_error_response(source_agent_id, str(e), request_id)
+    
+    async def _broadcast_line_lock_update(self, document_id: str, line_number: int, agent_id: str, action: str) -> None:
+        """Broadcast line lock updates to all agents in the document."""
+        try:
+            if document_id not in self.documents:
+                return
+            
+            document = self.documents[document_id]
+            
+            # Create a document content response with updated line locks
+            response = DocumentContentResponse(
+                document_id=document_id,
+                content=document.content.copy(),
+                comments=[],  # Don't include comments in lock updates
+                agent_presence=[],  # Don't include presence in lock updates
+                version=document.version,
+                line_authors=document.line_authors.copy(),
+                line_locks=document._get_active_line_locks(),
+                sender_id=self.network.network_id
+            )
+            
+            # Send to all agents except the one who triggered the change
+            for active_agent_id in document.active_agents:
+                if active_agent_id != agent_id:
+                    await self._send_response(active_agent_id, response)
+            
+            logger.info(f"Broadcasted line lock update for line {line_number} in document {document_id} ({action} by {agent_id})")
+            
+        except Exception as e:
+            logger.error(f"Failed to broadcast line lock update: {e}")

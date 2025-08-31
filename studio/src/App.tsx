@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import MainLayout from './components/layout/MainLayout';
 import ChatView from './components/chat/ChatView';
-import ThreadMessagingView from './components/chat/ThreadMessagingView';
+import ThreadMessagingView, { ThreadState } from './components/chat/ThreadMessagingView';
 import NetworkSelectionView from './components/network/NetworkSelectionView';
 import AgentNamePicker from './components/network/AgentNamePicker';
 import McpView from './components/mcp/McpView';
+import { DocumentsView } from './components';
 import useConversation from './hooks/useConversation';
 import useTheme from './hooks/useTheme';
 import { ToastProvider } from './context/ToastContext';
@@ -12,17 +13,58 @@ import { ConfirmProvider } from './context/ConfirmContext';
 import { NetworkProvider, useNetwork } from './context/NetworkContext';
 import { NewsSummaryExample } from './components/mcp_output/template';
 import { NetworkConnection } from './services/networkService';
-import { OpenAgentsConnection } from './services/openagentsService';
+import { OpenAgentsGRPCConnection } from './services/grpcService';
+import { DocumentInfo } from './types';
+import { clearAllOpenAgentsData } from './utils/cookies';
 
 // App main component wrapped with NetworkProvider
 const AppContent: React.FC = () => {
   const { currentNetwork, setCurrentNetwork, isConnected } = useNetwork();
 
-  const [activeView, setActiveView] = useState<'chat' | 'settings' | 'profile' | 'mcp'>('chat');
+  const [activeView, setActiveView] = useState<'chat' | 'settings' | 'profile' | 'mcp' | 'documents'>('chat');
   const [hasThreadMessaging, setHasThreadMessaging] = useState<boolean | null>(null);
+  const [hasSharedDocuments, setHasSharedDocuments] = useState<boolean | null>(null);
   const [isCheckingMods, setIsCheckingMods] = useState(false);
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkConnection | null>(null);
   const [agentName, setAgentName] = useState<string | null>(null);
+  const [threadState, setThreadState] = useState<ThreadState | null>(null);
+  const [forceUpdate, setForceUpdate] = useState(0);
+  
+  // Documents state
+  const [documents, setDocuments] = useState<DocumentInfo[]>([]);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const [documentsConnection, setDocumentsConnection] = useState<OpenAgentsGRPCConnection | null>(null);
+  const threadMessagingRef = useRef<{ 
+    getState: () => ThreadState;
+    selectChannel: (channel: string) => void;
+    selectDirectMessage: (agentId: string) => void;
+  } | null>(null);
+  
+  // Debug thread state changes
+  useEffect(() => {
+    console.log('🔍 App Debug - threadState changed:', threadState);
+    if (threadState) {
+      console.log('🔍 App Debug - agents count:', threadState.agents?.length);
+      console.log('🔍 App Debug - channels count:', threadState.channels?.length);
+      threadState.agents?.forEach(agent => {
+        console.log('🔍 App Debug - agent:', agent.agent_id, agent.metadata?.display_name);
+      });
+    } else {
+      console.log('🔍 App Debug - threadState is null/undefined');
+    }
+  }, [threadState]);
+
+  // Create a debug version of setThreadState
+  const debugSetThreadState = useCallback((newState: ThreadState) => {
+    console.log('🔍 App Debug - setThreadState called with:', newState);
+    console.log('🔍 App Debug - new agents count:', newState.agents?.length);
+    newState.agents?.forEach(agent => {
+      console.log('🔍 App Debug - received agent:', agent.agent_id, agent.metadata?.display_name);
+    });
+    setThreadState(newState);
+    // Force a re-render to update the MainLayout with new data
+    setForceUpdate(prev => prev + 1);
+  }, []);
   
   // Temporary override for testing - can be controlled via URL param or localStorage
   const forceThreadMessaging = new URLSearchParams(window.location.search).get('thread') === 'true' ||
@@ -39,6 +81,58 @@ const AppContent: React.FC = () => {
 
   const { theme, toggleTheme } = useTheme();
 
+  // Add debug function to window for troubleshooting
+  useEffect(() => {
+    (window as any).clearOpenAgentsData = clearAllOpenAgentsData;
+    console.log('🔧 Debug: Run clearOpenAgentsData() in console to clear all saved data');
+  }, []);
+
+  // Enhanced createNewConversation function that always shows chat view
+  const createNewConversationAndShowChat = () => {
+    createNewConversation();
+    setActiveView('chat');
+  };
+
+  // Enhanced conversation change function that always shows chat view 
+  const handleConversationChangeAndShowChat = (id: string) => {
+    handleConversationChange(id);
+    setActiveView('chat');
+  };
+
+  // Get current thread state from ref
+  const getCurrentThreadState = useCallback((): ThreadState | null => {
+    if (threadMessagingRef.current) {
+      const state = threadMessagingRef.current.getState();
+      console.log('🔍 App - getCurrentThreadState:', state.agents?.length, 'agents');
+      return state;
+    }
+    return null;
+  }, []);
+
+  // Thread messaging handlers
+  const handleChannelSelect = (channel: string) => {
+    console.log('📂 Channel selected:', channel);
+    if (threadMessagingRef.current) {
+      threadMessagingRef.current.selectChannel(channel);
+    }
+  };
+
+  const handleDirectMessageSelect = (agentId: string) => {
+    console.log('💬 DM selected:', agentId);
+    if (threadMessagingRef.current) {
+      threadMessagingRef.current.selectDirectMessage(agentId);
+    }
+  };
+
+  // Document selection handler
+  const handleDocumentSelect = useCallback((documentId: string | null) => {
+    console.log('📄 App - handleDocumentSelect called with:', documentId);
+    setSelectedDocumentId(documentId);
+    if (documentId) {
+      setActiveView('documents'); // Switch to documents view when a document is selected
+    }
+  }, []);
+
   const handleNetworkSelected = (network: NetworkConnection) => {
     setSelectedNetwork(network);
     // Don't set as current network yet - wait for agent name selection
@@ -53,47 +147,136 @@ const AppContent: React.FC = () => {
     setSelectedNetwork(null);
     setAgentName(null);
     setCurrentNetwork(null);
+    // Reset mod detection state when switching networks
+    setHasThreadMessaging(null);
+    setHasSharedDocuments(null);
+    setIsCheckingMods(false);
   };
 
   // Check for thread messaging mod when connected
   useEffect(() => {
     const checkThreadMessagingMod = async (): Promise<void> => {
-      if (!currentNetwork || !isConnected) return;
+      if (!currentNetwork || !isConnected || isCheckingMods) return;
+      
+      // Prevent repeated mod checks for the same network
+      if (hasThreadMessaging !== null && hasSharedDocuments !== null) {
+        console.log('Mods already detected, skipping re-check');
+        return;
+      }
       
       try {
         setIsCheckingMods(true);
         setHasThreadMessaging(null);
+        setHasSharedDocuments(null);
         
-        console.log(`Connected to OpenAgents network at ${currentNetwork.host}:${currentNetwork.port}`);
+        console.log(`🔍 Checking mods for network at ${currentNetwork.host}:${currentNetwork.port}`);
         
-        // Try to connect and check for thread messaging mod
-        const checkAgentId = agentName || `studio_check_${Date.now()}`;
-        const connection = new OpenAgentsConnection(checkAgentId, currentNetwork);
+        // Use a consistent agent ID to avoid creating multiple connections
+        const checkAgentId = `studio_mod_check_${currentNetwork.host}_${currentNetwork.port}`;
+        const connection = new OpenAgentsGRPCConnection(checkAgentId, currentNetwork);
         
         const connected = await connection.connect();
         if (connected) {
-          console.log('Successfully connected for mod detection');
+          console.log('✅ Connected for mod detection');
           const hasThreadMod = await connection.hasThreadMessagingMod();
+          const hasSharedDocMod = await connection.hasSharedDocumentMod();
           setHasThreadMessaging(hasThreadMod);
-          console.log(`Thread messaging mod ${hasThreadMod ? 'detected' : 'not found'} on network`);
-          console.log('Will show', hasThreadMod ? 'Thread Messaging interface' : 'regular chat interface');
-          connection.disconnect();
+          setHasSharedDocuments(hasSharedDocMod);
+          console.log(`📋 Thread messaging mod: ${hasThreadMod ? 'ENABLED' : 'disabled'}`);
+          console.log(`📄 Shared document mod: ${hasSharedDocMod ? 'ENABLED' : 'disabled'}`);
+          console.log('🎯 Interface mode:', hasThreadMod ? 'Thread Messaging' : 'Regular Chat');
+          if (hasSharedDocMod) {
+            console.log('📄 Documents tab will be available');
+          }
+          
+          // Properly disconnect
+          setTimeout(() => {
+            try {
+              connection.disconnect();
+              console.log('🔌 Mod detection connection closed');
+            } catch (e) {
+              console.warn('⚠️ Error closing mod detection connection:', e);
+            }
+          }, 100);
         } else {
-          console.log('Failed to connect for mod detection, defaulting to regular chat');
+          console.log('❌ Failed to connect for mod detection, defaulting to regular chat');
           setHasThreadMessaging(false);
+          setHasSharedDocuments(false);
         }
       } catch (error) {
-        console.error('Error checking for thread messaging mod:', error);
+        console.error('❌ Error checking for mods:', error);
         setHasThreadMessaging(false);
+        setHasSharedDocuments(false);
       } finally {
         setIsCheckingMods(false);
       }
     };
     
-    if (isConnected && currentNetwork && agentName) {
+    // Only check mods once when we have all required connection info
+    if (isConnected && currentNetwork && agentName && !isCheckingMods) {
       checkThreadMessagingMod();
     }
-  }, [currentNetwork, isConnected, agentName]);
+  }, [currentNetwork, isConnected, agentName, hasThreadMessaging, hasSharedDocuments, isCheckingMods]);
+
+  // Initialize documents connection when shared documents mod is available
+  useEffect(() => {
+    let isMounted = true;
+    let currentConnection: OpenAgentsGRPCConnection | null = null;
+
+    const initDocumentsConnection = async () => {
+      if (!currentNetwork || !hasSharedDocuments || !agentName || !isMounted) return;
+
+      try {
+        // Use a consistent agent ID based on network to avoid multiple connections
+        const agentId = `studio_documents_${currentNetwork.host}_${currentNetwork.port}`;
+        const conn = new OpenAgentsGRPCConnection(agentId, currentNetwork);
+        currentConnection = conn;
+        
+        const connected = await conn.connect();
+        if (connected && isMounted) {
+          setDocumentsConnection(conn);
+          console.log('📄 Connected for documents management');
+        }
+      } catch (err) {
+        console.error('Failed to initialize documents connection:', err);
+      }
+    };
+
+    if (hasSharedDocuments) {
+      initDocumentsConnection();
+    }
+
+    return () => {
+      isMounted = false;
+      if (currentConnection) {
+        try {
+          currentConnection.disconnect();
+          console.log('📄 Documents connection cleaned up');
+        } catch (e) {
+          console.warn('⚠️ Error cleaning up documents connection:', e);
+        }
+      }
+    };
+  }, [currentNetwork, hasSharedDocuments, agentName]);
+
+  // Load documents when connection is established
+  const loadDocuments = useCallback(async () => {
+    if (!documentsConnection) return;
+
+    try {
+      const docs = await documentsConnection.listDocuments(false); // Don't include closed documents by default
+      console.log('📋 Loaded documents:', docs);
+      setDocuments(docs || []);
+    } catch (err) {
+      console.error('Failed to load documents:', err);
+    }
+  }, [documentsConnection]);
+
+  useEffect(() => {
+    if (documentsConnection) {
+      loadDocuments();
+    }
+  }, [documentsConnection, loadDocuments]);
 
   // Show network selection if no network is selected
   if (!selectedNetwork) {
@@ -127,7 +310,7 @@ const AppContent: React.FC = () => {
   }
 
   // Show loading state while checking for mods
-  if (isCheckingMods || hasThreadMessaging === null) {
+  if (isCheckingMods || hasThreadMessaging === null || hasSharedDocuments === null) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
@@ -148,29 +331,67 @@ const AppContent: React.FC = () => {
     return (
       <ToastProvider>
         <ConfirmProvider>
-          <ThreadMessagingView
-            networkConnection={currentNetwork!}
-            agentName={agentName!}
+          <MainLayout
+            activeView={activeView}
+            setActiveView={setActiveView}
+            activeConversationId={activeConversationId}
+            conversations={conversations}
+            onConversationChange={handleConversationChangeAndShowChat}
+            createNewConversation={createNewConversationAndShowChat}
+            currentNetwork={currentNetwork}
             currentTheme={theme}
-            onProfileClick={() => setActiveView('profile')}
             toggleTheme={toggleTheme}
-          />
+            hasSharedDocuments={hasSharedDocuments || false}
+            hasThreadMessaging={hasThreadMessaging || false}
+            agentName={agentName}
+            threadState={getCurrentThreadState()}
+            onChannelSelect={handleChannelSelect}
+            onDirectMessageSelect={handleDirectMessageSelect}
+            // Documents props
+            documents={documents}
+            onDocumentSelect={handleDocumentSelect}
+            selectedDocumentId={selectedDocumentId}
+          >
+            {activeView === 'chat' ? (
+              <ThreadMessagingView
+                ref={threadMessagingRef}
+                networkConnection={currentNetwork!}
+                agentName={agentName!}
+                currentTheme={theme}
+                onProfileClick={() => setActiveView('profile')}
+                toggleTheme={toggleTheme}
+                hasSharedDocuments={hasSharedDocuments || false}
+                onDocumentsClick={() => setActiveView('documents')}
+                onThreadStateChange={debugSetThreadState}
+              />
+            ) : activeView === 'documents' ? (
+              <DocumentsView 
+                currentTheme={theme}
+                onBackClick={() => setActiveView('chat')}
+                documents={documents}
+                selectedDocumentId={selectedDocumentId}
+                onDocumentSelect={handleDocumentSelect}
+                documentsConnection={documentsConnection}
+                onDocumentsChange={setDocuments}
+              />
+            ) : activeView === 'settings' ? (
+              <div className="p-6">
+                <h1 className="text-2xl font-bold mb-4">Settings</h1>
+                <p>Settings panel coming soon...</p>
+              </div>
+            ) : activeView === 'profile' ? (
+              <div className="p-6">
+                <h1 className="text-2xl font-bold mb-4">Profile</h1>
+                <p>Profile panel coming soon...</p>
+              </div>
+            ) : activeView === 'mcp' ? (
+              <McpView onBackClick={() => setActiveView('chat')} />
+            ) : null}
+          </MainLayout>
         </ConfirmProvider>
       </ToastProvider>
     );
   }
-
-  // Enhanced createNewConversation function that always shows chat view
-  const createNewConversationAndShowChat = () => {
-    createNewConversation();
-    setActiveView('chat');
-  };
-
-  // Enhanced conversation change function that always shows chat view 
-  const handleConversationChangeAndShowChat = (id: string) => {
-    handleConversationChange(id);
-    setActiveView('chat');
-  };
 
   // Fallback to regular chat interface if no thread messaging
   return (
@@ -186,6 +407,16 @@ const AppContent: React.FC = () => {
           currentNetwork={currentNetwork}
           currentTheme={theme}
           toggleTheme={toggleTheme}
+          hasSharedDocuments={hasSharedDocuments || false}
+          hasThreadMessaging={hasThreadMessaging || false}
+          agentName={agentName}
+          threadState={getCurrentThreadState()}
+          onChannelSelect={handleChannelSelect}
+          onDirectMessageSelect={handleDirectMessageSelect}
+          // Documents props
+          documents={documents}
+          onDocumentSelect={handleDocumentSelect}
+          selectedDocumentId={selectedDocumentId}
         >
           {/* 新的布局：HTML结果在中间，聊天在右边 */}
           <div className="flex h-full">
@@ -196,6 +427,16 @@ const AppContent: React.FC = () => {
                   <NewsSummaryExample />
                 ) : activeView === 'mcp' ? (
                   <McpView onBackClick={() => setActiveView('chat')} />
+                ) : activeView === 'documents' && hasSharedDocuments ? (
+                  <DocumentsView 
+                    onBackClick={() => setActiveView('chat')}
+                    currentTheme={theme}
+                    documents={documents}
+                    selectedDocumentId={selectedDocumentId}
+                    onDocumentSelect={handleDocumentSelect}
+                    documentsConnection={documentsConnection}
+                    onDocumentsChange={setDocuments}
+                  />
                 ) : activeView === 'chat' ? (
                   <div>
                     <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">
