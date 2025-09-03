@@ -139,7 +139,7 @@ class CentralizedTopology(NetworkTopology):
     async def initialize(self) -> bool:
         """Initialize the centralized topology."""
         try:
-            # Initialize transport (default to WebSocket for centralized)
+            # Initialize primary transport (default to WebSocket for centralized)
             transport_type = TransportType(self.config.get("transport", "websocket"))
             
             if transport_type == TransportType.WEBSOCKET:
@@ -156,6 +156,8 @@ class CentralizedTopology(NetworkTopology):
             if not await self.transport_manager.initialize_transport(transport_type):
                 return False
             
+            # Note: Removed hybrid WebSocket setup - if gRPC is the transport, everything uses gRPC
+            
             if self.server_mode:
                 # Start server mode (coordinator)
                 host = self.config.get("host", "0.0.0.0")  
@@ -164,6 +166,8 @@ class CentralizedTopology(NetworkTopology):
                 if transport and not await transport.listen(f"{host}:{port}"):
                     return False
                 logger.info(f"Centralized coordinator started on {host}:{port}")
+                
+                # Note: Removed WebSocket agent port setup - agents use the same gRPC port
             else:
                 # Client mode - connect to coordinator
                 # This would be handled when agents register
