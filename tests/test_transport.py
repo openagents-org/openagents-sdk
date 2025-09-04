@@ -24,15 +24,15 @@ class TestTransportMessage:
     def test_create_transport_message(self):
         """Test creating a transport message."""
         message = TransportMessage(
-            sender_id="agent1",
+            source_id="agent1",
             target_id="agent2",
             message_type="direct",
             payload={"content": "Hello!"}
         )
         
-        assert message.sender_id == "agent1"
+        assert message.source_id == "agent1"
         assert message.target_id == "agent2"
-        assert message.message_type == "direct"
+        assert message.message_type == "direct_message"
         assert message.payload["content"] == "Hello!"
         assert message.message_id is not None
         assert message.timestamp > 0
@@ -118,7 +118,7 @@ class TestWebSocketTransport:
         transport.client_connections["agent2"] = mock_websocket
         
         message = Message(
-            sender_id="agent1",
+            source_id="agent1",
             target_id="agent2",
             message_type="direct",
             payload={"content": "Hello!"}
@@ -134,7 +134,7 @@ class TestWebSocketTransport:
         transport.is_running = True
         
         message = Message(
-            sender_id="agent1",
+            source_id="agent1",
             target_id="nonexistent",
             message_type="direct",
             payload={"content": "Hello!"}

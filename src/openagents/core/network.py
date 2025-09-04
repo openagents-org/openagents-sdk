@@ -20,9 +20,12 @@ from pathlib import Path
 from openagents.core.transport import Transport, TransportManager, Message
 from openagents.models.transport import TransportType
 from openagents.core.topology import NetworkTopology, NetworkMode, AgentInfo, create_topology
-from openagents.models.messages import BaseMessage, DirectMessage, BroadcastMessage, ModMessage
+from openagents.models.messages import DirectMessage, BroadcastMessage, ModMessage
 from openagents.models.network_config import NetworkConfig, NetworkMode as ConfigNetworkMode
 from openagents.core.agent_identity import AgentIdentityManager
+from openagents.core.events import EventBus
+from openagents.models.event import Event, EventNames, EventVisibility
+from openagents.core.events.event_bridge import EventBridge
 from openagents.config.globals import WORKSPACE_DEFAULT_MOD_NAME
 
 logger = logging.getLogger(__name__)
@@ -104,8 +107,31 @@ class AgentNetwork:
         # Message processing tracking to prevent infinite loops
         self.processed_message_ids: Set[str] = set()
         
+        # Unified event system
+        self.event_bus = EventBus()
+        self.event_bridge = EventBridge()
+        
         # Register internal message handlers
         self._register_internal_handlers()
+        
+        # Set up event system integration
+        self._setup_event_system()
+    
+    @property
+    def events(self):
+        """Get the events interface for this network.
+        
+        Returns:
+            EventBus: The network's event bus for subscribing to events
+            
+        Example:
+            # Subscribe to events at network level
+            subscription = network.events.subscribe("agent1", ["project.*", "channel.message.*"])
+            
+            # Create event queue for polling
+            queue = network.events.create_agent_event_queue("agent1")
+        """
+        return self.event_bus
     
     @staticmethod
     def load(config: Union[NetworkConfig, str, Path]) -> "AgentNetwork":
@@ -225,6 +251,128 @@ class AgentNetwork:
         # Register network-level message handlers
         self.message_handlers["mod_message"] = [self._handle_mod_message]
         self.message_handlers["project_notification"] = [self._handle_project_notification]
+    
+    def _setup_event_system(self):
+        """Set up the unified event system integration."""
+        # Register global event handler for logging and metrics
+        self.event_bus.register_global_handler(self._log_event)
+        
+        # Register mod event handlers for all loaded mods
+        for mod_name, mod_instance in self.mods.items():
+            if hasattr(mod_instance, 'process_event'):
+                self.event_bus.register_mod_handler(mod_name, mod_instance.process_event)
+            elif hasattr(mod_instance, 'process_mod_message'):
+                # Backward compatibility: wrap old process_mod_message with event handler
+                def create_mod_event_handler(mod_name, mod_instance):
+                    async def mod_event_handler(event: Event):
+                        if event.relevant_mod == mod_name:
+                            # Convert event back to ModMessage for backward compatibility
+                            try:
+                                mod_message = self.event_bridge.event_to_message(event)
+                                if isinstance(mod_message, ModMessage):
+                                    await mod_instance.process_mod_message(mod_message)
+                            except Exception as e:
+                                logger.error(f"Error processing event in mod {mod_name}: {e}")
+                    return mod_event_handler
+                
+                handler = create_mod_event_handler(mod_name, mod_instance)
+                self.event_bus.register_mod_handler(mod_name, handler)
+        
+        logger.info("Event system integration set up successfully")
+    
+    async def _log_event(self, event: Event):
+        """Global event handler for logging."""
+        logger.debug(f"Event: {event.event_name} from {event.source_id} to {event.target_agent_id or 'all'}")
+    
+    async def emit_event(self, event: Event) -> None:
+        """
+        Emit an event through the unified event system.
+        
+        Args:
+            event: The event to emit
+        """
+        await self.event_bus.emit_event(event)
+    
+    async def emit_event_from_message(self, message: Event) -> None:
+        """
+        Convert a message to an event and emit it.
+        
+        This provides backward compatibility during the migration period.
+        
+        Args:
+            message: The message to convert and emit as an event
+        """
+        try:
+            event = self.event_bridge.message_to_event(message)
+            await self.emit_event(event)
+        except Exception as e:
+            logger.error(f"Error converting message to event: {e}")
+            raise
+    
+    async def _emit_transport_message_as_event(self, message: Message) -> None:
+        """
+        Convert a transport message to an event and emit it.
+        
+        Args:
+            message: Transport message to convert and emit
+        """
+        try:
+            # Convert transport message to Event directly
+            event = self._transport_message_to_base_message(message)
+            if event:
+                await self.emit_event(event)
+        except Exception as e:
+            logger.debug(f"Could not convert transport message to event: {e}")
+            # This is not critical, so we don't raise the exception
+    
+    def _transport_message_to_base_message(self, message: Message) -> Optional[Event]:
+        """
+        Convert a transport Message to an Event.
+        
+        Args:
+            message: Transport message to convert
+            
+        Returns:
+            Optional[Event]: Converted event or None if conversion fails
+        """
+        try:
+            if message.message_type == "direct_message":
+                return DirectMessage(
+                    source_id=message.sender_id,
+                    target_agent_id=message.target_id,
+                    payload=message.payload or {},
+                    metadata=message.metadata or {}
+                )
+            elif message.message_type == "broadcast_message":
+                return BroadcastMessage(
+                    source_id=message.sender_id,
+                    payload=message.payload or {},
+                    metadata=message.metadata or {}
+                )
+            elif message.message_type == "mod_message":
+                payload = message.payload or {}
+                return ModMessage(
+                    source_id=message.sender_id,
+                    relevant_mod=payload.get('mod', ''),
+                    relevant_agent_id=payload.get('relevant_agent_id', message.sender_id),
+                    direction=payload.get('direction', 'inbound'),
+                    payload=payload,
+                    metadata=message.metadata or {}
+                )
+            elif message.message_type == "transport":
+                # Transport messages are typically capability announcements or system messages
+                # Convert them to broadcast messages so they can be processed by mods
+                return BroadcastMessage(
+                    source_id=message.sender_id,
+                    payload=message.payload or {},
+                    metadata=message.metadata or {}
+                )
+            else:
+                logger.debug(f"Unknown message type for conversion: {message.message_type}")
+                return None
+        except Exception as e:
+            logger.error(f"Error converting transport message to base message: {e}")
+            return None
     
     async def initialize(self) -> bool:
         """Initialize the network.
@@ -347,20 +495,24 @@ class AgentNetwork:
             logger.error(f"Failed to unregister agent {agent_id}: {e}")
             return False
         
-    async def send_message(self, message: BaseMessage) -> bool:
-        """Send a message through the network.
+    async def send_message(self, message: Event) -> bool:
+        """Send an event through the network.
         
         Args:
-            message: Message to send
+            message: Event to send (now extends Event)
             
         Returns:
-            bool: True if message sent successfully
+            bool: True if event sent successfully
         """
         try:
-            # Handle ModMessages locally - do NOT route through transport
+            # Emit event through the unified event system
+            await self.emit_event(message)
+            
+            # For backward compatibility, still handle some direct routing
+            # This will be removed once all components use events
             if isinstance(message, ModMessage):
-                logger.info(f"🔧 NETWORK: Handling ModMessage {message.message_id} locally, mod={message.mod}")
-                logger.info(f"🔧 NETWORK: ModMessage sender={message.sender_id}, relevant_agent={message.relevant_agent_id}")
+                logger.info(f"🔧 NETWORK: Handling ModMessage {message.event_id} locally, mod={message.mod}")
+                logger.info(f"🔧 NETWORK: ModMessage sender={message.source_id}, relevant_agent={message.relevant_agent_id}")
                 
                 # Check if this is a mod message response that needs to be delivered to an agent
                 if hasattr(message, 'relevant_agent_id') and message.relevant_agent_id:
@@ -464,10 +616,10 @@ class AgentNetwork:
                         response_message = {
                             'message_type': 'direct_message',
                             'data': {
-                                'message_id': message.message_id,
-                                'sender_id': message.sender_id,
+                                'message_id': message.message_id,  # Use backward compatibility property
+                                'sender_id': message.sender_id,   # Use backward compatibility property
                                 'target_agent_id': message.target_agent_id,
-                                'content': message.content,
+                                'content': message.content,       # Use backward compatibility property
                                 'timestamp': message.timestamp,
                                 'metadata': message.metadata,
                                 'requires_response': message.requires_response
@@ -637,7 +789,7 @@ class AgentNetwork:
             "port": self.config.port
         }
     
-    def _convert_to_transport_message(self, message: BaseMessage) -> Message:
+    def _convert_to_transport_message(self, message: Event) -> Message:
         """Convert a base message to a transport message.
         
         Args:
@@ -656,22 +808,18 @@ class AgentNetwork:
             target_id = message.relevant_agent_id
         # BroadcastMessage has target_id = None (broadcast)
         
-        # Create transport message
+        # Create transport message from Event
+        # Since messages are now Events, we can create TransportMessage directly
         transport_message = TransportMessage(
-            message_id=message.message_id,
-            sender_id=message.sender_id,
+            source_id=message.source_id,
+            target_agent_id=message.target_agent_id,
             target_id=target_id,
-            message_type=message.message_type,
-            payload={
-                "content": message.content,
-                "metadata": message.metadata,
-                "text_representation": message.text_representation,
-                "requires_response": message.requires_response,
-                "mod": getattr(message, 'mod', None),
-                "direction": getattr(message, 'direction', None),
-                "exclude_agent_ids": getattr(message, 'exclude_agent_ids', [])
-            },
-            timestamp=message.timestamp
+            payload=message.payload,
+            metadata=message.metadata,
+            timestamp=message.timestamp,
+            visibility=message.visibility,
+            requires_response=message.requires_response,
+            relevant_mod=getattr(message, 'relevant_mod', None)
         )
         
         return transport_message
@@ -703,6 +851,9 @@ class AgentNetwork:
                 old_ids = list(self.processed_message_ids)[:500]
                 for old_id in old_ids:
                     self.processed_message_ids.discard(old_id)
+            
+            # Convert transport message to Event and emit
+            await self._emit_transport_message_as_event(message)
             
             # Check if this message needs to be routed to a specific target
             target = message.target_id or getattr(message, 'target_agent_id', None)
@@ -768,11 +919,10 @@ class AgentNetwork:
             
             # Create ProjectNotificationMessage from the transport message
             project_notification = ProjectNotificationMessage(
-                sender_id=message.sender_id,
+                source_id=message.sender_id,
                 project_id=payload.get("project_id", ""),
                 notification_type=payload.get("notification_type", ""),
-                content=payload.get("content", {}),
-                message_id=message.message_id,
+                payload=payload.get("content", {}),
                 timestamp=message.timestamp
             )
             
@@ -796,10 +946,13 @@ class AgentNetwork:
             logger.info(f"🔧 NETWORK: _handle_mod_message called with message: {message.message_id}, type: {message.message_type}")
             logger.info(f"🔧 NETWORK: Message attributes: content={hasattr(message, 'content')}, payload={hasattr(message, 'payload')}")
             
-            # Extract the target mod name from the payload
+            # Extract the target mod name from the message
             target_mod_name = None
-            if hasattr(message, 'payload') and message.payload:
-                target_mod_name = message.payload.get('mod')
+            if hasattr(message, 'relevant_mod') and message.relevant_mod:
+                target_mod_name = message.relevant_mod
+            elif hasattr(message, 'payload') and message.payload:
+                # Fallback: check payload for backward compatibility
+                target_mod_name = message.payload.get('mod') or message.payload.get('relevant_mod')
             
             if target_mod_name and target_mod_name in self.mods:
                 network_mod = self.mods[target_mod_name]
@@ -816,10 +969,9 @@ class AgentNetwork:
                         content[key] = value
                 
                 mod_message = ModMessage(
-                    message_id=message.message_id,
-                    sender_id=message.sender_id,
-                    mod=target_mod_name,
-                    content=content,
+                    source_id=message.sender_id,
+                    relevant_mod=target_mod_name,
+                    payload=content,
                     action=message.payload.get('action'),
                     direction=message.payload.get('direction'),
                     relevant_agent_id=message.payload.get('relevant_agent_id'),

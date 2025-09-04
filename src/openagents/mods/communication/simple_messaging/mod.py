@@ -14,11 +14,11 @@ from pathlib import Path
 
 from openagents.core.base_mod import BaseMod
 from openagents.models.messages import (
-    BaseMessage, 
     DirectMessage,
     BroadcastMessage,
     ModMessage
 )
+from openagents.models.event import Event
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class SimpleMessagingNetworkMod(BaseMod):
         
         # Initialize mod state
         self.active_agents: Set[str] = set()
-        self.message_history: Dict[str, BaseMessage] = {}  # message_id -> message
+        self.message_history: Dict[str, Event] = {}  # message_id -> message
         self.max_history_size = 1000  # Number of messages to keep in history
         
         # Create a temporary directory for file storage
@@ -170,7 +170,7 @@ class SimpleMessagingNetworkMod(BaseMod):
             if file_id:
                 await self._handle_file_deletion(message.sender_id, file_id, message)
     
-    async def _process_file_attachments(self, message: BaseMessage) -> None:
+    async def _process_file_attachments(self, message: Event) -> None:
         """Process file attachments in a message.
         
         Args:
@@ -226,7 +226,7 @@ class SimpleMessagingNetworkMod(BaseMod):
             # File not found
             response = ModMessage(
                 sender_id=self.network.network_id,
-                mod="simple_messaging",
+                relevant_mod="simple_messaging",
                 content={
                     "action": "file_download_response",
                     "success": False,
@@ -250,7 +250,7 @@ class SimpleMessagingNetworkMod(BaseMod):
             # Send response
             response = ModMessage(
                 sender_id=self.network.network_id,
-                mod="simple_messaging",
+                relevant_mod="simple_messaging",
                 content={
                     "action": "file_download_response",
                     "success": True,
@@ -268,7 +268,7 @@ class SimpleMessagingNetworkMod(BaseMod):
             # Error reading file
             response = ModMessage(
                 sender_id=self.network.network_id,
-                mod="simple_messaging",
+                relevant_mod="simple_messaging",
                 content={
                     "action": "file_download_response",
                     "success": False,
@@ -295,7 +295,7 @@ class SimpleMessagingNetworkMod(BaseMod):
             # File not found
             response = ModMessage(
                 sender_id=self.network.network_id,
-                mod="simple_messaging",
+                relevant_mod="simple_messaging",
                 content={
                     "action": "file_deletion_response",
                     "success": False,
@@ -315,7 +315,7 @@ class SimpleMessagingNetworkMod(BaseMod):
             # Send response
             response = ModMessage(
                 sender_id=self.network.network_id,
-                mod="simple_messaging",
+                relevant_mod="simple_messaging",
                 content={
                     "action": "file_deletion_response",
                     "success": True,
@@ -332,7 +332,7 @@ class SimpleMessagingNetworkMod(BaseMod):
             # Error deleting file
             response = ModMessage(
                 sender_id=self.network.network_id,
-                mod="simple_messaging",
+                relevant_mod="simple_messaging",
                 content={
                     "action": "file_deletion_response",
                     "success": False,
@@ -361,7 +361,7 @@ class SimpleMessagingNetworkMod(BaseMod):
             "file_storage_path": str(self.file_storage_path)
         }
     
-    def _add_to_history(self, message: BaseMessage) -> None:
+    def _add_to_history(self, message: Event) -> None:
         """Add a message to the history.
         
         Args:

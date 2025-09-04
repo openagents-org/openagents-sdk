@@ -1,15 +1,16 @@
 from typing import Any, Dict
-from openagents.models.messages import BaseMessage, DirectMessage, BroadcastMessage, ModMessage
+from openagents.models.messages import DirectMessage, BroadcastMessage, ModMessage
+from openagents.models.event import Event
 
-def parse_message_dict(message_dict: Dict[str, Any]) -> BaseMessage:
+def parse_message_dict(message_dict: Dict[str, Any]) -> Event:
     """
-    Parse a message dictionary into a BaseMessage instance.
+    Parse a message dictionary into an Event instance.
 
     Args:
         message_dict: A dictionary containing message data
 
     Returns:
-        A BaseMessage instance
+        An Event instance (DirectMessage, BroadcastMessage, or ModMessage)
     """
     message_type = message_dict.get("message_type")
     
@@ -42,14 +43,14 @@ def parse_message_dict(message_dict: Dict[str, Any]) -> BaseMessage:
         if "relevant_agent_id" not in merged_dict:
             merged_dict["relevant_agent_id"] = "unknown"  # Default value to prevent validation error
             
-        return ModMessage.model_validate(merged_dict)
+        return ModMessage(**merged_dict)
     
     if message_type == "direct_message":
-        return DirectMessage.model_validate(message_dict)
+        return DirectMessage(**message_dict)
     elif message_type == "broadcast_message":
-        return BroadcastMessage.model_validate(message_dict)
+        return BroadcastMessage(**message_dict)
     elif message_type == "mod_message":
-        return ModMessage.model_validate(message_dict)
+        return ModMessage(**message_dict)
     else:
         raise ValueError(f"Unknown message type: {message_type}")
 
