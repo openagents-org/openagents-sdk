@@ -32,9 +32,10 @@ class TestProjectGRPC:
     @pytest.fixture(autouse=True)
     async def setup_and_teardown(self):
         """Set up and tear down test environment."""
-        # Use the same ports as the working project_example.py
+        # Use random ports to avoid conflicts between tests
+        import random
         self.host = "localhost"
-        self.port = 8570  # Same as workspace_network_config.yaml
+        self.port = random.randint(8600, 8700)  # Use random port range to avoid conflicts
         
         # Network and agents
         self.network = None
@@ -55,36 +56,99 @@ class TestProjectGRPC:
     async def _cleanup(self):
         """Clean up test resources."""
         try:
-            # Clean up event subscription
+            # Clean up event subscription first
             if hasattr(self, 'event_subscription') and self.event_subscription:
-                self.network.events.unsubscribe(self.event_subscription.subscription_id)
-                logger.info("Event subscription cleaned up")
+                try:
+                    self.network.events.unsubscribe(self.event_subscription.subscription_id)
+                    logger.info("Event subscription cleaned up")
+                except Exception as e:
+                    logger.warning(f"Failed to clean up event subscription: {e}")
                 
             if hasattr(self, 'event_queue') and self.event_queue:
-                self.network.events.remove_agent_event_queue("test-workspace-client")
-                logger.info("Event queue cleaned up")
+                try:
+                    self.network.events.remove_agent_event_queue("test-workspace-client")
+                    logger.info("Event queue cleaned up")
+                except Exception as e:
+                    logger.warning(f"Failed to clean up event queue: {e}")
                 
+            # Stop agent with longer timeout
             if self.echo_agent:
-                await self.echo_agent.async_stop()
-                logger.info("Echo agent stopped")
+                try:
+                    await asyncio.wait_for(self.echo_agent.async_stop(), timeout=10.0)
+                    logger.info("Echo agent stopped")
+                except asyncio.TimeoutError:
+                    logger.warning("Echo agent stop timed out")
+                except Exception as e:
+                    logger.warning(f"Failed to stop echo agent: {e}")
                 
+            # Give time for agent cleanup
+            await asyncio.sleep(2.0)
+                
+            # Shutdown network with longer timeout
             if self.network and self.network.is_running:
-                await self.network.shutdown()
-                logger.info("Network shutdown")
+                try:
+                    await asyncio.wait_for(self.network.shutdown(), timeout=15.0)
+                    logger.info("Network shutdown")
+                except asyncio.TimeoutError:
+                    logger.warning("Network shutdown timed out")
+                except Exception as e:
+                    logger.warning(f"Failed to shutdown network: {e}")
+                
+            # Final cleanup wait
+            await asyncio.sleep(1.0)
                 
         except Exception as e:
             logger.error(f"Cleanup error: {e}")
+            # Force cleanup if normal cleanup fails
+            try:
+                if hasattr(self, 'network') and self.network:
+                    self.network.is_running = False
+            except:
+                pass
 
     async def _setup_network_with_project_support(self):
         """Set up a network with project, workspace, and thread messaging mods."""
-        # Use the existing workspace network config that already works with project_example.py
-        self.network = AgentNetwork.load("examples/workspace_network_config.yaml")
+        # Create a custom network config for testing with the random port
+        from src.openagents.models.network_config import NetworkConfig, NetworkMode, TransportType
+        
+        config = NetworkConfig(
+            name=f"TestNetwork-{self.port}",
+            mode=NetworkMode.CENTRALIZED,
+            host=self.host,
+            port=self.port,
+            transport=TransportType.GRPC,
+            server_mode=True,
+            # Add resource limits for testing
+            max_connections=50,
+            connection_timeout=10.0,
+            message_timeout=10.0,
+            heartbeat_interval=10
+        )
+        
+        self.network = AgentNetwork(config)
+        
+        # Load mods manually for testing
+        from openagents.utils.mod_loaders import load_network_mods
+        mod_configs = [
+            {"name": "openagents.mods.communication.thread_messaging", "enabled": True, "config": {}},
+            {"name": "openagents.mods.workspace.default", "enabled": True, "config": {}},
+            {"name": "openagents.mods.project.default", "enabled": True, "config": {}}
+        ]
+        
+        try:
+            mods = load_network_mods(mod_configs)
+            for mod_name, mod_instance in mods.items():
+                mod_instance.bind_network(self.network)
+                self.network.mods[mod_name] = mod_instance
+        except Exception as e:
+            logger.warning(f"Failed to load some mods: {e}")
+        
         await self.network.initialize()
         
         # Give network time to fully start
-        await asyncio.sleep(1.0)
+        await asyncio.sleep(2.0)
         
-        logger.info(f"Network initialized with mods: {list(self.network.mods.keys())}")
+        logger.info(f"Network initialized on port {self.port} with mods: {list(self.network.mods.keys())}")
         return self.network
 
     async def _setup_project_echo_agent(self):
@@ -140,6 +204,7 @@ class TestProjectGRPC:
             return None
 
     @pytest.mark.asyncio
+    @pytest.mark.timeout(60)  # Add timeout to prevent hanging tests
     async def test_project_creation_with_goal_posting(self):
         """Test that projects are created and goals are posted to channels."""
         # Set up network without agents first
@@ -202,6 +267,7 @@ class TestProjectGRPC:
         logger.info("✅ Project creation and goal posting test passed")
 
     @pytest.mark.asyncio
+    @pytest.mark.timeout(90)  # Longer timeout for agent interaction test
     async def test_project_agent_interaction_via_grpc(self):
         """Test that service agents can interact with projects via gRPC."""
         # Set up network and agents
@@ -272,6 +338,7 @@ class TestProjectGRPC:
         logger.info("✅ Project agent interaction via gRPC test passed")
 
     @pytest.mark.asyncio
+    @pytest.mark.timeout(60)
     async def test_grpc_message_queuing_for_project_agents(self):
         """Test that gRPC message queuing works for project agents."""
         # Set up network and agents
@@ -317,6 +384,7 @@ class TestProjectGRPC:
         logger.info("✅ gRPC message queuing test passed")
 
     @pytest.mark.asyncio
+    @pytest.mark.timeout(60)
     async def test_project_status_and_listing(self):
         """Test project status retrieval and listing functionality."""
         # Set up network and agents
@@ -359,6 +427,7 @@ class TestProjectGRPC:
         logger.info("✅ Project status and listing test passed")
 
     @pytest.mark.asyncio
+    @pytest.mark.timeout(60)
     async def test_project_with_custom_configuration(self):
         """Test project creation with custom configuration and service agents."""
         # Set up network and agents
