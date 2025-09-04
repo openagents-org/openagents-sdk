@@ -508,9 +508,9 @@ class GRPCTransport(Transport):
             await self.http_runner.cleanup()
             self.http_runner = None
         
-        # Stop server
+        # Stop server with longer grace period for tests
         if self.server:
-            await self.server.stop(grace=5)
+            await self.server.stop(grace=10)
         
         self.channels.clear()
         self.stubs.clear()
