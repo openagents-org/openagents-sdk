@@ -192,12 +192,11 @@ class GRPCHTTPAdapter:
                     }
                 
                 mod_message = ModMessage(
-                    message_id=message_id,
-                    sender_id=data.get('sender_id'),
-                    mod="openagents.mods.communication.thread_messaging",
+                    source_id=data.get('sender_id'),
+                    relevant_mod="openagents.mods.communication.thread_messaging",
                     direction="outbound",
                     relevant_agent_id=data.get('sender_id'),
-                    content=mod_content,
+                    payload=mod_content,
                     timestamp=int(time.time())
                 )
                 
@@ -206,15 +205,14 @@ class GRPCHTTPAdapter:
                 
                 return web.json_response({
                     'success': True,
-                    'message_id': message_id
+                    'message_id': mod_message.message_id  # Use backward compatibility property
                 })
             else:
                 # Fallback to transport message if no network instance
                 from openagents.models.transport import TransportMessage
                 
                 message = TransportMessage(
-                    message_id=str(uuid.uuid4()),
-                    sender_id=data.get('sender_id'),
+                    source_id=data.get('sender_id'),
                     target_id=data.get('target_agent_id'),
                     message_type=data.get('message_type', 'direct_message'),
                     payload={
@@ -483,12 +481,11 @@ class GRPCHTTPAdapter:
             import uuid
             
             mod_message = ModMessage(
-                message_id=str(uuid.uuid4()),
-                sender_id=agent_id,
-                mod="openagents.mods.communication.thread_messaging",
+                source_id=agent_id,
+                relevant_mod="openagents.mods.communication.thread_messaging",
                 direction="outbound",
                 relevant_agent_id=agent_id,
-                content=mod_content,
+                payload=mod_content,
                 timestamp=int(time.time())
             )
             
@@ -513,10 +510,10 @@ class GRPCHTTPAdapter:
             
             # Create appropriate mod message based on command
             # The content should match exactly what the shared document mod expects
-            # BaseMessage requires sender_id, and we need all the data fields
+            # Event requires sender_id, and we need all the data fields
             mod_content = {
                 "message_type": command,
-                "sender_id": agent_id,  # Required by BaseMessage
+                "sender_id": agent_id,  # Required by Event
                 **data  # Include all data from the request (document_id, line_number, content, etc.)
             }
             
@@ -525,12 +522,11 @@ class GRPCHTTPAdapter:
             import uuid
             
             mod_message = ModMessage(
-                message_id=str(uuid.uuid4()),
-                sender_id=agent_id,
-                mod="openagents.mods.work.shared_document",
+                source_id=agent_id,
+                relevant_mod="openagents.mods.work.shared_document",
                 direction="outbound",
                 relevant_agent_id=agent_id,
-                content=mod_content,
+                payload=mod_content,
                 timestamp=int(time.time())
             )
             

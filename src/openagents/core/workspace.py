@@ -14,8 +14,7 @@ from datetime import datetime
 
 from openagents.core.client import AgentClient
 
-if TYPE_CHECKING:
-    from openagents.core.events import WorkspaceEvents
+# Removed WorkspaceEvents import - events are now handled at network level
 from openagents.models.messages import ModMessage
 from openagents.config.globals import THREAD_MESSAGING_MOD_NAME, DEFAULT_CHANNELS
 
@@ -76,19 +75,7 @@ class AgentConnection:
             # Send through client
             success = await self._client.send_direct_message(direct_message)
             
-            # Emit event if successful
-            if success:
-                try:
-                    from openagents.core.events import WorkspaceEvent, EventType
-                    event = WorkspaceEvent(
-                        event_type=EventType.AGENT_DIRECT_MESSAGE_SENT,
-                        source_agent_id=self._client.agent_id,
-                        target_agent_id=self.agent_id,
-                        data=message_content
-                    )
-                    await self.workspace.events.event_manager.emit_event(event)
-                except Exception as e:
-                    logger.debug(f"Failed to emit agent.direct_message.sent event: {e}")
+            # Events are now emitted automatically at network level
             
             return success
             
@@ -241,7 +228,7 @@ class ChannelConnection:
             # Create mod message for thread messaging
             mod_message = ModMessage(
                 sender_id=self._client.agent_id,
-                mod=THREAD_MESSAGING_MOD_NAME,
+                relevant_mod=THREAD_MESSAGING_MOD_NAME,
                 relevant_agent_id=self._client.agent_id,
                 direction="outbound",
                 content={
@@ -257,22 +244,7 @@ class ChannelConnection:
             # Send through workspace
             success = await self.workspace._send_mod_message(mod_message)
             
-            # Emit event if successful
-            if success:
-                try:
-                    from openagents.core.events import WorkspaceEvent, EventType
-                    event = WorkspaceEvent(
-                        event_type=EventType.CHANNEL_POST_CREATED,
-                        source_agent_id=self._client.agent_id,
-                        channel=self.name,
-                        data={
-                            "text": message_content.get("text", str(message_content)),
-                            **kwargs
-                        }
-                    )
-                    await self.workspace.events.event_manager.emit_event(event)
-                except Exception as e:
-                    logger.debug(f"Failed to emit channel.post.created event: {e}")
+            # Events are now emitted automatically at network level
             
             return success
             
@@ -306,7 +278,7 @@ class ChannelConnection:
             # Create mod message for thread messaging with mention
             mod_message = ModMessage(
                 sender_id=self._client.agent_id,
-                mod=THREAD_MESSAGING_MOD_NAME,
+                relevant_mod=THREAD_MESSAGING_MOD_NAME,
                 relevant_agent_id=self._client.agent_id,
                 content={
                     "message_type": "channel_message",
@@ -321,23 +293,7 @@ class ChannelConnection:
             # Send through workspace's method
             success = await self.workspace._send_mod_message(mod_message)
             
-            # Emit event if successful
-            if success:
-                try:
-                    from openagents.core.events import WorkspaceEvent, EventType
-                    event = WorkspaceEvent(
-                        event_type=EventType.CHANNEL_POST_CREATED,
-                        source_agent_id=self._client.agent_id,
-                        channel=self.name,
-                        data={
-                            "text": message_content.get("text", str(message_content)),
-                            "mentioned_agent_id": mention_agent_id,
-                            **kwargs
-                        }
-                    )
-                    await self.workspace.events.event_manager.emit_event(event)
-                except Exception as e:
-                    logger.debug(f"Failed to emit channel.post.created event: {e}")
+            # Events are now emitted automatically at network level
             
             return success
             
@@ -368,7 +324,7 @@ class ChannelConnection:
             # Create mod message to retrieve channel messages
             mod_message = ModMessage(
                 sender_id=self._client.agent_id,
-                mod=THREAD_MESSAGING_MOD_NAME,
+                relevant_mod=THREAD_MESSAGING_MOD_NAME,
                 relevant_agent_id=self._client.agent_id,
                 content={
                     "message_type": "message_retrieval",
@@ -459,7 +415,7 @@ class ChannelConnection:
             # Create mod message for thread messaging
             mod_message = ModMessage(
                 sender_id=self._client.agent_id,
-                mod=THREAD_MESSAGING_MOD_NAME,
+                relevant_mod=THREAD_MESSAGING_MOD_NAME,
                 relevant_agent_id=self._client.agent_id,
                 content={
                     "message_type": "reply_message",
@@ -501,7 +457,7 @@ class ChannelConnection:
             
             mod_message = ModMessage(
                 sender_id=self._client.agent_id,
-                mod=THREAD_MESSAGING_MOD_NAME,
+                relevant_mod=THREAD_MESSAGING_MOD_NAME,
                 relevant_agent_id=self._client.agent_id,
                 content={
                     "message_type": "file_upload",
@@ -546,7 +502,7 @@ class ChannelConnection:
             # Create mod message for reaction
             mod_message = ModMessage(
                 sender_id=self._client.agent_id,
-                mod=THREAD_MESSAGING_MOD_NAME,
+                relevant_mod=THREAD_MESSAGING_MOD_NAME,
                 relevant_agent_id=self._client.agent_id,
                 content={
                     "message_type": "reaction",
@@ -767,8 +723,7 @@ class Workspace:
         self._auto_connect_config: Optional[Dict[str, Any]] = None
         self._is_connected: bool = False
         
-        # Initialize events system
-        self._events: Optional['WorkspaceEvents'] = None
+        # Events are now handled at network level - no workspace events
         
         # Initialize response handling
         self._pending_responses: Dict[str, asyncio.Future] = {}
@@ -973,7 +928,7 @@ class Workspace:
             # Create mod message to list channels
             mod_message = ModMessage(
                 sender_id=self._client.agent_id,
-                mod=THREAD_MESSAGING_MOD_NAME,
+                relevant_mod=THREAD_MESSAGING_MOD_NAME,
                 relevant_agent_id=self._client.agent_id,
                 content={
                     "message_type": "channel_info",
@@ -1159,18 +1114,11 @@ class Workspace:
         """
         return self._client
     
-    @property
-    def events(self) -> 'WorkspaceEvents':
-        """Get the events interface for this workspace.
-        
-        Returns:
-            WorkspaceEvents: Event subscription interface
-        """
-        if self._events is None:
-            # Import here to avoid circular imports
-            from openagents.core.events import WorkspaceEvents
-            self._events = WorkspaceEvents(self)
-        return self._events
+    # Events property removed - use network.events instead
+    # @property
+    # def events(self) -> 'WorkspaceEvents':
+    #     """DEPRECATED: Events are now handled at network level. Use network.events instead."""
+    #     raise AttributeError("workspace.events is deprecated. Use network.events.subscribe() instead.")
     
     async def start_project(self, project, timeout: float = 10.0) -> Dict[str, Any]:
         """Start a new project with project-based collaboration.
@@ -1206,7 +1154,7 @@ class Workspace:
             # Create mod message to start project
             mod_message = ModMessage(
                 sender_id=self._client.agent_id,
-                mod="openagents.mods.project.default",
+                relevant_mod="openagents.mods.project.default",
                 relevant_agent_id=self._client.agent_id,
                 content={
                     "action": "project_creation",
@@ -1282,7 +1230,7 @@ class Workspace:
             # Create mod message to get project status
             mod_message = ModMessage(
                 sender_id=self._client.agent_id,
-                mod="openagents.mods.project.default",
+                relevant_mod="openagents.mods.project.default",
                 relevant_agent_id=self._client.agent_id,
                 content={
                     "message_type": "project_status",
@@ -1352,7 +1300,7 @@ class Workspace:
             # Create mod message to list projects
             mod_message = ModMessage(
                 sender_id=self._client.agent_id,
-                mod="openagents.mods.project.default",
+                relevant_mod="openagents.mods.project.default",
                 relevant_agent_id=self._client.agent_id,
                 content={
                     "message_type": "project_list",

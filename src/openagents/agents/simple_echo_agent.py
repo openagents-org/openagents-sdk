@@ -3,7 +3,8 @@ from typing import Dict, List, Optional
 
 from openagents.agents.runner import AgentRunner
 from openagents.models.message_thread import MessageThread
-from openagents.models.messages import BaseMessage, DirectMessage, BroadcastMessage
+from openagents.models.messages import DirectMessage, BroadcastMessage
+from openagents.models.event import Event
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ class SimpleEchoAgentRunner(AgentRunner):
         self.echo_prefix = echo_prefix or "Echo"
         self.message_count = 0
 
-    async def react(self, message_threads: Dict[str, MessageThread], incoming_thread_id: str, incoming_message: BaseMessage):
+    async def react(self, message_threads: Dict[str, MessageThread], incoming_thread_id: str, incoming_message: Event):
         """React to incoming messages by echoing them back.
         
         Args:
@@ -102,7 +103,7 @@ class SimpleEchoAgentRunner(AgentRunner):
         announcement_text = f"Echo agent {self.client.agent_id} is online! Send me a direct message and I'll echo it back."
         greeting = BroadcastMessage(
             sender_id=self.client.agent_id,
-            mod="openagents.mods.communication.simple_messaging",
+            relevant_mod="openagents.mods.communication.simple_messaging",
             message_type="broadcast_message", 
             content={"text": announcement_text},
             text_representation=announcement_text,
@@ -122,7 +123,7 @@ class SimpleEchoAgentRunner(AgentRunner):
         goodbye_text = f"Echo agent {self.client.agent_id} is going offline. Processed {self.message_count} messages total."
         goodbye = BroadcastMessage(
             sender_id=self.client.agent_id,
-            mod="openagents.mods.communication.simple_messaging",
+            relevant_mod="openagents.mods.communication.simple_messaging",
             message_type="broadcast_message",
             content={"text": goodbye_text},
             text_representation=goodbye_text,
