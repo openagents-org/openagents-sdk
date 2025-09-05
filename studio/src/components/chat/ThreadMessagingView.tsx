@@ -452,7 +452,11 @@ const ThreadMessagingView = React.forwardRef<{ getState: () => ThreadState }, Th
       if (existingIndex === -1) {
         newMessages[conversationKey].push(message);
         // Sort by timestamp
-        newMessages[conversationKey].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        newMessages[conversationKey].sort((a, b) => {
+          const aTime = parseInt(a.timestamp) < 1e10 ? parseInt(a.timestamp) * 1000 : parseInt(a.timestamp);
+          const bTime = parseInt(b.timestamp) < 1e10 ? parseInt(b.timestamp) * 1000 : parseInt(b.timestamp);
+          return aTime - bTime;
+        });
       }
       
       return { ...prev, messages: newMessages };
@@ -462,18 +466,46 @@ const ThreadMessagingView = React.forwardRef<{ getState: () => ThreadState }, Th
   const handleChannelsList = useCallback((channels: ThreadMessagingChannel[]) => {
     console.log('📋 Received channels list:', channels);
     console.log('✅ Setting channels count:', channels?.length || 0);
+    
+    // Auto-select the first channel if none is selected
+    const shouldAutoSelect = !state.currentChannel && channels?.length > 0;
+    const selectedChannel = shouldAutoSelect ? channels[0].name : state.currentChannel;
+    
+    console.log(`🔍 Channel selection - current: ${state.currentChannel}, shouldAutoSelect: ${shouldAutoSelect}, selectedChannel: ${selectedChannel}`);
+    
     setState(prev => ({ 
       ...prev, 
       channels: channels || [],
-      currentChannel: prev.currentChannel || (channels?.length > 0 ? channels[0].name : null)
+      currentChannel: selectedChannel
     }));
     
-    // Load messages for the first channel
-    if (channels.length > 0 && connection) {
-      const firstChannel = channels[0].name;
-      connection.retrieveChannelMessages(firstChannel, 50, 0, true);
+    // Load messages for the selected channel
+    if (shouldAutoSelect && connection) {
+      console.log(`🎯 Auto-selecting first channel: ${channels[0].name}`);
+      setTimeout(() => {
+        if (connection.isConnected()) {
+          console.log(`📡 Retrieving messages for auto-selected channel: ${channels[0].name}`);
+          connection.retrieveChannelMessages(channels[0].name, 50, 0, true);
+        }
+      }, 100);
     }
-  }, [connection]);
+    
+    // Notify parent component about the thread state change
+    if (onThreadStateChange && shouldAutoSelect) {
+      setTimeout(() => {
+        onThreadStateChange({
+          currentChannel: channels[0].name,
+          currentDirectMessage: null,
+          channels: channels || [],
+          agents: state.agents,
+          messages: state.messages,
+          isLoading: false,
+          error: null,
+          showDocuments: false
+        });
+      }, 200);
+    }
+  }, [connection, state.currentChannel, state.agents, onThreadStateChange]);
 
   const handleAgentsList = useCallback((agents: AgentInfo[]) => {
     console.log('👥 Received agents list:', agents);
@@ -487,10 +519,15 @@ const ThreadMessagingView = React.forwardRef<{ getState: () => ThreadState }, Th
       console.log('🔄 New state agents count:', newState.agents?.length);
       return newState;
     });
-  }, []);
+  }, [state.currentChannel]);
 
   const handleChannelMessages = useCallback((data: any) => {
-    const { channel, messages } = data;
+    console.log('📥 Raw channel messages data:', data);
+    
+    // Extract channel and messages from various possible data structures
+    const channel = data?.channel || data?.data?.channel || state.currentChannel;
+    const messages = data?.messages || data?.data?.messages || [];
+    
     console.log('📥 Handling channel messages for:', channel);
     console.log('📥 Messages received:', messages?.length || 0);
     
@@ -498,9 +535,11 @@ const ThreadMessagingView = React.forwardRef<{ getState: () => ThreadState }, Th
     lastMessageTimeRef.current = Date.now();
     
     if (messages && messages.length > 0) {
-      const sortedMessages = messages.sort((a: ThreadMessage, b: ThreadMessage) => 
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      );
+      const sortedMessages = messages.sort((a: ThreadMessage, b: ThreadMessage) => {
+        const aTime = parseInt(a.timestamp) < 1e10 ? parseInt(a.timestamp) * 1000 : parseInt(a.timestamp);
+        const bTime = parseInt(b.timestamp) < 1e10 ? parseInt(b.timestamp) * 1000 : parseInt(b.timestamp);
+        return aTime - bTime;
+      });
 
       // Check for mentions in new messages (only notify for unread messages)
       sortedMessages.forEach((message: ThreadMessage) => {
@@ -540,9 +579,11 @@ const ThreadMessagingView = React.forwardRef<{ getState: () => ThreadState }, Th
     console.log('📥 Messages received:', messages?.length || 0);
     
     if (messages && messages.length > 0) {
-      const sortedMessages = messages.sort((a: ThreadMessage, b: ThreadMessage) => 
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      );
+      const sortedMessages = messages.sort((a: ThreadMessage, b: ThreadMessage) => {
+        const aTime = parseInt(a.timestamp) < 1e10 ? parseInt(a.timestamp) * 1000 : parseInt(a.timestamp);
+        const bTime = parseInt(b.timestamp) < 1e10 ? parseInt(b.timestamp) * 1000 : parseInt(b.timestamp);
+        return aTime - bTime;
+      });
 
       // Check for mentions in new messages (only notify for unread messages)
       sortedMessages.forEach((message: ThreadMessage) => {
@@ -635,9 +676,11 @@ const ThreadMessagingView = React.forwardRef<{ getState: () => ThreadState }, Th
       };
       
       // Add the new message and sort by timestamp
-      const updatedMessages = [...existingMessages, messageWithReactions].sort((a: ThreadMessage, b: ThreadMessage) => 
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      );
+      const updatedMessages = [...existingMessages, messageWithReactions].sort((a: ThreadMessage, b: ThreadMessage) => {
+        const aTime = parseInt(a.timestamp) < 1e10 ? parseInt(a.timestamp) * 1000 : parseInt(a.timestamp);
+        const bTime = parseInt(b.timestamp) < 1e10 ? parseInt(b.timestamp) * 1000 : parseInt(b.timestamp);
+        return aTime - bTime;
+      });
       
       return {
         ...prev,
