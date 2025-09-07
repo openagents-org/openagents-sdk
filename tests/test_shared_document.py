@@ -47,12 +47,12 @@ from openagents.mods.work.shared_document.document_messages import (
     CursorPosition,
     DocumentComment
 )
-from openagents.models.messages import ModMessage
+from openagents.models.messages import Event, EventNames
 
 
-def wrap_message_for_mod(inner_message) -> ModMessage:
-    """Helper function to wrap inner messages in ModMessage for testing."""
-    return ModMessage(
+def wrap_message_for_mod(inner_message) -> Event:
+    """Helper function to wrap inner messages in Event for testing."""
+    return Event(
         mod_name="shared_document",
         content=inner_message.model_dump(),
         source_agent_id=inner_message.source_agent_id,
@@ -341,8 +341,8 @@ class TestSharedDocumentAgentAdapter:
         # Check that message was sent
         agent_adapter.network_interface.send_mod_message.assert_called_once()
         call_args = agent_adapter.network_interface.send_mod_message.call_args[0][0]
-        assert call_args.mod == "shared_document"
-        content = call_args.content
+        assert call_args.relevant_mod == "shared_document"
+        content = call_args.payload
         assert content["message_type"] == "create_document"
         assert content["document_name"] == "Test Document"
 
@@ -360,7 +360,7 @@ class TestSharedDocumentAgentAdapter:
         
         # Check message content
         call_args = agent_adapter.network_interface.send_mod_message.call_args[0][0]
-        content = call_args.content
+        content = call_args.payload
         assert content["message_type"] == "insert_lines"
         assert content["document_id"] == "doc-123"
         assert content["line_number"] == 5

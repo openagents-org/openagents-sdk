@@ -9,13 +9,13 @@ from typing import Dict, Any
 
 from openagents.agents.worker_agent import (
     WorkerAgent,
-    DirectMessageContext,
+    EventContext,
     ChannelMessageContext,
     ReplyMessageContext,
     ReactionContext,
     FileContext
 )
-from openagents.models.messages import DirectMessage, BroadcastMessage, ModMessage
+from openagents.models.messages import Event, EventNames
 
 
 class MockWorkerAgent(WorkerAgent):
@@ -28,9 +28,9 @@ class MockWorkerAgent(WorkerAgent):
         self.received_messages = []
         self.sent_messages = []
     
-    async def on_direct(self, msg: DirectMessageContext):
+    async def on_direct(self, msg: EventContext):
         self.received_messages.append(('direct', msg))
-        await self.send_direct(to=msg.sender_id, text=f"Got: {msg.text}")
+        await self.send_direct(to=msg.source_id, text=f"Got: {msg.text}")
     
     async def on_channel_post(self, msg: ChannelMessageContext):
         self.received_messages.append(('channel_post', msg))
@@ -126,10 +126,11 @@ class TestMessageHandling:
     async def test_direct_message_handling(self, worker_agent):
         """Test direct message handling."""
         # Create a direct message
-        message = DirectMessage(
-            sender_id="user1",
+        message = Event(
+            event_name="agent.direct_message.received",
+            source_id="user1",
             target_agent_id="test-agent",
-            content={"text": "Hello agent!"},
+            payload={"text": "Hello agent!"},
             text_representation="Hello agent!"
         )
         
@@ -140,8 +141,8 @@ class TestMessageHandling:
         assert len(worker_agent.received_messages) == 1
         msg_type, context = worker_agent.received_messages[0]
         assert msg_type == "direct"
-        assert isinstance(context, DirectMessageContext)
-        assert context.sender_id == "user1"
+        assert isinstance(context, EventContext)
+        assert context.source_id == "user1"
         assert context.text == "Hello agent!"
         assert context.target_agent_id == "test-agent"
     
@@ -149,10 +150,10 @@ class TestMessageHandling:
     async def test_broadcast_message_handling(self, worker_agent):
         """Test broadcast message handling."""
         # Create a broadcast message
-        message = BroadcastMessage(
-            sender_id="user1",
-            content={"text": "Hello everyone!"},
-            text_representation="Hello everyone!"
+        message = Event(
+            event_name="agent.broadcast_message.received",
+            source_id="user1",
+            payload={"text": "Hello everyone!"}
         )
         
         # Process the message
@@ -163,7 +164,7 @@ class TestMessageHandling:
         msg_type, context = worker_agent.received_messages[0]
         assert msg_type == "channel_post"
         assert isinstance(context, ChannelMessageContext)
-        assert context.sender_id == "user1"
+        assert context.source_id == "user1"
         assert context.text == "Hello everyone!"
         assert context.channel == "general"  # Default channel for broadcasts
     
@@ -171,10 +172,10 @@ class TestMessageHandling:
     async def test_broadcast_message_with_mention(self, worker_agent):
         """Test broadcast message with mention."""
         # Create a broadcast message that mentions the agent
-        message = BroadcastMessage(
-            sender_id="user1",
-            content={"text": "Hello @test-agent!"},
-            text_representation="Hello @test-agent!"
+        message = Event(
+            event_name="agent.broadcast_message.received",
+            source_id="user1",
+            payload={"text": "Hello @test-agent!"}
         )
         
         # Process the message
@@ -185,18 +186,18 @@ class TestMessageHandling:
         msg_type, context = worker_agent.received_messages[0]
         assert msg_type == "channel_mention"
         assert isinstance(context, ChannelMessageContext)
-        assert context.sender_id == "user1"
+        assert context.source_id == "user1"
         assert context.text == "Hello @test-agent!"
     
     @pytest.mark.asyncio
     async def test_ignore_own_messages(self, worker_agent):
         """Test that agent ignores its own messages."""
         # Create a message from the agent itself
-        message = DirectMessage(
-            sender_id="test-agent",  # Same as agent ID
+        message = Event(
+            event_name="agent.direct_message.received",
+            source_id="test-agent",  # Same as agent ID
             target_agent_id="other-agent",
-            content={"text": "Self message"},
-            text_representation="Self message"
+            payload={"text": "Self message"}
         )
         
         # Process the message
@@ -316,11 +317,11 @@ class TestCommandHandling:
         worker_agent.register_command("/test", test_handler)
         
         # Create a direct message with the command
-        context = DirectMessageContext(
+        context = EventContext(
             message_id="msg1",
-            sender_id="user1",
+            source_id="user1",
             timestamp=123456,
-            content={"text": "/test arg1 arg2"},
+            payload={"text": "/test arg1 arg2"},
             raw_message=Mock(),
             target_agent_id="test-agent"
         )
@@ -341,31 +342,31 @@ class TestContextClasses:
     def test_message_context_text_property(self):
         """Test text property extraction."""
         # Test with dict content
-        context = DirectMessageContext(
+        context = EventContext(
             message_id="msg1",
-            sender_id="user1",
+            source_id="user1",
             timestamp=123456,
-            content={"text": "Hello world"},
+            payload={"text": "Hello world"},
             raw_message=Mock(),
             target_agent_id="test-agent"
         )
         assert context.text == "Hello world"
         
         # Test with string content
-        context.content = "Direct string"
+        context.payload = "Direct string"
         assert context.text == "Direct string"
         
         # Test with other content
-        context.content = {"other": "data"}
+        context.payload = {"other": "data"}
         assert context.text == "{'other': 'data'}"
     
     def test_channel_message_context_mentions(self):
         """Test mention extraction in channel context."""
         context = ChannelMessageContext(
             message_id="msg1",
-            sender_id="user1",
+            source_id="user1",
             timestamp=123456,
-            content={"text": "Hello @user2 and @user3!"},
+            payload={"text": "Hello @user2 and @user3!"},
             raw_message=Mock(),
             channel="#general"
         )
@@ -381,7 +382,7 @@ class TestContextClasses:
         
         context = FileContext(
             message_id="msg1",
-            sender_id="user1",
+            source_id="user1",
             filename="test.txt",
             file_content=encoded_content,
             mime_type="text/plain",
@@ -390,7 +391,7 @@ class TestContextClasses:
             raw_message=Mock()
         )
         
-        assert context.content_bytes == original_content
+        assert context.payload_bytes == original_content
 
 
 class TestAsyncMethods:

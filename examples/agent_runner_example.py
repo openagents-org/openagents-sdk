@@ -8,7 +8,7 @@ import logging
 from typing import Dict
 
 from openagents.agents.runner import AgentRunner
-from openagents.models.messages import DirectMessage, BroadcastMessage
+from openagents.models.messages import Event, EventNames
 from openagents.models.message_thread import MessageThread
 from openagents.models.event import Event
 
@@ -25,30 +25,30 @@ class SimpleAgent(AgentRunner):
 
     async def react(self, message_threads: Dict[str, MessageThread], incoming_thread_id: str, incoming_message):
         """React to an incoming message."""
-        print(f"🎯 REACT CALLED! Processing message from {incoming_message.sender_id}")
+        print(f"🎯 REACT CALLED! Processing message from {incoming_message.source_id}")
         print(f"   Message type: {type(incoming_message).__name__}")
-        print(f"   Content: {incoming_message.content}")
+        print(f"   Content: {incoming_message.payload}")
         print(f"   Requires response: {incoming_message.requires_response}")
         
         self.message_count += 1
-        sender_id = incoming_message.sender_id
-        content = incoming_message.content
+        sender_id = incoming_message.source_id
+        content = incoming_message.payload
         text = content.get("text", str(content))
         
         logger.info(f"Agent {self.client.agent_id} received message from {sender_id}: {text}")
         logger.info(f"Message type: {type(incoming_message).__name__}, Protocol: {getattr(incoming_message, 'protocol', 'N/A')}")
         
         # Handle different message types
-        if isinstance(incoming_message, DirectMessage):
+        if isinstance(incoming_message, Event):
             logger.info(f"Processing direct message from {sender_id} to {incoming_message.target_agent_id}")
             print(f"📨 Sending echo response to {sender_id}")
             # Echo direct messages back
-            echo_message = DirectMessage(
-                sender_id=self.client.agent_id,
+            echo_message = Event(
+                event_name="agent.direct_message.sent",
+                source_id=self.client.agent_id,
                 target_agent_id=sender_id,
-                protocol="openagents.mods.communication.simple_messaging",
-                message_type="direct_message",
-                content={"text": f"Echo: {text}"},
+                relevant_mod="openagents.mods.communication.simple_messaging",
+                payload={"text": f"Echo: {text}"},
                 text_representation=f"Echo: {text}",
                 requires_response=False
             )
@@ -56,16 +56,16 @@ class SimpleAgent(AgentRunner):
             logger.info(f"Sent echo message back to {sender_id}")
             print(f"✅ Echo sent successfully!")
             
-        elif isinstance(incoming_message, BroadcastMessage):
+        elif isinstance(incoming_message, Event):
             logger.info(f"Processing broadcast message from {sender_id}")
             # Respond to greetings in broadcast messages
             if "hello" in text.lower() and sender_id != self.client.agent_id:
-                greeting_message = DirectMessage(
-                    sender_id=self.client.agent_id,
+                greeting_message = Event(
+                    event_name="agent.direct_message.sent",
+                    source_id=self.client.agent_id,
                     target_agent_id=sender_id,
-                    protocol="openagents.mods.communication.simple_messaging",
-                    message_type="direct_message",
-                    content={"text": f"Hello {sender_id}! Nice to meet you!"},
+                    relevant_mod="openagents.mods.communication.simple_messaging",
+                    payload={"text": f"Hello {sender_id}! Nice to meet you!"},
                     text_representation=f"Hello {sender_id}! Nice to meet you!",
                     requires_response=False
                 )
@@ -82,11 +82,11 @@ class SimpleAgent(AgentRunner):
         print(f"📋 Loaded protocols: {list(self.client.mod_adapters.keys())}")
         
         # Send a greeting broadcast message
-        greeting_message = BroadcastMessage(
-            sender_id=self.client.agent_id,
-            protocol="openagents.mods.communication.simple_messaging",
-            message_type="broadcast_message",
-            content={"text": f"Hello! I'm {self.client.agent_id}, ready to help!"},
+        greeting_message = Event(
+            event_name="agent.broadcast_message.sent",
+            source_id=self.client.agent_id,
+            relevant_mod="openagents.mods.communication.simple_messaging",
+            payload={"text": f"Hello! I'm {self.client.agent_id}, ready to help!"},
             text_representation=f"Hello! I'm {self.client.agent_id}, ready to help!",
             requires_response=False
         )
@@ -97,11 +97,11 @@ class SimpleAgent(AgentRunner):
         logger.info(f"Agent {self.client.agent_id} is shutting down...")
         
         # Send goodbye message
-        goodbye_message = BroadcastMessage(
-            sender_id=self.client.agent_id,
-            protocol="openagents.mods.communication.simple_messaging",
-            message_type="broadcast_message",
-            content={"text": f"Goodbye from {self.client.agent_id}!"},
+        goodbye_message = Event(
+            event_name="agent.broadcast_message.sent",
+            source_id=self.client.agent_id,
+            relevant_mod="openagents.mods.communication.simple_messaging",
+            payload={"text": f"Goodbye from {self.client.agent_id}!"},
             text_representation=f"Goodbye from {self.client.agent_id}!",
             requires_response=False
         )

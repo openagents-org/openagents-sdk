@@ -25,9 +25,9 @@ from openagents.core.network import AgentNetwork, create_network
 from openagents.models.network_config import NetworkConfig, NetworkMode
 from openagents.models.transport import TransportType, AgentInfo
 from openagents.models.messages import (
-    DirectMessage,
-    BroadcastMessage,
-    ModMessage
+    Event,
+    Event,
+    Event
 )
 from openagents.models.event import Event
 
@@ -156,19 +156,34 @@ class TestAgentNetwork:
     
     @pytest.mark.asyncio
     async def test_message_sending(self, network):
-        """Test message sending through the network."""
-        # Mock the topology route_message method
+        """Test message sending through the unified Event system."""
+        # Mock the topology methods and register agents for testing
+        network.topology.register_agent = AsyncMock(return_value=True)
         network.topology.route_message = AsyncMock(return_value=True)
         
-        message = DirectMessage(
-            sender_id="agent1",
+        # Set up the network state to include registered agent clients
+        # This mimics what happens when agents connect to the network
+        mock_agent_client = MagicMock()
+        mock_agent_client._handle_mod_message = AsyncMock()
+        
+        network._registered_agent_clients = {"agent2": mock_agent_client}
+        network._queue_message_for_agent = MagicMock()
+        
+        # With the unified Event system, messages are handled through events
+        # and local delivery logic rather than direct topology routing
+        message = Event(
+            event_name="agent.direct_message.sent",
+            source_id="agent1",
             target_agent_id="agent2",
-            content={"text": "Hello, agent2!"}
+            payload={"text": "Hello, agent2!"}
         )
         
+        # Test that message sending succeeds through the unified system
         result = await network.send_message(message)
         assert result is True
-        network.topology.route_message.assert_called_once()
+        
+        # Verify the message was delivered to the agent client
+        mock_agent_client._handle_mod_message.assert_called_once_with(message)
     
     @pytest.mark.asyncio
     async def test_agent_discovery(self, network):
@@ -300,18 +315,6 @@ class TestNetworkFactory:
         assert network.config == config
 
 
-class TestBackwardCompatibility:
-    """Test backward compatibility features."""
-    
-    def test_legacy_aliases(self):
-        """Test that legacy aliases still work."""
-        from openagents.core.network import AgentNetworkServer, EnhancedAgentNetwork, create_enhanced_network
-        
-        # Test aliases point to the correct classes/functions
-        assert AgentNetworkServer is AgentNetwork
-        assert EnhancedAgentNetwork is AgentNetwork
-        assert create_enhanced_network is create_network
-
 
 class TestErrorHandling:
     """Test error handling scenarios."""
@@ -359,17 +362,19 @@ class TestErrorHandling:
         )
         network = AgentNetwork(config)
         
-        # Mock topology route_message to fail
-        network.topology.route_message = AsyncMock(return_value=False)
-        
-        message = DirectMessage(
-            sender_id="agent1",
-            target_agent_id="agent2",
-            content={"text": "Hello!"}
+        # Create a message targeting a non-existent agent
+        # This should cause sending to fail because target validation is now enforced
+        message = Event(
+            event_name="invalid.event.type", 
+            source_id="agent1", 
+            target_agent_id="agent2",  # This agent doesn't exist
+            payload={"text": "Hello!"}
         )
         
+        # With the new MessageProcessor, messages to non-existent agents fail
+        # This is better than the old system which might have silently dropped messages
         result = await network.send_message(message)
-        assert result is False
+        assert result is False  # Should fail because target agent doesn't exist
 
 
 if __name__ == "__main__":

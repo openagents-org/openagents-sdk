@@ -16,7 +16,7 @@ from typing import Dict, Any, List, Optional, Set
 from datetime import datetime
 
 from openagents.core.base_mod import BaseMod
-from openagents.models.messages import ModMessage
+from openagents.models.messages import Event, EventNames
 from openagents.models.event import Event
 from openagents.workspace.project import Project
 from openagents.workspace.project_messages import (
@@ -128,7 +128,7 @@ class DefaultProjectNetworkMod(BaseMod):
         
         logger.info(f"Unregistered agent {agent_id} from Project mod")
     
-    async def process_mod_message(self, message: ModMessage) -> None:
+    async def process_system_message(self, message: Event) -> None:
         """Process a mod message.
         
         Args:
@@ -136,38 +136,68 @@ class DefaultProjectNetworkMod(BaseMod):
         """
         try:
             content = message.content
-            message_type = content.get("message_type")
+            event_name = getattr(message, 'event_name', '')
             
-            logger.info(f"🔧 PROJECT MOD: Received message type: {message_type}")
+            # Try to determine action from event_name first, fallback to message_type in payload
+            message_type = content.get("message_type") if isinstance(content, dict) else None
+            
+            logger.info(f"🔧 PROJECT MOD: Received event: {event_name}")
             logger.info(f"🔧 PROJECT MOD: Message content keys: {list(content.keys())}")
             logger.info(f"🔧 PROJECT MOD: Sender: {message.sender_id}")
             
-            if message_type == "project_creation":
+            # Route based on event_name patterns first, then fallback to message_type
+            if event_name == "project.create" or event_name == "project.creation.request" or message_type == "project_creation":
                 logger.info(f"🔧 PROJECT MOD: Processing project creation")
+                # Extract request_id from content before creating the message
+                request_id = content.get('request_id', message.message_id)
+                logger.info(f"🔧 PROJECT MOD: Extracted request_id: {request_id}")
                 inner_message = ProjectCreationMessage(**content)
+                # Pass the original event_name for action determination
+                inner_message.event_name = event_name
+                # Store request_id in the message for response correlation
+                inner_message.request_id = request_id
                 await self._process_project_creation(inner_message)
-            elif message_type == "project_status":
+            elif event_name == "project.status" or event_name == "project.status.request" or message_type == "project_status":
                 logger.info(f"🔧 PROJECT MOD: Processing project status")
+                # Extract request_id from content before creating the message
+                request_id = content.get('request_id', message.message_id)
+                logger.info(f"🔧 PROJECT MOD: Extracted request_id: {request_id}")
                 inner_message = ProjectStatusMessage(**content)
+                # Pass the original event_name for action determination
+                inner_message.event_name = event_name
+                # Store request_id in the message for response correlation
+                inner_message.request_id = request_id
                 await self._process_project_status(inner_message)
-            elif message_type == "project_notification":
+            elif event_name == "project.notification" or event_name == "project.notify" or message_type == "project_notification":
                 logger.info(f"🔧 PROJECT MOD: Processing project notification")
                 inner_message = ProjectNotificationMessage(**content)
+                # Pass the original event_name for action determination
+                inner_message.event_name = event_name
                 await self._process_project_notification(inner_message)
-            elif message_type == "project_channel":
+            elif event_name == "project.channel" or event_name == "project.channel.request" or message_type == "project_channel":
                 logger.info(f"🔧 PROJECT MOD: Processing project channel")
                 inner_message = ProjectChannelMessage(**content)
+                # Pass the original event_name for action determination
+                inner_message.event_name = event_name
                 await self._process_project_channel(inner_message)
-            elif message_type == "project_list":
+            elif event_name == "project.list" or event_name == "project.list.request" or message_type == "project_list":
                 logger.info(f"🔧 PROJECT MOD: Processing project list")
+                # Extract request_id from content before creating the message
+                request_id = content.get('request_id', message.message_id)
+                logger.info(f"🔧 PROJECT MOD: Extracted request_id: {request_id}")
                 inner_message = ProjectListMessage(**content)
+                # Pass the original event_name for action determination
+                inner_message.event_name = event_name
+                # Store request_id in the message for response correlation
+                inner_message.request_id = request_id
                 await self._process_project_list(inner_message)
             else:
-                logger.warning(f"Unknown project message type: {message_type}")
+                logger.warning(f"Unknown project event: {event_name} / message_type: {message_type}")
         except Exception as e:
             logger.error(f"Error processing project mod message: {e}")
             import traceback
             traceback.print_exc()
+        return message
     
     async def _process_project_creation(self, message: ProjectCreationMessage) -> None:
         """Process a project creation request.
@@ -235,9 +265,13 @@ class DefaultProjectNetworkMod(BaseMod):
         )
         
         # Send success response
+        # Use request_id from message for response correlation
+        request_id = getattr(message, 'request_id', message.message_id)
+        logger.info(f"🔧 PROJECT MOD: Sending response with request_id: {request_id}")
+        
         await self._send_project_response(
             message.sender_id,
-            message.message_id,
+            request_id,
             "project_creation_response",
             {
                 "success": True,
@@ -257,12 +291,28 @@ class DefaultProjectNetworkMod(BaseMod):
             message: The project status message
         """
         project_id = message.project_id
-        action = message.action
+        
+        # Determine action from event_name if possible, fallback to message.action
+        action = getattr(message, 'action', 'get_status')
+        
+        # Use event_name to determine action if available
+        if hasattr(message, 'event_name') and message.event_name:
+            if "start" in message.event_name:
+                action = "start"
+            elif "stop" in message.event_name:
+                action = "stop"
+            elif "pause" in message.event_name:
+                action = "pause"
+            elif "resume" in message.event_name:
+                action = "resume"
+            elif "status" in message.event_name or "get" in message.event_name:
+                action = "get_status"
         
         if project_id not in self.projects:
+            request_id = getattr(message, 'request_id', message.message_id)
             await self._send_error_response(
                 message.sender_id,
-                message.message_id,
+                request_id,
                 f"Project {project_id} not found"
             )
             return
@@ -333,9 +383,11 @@ class DefaultProjectNetworkMod(BaseMod):
             logger.info(f"Getting status for project {project_id}")
         
         # Send status response
+        request_id = getattr(message, 'request_id', message.message_id)
+        logger.info(f"🔧 PROJECT MOD: Sending status response with request_id: {request_id}")
         await self._send_project_response(
             message.sender_id,
-            message.message_id,
+            request_id,
             "project_status_response",
             {
                 "success": True,
@@ -447,7 +499,16 @@ class DefaultProjectNetworkMod(BaseMod):
             message: The project channel message
         """
         project_id = message.project_id
-        action = message.action
+        
+        # Determine action from event_name if possible, fallback to message.action
+        action = getattr(message, 'action', 'join')
+        
+        # Use event_name to determine action if available
+        if hasattr(message, 'event_name') and message.event_name:
+            if "join" in message.event_name:
+                action = "join"
+            elif "leave" in message.event_name:
+                action = "leave"
         
         if project_id not in self.projects:
             await self._send_error_response(
@@ -545,9 +606,11 @@ class DefaultProjectNetworkMod(BaseMod):
                 })
         
         # Send response
+        request_id = getattr(message, 'request_id', message.message_id)
+        logger.info(f"🔧 PROJECT MOD: Sending list response with request_id: {request_id}")
         await self._send_project_response(
             message.sender_id,
-            message.message_id,
+            request_id,
             "project_list_response",
             {
                 "success": True,
@@ -593,14 +656,12 @@ class DefaultProjectNetworkMod(BaseMod):
                 
                 # Create a transport message for the thread messaging mod
                 transport_message = Message(
-                    message_id=f"project-goal-{project.project_id}",
-                    sender_id=project.creator_agent_id,
+                    source_id=project.creator_agent_id,
                     target_id="",  # Broadcast to mod
                     message_type="mod_message",
                     payload={
                         "mod": "openagents.mods.communication.thread_messaging",
                         "action": "channel_message",
-                        "direction": "outbound",
                         "relevant_agent_id": project.creator_agent_id,
                         "message_type": "channel_message",
                         "sender_id": project.creator_agent_id,
@@ -608,6 +669,7 @@ class DefaultProjectNetworkMod(BaseMod):
                         "content": {"text": goal_message},
                         "system_message": True  # Mark as system message
                     },
+                    message_id=f"project-goal-{project.project_id}",
                     timestamp=int(time.time())
                 )
                 
@@ -628,19 +690,19 @@ class DefaultProjectNetworkMod(BaseMod):
             notification_type: Type of notification
         """
         for agent_id in project.service_agents:
-            notification = ModMessage(
-                sender_id=self.network.network_id,
+            notification = Event(
+                event_name="project.notification",
+                source_id=self.network.network_id,
                 relevant_mod="openagents.mods.project.default",
-                content={
+                target_agent_id=agent_id,
+                payload={
                     "action": "project_notification",
                     "notification_type": notification_type,
                     "project_id": project.project_id,
                     "project_name": project.name,
                     "project_goal": project.goal,
                     "channel_name": project.channel_name
-                },
-                direction="outbound",
-                relevant_agent_id=agent_id
+                }
             )
             
             try:
@@ -658,16 +720,16 @@ class DefaultProjectNetworkMod(BaseMod):
         """
         # Forward to project creator
         if project.creator_agent_id and project.creator_agent_id != message.sender_id:
-            notification = ModMessage(
-                sender_id=self.network.network_id,
+            notification = Event(
+                event_name="project.message_received",
+                source_id=self.network.network_id,
                 relevant_mod="openagents.mods.project.default",
-                content={
+                target_agent_id=project.creator_agent_id,
+                payload={
                     "action": "project_message_received",
                     "project_id": project.project_id,
                     "original_message": message.model_dump()
-                },
-                direction="outbound",
-                relevant_agent_id=project.creator_agent_id
+                }
             )
             
             try:
@@ -722,20 +784,21 @@ class DefaultProjectNetworkMod(BaseMod):
             action: Response action type
             content: Response content
         """
-        from openagents.models.messages import ModMessage
+        from openagents.models.messages import Event, EventNames
         
-        # Send response as ModMessage to ensure proper routing
+        # Send response as Event to ensure proper routing
         response_content = {
             "action": action,
             "request_id": request_id,
             **content
         }
         
-        response = ModMessage(
-            sender_id=self.network.network_id,
+        response = Event(
+            event_name="project.response",
+            source_id=self.network.network_id,
             relevant_mod="openagents.mods.project.default",
-            relevant_agent_id=agent_id,
-            content=response_content
+            target_agent_id=agent_id,
+            payload=response_content
         )
         
         try:

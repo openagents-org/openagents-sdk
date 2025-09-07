@@ -31,7 +31,7 @@ class Event:
     """
     Unified event structure for all network interactions.
     
-    This replaces DirectMessage, BroadcastMessage, ModMessage, and workspace events
+    This replaces Event, Event, Event, and workspace events
     with a single, flexible event type that supports all use cases.
     """
     
@@ -63,25 +63,10 @@ class Event:
     allowed_agents: Optional[Set[str]] = None  # Specific agents allowed (if visibility=RESTRICTED)
     
     def __init__(self, event_name: str, source_id: str = "", **kwargs):
-        """Initialize Event with backward compatibility for old field names."""
-        # Handle backward compatibility for common old field names
-        if 'message_id' in kwargs:
-            kwargs['event_id'] = kwargs.pop('message_id')
-        if 'sender_id' in kwargs:
-            source_id = kwargs.pop('sender_id')
-        if 'source_agent_id' in kwargs:
-            source_id = kwargs.pop('source_agent_id')
-        if 'content' in kwargs:
-            kwargs['payload'] = kwargs.pop('content')
-        
+        """Initialize Event."""
         # Ensure source_id is provided
         if not source_id:
-            raise ValueError("Event must have a source_id (or sender_id/source_agent_id for backward compatibility)")
-        
-        # Remove fields that don't belong to Event but might be passed by tests
-        ignored_fields = ['message_type', 'mod', 'direction', 'protocol', 'document_id', 'line_number', 'filename', 'file_content']
-        for field in ignored_fields:
-            kwargs.pop(field, None)
+            raise ValueError("Event must have a source_id")
         
         # Set the required fields
         self.event_name = event_name
@@ -207,6 +192,37 @@ class Event:
         
         return False
     
+    # Essential properties required by core classes (network.py, connector.py)
+    @property 
+    def message_id(self) -> str:
+        return self.event_id
+    
+    @property
+    def message_type(self) -> Optional[str]:
+        if isinstance(self.payload, dict):
+            return self.payload.get('message_type')
+        return None
+        
+    @property
+    def sender_id(self) -> str:
+        return self.source_id
+        
+    @property
+    def content(self) -> Dict[str, Any]:
+        return self.payload
+        
+    @property
+    def target_id(self) -> Optional[str]:
+        return self.target_agent_id
+    
+    @property  
+    def relevant_agent_id(self) -> Optional[str]:
+        return self.target_agent_id
+        
+    @relevant_agent_id.setter
+    def relevant_agent_id(self, value: Optional[str]):
+        self.target_agent_id = value
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert event to dictionary for serialization."""
         return {
@@ -250,6 +266,71 @@ class Event:
             visibility=EventVisibility(data.get("visibility", EventVisibility.NETWORK.value)),
             allowed_agents=allowed_agents
         )
+    
+    @property
+    def timestamp_float(self) -> float:
+        """Get timestamp as float."""
+        return float(self.timestamp) / 1000.0
+    
+    def model_dump(self) -> Dict[str, Any]:
+        """Model dump for serialization."""
+        return {
+            "event_id": self.event_id,
+            "event_name": self.event_name,
+            "timestamp": self.timestamp,
+            "source_id": self.source_id,
+            "source_type": self.source_type,
+            "target_agent_id": self.target_agent_id,
+            "target_channel": self.target_channel,
+            "relevant_mod": self.relevant_mod,
+            "requires_response": self.requires_response,
+            "response_to": self.response_to,
+            "payload": self.payload,
+            "metadata": self.metadata,
+            "text_representation": self.text_representation,
+            "visibility": self.visibility.value if hasattr(self.visibility, 'value') else self.visibility,
+            "allowed_agents": list(self.allowed_agents) if self.allowed_agents else None
+        }
+    
+    
+    def is_direct_message(self) -> bool:
+        """Check if this event is a direct message.
+        
+        Returns:
+            bool: True if event_name starts with "agent.direct_message."
+        """
+        return self.event_name.startswith("agent.direct_message.")
+    
+    def is_broadcast_message(self) -> bool:
+        """Check if this event is a broadcast message.
+        
+        Returns:
+            bool: True if event_name starts with "agent.broadcast_message."
+        """
+        return self.event_name.startswith("agent.broadcast_message.")
+    
+    def is_system_message(self) -> bool:
+        """Check if this event is a system message.
+        
+        System messages are any events that are not direct or broadcast messages.
+        
+        Returns:
+            bool: True if this is a system message
+        """
+        return not (self.is_direct_message() or self.is_broadcast_message())
+    
+    def get_message_type(self) -> str:
+        """Get the message type classification for this event.
+        
+        Returns:
+            str: "direct_message", "broadcast_message", or "system_message"
+        """
+        if self.is_direct_message():
+            return "direct_message"
+        elif self.is_broadcast_message():
+            return "broadcast_message"
+        else:
+            return "system_message"
 
 
 @dataclass
