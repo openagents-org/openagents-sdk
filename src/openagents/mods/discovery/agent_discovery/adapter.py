@@ -8,7 +8,7 @@ and for other agents to discover agents with specific capabilities.
 from typing import Dict, Any, Optional, List
 import logging
 from openagents.core.base_mod_adapter import BaseModAdapter
-from openagents.models.messages import ModMessage
+from openagents.models.messages import Event, EventNames
 from openagents.models.tool import AgentAdapterTool
 from openagents.utils.message_util import get_mod_message_thread_id
 import copy
@@ -109,12 +109,12 @@ class AgentDiscoveryAdapter(BaseModAdapter):
         logger.info(f"Agent {self.agent_id} discovering agents with query: {query}")
         
         # Create discovery request message
-        message = ModMessage(
-            direction="inbound",
-            sender_id=self.agent_id,
-            mod=self.mod_name,
-            relevant_agent_id=self.agent_id,
-            content={
+        message = Event(
+            event_name="discovery.request",
+            source_id=self.agent_id,
+            relevant_mod=self.mod_name,
+            target_agent_id=self.agent_id,
+            payload={
                 "action": DISCOVER_AGENTS,
                 "query": query
             }
@@ -137,14 +137,14 @@ class AgentDiscoveryAdapter(BaseModAdapter):
         logger.warning(f"Agent {self.agent_id} received no discovery results")
         return []
     
-    async def process_incoming_mod_message(self, message: ModMessage) -> Optional[ModMessage]:
+    async def process_incoming_mod_message(self, message: Event) -> Optional[Event]:
         """Process an incoming protocol message.
         
         Args:
             message: The message to handle
         
         Returns:
-            Optional[ModMessage]: The processed message, or None for stopping the message from being processed further by other adapters
+            Optional[Event]: The processed message, or None for stopping the message from being processed further by other adapters
         """
         if message.mod != self.mod_name:
             return message
@@ -172,12 +172,12 @@ class AgentDiscoveryAdapter(BaseModAdapter):
         capabilities_copy = copy.deepcopy(self._capabilities)
         
         # Create announcement message with explicit direction=inbound
-        message = ModMessage(
-            direction="inbound",
-            sender_id=self.agent_id,
-            mod=self.mod_name,
-            relevant_agent_id=self.agent_id,
-            content={
+        message = Event(
+            event_name="discovery.announce",
+            source_id=self.agent_id,
+            relevant_mod=self.mod_name,
+            target_agent_id=self.agent_id,
+            payload={
                 "action": ANNOUNCE_CAPABILITIES,
                 "capabilities": capabilities_copy
             }

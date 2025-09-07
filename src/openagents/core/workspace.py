@@ -15,7 +15,7 @@ from datetime import datetime
 from openagents.core.client import AgentClient
 
 # Removed WorkspaceEvents import - events are now handled at network level
-from openagents.models.messages import ModMessage
+from openagents.models.messages import Event, EventNames
 from openagents.config.globals import THREAD_MESSAGING_MOD_NAME, DEFAULT_CHANNELS
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ class AgentConnection:
             
         try:
             # Import here to avoid circular imports
-            from openagents.models.messages import DirectMessage
+            from openagents.models.messages import Event
             
             # Prepare message content
             if isinstance(content, str):
@@ -65,10 +65,11 @@ class AgentConnection:
                 message_content = content.copy()
             
             # Create direct message
-            direct_message = DirectMessage(
-                sender_id=self._client.agent_id,
+            direct_message = Event(
+                event_name="agent.direct_message.sent",
+                source_id=self._client.agent_id,
                 target_agent_id=self.agent_id,
-                content=message_content,
+                payload=message_content,
                 **kwargs
             )
             
@@ -126,7 +127,7 @@ class AgentConnection:
             def message_condition(msg):
                 """Check if this is a direct message from our target agent."""
                 try:
-                    return msg.sender_id == self.agent_id
+                    return msg.source_id == self.agent_id
                 except (AttributeError, KeyError):
                     return False
             
@@ -137,7 +138,7 @@ class AgentConnection:
             )
             
             if response:
-                return response.content
+                return response.payload
             return None
             
         except Exception as e:
@@ -226,12 +227,12 @@ class ChannelConnection:
                 message_content = content.copy()
             
             # Create mod message for thread messaging
-            mod_message = ModMessage(
-                sender_id=self._client.agent_id,
+            mod_message = Event(
+                event_name="thread.channel_message",
+                source_id=self._client.agent_id,
                 relevant_mod=THREAD_MESSAGING_MOD_NAME,
-                relevant_agent_id=self._client.agent_id,
-                direction="outbound",
-                content={
+                target_agent_id=self._client.agent_id,
+                payload={
                     "action": "channel_message",
                     "message_type": "channel_message",
                     "sender_id": self._client.agent_id,
@@ -276,11 +277,12 @@ class ChannelConnection:
                 message_content = content.copy()
             
             # Create mod message for thread messaging with mention
-            mod_message = ModMessage(
-                sender_id=self._client.agent_id,
+            mod_message = Event(
+                event_name="thread.channel_message",
+                source_id=self._client.agent_id,
                 relevant_mod=THREAD_MESSAGING_MOD_NAME,
-                relevant_agent_id=self._client.agent_id,
-                content={
+                target_agent_id=self._client.agent_id,
+                payload={
                     "message_type": "channel_message",
                     "sender_id": self._client.agent_id,
                     "channel": self.name,
@@ -322,11 +324,12 @@ class ChannelConnection:
             request_id = str(uuid.uuid4())
             
             # Create mod message to retrieve channel messages
-            mod_message = ModMessage(
-                sender_id=self._client.agent_id,
+            mod_message = Event(
+                event_name="thread.message_retrieval",
+                source_id=self._client.agent_id,
                 relevant_mod=THREAD_MESSAGING_MOD_NAME,
-                relevant_agent_id=self._client.agent_id,
-                content={
+                target_agent_id=self._client.agent_id,
+                payload={
                     "message_type": "message_retrieval",
                     "sender_id": self._client.agent_id,
                     "action": "retrieve_channel_messages",
@@ -341,7 +344,7 @@ class ChannelConnection:
             def response_condition(msg):
                 """Check if this is the response to our request."""
                 try:
-                    content = msg.content
+                    content = msg.payload
                     return (
                         content.get("action") == "retrieve_channel_messages_response" and
                         content.get("request_id") == request_id and
@@ -376,7 +379,7 @@ class ChannelConnection:
                 return []
             
             # Extract messages from response
-            response_content = response.content
+            response_content = response.payload
             messages = response_content.get("messages", [])
             
             logger.debug(f"Retrieved {len(messages)} messages from channel {self.name}")
@@ -413,11 +416,12 @@ class ChannelConnection:
                 reply_content = content.copy()
             
             # Create mod message for thread messaging
-            mod_message = ModMessage(
-                sender_id=self._client.agent_id,
+            mod_message = Event(
+                event_name="thread.reply_message",
+                source_id=self._client.agent_id,
                 relevant_mod=THREAD_MESSAGING_MOD_NAME,
-                relevant_agent_id=self._client.agent_id,
-                content={
+                target_agent_id=self._client.agent_id,
+                payload={
                     "message_type": "reply_message",
                     "sender_id": self._client.agent_id,
                     "channel": self.name,
@@ -455,11 +459,12 @@ class ChannelConnection:
             filename = file_path.split("/")[-1] if "/" in file_path else file_path
             file_size = len(file_content)
             
-            mod_message = ModMessage(
-                sender_id=self._client.agent_id,
+            mod_message = Event(
+                event_name="thread.file_upload",
+                source_id=self._client.agent_id,
                 relevant_mod=THREAD_MESSAGING_MOD_NAME,
-                relevant_agent_id=self._client.agent_id,
-                content={
+                target_agent_id=self._client.agent_id,
+                payload={
                     "message_type": "file_upload",
                     "sender_id": self._client.agent_id,
                     "channel": self.name,
@@ -500,11 +505,12 @@ class ChannelConnection:
             
         try:
             # Create mod message for reaction
-            mod_message = ModMessage(
-                sender_id=self._client.agent_id,
+            mod_message = Event(
+                event_name="thread.reaction",
+                source_id=self._client.agent_id,
                 relevant_mod=THREAD_MESSAGING_MOD_NAME,
-                relevant_agent_id=self._client.agent_id,
-                content={
+                target_agent_id=self._client.agent_id,
+                payload={
                     "message_type": "reaction",
                     "sender_id": self._client.agent_id,
                     "target_message_id": message_id,
@@ -539,7 +545,7 @@ class ChannelConnection:
             def reply_condition(msg):
                 """Check if this is a reply message in our channel."""
                 try:
-                    content = msg.content
+                    content = msg.payload
                     # Look for reply messages from thread messaging mod
                     if content.get("action") == "channel_message_notification":
                         msg_data = content.get("message", {})
@@ -564,7 +570,7 @@ class ChannelConnection:
             )
             
             if response:
-                return response.content.get("message", {})
+                return response.payload.get("message", {})
             return None
             
         except Exception as e:
@@ -590,7 +596,7 @@ class ChannelConnection:
             def post_condition(msg):
                 """Check if this is a new post (not reply) in our channel."""
                 try:
-                    content = msg.content
+                    content = msg.payload
                     # Look for channel messages from thread messaging mod
                     if content.get("action") == "channel_message_notification":
                         msg_data = content.get("message", {})
@@ -618,7 +624,7 @@ class ChannelConnection:
             )
             
             if response:
-                return response.content.get("message", {})
+                return response.payload.get("message", {})
             return None
             
         except Exception as e:
@@ -644,7 +650,7 @@ class ChannelConnection:
             def reaction_condition(msg):
                 """Check if this is a reaction to our message."""
                 try:
-                    content = msg.content
+                    content = msg.payload
                     # Look for reaction notifications from thread messaging mod
                     if content.get("action") == "reaction_notification":
                         return content.get("target_message_id") == message_id
@@ -659,7 +665,7 @@ class ChannelConnection:
             )
             
             if response:
-                return response.content
+                return response.payload
             return None
             
         except Exception as e:
@@ -733,7 +739,7 @@ class Workspace:
         """Send a mod message either directly to network or through connector.
         
         Args:
-            mod_message: ModMessage to send
+            mod_message: Event to send
             
         Returns:
             bool: True if message was sent successfully
@@ -741,22 +747,21 @@ class Workspace:
         # Send the message through the network's mod system if available, otherwise through connector
         if self._network and hasattr(self._network, '_handle_mod_message'):
             logger.info(f"🔧 WORKSPACE: Sending message directly to network mod system")
-            # Convert ModMessage to transport Message format for network processing
+            # Convert Event to transport Message format for network processing
             from openagents.core.transport import Message
             # Create payload with mod-specific fields and content
             payload = {
-                "mod": mod_message.mod,
-                "action": mod_message.content.get('action') if mod_message.content else None,
-                "direction": mod_message.direction,
-                "relevant_agent_id": mod_message.relevant_agent_id,
-                **mod_message.content  # Merge content at top level
+                "mod": mod_message.relevant_mod,
+                "action": mod_message.payload.get('action') if mod_message.payload else None,
+                "relevant_agent_id": mod_message.target_agent_id,
+                **mod_message.payload  # Merge payload at top level
             }
             transport_message = Message(
-                message_id=mod_message.message_id,
-                sender_id=mod_message.sender_id,
+                source_id=mod_message.source_id,
                 target_id="",
                 message_type="mod_message",
                 payload=payload,
+                message_id=mod_message.event_id,
                 timestamp=mod_message.timestamp
             )
             await self._network._handle_mod_message(transport_message)
@@ -813,28 +818,28 @@ class Workspace:
         """Handle project mod responses.
         
         Args:
-            message: The message to handle (ModMessage or DirectMessage)
+            message: The message to handle (Event or Event)
         """
         try:
             logger.info(f"🔧 WORKSPACE: _handle_project_responses called with message type: {type(message).__name__}")
             
-            # Handle both ModMessage and DirectMessage responses
+            # Handle both Event and Event responses
             content = None
             is_project_response = False
             
             # Import here to avoid circular imports
-            from openagents.models.messages import ModMessage, DirectMessage
+            from openagents.models.messages import Event, EventNames
             
-            if isinstance(message, ModMessage) and message.mod == "openagents.mods.project.default":
-                # ModMessage from project mod
-                logger.info(f"🔧 WORKSPACE: Received ModMessage from project mod")
-                content = message.content
+            if isinstance(message, Event) and message.relevant_mod == "openagents.mods.project.default":
+                # Event from project mod
+                logger.info(f"🔧 WORKSPACE: Received Event from project mod")
+                content = message.payload
                 is_project_response = True
-            elif isinstance(message, DirectMessage) and isinstance(message.content, dict):
-                # DirectMessage from project mod
-                if message.content.get("mod") == "openagents.mods.project.default":
-                    logger.info(f"🔧 WORKSPACE: Received DirectMessage from project mod")
-                    content = message.content
+            elif isinstance(message, Event) and isinstance(message.payload, dict):
+                # Event from project mod
+                if message.payload.get("mod") == "openagents.mods.project.default":
+                    logger.info(f"🔧 WORKSPACE: Received Event from project mod")
+                    content = message.payload
                     is_project_response = True
             
             if not is_project_response or not content:
@@ -843,23 +848,36 @@ class Workspace:
             action = content.get("action")
             request_id = content.get("request_id")
             
+            logger.info(f"🔧 WORKSPACE: Processing response - action={action}, request_id={request_id}")
+            logger.info(f"🔧 WORKSPACE: Response content keys: {list(content.keys()) if isinstance(content, dict) else 'Not dict'}")
+            
             if not request_id:
+                logger.warning(f"🔧 WORKSPACE: No request_id in response content: {content}")
                 return
             
             # Find matching response future
             response_key = None
+            logger.info(f"🔧 WORKSPACE: Looking for response key containing: {request_id}")
+            logger.info(f"🔧 WORKSPACE: Available pending responses: {list(self._pending_responses.keys())}")
+            
             for key in self._pending_responses.keys():
                 if request_id in key:
                     response_key = key
                     break
             
             if response_key and response_key in self._pending_responses:
+                logger.info(f"🔧 WORKSPACE: Found matching response key: {response_key}")
                 future = self._pending_responses[response_key]
                 if not future.done():
+                    logger.info(f"🔧 WORKSPACE: Setting result for future")
                     future.set_result(content)
+                else:
+                    logger.warning(f"🔧 WORKSPACE: Future already done")
                 
                 # Clean up
                 del self._pending_responses[response_key]
+            else:
+                logger.warning(f"🔧 WORKSPACE: No matching response key found for {request_id}")
         except Exception as e:
             logger.error(f"Error handling project response: {e}")
     
@@ -926,11 +944,12 @@ class Workspace:
             request_id = str(uuid.uuid4())
             
             # Create mod message to list channels
-            mod_message = ModMessage(
-                sender_id=self._client.agent_id,
+            mod_message = Event(
+                event_name="thread.channel_info",
+                source_id=self._client.agent_id,
                 relevant_mod=THREAD_MESSAGING_MOD_NAME,
-                relevant_agent_id=self._client.agent_id,
-                content={
+                target_agent_id=self._client.agent_id,
+                payload={
                     "message_type": "channel_info",
                     "sender_id": self._client.agent_id,
                     "action": "list_channels",
@@ -942,7 +961,7 @@ class Workspace:
             def response_condition(msg):
                 """Check if this is the response to our request."""
                 try:
-                    content = msg.content
+                    content = msg.payload
                     return (
                         content.get("action") == "list_channels_response" and
                         content.get("request_id") == request_id
@@ -978,7 +997,7 @@ class Workspace:
                 return list(self._channels_cache.keys()) if self._channels_cache else DEFAULT_CHANNELS
             
             # Extract channels from response
-            response_content = response.content
+            response_content = response.payload
             channels = response_content.get("channels", DEFAULT_CHANNELS)
             
             # Update cache
@@ -1152,11 +1171,12 @@ class Workspace:
             request_id = str(uuid.uuid4())
             
             # Create mod message to start project
-            mod_message = ModMessage(
-                sender_id=self._client.agent_id,
+            mod_message = Event(
+                event_name="project.create",
+                source_id=self._client.agent_id,
+                target_agent_id=self._client.agent_id,
                 relevant_mod="openagents.mods.project.default",
-                relevant_agent_id=self._client.agent_id,
-                content={
+                payload={
                     "action": "project_creation",
                     "message_type": "project_creation",
                     "sender_id": self._client.agent_id,
@@ -1228,11 +1248,12 @@ class Workspace:
             request_id = str(uuid.uuid4())
             
             # Create mod message to get project status
-            mod_message = ModMessage(
-                sender_id=self._client.agent_id,
+            mod_message = Event(
+                event_name="project.status",
+                source_id=self._client.agent_id,
                 relevant_mod="openagents.mods.project.default",
-                relevant_agent_id=self._client.agent_id,
-                content={
+                target_agent_id=self._client.agent_id,
+                payload={
                     "message_type": "project_status",
                     "sender_id": self._client.agent_id,
                     "project_id": project_id,
@@ -1298,11 +1319,12 @@ class Workspace:
             request_id = str(uuid.uuid4())
             
             # Create mod message to list projects
-            mod_message = ModMessage(
-                sender_id=self._client.agent_id,
+            mod_message = Event(
+                event_name="project.list",
+                source_id=self._client.agent_id,
                 relevant_mod="openagents.mods.project.default",
-                relevant_agent_id=self._client.agent_id,
-                content={
+                target_agent_id=self._client.agent_id,
+                payload={
                     "message_type": "project_list",
                     "sender_id": self._client.agent_id,
                     "action": "list_projects",

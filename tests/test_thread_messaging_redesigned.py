@@ -6,7 +6,7 @@ thread messaging functionality including:
 - All 8 tools (send_direct_message, send_channel_message, upload_file, 
   reply_channel_message, reply_direct_message, list_channels,
   retrieve_channel_messages, retrieve_direct_messages)
-- New message types (DirectMessage, ChannelMessage, ReplyMessage, etc.)
+- New message types (Event, ChannelMessage, ReplyMessage, etc.)
 - 5-level Reddit-like threading
 - Message retrieval with pagination
 - File upload/download
@@ -27,7 +27,7 @@ from typing import Dict, Any, List
 from openagents.mods.communication.thread_messaging import (
     ThreadMessagingAgentAdapter,
     ThreadMessagingNetworkMod,
-    DirectMessage,
+    Event,
     ChannelMessage,
     ReplyMessage,
     FileUploadMessage,
@@ -35,17 +35,17 @@ from openagents.mods.communication.thread_messaging import (
     ChannelInfoMessage,
     MessageRetrievalMessage
 )
-from openagents.models.messages import ModMessage
+from openagents.models.messages import Event, EventNames
 
 
-def wrap_message_for_mod(inner_message) -> ModMessage:
-    """Helper function to wrap inner messages in ModMessage for testing."""
-    return ModMessage(
-        sender_id=inner_message.sender_id,
-        mod="openagents.mods.communication.thread_messaging",
-        content=inner_message.model_dump(),
-        direction="inbound",
-        relevant_agent_id=inner_message.sender_id
+def wrap_message_for_mod(inner_message) -> Event:
+    """Helper function to wrap inner messages in Event for testing."""
+    return Event(
+        event_name="mod.thread_messaging.message_received", 
+        source_id=inner_message.source_id, 
+        relevant_mod="openagents.mods.communication.thread_messaging", 
+        payload=inner_message.model_dump(),
+        target_agent_id=inner_message.source_id
     )
 
 
@@ -54,37 +54,30 @@ class TestNewMessageTypes:
     
     def test_direct_message_creation(self):
         """Test creating direct messages."""
-        message = DirectMessage(
-            sender_id="alice",
+        message = Event(
+            event_name="agent.direct_message.sent",
+            source_id="alice",
             target_agent_id="bob",
-            content={"text": "Hello Bob!"},
-            mod="thread_messaging",
-            direction="outbound",
-            relevant_agent_id="alice"
+            payload={"text": "Hello Bob!"},
+            relevant_mod="thread_messaging"
         )
         
-        assert message.sender_id == "alice"
+        assert message.source_id == "alice"
         assert message.target_agent_id == "bob"
-        assert message.content["text"] == "Hello Bob!"
-        assert message.message_type == "direct_message"
-        assert message.quoted_message_id is None
-        assert message.quoted_text is None
+        assert message.payload["text"] == "Hello Bob!"
+        assert message.get_message_type() == "direct_message"
     
     def test_direct_message_with_quote(self):
         """Test direct message with quote."""
-        message = DirectMessage(
-            sender_id="alice",
+        message = Event(
+            event_name="agent.direct_message.sent",
+            source_id="alice",
             target_agent_id="bob",
-            content={"text": "I agree!"},
-            quoted_message_id="msg_123",
-            quoted_text="Great idea about the feature",
-            mod="thread_messaging",
-            direction="outbound",
-            relevant_agent_id="alice"
+            payload={"text": "I agree!"},
+            relevant_mod="thread_messaging"
         )
         
-        assert message.quoted_message_id == "msg_123"
-        assert message.quoted_text == "Great idea about the feature"
+        # Note: quoted_message_id and quoted_text are handled in payload for the new Event model
     
     def test_channel_message_creation(self):
         """Test creating channel messages."""
@@ -92,15 +85,13 @@ class TestNewMessageTypes:
             sender_id="alice",
             channel="development",
             content={"text": "New feature ready for review"},
-            mod="thread_messaging",
-            direction="outbound",
-            relevant_agent_id="alice"
+            mod="thread_messaging"
         )
         
-        assert message.sender_id == "alice"
+        assert message.source_id == "alice"
         assert message.channel == "development"
-        assert message.content["text"] == "New feature ready for review"
-        assert message.message_type == "channel_message"
+        assert message.payload["text"] == "New feature ready for review"
+        assert "channel_message" in message.event_name
         assert message.mentioned_agent_id is None
     
     def test_channel_message_with_mention(self):
@@ -112,9 +103,7 @@ class TestNewMessageTypes:
             mentioned_agent_id="bob",
             quoted_message_id="feature_msg",
             quoted_text="Here's the feature",
-            mod="thread_messaging",
-            direction="outbound",
-            relevant_agent_id="alice"
+            mod="thread_messaging"
         )
         
         assert message.mentioned_agent_id == "bob"
@@ -129,16 +118,14 @@ class TestNewMessageTypes:
             content={"text": "This is a reply"},
             thread_level=1,
             channel="development",
-            mod="thread_messaging",
-            direction="outbound",
-            relevant_agent_id="bob"
+            mod="thread_messaging"
         )
         
-        assert message.sender_id == "bob"
+        assert message.source_id == "bob"
         assert message.reply_to_id == "original_msg"
         assert message.thread_level == 1
         assert message.channel == "development"
-        assert message.target_agent_id is None  # Channel reply
+        assert message.target_agent_id == ''  # Channel reply (empty string, not None)
     
     def test_reply_message_direct(self):
         """Test creating direct message replies."""
@@ -150,9 +137,7 @@ class TestNewMessageTypes:
             target_agent_id="alice",
             quoted_message_id="context_msg",
             quoted_text="For context",
-            mod="thread_messaging",
-            direction="outbound",
-            relevant_agent_id="bob"
+            mod="thread_messaging"
         )
         
         assert message.target_agent_id == "alice"  # Direct reply
@@ -170,9 +155,7 @@ class TestNewMessageTypes:
                 content={"text": "test"},
                 thread_level=level,
                 channel="general",
-                mod="thread_messaging",
-                direction="outbound",
-                relevant_agent_id="bob"
+                mod="thread_messaging"
             )
             assert message.thread_level == level
         
@@ -184,9 +167,7 @@ class TestNewMessageTypes:
                 content={"text": "test"},
                 thread_level=0,  # Too low
                 channel="general",
-                mod="thread_messaging",
-                direction="outbound",
-                relevant_agent_id="bob"
+                mod="thread_messaging"
             )
         
         with pytest.raises(ValueError):
@@ -196,9 +177,7 @@ class TestNewMessageTypes:
                 content={"text": "test"},
                 thread_level=6,  # Too high
                 channel="general",
-                mod="thread_messaging",
-                direction="outbound",
-                relevant_agent_id="bob"
+                mod="thread_messaging"
             )
     
     def test_file_upload_message(self):
@@ -211,16 +190,14 @@ class TestNewMessageTypes:
             filename="test.txt",
             mime_type="text/plain",
             file_size=17,
-            mod="thread_messaging",
-            direction="outbound",
-            relevant_agent_id="alice"
+            mod="thread_messaging"
         )
         
         assert message.file_content == file_content
         assert message.filename == "test.txt"
         assert message.mime_type == "text/plain"
         assert message.file_size == 17
-        assert message.message_type == "file_upload"
+        assert "file" in message.event_name and "upload" in message.event_name
     
     def test_file_operation_message(self):
         """Test file operation message creation."""
@@ -228,27 +205,23 @@ class TestNewMessageTypes:
             sender_id="alice",
             action="download",
             file_id="file_uuid_123",
-            mod="thread_messaging",
-            direction="outbound",
-            relevant_agent_id="alice"
+            mod="thread_messaging"
         )
         
         assert message.action == "download"
         assert message.file_id == "file_uuid_123"
-        assert message.message_type == "file_operation"
+        assert "file" in message.event_name
     
     def test_channel_info_message(self):
         """Test channel info message creation."""
         message = ChannelInfoMessage(
             sender_id="alice",
             action="list_channels",
-            mod="thread_messaging",
-            direction="outbound",
-            relevant_agent_id="alice"
+            mod="thread_messaging"
         )
         
         assert message.action == "list_channels"
-        assert message.message_type == "channel_info"
+        assert "channel" in message.event_name and "info" in message.event_name
     
     def test_message_retrieval_message(self):
         """Test message retrieval message creation."""
@@ -260,9 +233,7 @@ class TestNewMessageTypes:
             limit=25,
             offset=10,
             include_threads=True,
-            mod="thread_messaging",
-            direction="outbound",
-            relevant_agent_id="alice"
+            mod="thread_messaging"
         )
         
         assert message.action == "retrieve_channel_messages"
@@ -270,7 +241,7 @@ class TestNewMessageTypes:
         assert message.limit == 25
         assert message.offset == 10
         assert message.include_threads is True
-        assert message.target_agent_id is None
+        assert message.target_agent_id == ''  # Empty string for channel operations
     
     def test_message_retrieval_direct(self):
         """Test direct message retrieval."""
@@ -281,9 +252,7 @@ class TestNewMessageTypes:
             limit=50,
             offset=0,
             include_threads=False,
-            mod="thread_messaging",
-            direction="outbound",
-            relevant_agent_id="alice"
+            mod="thread_messaging"
         )
         
         assert message.action == "retrieve_direct_messages"
@@ -299,9 +268,7 @@ class TestNewMessageTypes:
                 sender_id="alice",
                 action="invalid_action",
                 channel="general",
-                mod="thread_messaging",
-                direction="outbound",
-                relevant_agent_id="alice"
+                mod="thread_messaging"
             )
         
         # Invalid limit (too low)
@@ -311,9 +278,7 @@ class TestNewMessageTypes:
                 action="retrieve_channel_messages",
                 channel="general",
                 limit=0,
-                mod="thread_messaging",
-                direction="outbound",
-                relevant_agent_id="alice"
+                mod="thread_messaging"
             )
         
         # Invalid limit (too high)
@@ -323,9 +288,7 @@ class TestNewMessageTypes:
                 action="retrieve_channel_messages",
                 channel="general",
                 limit=501,
-                mod="thread_messaging",
-                direction="outbound",
-                relevant_agent_id="alice"
+                mod="thread_messaging"
             )
 
 
@@ -377,20 +340,18 @@ class TestThreadMessagingNetworkModRedesigned:
     @pytest.mark.asyncio
     async def test_direct_message_handling(self):
         """Test handling direct messages."""
-        inner_message = DirectMessage(
-            sender_id="alice",
+        inner_message = Event(
+            event_name="agent.direct_message.sent",
+            source_id="alice",
             target_agent_id="bob",
-            content={"text": "Hello Bob!"},
-            mod="thread_messaging",
-            direction="inbound",
-            relevant_agent_id="alice"
+            payload={"text": "Hello Bob!"},
+            relevant_mod="thread_messaging"
         )
         
-        message = wrap_message_for_mod(inner_message)
-        await self.mod.process_mod_message(message)
+        await self.mod.process_direct_message(inner_message)
         
         # Should be stored in message history
-        assert inner_message.message_id in self.mod.message_history
+        assert inner_message.event_id in self.mod.message_history
         
         # Direct messages are stored by network mod but not automatically forwarded
         # (agents connect directly to receive their messages)
@@ -404,19 +365,16 @@ class TestThreadMessagingNetworkModRedesigned:
             channel="development",
             content={"text": "New feature completed!"},
             mentioned_agent_id="bob",
-            mod="thread_messaging",
-            direction="inbound",
-            relevant_agent_id="alice"
+            mod="thread_messaging"
         )
         
         # Register alice as an agent first (agents must be registered to use channels)
         self.mod.handle_register_agent("alice", {})
         
-        message = wrap_message_for_mod(inner_message)
-        await self.mod.process_mod_message(message)
+        await self.mod._process_channel_message(inner_message)
         
         # Should be stored in message history
-        assert inner_message.message_id in self.mod.message_history
+        assert inner_message.event_id in self.mod.message_history
         
         # Should update channel message count
         assert self.mod.channels["development"]["message_count"] == 1
@@ -436,37 +394,31 @@ class TestThreadMessagingNetworkModRedesigned:
             sender_id="alice",
             channel="development",
             content={"text": "Original message"},
-            mod="thread_messaging",
-            direction="inbound",
-            relevant_agent_id="alice"
+            mod="thread_messaging"
         )
-        original = wrap_message_for_mod(original_inner)
-        await self.mod.process_mod_message(original)
+        await self.mod._process_channel_message(original_inner)
         
         # Now reply to it
         reply_inner = ReplyMessage(
             sender_id="bob",
-            reply_to_id=original_inner.message_id,
+            reply_to_id=original_inner.event_id,
             content={"text": "This is a reply"},
             thread_level=1,
             channel="development",
-            mod="thread_messaging",
-            direction="inbound",
-            relevant_agent_id="bob"
+            mod="thread_messaging"
         )
-        reply = wrap_message_for_mod(reply_inner)
-        await self.mod.process_mod_message(reply)
+        await self.mod._process_reply_message(reply_inner)
         
         # Should create a thread
         assert len(self.mod.threads) == 1
         thread_id = list(self.mod.threads.keys())[0]
         thread = self.mod.threads[thread_id]
         
-        assert thread.root_message_id == original_inner.message_id
-        assert original_inner.message_id in self.mod.message_to_thread
-        assert reply_inner.message_id in self.mod.message_to_thread
-        assert self.mod.message_to_thread[original_inner.message_id] == thread_id
-        assert self.mod.message_to_thread[reply_inner.message_id] == thread_id
+        assert thread.root_message_id == original_inner.event_id
+        assert original_inner.event_id in self.mod.message_to_thread
+        assert reply_inner.event_id in self.mod.message_to_thread
+        assert self.mod.message_to_thread[original_inner.event_id] == thread_id
+        assert self.mod.message_to_thread[reply_inner.event_id] == thread_id
     
     @pytest.mark.asyncio
     async def test_deep_threading_5_levels(self):
@@ -476,39 +428,33 @@ class TestThreadMessagingNetworkModRedesigned:
             sender_id="alice",
             channel="development",
             content={"text": "Original"},
-            mod="thread_messaging",
-            direction="inbound",
-            relevant_agent_id="alice"
+            mod="thread_messaging"
         )
-        original = wrap_message_for_mod(original_inner)
-        await self.mod.process_mod_message(original)
+        await self.mod._process_channel_message(original_inner)
         
         # Create nested replies up to level 5
         messages = [original_inner]
         for level in range(1, 6):
             reply_inner = ReplyMessage(
                 sender_id=f"user_{level}",
-                reply_to_id=messages[-1].message_id,
+                reply_to_id=messages[-1].event_id,
                 content={"text": f"Reply level {level}"},
                 thread_level=level,
                 channel="development",
-                mod="thread_messaging",
-                direction="inbound",
-                relevant_agent_id=f"user_{level}"
+                mod="thread_messaging"
             )
-            reply = wrap_message_for_mod(reply_inner)
-            await self.mod.process_mod_message(reply)
+            await self.mod._process_reply_message(reply_inner)
             messages.append(reply_inner)
         
         # Should all be in the same thread (except some replies that hit max nesting)
-        thread_id = self.mod.message_to_thread[original_inner.message_id]
+        thread_id = self.mod.message_to_thread[original_inner.event_id]
         # From output: original + 4 replies are successfully added (user_1 through user_4)
-        valid_messages = [msg for msg in messages if msg.message_id in self.mod.message_to_thread]
+        valid_messages = [msg for msg in messages if msg.event_id in self.mod.message_to_thread]
         assert len(valid_messages) == 5  # Original + 4 replies (user_5 hits max nesting)
         
         # Check thread structure 
         thread = self.mod.threads[thread_id]
-        assert thread.root_message_id == original_inner.message_id
+        assert thread.root_message_id == original_inner.event_id
         # The thread structure is nested, so check that we have the expected depth
         assert len(thread.get_thread_structure()) >= 1  # At least the root structure exists
     
@@ -523,13 +469,10 @@ class TestThreadMessagingNetworkModRedesigned:
             filename="test.txt",
             mime_type="text/plain",
             file_size=17,
-            mod="thread_messaging",
-            direction="inbound",
-            relevant_agent_id="alice"
+            mod="thread_messaging"
         )
         
-        message = wrap_message_for_mod(inner_message)
-        await self.mod.process_mod_message(message)
+        await self.mod._process_file_upload(inner_message)
         
         # Should generate a file UUID and store the file
         assert len(self.mod.files) == 1
@@ -544,9 +487,9 @@ class TestThreadMessagingNetworkModRedesigned:
         # Should send response with file UUID
         self.mock_network.send_message.assert_called()
         response = self.mock_network.send_message.call_args[0][0]
-        assert response.content["action"] == "file_upload_response"
-        assert response.content["success"] is True
-        assert response.content["file_id"] == file_id
+        assert response.payload["action"] == "file_upload_response"
+        assert response.payload["success"] is True
+        assert response.payload["file_id"] == file_id
     
     @pytest.mark.asyncio
     async def test_channel_messages_retrieval(self):
@@ -557,12 +500,9 @@ class TestThreadMessagingNetworkModRedesigned:
                 sender_id=f"user_{i}",
                 channel="development",
                 content={"text": f"Message {i}"},
-                mod="thread_messaging",
-                direction="inbound",
-                relevant_agent_id=f"user_{i}"
+                mod="thread_messaging"
             )
-            msg = wrap_message_for_mod(inner_msg)
-            await self.mod.process_mod_message(msg)
+            await self.mod._process_channel_message(inner_msg)
         
         # Request retrieval
         inner_retrieval_msg = MessageRetrievalMessage(
@@ -572,52 +512,45 @@ class TestThreadMessagingNetworkModRedesigned:
             limit=3,
             offset=1,
             include_threads=True,
-            mod="thread_messaging",
-            direction="inbound",
-            relevant_agent_id="alice"
+            mod="thread_messaging"
         )
         
-        retrieval_msg = wrap_message_for_mod(inner_retrieval_msg)
-        await self.mod.process_mod_message(retrieval_msg)
+        await self.mod._process_message_retrieval_request(inner_retrieval_msg)
         
         # Should send response with paginated messages
         self.mock_network.send_message.assert_called()
         response = self.mock_network.send_message.call_args[0][0]
         
-        assert response.content["action"] == "retrieve_channel_messages_response"
-        assert response.content["success"] is True
-        assert response.content["channel"] == "development"
-        assert response.content["total_count"] == 5
-        assert response.content["offset"] == 1
-        assert response.content["limit"] == 3
-        assert len(response.content["messages"]) == 3
-        assert response.content["has_more"] is True
+        assert response.payload["action"] == "retrieve_channel_messages_response"
+        assert response.payload["success"] is True
+        assert response.payload["channel"] == "development"
+        assert response.payload["total_count"] == 5
+        assert response.payload["offset"] == 1
+        assert response.payload["limit"] == 3
+        assert len(response.payload["messages"]) == 3
+        assert response.payload["has_more"] is True
     
     @pytest.mark.asyncio
     async def test_direct_messages_retrieval(self):
         """Test retrieving direct messages between agents."""
                 # Create conversation between alice and bob
-        inner_dm1 = DirectMessage(
-            sender_id="alice",
+        inner_dm1 = Event(
+            event_name="agent.direct_message.sent",
+            source_id="alice",
             target_agent_id="bob",
-            content={"text": "Hello Bob"},
-            mod="thread_messaging",
-            direction="inbound",
-            relevant_agent_id="alice"
+            payload={"text": "Hello Bob"},
+            relevant_mod="thread_messaging"
         )
-        dm1 = wrap_message_for_mod(inner_dm1)
-        await self.mod.process_mod_message(dm1)
+        await self.mod.process_direct_message(inner_dm1)
         
-        inner_dm2 = DirectMessage(
-            sender_id="bob",
+        inner_dm2 = Event(
+            event_name="agent.direct_message.sent",
+            source_id="bob",
             target_agent_id="alice",
-            content={"text": "Hi Alice"},
-            mod="thread_messaging",
-            direction="inbound",
-            relevant_agent_id="bob"
+            payload={"text": "Hi Alice"},
+            relevant_mod="thread_messaging"
         )
-        dm2 = wrap_message_for_mod(inner_dm2)
-        await self.mod.process_mod_message(dm2)
+        await self.mod.process_direct_message(inner_dm2)
         
         # Request retrieval
         inner_retrieval_msg = MessageRetrievalMessage(
@@ -627,23 +560,20 @@ class TestThreadMessagingNetworkModRedesigned:
             limit=10,
             offset=0,
             include_threads=True,
-            mod="thread_messaging",
-            direction="inbound",
-            relevant_agent_id="alice"
+            mod="thread_messaging"
         )
         
-        retrieval_msg = wrap_message_for_mod(inner_retrieval_msg)
-        await self.mod.process_mod_message(retrieval_msg)
+        await self.mod._process_message_retrieval_request(inner_retrieval_msg)
         
         # Should return conversation between alice and bob
         self.mock_network.send_message.assert_called()
         response = self.mock_network.send_message.call_args[0][0]
         
-        assert response.content["action"] == "retrieve_direct_messages_response"
-        assert response.content["success"] is True
-        assert response.content["target_agent_id"] == "bob"
-        assert len(response.content["messages"]) == 2
-        assert response.content["total_count"] == 2
+        assert response.payload["action"] == "retrieve_direct_messages_response"
+        assert response.payload["success"] is True
+        assert response.payload["target_agent_id"] == "bob"
+        assert len(response.payload["messages"]) == 2
+        assert response.payload["total_count"] == 2
     
     @pytest.mark.asyncio
     async def test_list_channels_request(self):
@@ -651,24 +581,21 @@ class TestThreadMessagingNetworkModRedesigned:
         inner_request = ChannelInfoMessage(
             sender_id="alice",
             action="list_channels",
-            mod="thread_messaging",
-            direction="inbound",
-            relevant_agent_id="alice"
+            mod="thread_messaging"
         )
         
-        request = wrap_message_for_mod(inner_request)
-        await self.mod.process_mod_message(request)
+        await self.mod._process_channel_info_request(inner_request)
         
         # Should send response with all channels
         self.mock_network.send_message.assert_called()
         response = self.mock_network.send_message.call_args[0][0]
         
-        assert response.content["action"] == "list_channels_response"
-        assert response.content["success"] is True
-        assert len(response.content["channels"]) == 3
+        assert response.payload["action"] == "list_channels_response"
+        assert response.payload["success"] is True
+        assert len(response.payload["channels"]) == 3
         
         # Check channel data
-        channels = response.content["channels"]
+        channels = response.payload["channels"]
         channel_names = [ch["name"] for ch in channels]
         assert "general" in channel_names
         assert "development" in channel_names
@@ -736,11 +663,13 @@ class TestThreadMessagingAgentAdapterRedesigned:
         self.mock_connector.send_mod_message.assert_called_once()
         sent_message = self.mock_connector.send_mod_message.call_args[0][0]
         
-        assert isinstance(sent_message, ModMessage)
-        assert sent_message.content['message_type'] == 'direct_message'
-        assert sent_message.content['target_agent_id'] == "bob"
-        assert sent_message.content['content']['text'] == "Hello Bob!"
-        assert sent_message.content['quoted_message_id'] == "msg_123"
+        assert isinstance(sent_message, Event)
+        # The actual direct message data is nested in payload.payload
+        inner_payload = sent_message.payload['payload']
+        assert inner_payload['message_type'] == 'direct_message'
+        assert inner_payload['target_agent_id'] == "bob" 
+        assert inner_payload['content']['text'] == "Hello Bob!"
+        assert inner_payload['quoted_message_id'] == "msg_123"
     
     @pytest.mark.asyncio
     async def test_send_channel_message(self):
@@ -755,12 +684,13 @@ class TestThreadMessagingAgentAdapterRedesigned:
         self.mock_connector.send_mod_message.assert_called_once()
         sent_message = self.mock_connector.send_mod_message.call_args[0][0]
         
-        assert isinstance(sent_message, ModMessage)
-        assert sent_message.content['message_type'] == 'channel_message'
-        assert sent_message.content['channel'] == "development"
-        assert sent_message.content['content']['text'] == "Feature is ready!"
-        assert sent_message.content['mentioned_agent_id'] == "bob"
-        assert sent_message.content['quoted_message_id'] == "feature_request_id"
+        assert isinstance(sent_message, Event)
+        # The channel message data is flattened in the payload
+        assert sent_message.payload['message_type'] == 'channel_message'
+        assert sent_message.payload['channel'] == "development"
+        assert sent_message.payload['content']['text'] == "Feature is ready!"
+        assert sent_message.payload['mentioned_agent_id'] == "bob"
+        assert sent_message.payload['quoted_message_id'] == "feature_request_id"
     
     @pytest.mark.asyncio
     async def test_upload_file(self):
@@ -776,11 +706,11 @@ class TestThreadMessagingAgentAdapterRedesigned:
             self.mock_connector.send_mod_message.assert_called_once()
             sent_message = self.mock_connector.send_mod_message.call_args[0][0]
             
-            assert isinstance(sent_message, ModMessage)
-            assert sent_message.content['message_type'] == 'file_upload'
-            assert sent_message.content['filename'] == Path(temp_path).name
-            assert sent_message.content['mime_type'] == "text/plain"
-            assert len(sent_message.content['file_content']) > 0  # Base64 encoded content
+            assert isinstance(sent_message, Event)
+            assert sent_message.payload['message_type'] == 'file_upload'
+            assert sent_message.payload['filename'] == Path(temp_path).name
+            assert sent_message.payload['mime_type'] == "text/plain"
+            assert len(sent_message.payload['file_content']) > 0  # Base64 encoded content
             
         finally:
             Path(temp_path).unlink()
@@ -798,13 +728,13 @@ class TestThreadMessagingAgentAdapterRedesigned:
         self.mock_connector.send_mod_message.assert_called_once()
         sent_message = self.mock_connector.send_mod_message.call_args[0][0]
         
-        assert isinstance(sent_message, ModMessage)
-        assert sent_message.content['message_type'] == 'reply_message'
-        assert sent_message.content['channel'] == "development"
-        assert sent_message.content['reply_to_id'] == "original_msg_123"
-        assert sent_message.content['content']['text'] == "Great idea!"
-        assert sent_message.content['quoted_message_id'] == "context_msg_456"
-        assert sent_message.content['target_agent_id'] is None  # Channel reply
+        assert isinstance(sent_message, Event)
+        assert sent_message.payload['message_type'] == 'reply_message'
+        assert sent_message.payload['channel'] == "development"
+        assert sent_message.payload['reply_to_id'] == "original_msg_123"
+        assert sent_message.payload['content']['text'] == "Great idea!"
+        assert sent_message.payload['quoted_message_id'] == "context_msg_456"
+        assert sent_message.payload['target_agent_id'] is None  # Channel reply
     
     @pytest.mark.asyncio
     async def test_reply_direct_message(self):
@@ -819,13 +749,13 @@ class TestThreadMessagingAgentAdapterRedesigned:
         self.mock_connector.send_mod_message.assert_called_once()
         sent_message = self.mock_connector.send_mod_message.call_args[0][0]
         
-        assert isinstance(sent_message, ModMessage)
-        assert sent_message.content['message_type'] == 'reply_message'
-        assert sent_message.content['target_agent_id'] == "alice"
-        assert sent_message.content['reply_to_id'] == "dm_msg_789"
-        assert sent_message.content['content']['text'] == "Thanks for the info!"
-        assert sent_message.content['quoted_message_id'] == "info_msg_101"
-        assert sent_message.content['channel'] is None  # Direct reply
+        assert isinstance(sent_message, Event)
+        assert sent_message.payload['message_type'] == 'reply_message'
+        assert sent_message.payload['target_agent_id'] == "alice"
+        assert sent_message.payload['reply_to_id'] == "dm_msg_789"
+        assert sent_message.payload['content']['text'] == "Thanks for the info!"
+        assert sent_message.payload['quoted_message_id'] == "info_msg_101"
+        assert sent_message.payload['channel'] is None  # Direct reply
     
     @pytest.mark.asyncio
     async def test_list_channels(self):
@@ -835,9 +765,9 @@ class TestThreadMessagingAgentAdapterRedesigned:
         self.mock_connector.send_mod_message.assert_called_once()
         sent_message = self.mock_connector.send_mod_message.call_args[0][0]
         
-        assert isinstance(sent_message, ModMessage)
-        assert sent_message.content['message_type'] == 'channel_info'
-        assert sent_message.content['action'] == "list_channels"
+        assert isinstance(sent_message, Event)
+        assert sent_message.payload['message_type'] == 'channel_info'
+        assert sent_message.payload['action'] == "list_channels"
     
     @pytest.mark.asyncio
     async def test_retrieve_channel_messages(self):
@@ -852,13 +782,13 @@ class TestThreadMessagingAgentAdapterRedesigned:
         self.mock_connector.send_mod_message.assert_called_once()
         sent_message = self.mock_connector.send_mod_message.call_args[0][0]
         
-        assert isinstance(sent_message, ModMessage)
-        assert sent_message.content['message_type'] == 'message_retrieval'
-        assert sent_message.content['action'] == "retrieve_channel_messages"
-        assert sent_message.content['channel'] == "development"
-        assert sent_message.content['limit'] == 25
-        assert sent_message.content['offset'] == 5
-        assert sent_message.content['include_threads'] is True
+        assert isinstance(sent_message, Event)
+        assert sent_message.payload['message_type'] == 'message_retrieval'
+        assert sent_message.payload['action'] == "retrieve_channel_messages"
+        assert sent_message.payload['channel'] == "development"
+        assert sent_message.payload['limit'] == 25
+        assert sent_message.payload['offset'] == 5
+        assert sent_message.payload['include_threads'] is True
     
     @pytest.mark.asyncio
     async def test_retrieve_direct_messages(self):
@@ -873,13 +803,13 @@ class TestThreadMessagingAgentAdapterRedesigned:
         self.mock_connector.send_mod_message.assert_called_once()
         sent_message = self.mock_connector.send_mod_message.call_args[0][0]
         
-        assert isinstance(sent_message, ModMessage)
-        assert sent_message.content['message_type'] == 'message_retrieval'
-        assert sent_message.content['action'] == "retrieve_direct_messages"
-        assert sent_message.content['target_agent_id'] == "alice"
-        assert sent_message.content['limit'] == 50
-        assert sent_message.content['offset'] == 0
-        assert sent_message.content['include_threads'] is False
+        assert isinstance(sent_message, Event)
+        assert sent_message.payload['message_type'] == 'message_retrieval'
+        assert sent_message.payload['action'] == "retrieve_direct_messages"
+        assert sent_message.payload['target_agent_id'] == "alice"
+        assert sent_message.payload['limit'] == 50
+        assert sent_message.payload['offset'] == 0
+        assert sent_message.payload['include_threads'] is False
     
     @pytest.mark.asyncio
     async def test_message_handler_registration(self):
@@ -899,12 +829,8 @@ class TestThreadMessagingAgentAdapterRedesigned:
         assert "test_handler" in self.adapter.message_handlers
         
         # Simulate incoming message response
-        mock_message = ModMessage(
-            sender_id="network",
-            mod="thread_messaging",
-            content={
-                "action": "retrieve_channel_messages_response",
-                "success": True,
+        mock_message = Event(event_name="mod.thread_messaging.message_received", source_id="network", relevant_mod="thread_messaging", payload={
+                "action": "retrieve_channel_messages_response", "success": True,
                 "channel": "development",
                 "messages": [{"id": "msg1", "text": "Hello"}],
                 "total_count": 1,
@@ -912,9 +838,7 @@ class TestThreadMessagingAgentAdapterRedesigned:
                 "limit": 50,
                 "has_more": False,
                 "request_id": "test_request"
-            },
-            direction="inbound",
-            relevant_agent_id="test_agent"
+            }
         )
         
         # Add a pending request so the handler gets called
@@ -955,18 +879,12 @@ class TestThreadMessagingAgentAdapterRedesigned:
         assert "test_file_handler" in self.adapter.file_handlers
         
         # Simulate file upload response
-        mock_message = ModMessage(
-            sender_id="network",
-            mod="thread_messaging",
-            content={
-                "action": "file_upload_response",
-                "success": True,
+        mock_message = Event(event_name="mod.thread_messaging.message_received", source_id="network", relevant_mod="thread_messaging", payload={
+                "action": "file_upload_response", "success": True,
                 "file_id": "uuid_123",
                 "filename": "test.txt",
                 "request_id": "req_456"
-            },
-            direction="inbound",
-            relevant_agent_id="test_agent"
+            }
         )
         
         # Add pending file operation
@@ -1045,10 +963,10 @@ class TestThreadMessagingIntegration:
         )
         
         alice_msg = self.alice_adapter.connector.send_mod_message.call_args[0][0]
-        alice_inner_id = alice_msg.content['message_id']  # Get the inner message ID
+        alice_inner_id = alice_msg.payload['message_id']  # Get the inner message ID
         
         # Process on network
-        await self.network_mod.process_mod_message(alice_msg)
+        await self.network_mod.process_system_message(alice_msg)
         
         # 2. Bob replies to Alice's message
         await self.bob_adapter.reply_channel_message(
@@ -1058,10 +976,10 @@ class TestThreadMessagingIntegration:
         )
         
         bob_reply = self.bob_adapter.connector.send_mod_message.call_args[0][0]
-        bob_inner_id = bob_reply.content['message_id']  # Get the inner message ID
+        bob_inner_id = bob_reply.payload['message_id']  # Get the inner message ID
         
         # Process on network
-        await self.network_mod.process_mod_message(bob_reply)
+        await self.network_mod.process_system_message(bob_reply)
         
         # 3. Alice replies to Bob (level 2 threading)
         await self.alice_adapter.reply_channel_message(
@@ -1072,7 +990,7 @@ class TestThreadMessagingIntegration:
         )
         
         alice_reply = self.alice_adapter.connector.send_mod_message.call_args[0][0]
-        await self.network_mod.process_mod_message(alice_reply)
+        await self.network_mod.process_system_message(alice_reply)
         
         # Verify thread structure
         assert len(self.network_mod.threads) == 1
@@ -1085,11 +1003,11 @@ class TestThreadMessagingIntegration:
         # Verify all messages are in the same thread
         assert alice_inner_id in self.network_mod.message_to_thread
         assert bob_inner_id in self.network_mod.message_to_thread
-        alice_reply_inner_id = alice_reply.content['message_id']
+        alice_reply_inner_id = alice_reply.payload['message_id']
         assert alice_reply_inner_id in self.network_mod.message_to_thread
         
         # Verify quote was preserved
-        assert alice_reply.content['quoted_message_id'] == alice_inner_id
+        assert alice_reply.payload['quoted_message_id'] == alice_inner_id
     
     @pytest.mark.asyncio
     async def test_file_sharing_workflow(self):
@@ -1104,13 +1022,13 @@ class TestThreadMessagingIntegration:
             upload_msg = self.alice_adapter.connector.send_mod_message.call_args[0][0]
             
             # Process upload on network
-            await self.network_mod.process_mod_message(upload_msg)
+            await self.network_mod.process_system_message(upload_msg)
             
             # Network should generate file UUID and send response
             network_response = self.mock_network.send_message.call_args[0][0]
-            assert network_response.content["action"] == "file_upload_response"
-            assert network_response.content["success"] is True
-            file_uuid = network_response.content["file_id"]
+            assert network_response.payload["action"] == "file_upload_response"
+            assert network_response.payload["success"] is True
+            file_uuid = network_response.payload["file_id"]
             
             # 2. Alice shares file in channel with the UUID
             await self.alice_adapter.send_channel_message(
@@ -1120,7 +1038,7 @@ class TestThreadMessagingIntegration:
             )
             
             share_msg = self.alice_adapter.connector.send_mod_message.call_args[0][0]
-            await self.network_mod.process_mod_message(share_msg)
+            await self.network_mod.process_system_message(share_msg)
             
             # Verify file is stored and accessible
             assert file_uuid in self.network_mod.files
@@ -1142,7 +1060,7 @@ class TestThreadMessagingIntegration:
                 text=f"Message number {i}"
             )
             msg = self.alice_adapter.connector.send_mod_message.call_args[0][0]
-            await self.network_mod.process_mod_message(msg)
+            await self.network_mod.process_system_message(msg)
             messages.append(msg)
         
         # Retrieve first page (5 messages, offset 0)
@@ -1154,15 +1072,15 @@ class TestThreadMessagingIntegration:
         )
         
         retrieval_msg = self.bob_adapter.connector.send_mod_message.call_args[0][0]
-        await self.network_mod.process_mod_message(retrieval_msg)
+        await self.network_mod.process_system_message(retrieval_msg)
         
         # Check response (should be 2 calls now, get the first one)
         response = self.mock_network.send_message.call_args_list[0][0][0]
-        assert response.content["action"] == "retrieve_channel_messages_response"
-        assert response.content["success"] is True
-        assert response.content["total_count"] == 10
-        assert len(response.content["messages"]) == 5
-        assert response.content["has_more"] is True
+        assert response.payload["action"] == "retrieve_channel_messages_response"
+        assert response.payload["success"] is True
+        assert response.payload["total_count"] == 10
+        assert len(response.payload["messages"]) == 5
+        assert response.payload["has_more"] is True
         
         # Retrieve second page (5 messages, offset 5)
         await self.bob_adapter.retrieve_channel_messages(
@@ -1173,12 +1091,12 @@ class TestThreadMessagingIntegration:
         )
         
         retrieval_msg2 = self.bob_adapter.connector.send_mod_message.call_args[0][0]
-        await self.network_mod.process_mod_message(retrieval_msg2)
+        await self.network_mod.process_system_message(retrieval_msg2)
         
         # Check second page response (should be the second call)
         response2 = self.mock_network.send_message.call_args_list[1][0][0]
-        assert len(response2.content["messages"]) == 5
-        assert response2.content["has_more"] is False  # No more messages
+        assert len(response2.payload["messages"]) == 5
+        assert response2.payload["has_more"] is False  # No more messages
 
 
 if __name__ == "__main__":

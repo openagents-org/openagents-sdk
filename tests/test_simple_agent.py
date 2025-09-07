@@ -18,7 +18,7 @@ from openagents.agents.simple_agent import (
     SimpleGenericProvider
 )
 from openagents.models.message_thread import MessageThread
-from openagents.models.messages import DirectMessage
+from openagents.models.messages import Event
 
 
 class TestSimpleAgentRunner:
@@ -217,14 +217,14 @@ class TestSimpleAgentRunnerWithMockedAPI:
         mock_response = Mock()
         mock_response.choices = [Mock()]
         mock_response.choices[0].message = Mock()
-        mock_response.choices[0].message.content = "Hello! This is a test response."
+        mock_response.choices[0].message.payload = "Hello! This is a test response."
         mock_response.choices[0].message.tool_calls = None
         return mock_response
     
     @pytest.fixture
     def test_message(self):
         """Create a test message."""
-        return DirectMessage(
+        return Event(
             sender_id="test-user",
             target_agent_id="test-agent",
             content={"text": "Hello, test agent!"},
@@ -273,7 +273,7 @@ class TestSimpleAgentRunnerWithMockedAPI:
         mock_response = Mock()
         mock_response.choices = [Mock()]
         mock_response.choices[0].message = Mock()
-        mock_response.choices[0].message.content = None
+        mock_response.choices[0].message.payload = None
         
         # Mock tool call
         mock_tool_call = Mock()

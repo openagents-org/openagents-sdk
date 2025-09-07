@@ -7,7 +7,7 @@ import websockets
 from websockets.asyncio.client import connect
 from websockets.exceptions import ConnectionClosed
 from openagents.utils.message_util import parse_message_dict
-from openagents.models.messages import DirectMessage, BroadcastMessage, ModMessage
+from openagents.models.messages import Event, EventNames
 from openagents.models.event import Event
 from .system_commands import send_system_request as send_system_request_impl
 from .system_commands import REGISTER_AGENT, LIST_AGENTS, LIST_MODS, GET_MOD_MANIFEST, PING_AGENT, CLAIM_AGENT_ID, VALIDATE_CERTIFICATE
@@ -214,10 +214,29 @@ class NetworkConnector:
         Args:
             message: Message to consume
         """
-        if isinstance(message, ModMessage):
+        if message.relevant_mod:
             message.relevant_agent_id = self.agent_id
             
+        # Determine message type from payload or infer from message properties
         message_type = message.message_type
+        if not message_type:
+            # Auto-classify based on message properties
+            # Prioritize based on targeting: direct > channel > broadcast > mod
+            if message.target_agent_id:
+                message_type = "direct_message"
+            elif message.target_channel:
+                message_type = "channel_message"
+            elif message.relevant_mod and not message.target_agent_id and not message.target_channel:
+                # Could be either broadcast or mod message - check event_name for hint
+                if "broadcast" in message.event_name.lower():
+                    message_type = "broadcast_message"
+                else:
+                    message_type = "mod_message"
+            else:
+                message_type = "broadcast_message"
+            
+            logger.debug(f"Auto-classified message as {message_type} based on properties")
+        
         if message_type in self.message_handlers:
             # Call all handlers for this message type
             for handler in reversed(self.message_handlers[message_type]):
@@ -244,8 +263,8 @@ class NetworkConnector:
             if not message.source_id:
                 message.source_id = self.agent_id
             
-            # For ModMessage backward compatibility
-            if isinstance(message, ModMessage):
+            # For Event backward compatibility
+            if message.relevant_mod:
                 if not message.relevant_agent_id:
                     message.relevant_agent_id = self.agent_id
                 
@@ -263,7 +282,7 @@ class NetworkConnector:
             logger.error(f"Failed to send message: {e}")
             return False
     
-    async def send_direct_message(self, message: DirectMessage) -> bool:
+    async def send_direct_message(self, message: Event) -> bool:
         """Send a direct message to another agent.
         
         Args:
@@ -271,7 +290,7 @@ class NetworkConnector:
         """
         return await self.send_message(message)
     
-    async def send_broadcast_message(self, message: BroadcastMessage) -> bool:
+    async def send_broadcast_message(self, message: Event) -> bool:
         """Send a broadcast message to all connected agents.
         
         Args:
@@ -282,7 +301,7 @@ class NetworkConnector:
         """
         return await self.send_message(message)
     
-    async def send_mod_message(self, message: ModMessage) -> bool:
+    async def send_mod_message(self, message: Event) -> bool:
         """Send a mod message to another agent.
         
         Args:
@@ -290,7 +309,7 @@ class NetworkConnector:
         """
         return await self.send_message(message)
     
-    async def wait_mod_message(self, mod_name: str, filter_dict: Optional[Dict[str, Any]] = None, timeout: float = 5.0) -> Optional[ModMessage]:
+    async def wait_mod_message(self, mod_name: str, filter_dict: Optional[Dict[str, Any]] = None, timeout: float = 5.0) -> Optional[Event]:
         """Wait for a mod message from the specified mod that matches the filter criteria.
         
         Args:
@@ -299,7 +318,7 @@ class NetworkConnector:
             timeout: Maximum time to wait for a response in seconds
             
         Returns:
-            Optional[ModMessage]: The matching message, or None if no matching message received within timeout
+            Optional[Event]: The matching message, or None if no matching message received within timeout
         """
         if not self.is_connected:
             logger.debug(f"Agent {self.agent_id} is not connected to a network")
@@ -308,7 +327,7 @@ class NetworkConnector:
         # Create a future to store the response
         response_future = asyncio.Future()
         
-        async def temp_protocol_handler(msg: ModMessage) -> None:
+        async def temp_protocol_handler(msg: Event) -> None:
             # Check if this is the message we're waiting for
             if (msg.mod == mod_name and 
                 msg.relevant_agent_id == self.agent_id):
@@ -344,7 +363,7 @@ class NetworkConnector:
             # Unregister the temporary handler
             self.unregister_message_handler("mod_message", temp_protocol_handler)
     
-    async def wait_direct_message(self, sender_id: str, timeout: float = 5.0) -> Optional[DirectMessage]:
+    async def wait_direct_message(self, sender_id: str, timeout: float = 5.0) -> Optional[Event]:
         """Wait for a direct message from the specified sender.
         
         Args:
@@ -352,15 +371,15 @@ class NetworkConnector:
             timeout: Maximum time to wait for a response in seconds
             
         Returns:
-            Optional[DirectMessage]: The received message or None if timeout occurs
+            Optional[Event]: The received message or None if timeout occurs
         """
         # Create a future to be resolved when the message is received
         response_future = asyncio.Future()
         
         # Create a temporary handler that will resolve the future when the message arrives
-        async def temp_direct_handler(msg: DirectMessage) -> None:
+        async def temp_direct_handler(msg: Event) -> None:
             # Check if this is the message we're waiting for
-            if msg.sender_id == sender_id:
+            if msg.source_id == sender_id:
                 response_future.set_result(msg)
         
         # Register the temporary handler

@@ -16,7 +16,7 @@ from typing import List, Dict, Any
 
 from src.openagents.core.network import AgentNetwork, create_network
 from src.openagents.models.network_config import NetworkConfig, NetworkMode
-from src.openagents.models.messages import DirectMessage, BroadcastMessage
+from openagents.models.messages import Event, EventNames
 
 # Configure logging for tests
 logger = logging.getLogger(__name__)
@@ -142,18 +142,19 @@ class TestSimpleMessaging:
         self.received_messages.clear()
         
         # Create a test message
-        test_message = DirectMessage(
-            sender_id=agent1_id,
+        test_message = Event(
+            event_name="agent.direct_message.sent",
+            source_id=agent1_id,
             target_agent_id=agent2_id,
-            content={"text": "Hello from TestAgent1!"},
+            payload={"text": "Hello from TestAgent1!"},
             message_type="direct"
         )
         
         # Test that we can create the message and convert it to transport format
         # (This tests the message creation and conversion logic)
         transport_message = self.network._convert_to_transport_message(test_message)
-        assert transport_message.sender_id == agent1_id
-        assert transport_message.target_id == agent2_id
+        assert transport_message.source_id == agent1_id
+        assert transport_message.target_agent_id == agent2_id
         assert transport_message.payload["text"] == "Hello from TestAgent1!"
 
         # Verify that both agents are registered
@@ -178,9 +179,10 @@ class TestSimpleMessaging:
         self.received_messages.clear()
         
         # Create a broadcast message
-        broadcast_message = BroadcastMessage(
-            sender_id=agent1_id,
-            content={"text": "Broadcast message from TestAgent1!"},
+        broadcast_message = Event(
+            event_name="agent.broadcast_message.sent",
+            source_id=agent1_id,
+            payload={"text": "Broadcast message from TestAgent1!"},
             message_type="broadcast"
         )
 
@@ -223,10 +225,7 @@ class TestSimpleMessaging:
             original_content = f.read()
         
         # Create a file transfer message
-        file_message = DirectMessage(
-            sender_id=agent1_id,
-            target_agent_id=agent2_id,
-            content={
+        file_message = Event(event_name="agent.direct_message.sent", source_id=agent1_id, target_agent_id=agent2_id, payload={
                 "file_data": original_content.decode('utf-8'),
                 "filename": "test_file.txt",
                 "file_size": len(original_content)
@@ -236,8 +235,8 @@ class TestSimpleMessaging:
         
         # Test message creation and conversion
         transport_message = self.network._convert_to_transport_message(file_message)
-        assert transport_message.sender_id == agent1_id
-        assert transport_message.target_id == agent2_id
+        assert transport_message.source_id == agent1_id
+        assert transport_message.target_agent_id == agent2_id
         assert "file_data" in transport_message.payload
 
         # Verify that both agents are still registered
@@ -264,10 +263,11 @@ class TestSimpleMessaging:
             
             # Create a simple file transfer message
             test_content = "This is a test file content"
-            file_message = DirectMessage(
-                sender_id=agent1_id,
+            file_message = Event(
+                event_name="agent.direct_message.sent",
+                source_id=agent1_id,
                 target_agent_id=agent2_id,
-                content={
+                payload={
                     "type": "file_transfer",
                     "filename": "test.txt",
                     "data": test_content
@@ -276,9 +276,9 @@ class TestSimpleMessaging:
             )
             
             # Test message creation
-            assert file_message.sender_id == agent1_id
+            assert file_message.source_id == agent1_id
             assert file_message.target_agent_id == agent2_id
-            assert file_message.content["data"] == test_content
+            assert file_message.payload["data"] == test_content
 
             # Verify network state
             stats = self.network.get_network_stats()
