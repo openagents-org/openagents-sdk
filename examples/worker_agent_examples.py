@@ -38,15 +38,16 @@ class EchoAgent(WorkerAgent):
     
     async def on_direct(self, msg: EventContext):
         """Echo back direct messages."""
-        await self.send_direct(to=msg.sender_id, text=f"Echo: {msg.text}")
+        ws = self.workspace()
+        await ws.agent(msg.sender_id).send_direct_message(f"Echo: {msg.text}")
         logger.info(f"Echoed message from {msg.sender_id}")
 
     async def on_channel_mention(self, msg: ChannelMessageContext):
         """Respond when mentioned in channels."""
-        await self.send_channel(
-            channel=msg.channel,
-            text=f"Hi {msg.sender_id}! You mentioned me. I'm an echo bot - send me a DM!",
-            mention=msg.sender_id
+        ws = self.workspace()
+        await ws.channel(msg.channel).post_with_mention(
+            f"Hi {msg.sender_id}! You mentioned me. I'm an echo bot - send me a DM!",
+            mention_agent_id=msg.sender_id
         )
 
 
@@ -62,54 +63,50 @@ class HelpfulAgent(WorkerAgent):
         text = msg.text.lower()
         
         if "hello" in text or "hi" in text:
-            await self.send_direct(
-                to=msg.sender_id,
-                text=f"Hello {msg.sender_id}! I'm a helpful agent that demonstrates WorkerAgent capabilities."
+            ws = self.workspace()
+            await ws.agent(msg.sender_id).send_direct_message(
+                f"Hello {msg.sender_id}! I'm a helpful agent that demonstrates WorkerAgent capabilities."
             )
         elif "help" in text:
-            await self.send_direct(
-                to=msg.sender_id,
-                text="I'm here to help! I can respond to messages, participate in channels, and demonstrate WorkerAgent features."
+            ws = self.workspace()
+            await ws.agent(msg.sender_id).send_direct_message(
+                "I'm here to help! I can respond to messages, participate in channels, and demonstrate WorkerAgent features."
             )
         elif "history" in text:
-            # Demonstrate message history functionality
-            recent_messages = await self.get_recent_direct_messages(msg.sender_id, count=3)
-            if recent_messages:
-                await self.send_direct(
-                    to=msg.sender_id,
-                    text=f"📜 Found {len(recent_messages)} recent messages in our conversation."
-                )
-            else:
-                await self.send_direct(to=msg.sender_id, text="No recent conversation history found.")
+            # Note: Message history functionality removed - using workspace directly
+            ws = self.workspace()
+            await ws.agent(msg.sender_id).send_direct_message(
+                "📜 Message history functionality is now handled by the workspace layer."
+            )
         else:
-            await self.send_direct(
-                to=msg.sender_id,
-                text="I received your message! I'm a helpful agent that demonstrates WorkerAgent capabilities."
+            ws = self.workspace()
+            await ws.agent(msg.sender_id).send_direct_message(
+                "I received your message! I'm a helpful agent that demonstrates WorkerAgent capabilities."
             )
     
     async def on_channel_mention(self, msg: ChannelMessageContext):
         """Respond when mentioned in channels."""
-        await self.send_channel(
-            channel=msg.channel,
-            text=f"Hi {msg.sender_id}! I'm a helpful agent. Send me a DM if you'd like to chat!",
-            mention=msg.sender_id
+        ws = self.workspace()
+        await ws.channel(msg.channel).post_with_mention(
+            f"Hi {msg.sender_id}! I'm a helpful agent. Send me a DM if you'd like to chat!",
+            mention_agent_id=msg.sender_id
         )
     
     async def on_channel_post(self, msg: ChannelMessageContext):
         """Handle channel posts (when not mentioned)."""
         # Only respond to help requests
         if "help" in msg.text.lower() and "?" in msg.text.lower():
-            await self.send_channel(
-                channel=msg.channel,
-                text="I can help! Mention me (@helpful) or send me a DM.",
-                mention=msg.sender_id
+            ws = self.workspace()
+            await ws.channel(msg.channel).post_with_mention(
+                "I can help! Mention me (@helpful) or send me a DM.",
+                mention_agent_id=msg.sender_id
             )
     
     async def on_file_upload(self, msg: FileContext):
         """Handle file uploads."""
-        await self.send_direct(
-            to=msg.sender_id,
-            text=f"📁 I received your file: {msg.filename} ({msg.file_size} bytes)"
+        ws = self.workspace()
+        await ws.agent(msg.sender_id).send_direct_message(
+            f"📁 I received your file: {msg.filename} ({msg.file_size} bytes)"
         )
     
 
@@ -146,30 +143,32 @@ class ProjectManagerAgent(WorkerAgent):
             
             # Respond to specific keywords
             if "help" in msg.text.lower():
-                await self.send_reply(
-                    reply_to_id=msg.message_id,
-                    text="I'm tracking this project! Let me know if you need status updates or assistance."
+                ws = self.workspace()
+                await ws.channel(msg.channel).reply_to_message(
+                    msg.message_id,
+                    "I'm tracking this project! Let me know if you need status updates or assistance."
                 )
         elif "project" in msg.text.lower() and "create" in msg.text.lower():
             # Handle project creation requests
-            await self.send_reply(
-                reply_to_id=msg.message_id,
-                text=f"I can help create a project! Send me a direct message with details, {msg.sender_id}."
+            ws = self.workspace()
+            await ws.channel(msg.channel).reply_to_message(
+                msg.message_id,
+                f"I can help create a project! Send me a direct message with details, {msg.sender_id}."
             )
     
     async def on_channel_mention(self, msg: ChannelMessageContext):
         """Handle mentions in project contexts."""
         if msg.channel.startswith("#project-"):
-            await self.send_channel(
-                channel=msg.channel,
-                text=f"Hi {msg.sender_id}! I'm monitoring this project. How can I help?",
-                mention=msg.sender_id
+            ws = self.workspace()
+            await ws.channel(msg.channel).post_with_mention(
+                f"Hi {msg.sender_id}! I'm monitoring this project. How can I help?",
+                mention_agent_id=msg.sender_id
             )
         else:
-            await self.send_channel(
-                channel=msg.channel,
-                text=f"Hi {msg.sender_id}! I manage projects. Mention me in project channels or ask me to create one!",
-                mention=msg.sender_id
+            ws = self.workspace()
+            await ws.channel(msg.channel).post_with_mention(
+                f"Hi {msg.sender_id}! I manage projects. Mention me in project channels or ask me to create one!",
+                mention_agent_id=msg.sender_id
             )
     
     async def on_direct(self, msg: EventContext):
@@ -179,9 +178,9 @@ class ProjectManagerAgent(WorkerAgent):
         if "project" in text and "status" in text:
             # Send project status summary
             if not self.active_projects:
-                await self.send_direct(
-                    to=msg.sender_id,
-                    text="No active projects currently being tracked."
+                ws = self.workspace()
+                await ws.agent(msg.sender_id).send_direct_message(
+                    "No active projects currently being tracked."
                 )
             else:
                 status_lines = ["📊 **Active Projects:**"]
@@ -191,9 +190,9 @@ class ProjectManagerAgent(WorkerAgent):
                         f"• {project_id}: {info['messages']} messages, {participants_count} participants"
                     )
                 
-                await self.send_direct(
-                    to=msg.sender_id,
-                    text="\n".join(status_lines)
+                ws = self.workspace()
+                await ws.agent(msg.sender_id).send_direct_message(
+                    "\n".join(status_lines)
                 )
         elif "project" in text and "create" in text:
             # Handle direct project creation requests
@@ -209,14 +208,14 @@ class ProjectManagerAgent(WorkerAgent):
                 "last_activity": msg.timestamp
             }
             
-            await self.send_direct(
-                to=msg.sender_id,
-                text=f"✅ Created project {project_id}! Channel: #project-{project_id}"
+            ws = self.workspace()
+            await ws.agent(msg.sender_id).send_direct_message(
+                f"✅ Created project {project_id}! Channel: #project-{project_id}"
             )
         else:
-            await self.send_direct(
-                to=msg.sender_id,
-                text="I'm a project manager! I can help create projects and track their status. What do you need?"
+            ws = self.workspace()
+            await ws.agent(msg.sender_id).send_direct_message(
+                "I'm a project manager! I can help create projects and track their status. What do you need?"
             )
     
 
@@ -254,23 +253,25 @@ class FileProcessorAgent(WorkerAgent):
 The file has been analyzed and is ready for use.
         """
         
-        await self.send_direct(to=msg.sender_id, text=result_text.strip())
+        ws = self.workspace()
+        await ws.agent(msg.sender_id).send_direct_message(result_text.strip())
         
         # Add a reaction to show we processed it
-        await self.react_to(msg.message_id, "check")
+        # Note: Reaction functionality would need channel context
+        # ws = self.workspace()
+        # await ws.channel("general").react_to_message(msg.message_id, "check")
     
     async def on_direct(self, msg: EventContext):
         """Handle direct messages about file processing."""
+        ws = self.workspace()
         if "file" in msg.text.lower():
-            await self.send_direct(
-                to=msg.sender_id,
-                text="I process uploaded files! Just upload a file and I'll analyze it for you."
+            await ws.agent(msg.sender_id).send_direct_message(
+                "I process uploaded files! Just upload a file and I'll analyze it for you."
             )
         else:
-            await self.send_direct(
-                to=msg.sender_id,
-                            text="Hi! I'm a file processor. Upload any file and I'll process it for you!"
-        )
+            await ws.agent(msg.sender_id).send_direct_message(
+                "Hi! I'm a file processor. Upload any file and I'll process it for you!"
+            )
 
 
 class ProjectWorkerAgent(WorkerAgent):
@@ -309,15 +310,16 @@ class ProjectWorkerAgent(WorkerAgent):
                 goal = "New project created via direct message"
             
             try:
-                result = await self.create_project(
-                    goal=goal,
-                    name=f"Project by {msg.sender_id}",
-                    config={
-                        "priority": "medium",
-                        "created_by": msg.sender_id,
-                        "created_via": "direct_message"
-                    }
-                )
+                # Use workspace to create project
+                from openagents.workspace import Project
+                project = Project(goal=goal, name=f"Project by {msg.sender_id}")
+                project.config = {
+                    "priority": "medium",
+                    "created_by": msg.sender_id,
+                    "created_via": "direct_message"
+                }
+                ws = self.workspace()
+                result = await ws.start_project(project)
                 
                 if result.get("success"):
                     project_id = result["project_id"]
