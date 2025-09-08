@@ -47,7 +47,7 @@ class AINewsWorkerAgent(WorkerAgent):
     
     default_agent_id = "ai-news-bot"
     auto_mention_response = True
-    default_channels = ["#general", "#ai-news", "#research", "#tools"]
+    default_channels = ["general", "#ai-news", "#research", "#tools"]
     
     def __init__(self, **kwargs):
         """Initialize the AI News Worker Agent."""
@@ -108,7 +108,12 @@ class AINewsWorkerAgent(WorkerAgent):
         # Check available channels
         logger.info("🔍 Checking available channels...")
         try:
-            channels_info = await self._thread_adapter.list_channels()
+            ws = self.workspace()
+            ws._auto_connect_config = {
+                'host': 'localhost',
+                'port': 8572
+            }
+            channels_info = await ws.channels()
             logger.info(f"📺 Available channels: {channels_info}")
         except Exception as e:
             logger.error(f"❌ Error listing channels: {e}")
@@ -133,7 +138,11 @@ class AINewsWorkerAgent(WorkerAgent):
         
         try:
             ws = self.workspace()
-            ws.channel("#general").post(startup_message)
+            ws._auto_connect_config = {
+                'host': 'localhost',
+                'port': 8572
+            }
+            await ws.channel("general").post(startup_message)
             logger.info("✅ Successfully sent startup message to general channel")
         except Exception as e:
             logger.error(f"❌ Failed to send startup message: {e}")
@@ -152,15 +161,15 @@ class AINewsWorkerAgent(WorkerAgent):
         text = msg.text.lower().strip()
         
         if "hello" in text or "hi" in text:
-            await self.send_direct(
-                to=msg.sender_id,
-                text=f"👋 Hello {msg.sender_id}! I'm your AI News assistant.\n\n"
-                     f"I can help you stay updated on AI developments. Try asking me about:\n"
-                     f"• Latest AI product launches\n"
-                     f"• Recent research papers\n"
-                     f"• New AI tools and frameworks\n"
-                     f"• Industry announcements\n\n"
-                     f"What would you like to know about?"
+            ws = self.workspace()
+            await ws.agent(msg.sender_id).send_direct_message(
+                f"👋 Hello {msg.sender_id}! I'm your AI News assistant.\n\n"
+                f"I can help you stay updated on AI developments. Try asking me about:\n"
+                f"• Latest AI product launches\n"
+                f"• Recent research papers\n"
+                f"• New AI tools and frameworks\n"
+                f"• Industry announcements\n\n"
+                f"What would you like to know about?"
             )
         
         elif "search" in text:
@@ -170,15 +179,16 @@ class AINewsWorkerAgent(WorkerAgent):
                 results = await self._search_knowledge_base(query)
                 await self._send_search_results(msg.sender_id, query, results, is_direct=True)
             else:
-                await self.send_direct(
-                    to=msg.sender_id,
-                    text="🔍 Please specify what you'd like to search for!\n"
-                         f"Example: `search transformer models`"
+                ws = self.workspace()
+                await ws.agent(msg.sender_id).send_direct_message(
+                    "🔍 Please specify what you'd like to search for!\n"
+                    f"Example: `search transformer models`"
                 )
         
         elif "summary" in text:
             summary = await self._generate_daily_summary()
-            await self.send_direct(to=msg.sender_id, text=summary)
+            ws = self.workspace()
+            await ws.agent(msg.sender_id).send_direct_message(summary)
         
         elif "categories" in text:
             categories_text = "📋 **Content Categories:**\n\n"
@@ -187,7 +197,8 @@ class AINewsWorkerAgent(WorkerAgent):
                            if item.get('category') == category])
                 categories_text += f"{emoji} **{category.title()}** ({count} items)\n"
             
-            await self.send_direct(to=msg.sender_id, text=categories_text)
+            ws = self.workspace()
+            await ws.agent(msg.sender_id).send_direct_message(categories_text)
         
         elif "help" in text:
             help_text = """
@@ -215,24 +226,25 @@ class AINewsWorkerAgent(WorkerAgent):
 I automatically share interesting findings every 30 minutes!
             """.strip()
             
-            await self.send_direct(to=msg.sender_id, text=help_text)
+            ws = self.workspace()
+            await ws.agent(msg.sender_id).send_direct_message(help_text)
         
         else:
             # Try to answer as an AI-related question
             if any(keyword in text for keyword in ["ai", "artificial intelligence", "machine learning", "llm"]):
-                await self.send_direct(
-                    to=msg.sender_id,
-                    text=f"🤔 That's an interesting AI question! While I specialize in sharing news and updates, "
-                         f"I'd recommend asking in general or #research for community discussion.\n\n"
-                         f"I can help you search for related content though - try `search {text[:30]}...`"
+                ws = self.workspace()
+                await ws.agent(msg.sender_id).send_direct_message(
+                    f"🤔 That's an interesting AI question! While I specialize in sharing news and updates, "
+                    f"I'd recommend asking in general or #research for community discussion.\n\n"
+                    f"I can help you search for related content though - try `search {text[:30]}...`"
                 )
             else:
-                await self.send_direct(
-                    to=msg.sender_id,
-                    text="🤖 I'm focused on AI news and research! Try asking me about:\n"
-                         f"• `search <AI topic>`\n"
-                         f"• `summary` for today's updates\n"
-                         f"• `help` for more commands"
+                ws = self.workspace()
+                await ws.agent(msg.sender_id).send_direct_message(
+                    "🤖 I'm focused on AI news and research! Try asking me about:\n"
+                    f"• `search <AI topic>`\n"
+                    f"• `summary` for today's updates\n"
+                    f"• `help` for more commands"
                 )
     
     async def on_channel_mention(self, msg: ChannelMessageContext):
@@ -249,19 +261,19 @@ I automatically share interesting findings every 30 minutes!
                 await self._send_search_results(msg.sender_id, query, results, 
                                               channel=msg.channel, is_direct=False)
             else:
-                await self.send_channel(
-                    channel=msg.channel,
-                    text=f"🔍 {msg.sender_id}, please specify what you'd like to search for!\n"
-                         f"Example: `@ai-news-bot search GPT models`",
-                    mention=msg.sender_id
+                ws = self.workspace()
+                await ws.channel(msg.channel).post_with_mention(
+                    f"🔍 {msg.sender_id}, please specify what you'd like to search for!\n"
+                    f"Example: `@ai-news-bot search GPT models`",
+                    mention_agent_id=msg.sender_id
                 )
         
         elif "summary" in clean_text:
             summary = await self._generate_daily_summary()
-            await self.send_channel(
-                channel=msg.channel,
-                text=f"📊 **Daily AI Summary for {msg.sender_id}:**\n\n{summary}",
-                mention=msg.sender_id
+            ws = self.workspace()
+            await ws.channel(msg.channel).post_with_mention(
+                f"📊 **Daily AI Summary for {msg.sender_id}:**\n\n{summary}",
+                mention_agent_id=msg.sender_id
             )
         
         elif "categories" in clean_text:
@@ -271,18 +283,18 @@ I automatically share interesting findings every 30 minutes!
                            if item.get('category') == category])
                 categories_text += f"{emoji} **{category.title()}** ({count} items)\n"
             
-            await self.send_channel(
-                channel=msg.channel,
-                text=f"{categories_text}\n\n*Requested by {msg.sender_id}*",
-                mention=msg.sender_id
+            ws = self.workspace()
+            await ws.channel(msg.channel).post_with_mention(
+                f"{categories_text}\n\n*Requested by {msg.sender_id}*",
+                mention_agent_id=msg.sender_id
             )
         
         else:
-            await self.send_channel(
-                channel=msg.channel,
-                text=f"👋 Hi {msg.sender_id}! I can help with AI news and research.\n"
-                     f"Try: `@ai-news-bot search <topic>`, `@ai-news-bot summary`, or `@ai-news-bot help`",
-                mention=msg.sender_id
+            ws = self.workspace()
+            await ws.channel(msg.channel).post_with_mention(
+                f"👋 Hi {msg.sender_id}! I can help with AI news and research.\n"
+                f"Try: `@ai-news-bot search <topic>`, `@ai-news-bot summary`, or `@ai-news-bot help`",
+                mention_agent_id=msg.sender_id
             )
     
     async def on_channel_post(self, msg: ChannelMessageContext):
@@ -300,11 +312,11 @@ I automatically share interesting findings every 30 minutes!
                 # Don't spam - only respond occasionally
                 import random
                 if random.random() < 0.3:  # 30% chance to respond
-                    await self.send_channel(
-                        channel=msg.channel,
-                        text=f"💡 Interesting AI discussion! I might have related content - "
-                               f"try `@ai-news-bot search {text.split()[0:3]}`",
-                        mention=msg.sender_id
+                    ws = self.workspace()
+                    await ws.channel(msg.channel).post_with_mention(
+                        f"💡 Interesting AI discussion! I might have related content - "
+                        f"try `@ai-news-bot search {text.split()[0:3]}`",
+                        mention_agent_id=msg.sender_id
                     )
     
     async def _news_monitoring_loop(self):
@@ -482,21 +494,17 @@ I automatically share interesting findings every 30 minutes!
         message += f"🔗 **Read more:** {content.get('url', 'N/A')}\n\n"
         message += f"*📡 Shared by AI News Bot • {datetime.now().strftime('%H:%M')}*"
         
-        # Post to general channel using thread messaging adapter directly
+        # Post to general channel using workspace
         try:
-            await self._thread_adapter.send_channel_message(
-                channel=channel,
-                text=message
-            )
+            ws = self.workspace()
+            await ws.channel(channel).post(message)
             logger.info(f"✅ Successfully sent message to {channel}")
         except Exception as e:
             logger.error(f"❌ Failed to send message to {channel}: {e}")
             # Fallback: try with # prefix
             try:
-                await self._thread_adapter.send_channel_message(
-                    channel=f"#{channel}",
-                    text=message
-                )
+                ws = self.workspace()
+                await ws.channel(f"#{channel}").post(message)
                 logger.info(f"✅ Successfully sent message to #{channel} (with # prefix)")
             except Exception as e2:
                 logger.error(f"❌ Failed to send message to #{channel}: {e2}")
@@ -541,9 +549,11 @@ I automatically share interesting findings every 30 minutes!
                 message += f"   🔗 {content.get('url', 'N/A')}\n\n"
         
         if is_direct:
-            await self.send_direct(to=sender_id, text=message)
+            ws = self.workspace()
+            await ws.agent(sender_id).send_direct_message(message)
         else:
-            await self.send_channel(channel=channel, text=message, mention=sender_id)
+            ws = self.workspace()
+            await ws.channel(channel).post_with_mention(message, mention_agent_id=sender_id)
     
     async def _generate_daily_summary(self) -> str:
         """Generate a summary of today's AI news."""

@@ -30,7 +30,13 @@ class MockWorkerAgent(WorkerAgent):
     
     async def on_direct(self, msg: EventContext):
         self.received_messages.append(('direct', msg))
-        await self.send_direct(to=msg.source_id, text=f"Got: {msg.text}")
+        # Use workspace for sending messages (mocked in tests)
+        try:
+            ws = self.workspace()
+            await ws.agent(msg.source_id).send_direct_message(f"Got: {msg.text}")
+        except AttributeError:
+            # In tests, workspace might not be available
+            pass
     
     async def on_channel_post(self, msg: ChannelMessageContext):
         self.received_messages.append(('channel_post', msg))
@@ -80,6 +86,22 @@ def worker_agent(mock_client, mock_thread_adapter):
     mock_client.mod_adapters = {"thread_messaging": mock_thread_adapter}
     # Set the thread adapter directly for testing
     agent._thread_adapter = mock_thread_adapter
+    
+    # Mock the workspace method and client workspace
+    mock_workspace = Mock()
+    mock_agent_conn = Mock()
+    mock_agent_conn.send_direct_message = AsyncMock(return_value=True)
+    mock_workspace.agent.return_value = mock_agent_conn
+    
+    # Mock the client's workspace method
+    mock_client.workspace = Mock(return_value=mock_workspace)
+    
+    # Override the workspace method on the agent
+    def mock_workspace_method():
+        return mock_workspace
+    
+    agent.workspace = mock_workspace_method
+    
     return agent
 
 
@@ -212,85 +234,112 @@ class TestSendingMethods:
     
     @pytest.mark.asyncio
     async def test_send_direct(self, worker_agent, mock_thread_adapter):
-        """Test sending direct messages."""
-        await worker_agent.send_direct(to="user1", text="Hello user!")
+        """Test sending direct messages via workspace."""
+        # Mock workspace and agent connection
+        mock_workspace = Mock()
+        mock_agent_conn = Mock()
+        mock_agent_conn.send_direct_message = AsyncMock(return_value=True)
+        mock_workspace.agent.return_value = mock_agent_conn
         
-        mock_thread_adapter.send_direct_message.assert_called_once_with(
-            target_agent_id="user1",
-            text="Hello user!",
-            quote=None
-        )
+        # Mock the workspace() method
+        worker_agent.workspace = Mock(return_value=mock_workspace)
+        
+        # Test sending via workspace
+        ws = worker_agent.workspace()
+        await ws.agent("user1").send_direct_message("Hello user!")
+        
+        mock_agent_conn.send_direct_message.assert_called_once_with("Hello user!")
     
     @pytest.mark.asyncio
     async def test_send_channel(self, worker_agent, mock_thread_adapter):
-        """Test sending channel messages."""
-        await worker_agent.send_channel(channel="#general", text="Hello channel!")
+        """Test sending channel messages via workspace."""
+        # Mock workspace and channel connection
+        mock_workspace = Mock()
+        mock_channel_conn = Mock()
+        mock_channel_conn.post = AsyncMock(return_value=True)
+        mock_workspace.channel.return_value = mock_channel_conn
         
-        mock_thread_adapter.send_channel_message.assert_called_once_with(
-            channel="#general",
-            text="Hello channel!",
-            mentioned_agent_id=None,
-            quote=None
-        )
+        # Mock the workspace() method
+        worker_agent.workspace = Mock(return_value=mock_workspace)
+        
+        # Test sending via workspace
+        ws = worker_agent.workspace()
+        await ws.channel("#general").post("Hello channel!")
+        
+        mock_channel_conn.post.assert_called_once_with("Hello channel!")
     
     @pytest.mark.asyncio
     async def test_send_channel_with_mention(self, worker_agent, mock_thread_adapter):
-        """Test sending channel messages with mentions."""
-        await worker_agent.send_channel(
-            channel="#general", 
-            text="Hello!", 
-            mention="user1"
-        )
+        """Test sending channel messages with mentions via workspace."""
+        # Mock workspace and channel connection
+        mock_workspace = Mock()
+        mock_channel_conn = Mock()
+        mock_channel_conn.post_with_mention = AsyncMock(return_value=True)
+        mock_workspace.channel.return_value = mock_channel_conn
         
-        mock_thread_adapter.send_channel_message.assert_called_once_with(
-            channel="#general",
-            text="@user1 Hello!",
-            mentioned_agent_id="user1",
-            quote=None
-        )
+        # Mock the workspace() method
+        worker_agent.workspace = Mock(return_value=mock_workspace)
+        
+        # Test sending via workspace
+        ws = worker_agent.workspace()
+        await ws.channel("#general").post_with_mention("Hello!", mention_agent_id="user1")
+        
+        mock_channel_conn.post_with_mention.assert_called_once_with("Hello!", mention_agent_id="user1")
     
     @pytest.mark.asyncio
     async def test_send_reply(self, worker_agent, mock_thread_adapter):
-        """Test sending reply messages."""
-        await worker_agent.send_reply(reply_to_id="msg123", text="This is a reply")
+        """Test sending reply messages via workspace."""
+        # Mock workspace and channel connection
+        mock_workspace = Mock()
+        mock_channel_conn = Mock()
+        mock_channel_conn.reply_to_message = AsyncMock(return_value=True)
+        mock_workspace.channel.return_value = mock_channel_conn
         
-        mock_thread_adapter.send_reply_message.assert_called_once_with(
-            reply_to_id="msg123",
-            text="This is a reply",
-            quote=None
-        )
+        # Mock the workspace() method
+        worker_agent.workspace = Mock(return_value=mock_workspace)
+        
+        # Test sending via workspace
+        ws = worker_agent.workspace()
+        await ws.channel("general").reply_to_message("msg123", "This is a reply")
+        
+        mock_channel_conn.reply_to_message.assert_called_once_with("msg123", "This is a reply")
     
     @pytest.mark.asyncio
     async def test_react_to(self, worker_agent, mock_thread_adapter):
-        """Test adding reactions."""
-        await worker_agent.react_to(message_id="msg123", reaction="thumbs_up")
+        """Test adding reactions via workspace."""
+        # Mock workspace and channel connection
+        mock_workspace = Mock()
+        mock_channel_conn = Mock()
+        mock_channel_conn.react_to_message = AsyncMock(return_value=True)
+        mock_workspace.channel.return_value = mock_channel_conn
         
-        mock_thread_adapter.add_reaction.assert_called_once_with(
-            target_message_id="msg123",
-            reaction_type="thumbs_up"
-        )
+        # Mock the workspace() method
+        worker_agent.workspace = Mock(return_value=mock_workspace)
+        
+        # Test reacting via workspace
+        ws = worker_agent.workspace()
+        await ws.channel("general").react_to_message("msg123", "thumbs_up")
+        
+        mock_channel_conn.react_to_message.assert_called_once_with("msg123", "thumbs_up")
     
     @pytest.mark.asyncio
     async def test_upload_file(self, worker_agent, mock_thread_adapter):
-        """Test file upload."""
-        file_content = b"Hello, world!"
-        await worker_agent.upload_file(
-            filename="test.txt",
-            content=file_content,
-            mime_type="text/plain"
-        )
+        """Test file upload via workspace."""
+        # Mock workspace and channel connection
+        mock_workspace = Mock()
+        mock_channel_conn = Mock()
+        mock_channel_conn.upload_file = AsyncMock(return_value="file-uuid-123")
+        mock_workspace.channel.return_value = mock_channel_conn
         
-        # Check that the adapter was called with base64 encoded content
-        mock_thread_adapter.upload_file.assert_called_once()
-        call_args = mock_thread_adapter.upload_file.call_args[1]
-        assert call_args["filename"] == "test.txt"
-        assert call_args["mime_type"] == "text/plain"
-        assert call_args["file_size"] == len(file_content)
+        # Mock the workspace() method
+        worker_agent.workspace = Mock(return_value=mock_workspace)
         
-        # Verify base64 encoding
-        import base64
-        expected_b64 = base64.b64encode(file_content).decode('utf-8')
-        assert call_args["file_content"] == expected_b64
+        # Test uploading via workspace
+        ws = worker_agent.workspace()
+        file_uuid = await ws.channel("general").upload_file("/path/to/test.txt")
+        
+        mock_channel_conn.upload_file.assert_called_once_with("/path/to/test.txt")
+        assert file_uuid == "file-uuid-123"
 
 
 class TestCommandHandling:

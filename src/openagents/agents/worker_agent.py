@@ -320,6 +320,10 @@ class WorkerAgent(AgentRunner):
         """Get the workspace client."""
         if self._workspace_client is None:
             self._workspace_client = self.client.workspace()
+        self._workspace_client._auto_connect_config = {
+            'host': 'localhost',
+            'port': 8572
+        }
         return self._workspace_client
 
     async def setup(self):
@@ -327,6 +331,31 @@ class WorkerAgent(AgentRunner):
         await super().setup()
         
         logger.info(f"Setting up WorkerAgent '{self.default_agent_id}'")
+        
+        # Find thread messaging adapter using multiple possible keys
+        thread_adapter = None
+        for key in ["ThreadMessagingAgentAdapter", "thread_messaging", "openagents.mods.communication.thread_messaging"]:
+            thread_adapter = self.get_mod_adapter(key)
+            if thread_adapter:
+                logger.info(f"Found thread messaging adapter with key: {key}")
+                break
+        
+        if not thread_adapter:
+            logger.error("Thread messaging adapter not found with any known key!")
+            return
+        
+        # Store reference for later use (needed for workspace integration)
+        self._thread_adapter = thread_adapter
+        
+        # Register for mod message notifications
+        if hasattr(thread_adapter, 'set_agent_mod_message_handler'):
+            thread_adapter.set_agent_mod_message_handler(self._handle_thread_mod_message)
+            logger.info("Registered for thread messaging notifications")
+        
+        # Register message handler for history responses
+        if hasattr(thread_adapter, 'register_message_handler'):
+            thread_adapter.register_message_handler("worker_agent_history", self._handle_history_response)
+            logger.info("Registered for message history responses")
         
         # Setup project functionality if available
         await self._setup_project_functionality()
@@ -413,6 +442,195 @@ class WorkerAgent(AgentRunner):
         
         # This will be handled by _handle_thread_mod_message
         pass
+
+    async def _handle_thread_mod_message(self, message: Event):
+        """Handle thread messaging mod messages."""
+        action = message.payload.get("action", "")
+        
+        if action == "channel_message_notification":
+            await self._handle_channel_notification(message)
+        elif action == "reaction_notification":
+            await self._handle_reaction_notification(message)
+        elif action == "file_upload_response":
+            await self._handle_file_notification(message)
+        else:
+            logger.debug(f"Unhandled thread messaging action: {action}")
+
+    async def _handle_channel_notification(self, message: Event):
+        """Handle channel message notifications."""
+        channel_msg_data = message.payload.get("message", {})
+        channel = message.payload.get("channel", "")
+        
+        # Extract message details
+        msg_content = channel_msg_data.get("content", {})
+        sender_id = channel_msg_data.get("sender_id", "")
+        message_id = channel_msg_data.get("message_id", "")
+        timestamp = channel_msg_data.get("timestamp", 0)
+        message_type = channel_msg_data.get("message_type", "")
+        
+        # Skip our own messages
+        if self.ignore_own_messages and sender_id == self.client.agent_id:
+            return
+        
+        if message_type == "channel_message":
+            context = ChannelMessageContext(
+                message_id=message_id,
+                source_id=sender_id,
+                timestamp=timestamp,
+                payload=msg_content,
+                raw_message=message,
+                channel=channel,
+                mentioned_agent_id=channel_msg_data.get("mentioned_agent_id")
+            )
+            
+            # Check if we're mentioned
+            if (context.mentioned_agent_id == self.client.agent_id or 
+                self.is_mentioned(context.text)):
+                await self.on_channel_mention(context)
+            else:
+                await self.on_channel_post(context)
+                
+        elif message_type == "reply_message":
+            context = ReplyMessageContext(
+                message_id=message_id,
+                source_id=sender_id,
+                timestamp=timestamp,
+                payload=msg_content,
+                raw_message=message,
+                reply_to_id=channel_msg_data.get("reply_to_id", ""),
+                target_agent_id=channel_msg_data.get("target_agent_id"),
+                channel=channel,
+                thread_level=channel_msg_data.get("thread_level", 1)
+            )
+            
+            await self.on_channel_reply(context)
+
+    async def _handle_reaction_notification(self, message: Event):
+        """Handle reaction notifications."""
+        reaction_data = message.payload.get("reaction", {})
+        
+        context = ReactionContext(
+            message_id=message.event_id,
+            target_message_id=reaction_data.get("target_message_id", ""),
+            reactor_id=reaction_data.get("sender_id", ""),
+            reaction_type=reaction_data.get("reaction_type", ""),
+            action=reaction_data.get("action", "add"),
+            timestamp=message.timestamp,
+            raw_message=message
+        )
+        
+        await self.on_reaction(context)
+
+    async def _handle_file_notification(self, message: Event):
+        """Handle file upload notifications."""
+        file_data = message.payload.get("file", {})
+        
+        context = FileContext(
+            message_id=message.event_id,
+            source_id=message.source_id,
+            filename=file_data.get("filename", ""),
+            file_content=file_data.get("file_content", ""),
+            mime_type=file_data.get("mime_type", "application/octet-stream"),
+            file_size=file_data.get("file_size", 0),
+            timestamp=message.timestamp,
+            raw_message=message
+        )
+        
+        await self.on_file_received(context)
+
+    def _handle_history_response(self, data: Dict[str, Any], sender_id: str):
+        """Handle message history responses from the thread messaging adapter."""
+        action = data.get("action", "")
+        
+        if action == "channel_messages_retrieved":
+            self._process_channel_history_response(data)
+        elif action == "direct_messages_retrieved":
+            self._process_direct_history_response(data)
+        elif action in ["channel_messages_retrieval_error", "direct_messages_retrieval_error"]:
+            self._process_history_error_response(data)
+    
+    def _process_channel_history_response(self, data: Dict[str, Any]):
+        """Process channel message history response."""
+        channel = data.get("channel", "")
+        messages = data.get("messages", [])
+        
+        # Cache the messages
+        cache_key = f"channel:{channel}"
+        if cache_key not in self._message_history_cache:
+            self._message_history_cache[cache_key] = []
+        
+        # Add new messages to cache (avoid duplicates)
+        existing_ids = {msg.get("message_id") for msg in self._message_history_cache[cache_key]}
+        new_messages = [msg for msg in messages if msg.get("message_id") not in existing_ids]
+        self._message_history_cache[cache_key].extend(new_messages)
+        
+        # Resolve any pending futures
+        future_key = f"get_channel_messages:{channel}"
+        if future_key in self._pending_history_requests:
+            future = self._pending_history_requests.pop(future_key)
+            if not future.done():
+                future.set_result({
+                    "messages": messages,
+                    "total_count": data.get("total_count", 0),
+                    "offset": data.get("offset", 0),
+                    "limit": data.get("limit", 50),
+                    "has_more": data.get("has_more", False)
+                })
+        
+        logger.debug(f"Cached {len(new_messages)} new messages for channel {channel}")
+    
+    def _process_direct_history_response(self, data: Dict[str, Any]):
+        """Process direct message history response."""
+        target_agent_id = data.get("target_agent_id", "")
+        messages = data.get("messages", [])
+        
+        # Cache the messages
+        cache_key = f"direct:{target_agent_id}"
+        if cache_key not in self._message_history_cache:
+            self._message_history_cache[cache_key] = []
+        
+        # Add new messages to cache (avoid duplicates)
+        existing_ids = {msg.get("message_id") for msg in self._message_history_cache[cache_key]}
+        new_messages = [msg for msg in messages if msg.get("message_id") not in existing_ids]
+        self._message_history_cache[cache_key].extend(new_messages)
+        
+        # Resolve any pending futures
+        future_key = f"get_direct_messages:{target_agent_id}"
+        if future_key in self._pending_history_requests:
+            future = self._pending_history_requests.pop(future_key)
+            if not future.done():
+                future.set_result({
+                    "messages": messages,
+                    "total_count": data.get("total_count", 0),
+                    "offset": data.get("offset", 0),
+                    "limit": data.get("limit", 50),
+                    "has_more": data.get("has_more", False)
+                })
+        
+        logger.debug(f"Cached {len(new_messages)} new messages for direct conversation with {target_agent_id}")
+    
+    def _process_history_error_response(self, data: Dict[str, Any]):
+        """Process history retrieval error response."""
+        error = data.get("error", "Unknown error")
+        request_info = data.get("request_info", {})
+        
+        # Resolve any pending futures with error
+        action = request_info.get("action", "")
+        if action == "retrieve_channel_messages":
+            channel = request_info.get("channel", "")
+            future_key = f"get_channel_messages:{channel}"
+        elif action == "retrieve_direct_messages":
+            target_agent_id = request_info.get("target_agent_id", "")
+            future_key = f"get_direct_messages:{target_agent_id}"
+        else:
+            return
+        
+        if future_key in self._pending_history_requests:
+            future = self._pending_history_requests.pop(future_key)
+            if not future.done():
+                future.set_exception(Exception(f"History retrieval failed: {error}"))
+        
+        logger.error(f"Message history retrieval failed: {error}")
 
     async def _handle_thread_mod_message(self, message: Event):
         """Handle thread messaging mod messages."""
@@ -862,213 +1080,7 @@ class WorkerAgent(AgentRunner):
         """Handle project agent leave events. Override this method."""
         pass
 
-    # Convenience sending methods
-    async def send_direct(self, to: str, text: str, quote: Optional[str] = None):
-        """Send a direct message to another agent."""
-        if not hasattr(self, '_thread_adapter') or not self._thread_adapter:
-            logger.error("Thread messaging adapter not available")
-            return
-        
-        await self._thread_adapter.send_direct_message(
-            target_agent_id=to,
-            text=text,
-            quote=quote
-        )
-        logger.debug(f"Sent direct message to {to}: {text}")
 
-    async def send_channel(self, channel: str, text: str, mention: Optional[str] = None, quote: Optional[str] = None):
-        """Send a message to a channel."""
-        if not hasattr(self, '_thread_adapter') or not self._thread_adapter:
-            logger.error("Thread messaging adapter not available")
-            return
-        
-        # Add mention to text if specified
-        if mention:
-            text = f"@{mention} {text}"
-        
-        await self._thread_adapter.send_channel_message(
-            channel=channel,
-            text=text,
-            mentioned_agent_id=mention,
-            quote=quote
-        )
-        logger.debug(f"Sent channel message to {channel}: {text}")
-
-    async def send_reply(self, reply_to_id: str, text: str, quote: Optional[str] = None):
-        """Send a reply to any message."""
-        if not hasattr(self, '_thread_adapter') or not self._thread_adapter:
-            logger.error("Thread messaging adapter not available")
-            return
-        
-        await self._thread_adapter.send_reply_message(
-            reply_to_id=reply_to_id,
-            text=text,
-            quote=quote
-        )
-        logger.debug(f"Sent reply to {reply_to_id}: {text}")
-
-    async def react_to(self, message_id: str, reaction: str):
-        """Add a reaction to a message."""
-        if not hasattr(self, '_thread_adapter') or not self._thread_adapter:
-            logger.error("Thread messaging adapter not available")
-            return
-        
-        await self._thread_adapter.add_reaction(
-            target_message_id=message_id,
-            reaction_type=reaction
-        )
-        logger.debug(f"Added reaction '{reaction}' to message {message_id}")
-
-    async def upload_file(self, filename: str, content: bytes, mime_type: str = "application/octet-stream"):
-        """Upload a file."""
-        if not hasattr(self, '_thread_adapter') or not self._thread_adapter:
-            logger.error("Thread messaging adapter not available")
-            return
-        
-        import base64
-        file_content_b64 = base64.b64encode(content).decode('utf-8')
-        
-        await self._thread_adapter.upload_file(
-            filename=filename,
-            file_content=file_content_b64,
-            mime_type=mime_type,
-            file_size=len(content)
-        )
-        logger.debug(f"Uploaded file: {filename} ({len(content)} bytes)")
-
-    # Utility methods
-    async def get_channels(self) -> List[Dict[str, Any]]:
-        """Get available channels."""
-        if not hasattr(self, '_thread_adapter') or not self._thread_adapter:
-            return []
-        
-        await self._thread_adapter.list_channels()
-        # The response will be handled asynchronously
-        return self._thread_adapter.available_channels
-
-    async def get_channel_messages(self, channel: str, limit: int = 50, offset: int = 0, timeout: float = 10.0) -> Dict[str, Any]:
-        """Get channel message history.
-        
-        Args:
-            channel: Channel name to retrieve messages from
-            limit: Maximum number of messages to retrieve (1-500)
-            offset: Number of messages to skip for pagination
-            timeout: Maximum time to wait for response in seconds
-            
-        Returns:
-            Dict containing:
-                - messages: List of message dictionaries
-                - total_count: Total number of messages in channel
-                - offset: Offset used for this request
-                - limit: Limit used for this request
-                - has_more: Whether there are more messages available
-                
-        Raises:
-            Exception: If retrieval fails or times out
-        """
-        if not hasattr(self, '_thread_adapter') or not self._thread_adapter:
-            raise Exception("Thread messaging adapter not available")
-        
-        # Check cache first
-        cache_key = f"channel:{channel}"
-        if cache_key in self._message_history_cache and offset == 0:
-            cached_messages = self._message_history_cache[cache_key]
-            if len(cached_messages) >= limit:
-                return {
-                    "messages": cached_messages[:limit],
-                    "total_count": len(cached_messages),
-                    "offset": 0,
-                    "limit": limit,
-                    "has_more": len(cached_messages) > limit
-                }
-        
-        # Create future for async response
-        future_key = f"get_channel_messages:{channel}"
-        if future_key in self._pending_history_requests:
-            # Request already in progress, wait for it
-            future = self._pending_history_requests[future_key]
-        else:
-            # Create new request
-            future = asyncio.get_event_loop().create_future()
-            self._pending_history_requests[future_key] = future
-            
-            # Send the request
-            await self._thread_adapter.retrieve_channel_messages(
-                channel=channel,
-                limit=limit,
-                offset=offset
-            )
-        
-        # Wait for response with timeout
-        try:
-            result = await asyncio.wait_for(future, timeout=timeout)
-            return result
-        except asyncio.TimeoutError:
-            # Clean up pending request
-            self._pending_history_requests.pop(future_key, None)
-            raise Exception(f"Timeout waiting for channel messages from {channel}")
-
-    async def get_direct_messages(self, with_agent: str, limit: int = 50, offset: int = 0, timeout: float = 10.0) -> Dict[str, Any]:
-        """Get direct message history.
-        
-        Args:
-            with_agent: Agent ID to get conversation history with
-            limit: Maximum number of messages to retrieve (1-500)
-            offset: Number of messages to skip for pagination
-            timeout: Maximum time to wait for response in seconds
-            
-        Returns:
-            Dict containing:
-                - messages: List of message dictionaries
-                - total_count: Total number of messages in conversation
-                - offset: Offset used for this request
-                - limit: Limit used for this request
-                - has_more: Whether there are more messages available
-                
-        Raises:
-            Exception: If retrieval fails or times out
-        """
-        if not hasattr(self, '_thread_adapter') or not self._thread_adapter:
-            raise Exception("Thread messaging adapter not available")
-        
-        # Check cache first
-        cache_key = f"direct:{with_agent}"
-        if cache_key in self._message_history_cache and offset == 0:
-            cached_messages = self._message_history_cache[cache_key]
-            if len(cached_messages) >= limit:
-                return {
-                    "messages": cached_messages[:limit],
-                    "total_count": len(cached_messages),
-                    "offset": 0,
-                    "limit": limit,
-                    "has_more": len(cached_messages) > limit
-                }
-        
-        # Create future for async response
-        future_key = f"get_direct_messages:{with_agent}"
-        if future_key in self._pending_history_requests:
-            # Request already in progress, wait for it
-            future = self._pending_history_requests[future_key]
-        else:
-            # Create new request
-            future = asyncio.get_event_loop().create_future()
-            self._pending_history_requests[future_key] = future
-            
-            # Send the request
-            await self._thread_adapter.retrieve_direct_messages(
-                target_agent_id=with_agent,
-                limit=limit,
-                offset=offset
-            )
-        
-        # Wait for response with timeout
-        try:
-            result = await asyncio.wait_for(future, timeout=timeout)
-            return result
-        except asyncio.TimeoutError:
-            # Clean up pending request
-            self._pending_history_requests.pop(future_key, None)
-            raise Exception(f"Timeout waiting for direct messages with {with_agent}")
 
     def is_mentioned(self, text: str) -> bool:
         """Check if this agent is mentioned in the text."""
@@ -1104,252 +1116,6 @@ class WorkerAgent(AgentRunner):
         task = asyncio.create_task(delayed_task())
         self._scheduled_tasks.append(task)
         return task
-
-    # Project management methods (only effective when project mod is enabled)
-    async def create_project(self, goal: str, name: Optional[str] = None, config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Create a new project.
-        
-        Args:
-            goal: The goal or description of the project
-            name: Optional name for the project (auto-generated if not provided)
-            config: Optional project-specific configuration
-            
-        Returns:
-            Dict containing project creation result
-            
-        Raises:
-            Exception: If project mod is not available or creation fails
-        """
-        if not self._project_mod_available:
-            raise Exception("Project functionality not available - project mod not enabled")
-        
-        if not self._workspace_client:
-            raise Exception("Workspace client not available for project creation")
-        
-        try:
-            if not PROJECT_IMPORTS_AVAILABLE:
-                raise Exception("Project imports not available")
-            
-            # Create project object
-            project = Project(goal=goal, name=name)
-            if config:
-                project.config = config
-            
-            # Start the project through workspace
-            result = await self._workspace_client.start_project(project)
-            
-            if result.get("success"):
-                project_id = result["project_id"]
-                # Track the project
-                self._active_projects[project_id] = {
-                    "name": result.get("project_name", name or "Unnamed Project"),
-                    "status": "running",
-                    "created_at": int(asyncio.get_event_loop().time()),
-                    "channel": result.get("channel_name")
-                }
-                if result.get("channel_name"):
-                    self._project_channels[project_id] = result["channel_name"]
-                
-                logger.info(f"Created project {project_id}: {goal}")
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"Failed to create project: {e}")
-            raise
-
-    async def get_project_status(self, project_id: str) -> Dict[str, Any]:
-        """Get the status and details of a project.
-        
-        Args:
-            project_id: ID of the project to get status for
-            
-        Returns:
-            Dict containing project status information
-            
-        Raises:
-            Exception: If project mod is not available or request fails
-        """
-        if not self._project_mod_available:
-            raise Exception("Project functionality not available - project mod not enabled")
-        
-        if not self._workspace_client:
-            raise Exception("Workspace client not available")
-        
-        try:
-            result = await self._workspace_client.get_project_status(project_id)
-            return result
-        except Exception as e:
-            logger.error(f"Failed to get project status for {project_id}: {e}")
-            raise
-
-    async def list_my_projects(self, status_filter: Optional[str] = None) -> List[Dict[str, Any]]:
-        """List projects for this agent.
-        
-        Args:
-            status_filter: Optional status filter ("running", "completed", etc.)
-            
-        Returns:
-            List of project dictionaries
-            
-        Raises:
-            Exception: If project mod is not available or request fails
-        """
-        if not self._project_mod_available:
-            raise Exception("Project functionality not available - project mod not enabled")
-        
-        if not self._workspace_client:
-            raise Exception("Workspace client not available")
-        
-        try:
-            result = await self._workspace_client.list_projects(filter_status=status_filter)
-            if result.get("success"):
-                return result.get("projects", [])
-            else:
-                raise Exception(result.get("error", "Failed to list projects"))
-        except Exception as e:
-            logger.error(f"Failed to list projects: {e}")
-            raise
-
-    async def stop_project(self, project_id: str) -> Dict[str, Any]:
-        """Stop a running project.
-        
-        Args:
-            project_id: ID of the project to stop
-            
-        Returns:
-            Dict containing stop result
-            
-        Raises:
-            Exception: If project mod is not available or request fails
-        """
-        if not self._project_mod_available:
-            raise Exception("Project functionality not available - project mod not enabled")
-        
-        project_adapter = self.get_mod_adapter('project.default')
-        if not project_adapter:
-            raise Exception("Project adapter not available")
-        
-        try:
-            # Use the project adapter to stop the project
-            # This would need to be implemented in the adapter
-            # For now, we'll track it locally
-            self._active_projects.pop(project_id, None)
-            self._project_channels.pop(project_id, None)
-            
-            logger.info(f"Stopped project {project_id}")
-            return {"success": True, "project_id": project_id}
-            
-        except Exception as e:
-            logger.error(f"Failed to stop project {project_id}: {e}")
-            raise
-
-    async def send_project_message(self, project_id: str, message: str) -> None:
-        """Send a message to a project channel.
-        
-        Args:
-            project_id: ID of the project
-            message: Message text to send
-            
-        Raises:
-            Exception: If project mod is not available or send fails
-        """
-        if not self._project_mod_available:
-            raise Exception("Project functionality not available - project mod not enabled")
-        
-        # Get project channel
-        channel = self._project_channels.get(project_id)
-        if not channel:
-            # Try to get from active projects
-            project_info = self._active_projects.get(project_id)
-            if project_info:
-                channel = project_info.get("channel")
-        
-        if not channel:
-            raise Exception(f"No channel found for project {project_id}")
-        
-        # Send message to project channel
-        await self.send_channel(channel, message)
-        logger.debug(f"Sent message to project {project_id} channel {channel}")
-
-    async def send_project_notification(self, project_id: str, notification_type: str, content: Dict[str, Any]) -> None:
-        """Send a project notification.
-        
-        Args:
-            project_id: ID of the project
-            notification_type: Type of notification ("progress", "error", "completion", etc.)
-            content: Notification content
-            
-        Raises:
-            Exception: If project mod is not available or send fails
-        """
-        if not self._project_mod_available:
-            raise Exception("Project functionality not available - project mod not enabled")
-        
-        if not PROJECT_IMPORTS_AVAILABLE:
-            raise Exception("Project imports not available")
-        
-        try:
-            # Create project notification message
-            notification = ProjectNotificationMessage(
-                sender_id=self.client.agent_id,
-                project_id=project_id,
-                notification_type=notification_type,
-                content=content
-            )
-            
-            # Send through mod message system
-            mod_message = Event(
-                event_name="project.notification.sent",
-                source_id=self.client.agent_id,
-                relevant_mod="openagents.mods.project.default",
-                target_agent_id=self.client.agent_id,
-                payload=notification.model_dump()
-            )
-            
-            await self.client.connector.send_mod_message(mod_message)
-            logger.debug(f"Sent project notification for {project_id}: {notification_type}")
-            
-        except Exception as e:
-            logger.error(f"Failed to send project notification: {e}")
-            raise
-
-    async def complete_project(self, project_id: str, results: Dict[str, Any], summary: str) -> None:
-        """Mark a project as completed with results.
-        
-        Args:
-            project_id: ID of the project to complete
-            results: Project completion results
-            summary: Completion summary
-            
-        Raises:
-            Exception: If project mod is not available or completion fails
-        """
-        if not self._project_mod_available:
-            raise Exception("Project functionality not available - project mod not enabled")
-        
-        try:
-            # Send completion notification
-            await self.send_project_notification(
-                project_id=project_id,
-                notification_type="completion",
-                content={
-                    "results": results,
-                    "completed_by": self.client.agent_id,
-                    "completion_summary": summary,
-                    "completion_time": asyncio.get_event_loop().time()
-                }
-            )
-            
-            # Update local state
-            self._active_projects.pop(project_id, None)
-            self._project_channels.pop(project_id, None)
-            
-            logger.info(f"Completed project {project_id}: {summary}")
-            
-        except Exception as e:
-            logger.error(f"Failed to complete project {project_id}: {e}")
-            raise
 
     # Project utility methods
     def has_project_mod(self) -> bool:
