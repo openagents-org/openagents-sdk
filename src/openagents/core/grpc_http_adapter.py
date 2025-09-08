@@ -90,6 +90,10 @@ class GRPCHTTPAdapter:
             class MockContext:
                 def peer(self):
                     return f"{request.remote}:{request.transport.get_extra_info('peername')[1] if request.transport else 'unknown'}"
+                
+                async def send(self, data):
+                    """Mock send method for HTTP clients - responses are queued instead of sent directly."""
+                    pass  # HTTP responses are handled through the polling mechanism
             
             await self.transport._notify_system_message_handlers(
                 agent_id, system_message, MockContext()
@@ -179,11 +183,14 @@ class GRPCHTTPAdapter:
                 message_type = data.get('message_type', 'direct_message')
                 message_id = str(uuid.uuid4())
                 
+                # CRITICAL FIX: Use agent_id or sender_id for compatibility
+                sender_id = data.get('sender_id') or data.get('agent_id')
+                
                 # Create appropriate message content based on type
                 if message_type == 'channel_message':
                     mod_content = {
                         "message_type": "channel_message",
-                        "sender_id": data.get('sender_id'),
+                        "sender_id": sender_id,
                         "channel": data.get('channel', 'general'),
                         "content": data.get('content', {}),
                         "reply_to_id": data.get('reply_to_id'),
@@ -193,7 +200,7 @@ class GRPCHTTPAdapter:
                 else:
                     mod_content = {
                         "message_type": "direct_message",
-                        "sender_id": data.get('sender_id'),
+                        "sender_id": sender_id,
                         "target_agent_id": data.get('target_agent_id'),
                         "content": data.get('content', {}),
                         "reply_to_id": data.get('reply_to_id'),
@@ -201,11 +208,21 @@ class GRPCHTTPAdapter:
                         "quoted_text": data.get('quoted_text')
                     }
                 
+                # Also handle the case where text is provided directly (for simple messages)
+                if 'text' in data and not mod_content['content']:
+                    mod_content['content'] = {'text': data['text']}
+                
+                # Handle target_channel for channel messages
+                if 'target_channel' in data:
+                    mod_content['channel'] = data['target_channel']
+                    message_type = 'channel_message'
+                    mod_content['message_type'] = 'channel_message'
+                
                 mod_message = Event(
                     event_name="thread.message",
-                    source_id=data.get('sender_id'),
+                    source_id=sender_id,
                     relevant_mod="openagents.mods.communication.thread_messaging",
-                    target_agent_id=data.get('sender_id'),
+                    target_agent_id=sender_id,
                     payload=mod_content,
                     timestamp=int(time.time())
                 )
@@ -269,6 +286,10 @@ class GRPCHTTPAdapter:
             class MockContext:
                 def peer(self):
                     return f"{request.remote}:unknown"
+                
+                async def send(self, data):
+                    """Mock send method for HTTP clients - responses are queued instead of sent directly."""
+                    pass  # HTTP responses are handled through the polling mechanism
             
             # Handle the system command and queue response
             response_data = await self._handle_system_command(
@@ -319,7 +340,11 @@ class GRPCHTTPAdapter:
                 # Handle list_agents command directly
                 if command == 'list_agents':
                     agent_list = []
+                    seen_agents = set()
+                    
+                    # First, add agents from the agents dictionary
                     for agent_id_key, metadata in network.agents.items():
+                        seen_agents.add(agent_id_key)
                         # Create a copy of metadata and set the status based on connection
                         agent_metadata = metadata.copy()
                         is_connected = agent_id_key in network.connections
@@ -332,6 +357,26 @@ class GRPCHTTPAdapter:
                             "metadata": agent_metadata
                         }
                         agent_list.append(agent_info)
+                    
+                    # Also add connected agents that might not be in the agents dictionary (gRPC agents)
+                    for agent_id_key in network.connections.keys():
+                        if agent_id_key not in seen_agents:
+                            # Try to get metadata from connections or create basic metadata
+                            connection = network.connections[agent_id_key]
+                            metadata = getattr(connection, 'metadata', {})
+                            if not metadata:
+                                metadata = {'name': agent_id_key, 'connection_type': 'grpc'}
+                            
+                            agent_metadata = metadata.copy()
+                            agent_metadata['status'] = 'online'
+                            
+                            agent_info = {
+                                "agent_id": agent_id_key,
+                                "name": metadata.get("name", agent_id_key),
+                                "connected": True,
+                                "metadata": agent_metadata
+                            }
+                            agent_list.append(agent_info)
                     
                     # Queue the response for the requesting agent
                     response_message = {
@@ -506,8 +551,20 @@ class GRPCHTTPAdapter:
             request_id = str(uuid.uuid4())
             mod_content['request_id'] = request_id
             
+            # Determine correct event name based on command
+            if command == 'get_channel_messages':
+                event_name = "thread.channel_messages.retrieve"
+            elif command == 'list_channels':
+                event_name = "thread.channels.list"
+            elif command == 'react_to_message':
+                event_name = "thread.reaction.add"
+            elif command == 'send_channel_message':
+                event_name = "thread.channel_message.sent"
+            else:
+                event_name = "thread.request"  # fallback
+            
             mod_message = Event(
-                event_name="thread.request",
+                event_name=event_name,
                 source_id=agent_id,
                 relevant_mod="openagents.mods.communication.thread_messaging",
                 target_agent_id=agent_id,
@@ -526,9 +583,9 @@ class GRPCHTTPAdapter:
             # Send through network's mod message handler
             await network._handle_mod_message(mod_message)
             
-            # Wait for response with timeout
+            # Wait for response with timeout (increased to 30 seconds for better reliability)
             try:
-                response_data = await asyncio.wait_for(response_future, timeout=10.0)
+                response_data = await asyncio.wait_for(response_future, timeout=30.0)
                 logger.info(f"🔧 Received mod response for {command}: {response_data}")
                 return response_data
             except asyncio.TimeoutError:
@@ -655,7 +712,11 @@ class GRPCHTTPAdapter:
         elif isinstance(obj, ListValue):
             return [self._make_json_serializable(item) for item in obj]
         elif isinstance(obj, Struct):
-            return dict(obj)
+            # Convert Struct to dict and recursively make serializable
+            result = {}
+            for key, value in obj.items():
+                result[key] = self._make_json_serializable(value)
+            return result
         elif isinstance(obj, Message):
             # Convert protobuf message to dict
             from google.protobuf.json_format import MessageToDict

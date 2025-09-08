@@ -18,7 +18,8 @@ from typing import Dict, Any, List, Optional, Callable, Union
 from pathlib import Path
 
 from openagents.core.base_mod_adapter import BaseModAdapter
-from openagents.models.messages import Event, EventNames
+from openagents.models.messages import Event
+from openagents.models.event import EventVisibility, EventNames
 from openagents.models.tool import AgentAdapterTool
 from openagents.utils.message_util import (
     get_direct_message_thread_id,
@@ -211,7 +212,13 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         # Wrap in Event for proper transport
         wrapper_payload = direct_msg.model_dump()
         wrapper_payload["relevant_agent_id"] = target_agent_id
-        message = Event(event_name="thread.message", source_id=self.agent_id, payload=wrapper_payload)
+        message = Event(
+            event_name="thread.message", 
+            source_id=self.agent_id, 
+            payload=wrapper_payload,
+            relevant_mod="openagents.mods.communication.thread_messaging",
+            visibility=EventVisibility.MOD_ONLY
+        )
         
         await self.connector.send_mod_message(message)
         logger.debug(f"Sent direct message to {target_agent_id}")
@@ -229,6 +236,13 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             logger.error(f"Cannot send channel message: connector is None for agent {self.agent_id}")
             return
         
+        # CRITICAL FIX: Normalize channel name by removing # prefix
+        # This ensures messages sent to "#general" appear in "general" channel
+        normalized_channel = channel.lstrip('#') if channel else channel
+        logger.info(f"🔍 DEBUG CHANNEL: Input channel='{channel}' -> normalized='{normalized_channel}'")
+        if normalized_channel != channel:
+            logger.info(f"🔧 CHANNEL FIX: Normalized channel '{channel}' -> '{normalized_channel}'")
+        
         content = {"text": text}
         
         # Handle quoting if specified
@@ -241,7 +255,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         # Create channel message
         channel_msg = ChannelMessage(
             source_id=self.agent_id,
-            channel=channel,
+            channel=normalized_channel,
             mentioned_agent_id=mentioned_agent_id,
             content=content,
             quoted_message_id=quoted_message_id,
@@ -251,7 +265,20 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         # Wrap in Event for proper transport
         wrapper_payload = channel_msg.model_dump()
         wrapper_payload["relevant_agent_id"] = self.agent_id
-        message = Event(event_name="thread.message", source_id=self.agent_id, payload=wrapper_payload)
+        wrapper_payload["message_type"] = "channel_message"  # Ensure message_type is explicitly set
+        
+        # CRITICAL FIX: Set target_channel on Event for proper message routing
+        # The network's message classification depends on this field
+        message = Event(
+            event_name="thread.message", 
+            source_id=self.agent_id, 
+            target_channel=normalized_channel,  # This is the key fix!
+            payload=wrapper_payload,
+            relevant_mod="openagents.mods.communication.thread_messaging",
+            visibility=EventVisibility.MOD_ONLY
+        )
+        logger.info(f"🔧 ADAPTER: Created Event with visibility={message.visibility}, relevant_mod={message.relevant_mod}")
+        logger.info(f"🔧 ADAPTER: Event target_agent_id={message.target_agent_id}, target_channel={message.target_channel}")
         
         await self.connector.send_mod_message(message)
         logger.debug(f"Sent channel message to {channel}")
@@ -319,7 +346,12 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             # Wrap in Event for proper transport
             wrapper_payload = upload_msg.model_dump()
             wrapper_payload["relevant_agent_id"] = self.agent_id
-            message = Event(event_name="thread.message", source_id=self.agent_id, payload=wrapper_payload)
+            message = Event(
+                event_name="thread.message", 
+                source_id=self.agent_id, 
+                payload=wrapper_payload,
+                relevant_mod="openagents.mods.communication.thread_messaging"
+            )
             
             # Store pending operation
             self.pending_file_operations[message.event_id] = {
@@ -371,7 +403,11 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         )
         
         # Wrap in Event for proper transport
-        message = Event(event_name="thread.message", source_id=self.agent_id, relevant_mod="openagents.mods.communication.thread_messaging",
+        message = Event(
+            event_name="thread.message", 
+            source_id=self.agent_id, 
+            relevant_mod="openagents.mods.communication.thread_messaging",
+            visibility=EventVisibility.MOD_ONLY,
             relevant_agent_id=self.agent_id,
             payload=reply_msg.model_dump()
         )
@@ -412,7 +448,11 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         )
         
         # Wrap in Event for proper transport
-        message = Event(event_name="thread.message", source_id=self.agent_id, relevant_mod="openagents.mods.communication.thread_messaging",
+        message = Event(
+            event_name="thread.message", 
+            source_id=self.agent_id, 
+            relevant_mod="openagents.mods.communication.thread_messaging",
+            visibility=EventVisibility.MOD_ONLY,
             relevant_agent_id=self.agent_id,
             payload=reply_msg.model_dump()
         )
@@ -449,7 +489,11 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         )
         
         # Wrap in Event for proper transport
-        message = Event(event_name="thread.message", source_id=self.agent_id, relevant_mod="openagents.mods.communication.thread_messaging",
+        message = Event(
+            event_name="thread.message", 
+            source_id=self.agent_id, 
+            relevant_mod="openagents.mods.communication.thread_messaging",
+            visibility=EventVisibility.MOD_ONLY,
             relevant_agent_id=self.agent_id,
             payload=retrieval_msg.model_dump()
         )
@@ -496,7 +540,11 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         )
         
         # Wrap in Event for proper transport
-        message = Event(event_name="thread.message", source_id=self.agent_id, relevant_mod="openagents.mods.communication.thread_messaging",
+        message = Event(
+            event_name="thread.message", 
+            source_id=self.agent_id, 
+            relevant_mod="openagents.mods.communication.thread_messaging",
+            visibility=EventVisibility.MOD_ONLY,
             relevant_agent_id=self.agent_id,
             payload=retrieval_msg.model_dump()
         )
@@ -533,7 +581,11 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         )
         
         # Wrap in Event for proper transport
-        message = Event(event_name="thread.message", source_id=self.agent_id, relevant_mod="openagents.mods.communication.thread_messaging",
+        message = Event(
+            event_name="thread.message", 
+            source_id=self.agent_id, 
+            relevant_mod="openagents.mods.communication.thread_messaging",
+            visibility=EventVisibility.MOD_ONLY,
             relevant_agent_id=self.agent_id,
             payload=channel_info_msg.model_dump()
         )
@@ -573,7 +625,11 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         )
         
         # Wrap in Event for proper transport
-        message = Event(event_name="thread.message", source_id=self.agent_id, relevant_mod="openagents.mods.communication.thread_messaging",
+        message = Event(
+            event_name="thread.message", 
+            source_id=self.agent_id, 
+            relevant_mod="openagents.mods.communication.thread_messaging",
+            visibility=EventVisibility.MOD_ONLY,
             relevant_agent_id=self.agent_id,
             payload=reaction_msg.model_dump()
         )

@@ -427,8 +427,15 @@ class GRPCTransport(Transport):
         self.server = None
         self.servicer = None
         self.http_adapter = None  # For browser compatibility
+        self.network_instance = None  # Reference to network instance
         self.host = self.config.get('host', 'localhost')
         self.port = self.config.get('port', 50051)
+    
+    def set_network_instance(self, network):
+        """Set network instance for HTTP adapter integration."""
+        self.network_instance = network
+        if self.http_adapter:
+            self.http_adapter.transport.network_instance = network
     
     async def initialize(self) -> bool:
         """Initialize gRPC transport."""
@@ -529,21 +536,103 @@ class GRPCTransport(Transport):
                     )
                 
                 async def RegisterAgent(self, request, context):
-                    # Basic registration that just acknowledges
+                    # CRITICAL FIX: Call network's register_agent method to notify mods
                     logger.info(f"Agent registration: {request.agent_id}")
-                    return agent_service_pb2.RegisterAgentResponse(
-                        success=True,
-                        network_name="TestNetwork",
-                        network_id="grpc-network"
-                    )
+                    
+                    # Extract metadata from request
+                    metadata = dict(request.metadata) if request.metadata else {}
+                    
+                    # Register with network instance if available
+                    if self.transport.network_instance:
+                        try:
+                            success = await self.transport.network_instance.register_agent(request.agent_id, metadata)
+                            network_name = self.transport.network_instance.network_name
+                            network_id = self.transport.network_instance.network_id
+                            
+                            if success:
+                                logger.info(f"✅ Successfully registered agent {request.agent_id} with network {network_name}")
+                                return agent_service_pb2.RegisterAgentResponse(
+                                    success=True,
+                                    network_name=network_name,
+                                    network_id=network_id
+                                )
+                            else:
+                                logger.error(f"❌ Network registration failed for agent {request.agent_id}")
+                                return agent_service_pb2.RegisterAgentResponse(
+                                    success=False,
+                                    error_message="Network registration failed",
+                                    network_name="",
+                                    network_id=""
+                                )
+                        except Exception as e:
+                            logger.error(f"❌ Error during agent registration: {e}")
+                            return agent_service_pb2.RegisterAgentResponse(
+                                success=False,
+                                error_message=f"Registration error: {str(e)}",
+                                network_name="",
+                                network_id=""
+                            )
+                    else:
+                        logger.warning(f"⚠️ No network instance available for registering agent {request.agent_id}")
+                        # Fallback to basic acknowledgment
+                        return agent_service_pb2.RegisterAgentResponse(
+                            success=True,
+                            network_name="TestNetwork",
+                            network_id="grpc-network"
+                        )
                 
                 async def SendMessage(self, request, context):
-                    # Basic message handling - request is a Message, not a wrapper
-                    logger.debug(f"gRPC message from {request.sender_id}")
-                    return agent_service_pb2.MessageResponse(
-                        success=True,
-                        message_id=request.message_id
-                    )
+                    # Convert gRPC message to Event and forward to network layer
+                    try:
+                        logger.debug(f"gRPC message from {request.sender_id}")
+                        
+                        # Extract payload from protobuf Any
+                        payload = {}
+                        if request.payload and request.payload.value:
+                            try:
+                                # Unpack protobuf Struct from Any field
+                                from google.protobuf.struct_pb2 import Struct
+                                struct = Struct()
+                                request.payload.Unpack(struct)
+                                # Convert Struct to Python dict
+                                payload = dict(struct)
+                            except Exception as e:
+                                logger.warning(f"Could not decode protobuf payload: {e}")
+                                # Fallback: try JSON decode
+                                try:
+                                    import json
+                                    payload = json.loads(request.payload.value.decode('utf-8'))
+                                except (json.JSONDecodeError, UnicodeDecodeError) as e2:
+                                    logger.warning(f"Could not decode as JSON either: {e2}")
+                                    payload = {'raw_data': request.payload.value.hex()}
+                        
+                        # Create Event from gRPC message
+                        # The AI News Bot sends via thread messaging adapter which uses event_name="thread.message"
+                        event_name = request.message_type if request.message_type else "thread.message"
+                        message = Event(
+                            event_name=event_name,
+                            source_id=request.sender_id,
+                            target_agent_id=request.target_id,
+                            payload=payload,
+                            event_id=request.message_id,
+                            timestamp=request.timestamp.ToDatetime() if request.timestamp else None,
+                            metadata=dict(request.metadata) if request.metadata else {}
+                        )
+                        
+                        # Forward to network layer through message handlers
+                        await self.transport.handle_message(message, request.sender_id)
+                        
+                        return agent_service_pb2.MessageResponse(
+                            success=True,
+                            message_id=request.message_id
+                        )
+                    except Exception as e:
+                        logger.error(f"Error handling gRPC message: {e}")
+                        return agent_service_pb2.MessageResponse(
+                            success=False,
+                            error_message=str(e),
+                            message_id=request.message_id
+                        )
                 
                 async def SendSystemCommand(self, request, context):
                     # Basic system command handling
@@ -571,6 +660,19 @@ class GRPCTransport(Transport):
             await self.server.start()
             self.is_listening = True
             logger.info(f"gRPC transport listening on {host}:{port}")
+            
+            # Start HTTP adapter for browser compatibility
+            try:
+                from openagents.core.grpc_http_adapter import GRPCHTTPAdapter
+                self.http_adapter = GRPCHTTPAdapter(self)
+                # Set network instance if available
+                if hasattr(self, 'network_instance') and self.network_instance:
+                    self.http_adapter.transport.network_instance = self.network_instance
+                await self.http_adapter.start_server(host, port)
+                logger.info(f"gRPC HTTP adapter started for browser compatibility")
+            except Exception as e:
+                logger.warning(f"Failed to start HTTP adapter: {e}")
+            
             return True
             
         except ImportError as e:

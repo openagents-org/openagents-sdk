@@ -71,28 +71,10 @@ async def async_launch_network(config_path: str, runtime: Optional[int] = None) 
         logger.info(f"Loaded network configuration from {config_path}")
         
         # Create enhanced network - pass the full config path to preserve metadata
+        # Mods are automatically loaded and registered during network creation
         network = create_network(config_path)
         logger.info(f"Created network: {network.network_name}")
-        
-        # Load and register network mods
-        if hasattr(config.network, 'mods') and config.network.mods:
-            logger.info(f"Loading {len(config.network.mods)} network mods...")
-            from openagents.utils.mod_loaders import load_network_mods
-            try:
-                # Convert ModConfig objects to dictionaries
-                mod_configs = [{"name": p.name, "enabled": p.enabled, "config": p.config} for p in config.network.mods]
-                mods = load_network_mods(mod_configs)
-                
-                # Register mods with the network
-                for mod_name, mod_instance in mods.items():
-                    mod_instance.bind_network(network)
-                    network.mods[mod_name] = mod_instance
-                    logger.info(f"Registered network mod: {mod_name}")
-                    
-                logger.info(f"Successfully loaded {len(mods)} network mods")
-            except Exception as e:
-                logger.error(f"Failed to load network mods: {e}")
-                # Continue without mods - this shouldn't be fatal
+        logger.info(f"Loaded {len(network.mods)} network mods: {list(network.mods.keys())}")
     
         # Initialize network
         if not await network.initialize():
