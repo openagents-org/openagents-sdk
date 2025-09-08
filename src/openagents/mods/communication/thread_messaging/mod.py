@@ -366,6 +366,7 @@ class ThreadMessagingNetworkMod(BaseMod):
         Returns:
             Optional[Event]: The processed message, or None if the message was handled
         """
+        
         # Prevent infinite loops - don't process messages we generated
         if message.source_id == self.network.network_id and message.relevant_mod == "openagents.mods.communication.thread_messaging":
             logger.debug("Skipping thread messaging response message to prevent infinite loop")
@@ -374,6 +375,12 @@ class ThreadMessagingNetworkMod(BaseMod):
         # Check if this is a message type that thread messaging should handle
         event_name = message.event_name
         
+        # Debug logging for thread.message events
+        if event_name == "thread.message":
+            logger.warning(f"🔧 THREAD MOD ENTRY: Received thread.message event from {message.source_id}")
+            logger.warning(f"🔧 THREAD MOD ENTRY: Event payload type: {type(message.payload)}")
+            logger.warning(f"🔧 THREAD MOD ENTRY: Event payload: {message.payload}")
+        
         # Handle thread messaging specific events based on event_name
         if event_name.startswith("thread."):
             logger.debug(f"Thread messaging processing system message: {event_name}")
@@ -381,6 +388,29 @@ class ThreadMessagingNetworkMod(BaseMod):
             # Extract the inner message from the Event content
             try:
                 content = message.payload if hasattr(message, 'payload') else message.content
+                
+                # Convert protobuf content to dict if needed
+                if event_name == "thread.message":
+                    logger.warning(f"🔧 THREAD.MESSAGE DEBUG: content type={type(content)}, has_fields={hasattr(content, 'fields')}")
+                    logger.warning(f"🔧 THREAD.MESSAGE DEBUG: content keys={list(content.keys()) if hasattr(content, 'keys') else 'No keys'}")
+                    logger.warning(f"🔧 THREAD.MESSAGE DEBUG: content={content}")
+                if hasattr(content, 'fields'):
+                    logger.warning(f"🔧 PROTOBUF CONVERSION: Converting protobuf fields")
+                    # This is a protobuf Struct, convert to dict
+                    content_dict = {}
+                    for field_name, field_value in content.fields.items():
+                        if hasattr(field_value, 'string_value'):
+                            content_dict[field_name] = field_value.string_value
+                        elif hasattr(field_value, 'struct_value'):
+                            # Handle nested struct (like content.text)
+                            nested_dict = {}
+                            for nested_name, nested_value in field_value.struct_value.fields.items():
+                                if hasattr(nested_value, 'string_value'):
+                                    nested_dict[nested_name] = nested_value.string_value
+                            content_dict[field_name] = nested_dict
+                    content = content_dict
+                    logger.debug(f"Converted protobuf content to dict: {content}")
+                
                 logger.debug(f"Processing thread system message: {event_name}")
                 logger.debug(f"Message content keys: {list(content.keys()) if hasattr(content, 'keys') else 'No keys'}")
                 
@@ -424,7 +454,7 @@ class ThreadMessagingNetworkMod(BaseMod):
                     # Populate quoted_text if quoted_message_id is provided
                     if 'quoted_message_id' in content and content['quoted_message_id']:
                         content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
-                    inner_message = Event(**content)
+                    inner_message = Event(event_name=event_name, **content)
                     self._add_to_history(inner_message)
                     await self._process_direct_message(inner_message)
                 elif event_name == "thread.channel_message.sent" or event_name == "thread.channel_message.post":
@@ -436,7 +466,39 @@ class ThreadMessagingNetworkMod(BaseMod):
                     await self._process_channel_message(inner_message)
                 elif event_name == "thread.message":
                     # Handle generic thread.message by examining message_type in payload
+                    
+                    # Convert protobuf fields to dict if needed BEFORE extracting message_type
+                    if isinstance(content, dict) and 'payload' in content and hasattr(content['payload'], 'fields'):
+                        logger.warning(f"🔧 THREAD.MESSAGE FIX: Converting protobuf payload to dict")
+                        payload = content['payload']
+                        content_dict = {}
+                        for field_name, field_value in payload.fields.items():
+                            logger.warning(f"🔧 PROTOBUF FIELD DEBUG: {field_name} = {field_value} (type: {type(field_value)})")
+                            logger.warning(f"🔧 PROTOBUF FIELD DEBUG: {field_name} has string_value: {hasattr(field_value, 'string_value')}")
+                            logger.warning(f"🔧 PROTOBUF FIELD DEBUG: {field_name} has struct_value: {hasattr(field_value, 'struct_value')}")
+                            # Handle specific fields that should be nested structs
+                            if field_name == 'content' and hasattr(field_value, 'struct_value'):
+                                # Handle nested struct (like content.text)
+                                logger.warning(f"🔧 NESTED STRUCT DEBUG: Processing {field_name} struct")
+                                nested_dict = {}
+                                for nested_name, nested_value in field_value.struct_value.fields.items():
+                                    if hasattr(nested_value, 'string_value'):
+                                        nested_dict[nested_name] = nested_value.string_value
+                                        logger.warning(f"🔧 NESTED STRUCT DEBUG: {field_name}.{nested_name} = {nested_value.string_value}")
+                                content_dict[field_name] = nested_dict
+                                logger.warning(f"🔧 NESTED STRUCT DEBUG: Final {field_name} = {nested_dict}")
+                            elif hasattr(field_value, 'string_value'):
+                                content_dict[field_name] = field_value.string_value
+                            else:
+                                logger.warning(f"🔧 PROTOBUF DEBUG: Unknown field type for {field_name}: {type(field_value)}")
+                                content_dict[field_name] = str(field_value)
+                        content = content_dict
+                        logger.warning(f"🔧 THREAD.MESSAGE FIX: Converted to: {content}")
+                    
                     message_type = content.get("message_type") if isinstance(content, dict) else None
+                    logger.warning(f"🔧 THREAD MOD DEBUG: Processing thread.message with message_type: {message_type}")
+                    logger.warning(f"🔧 THREAD MOD DEBUG: Content keys: {list(content.keys()) if isinstance(content, dict) else 'Not a dict'}")
+                    logger.warning(f"🔧 THREAD MOD DEBUG: Full content structure: {content}")
                     logger.debug(f"Processing generic thread.message with message_type: {message_type}")
                     
                     if message_type == "reply_message":
@@ -459,8 +521,7 @@ class ThreadMessagingNetworkMod(BaseMod):
                         # Populate quoted_text if quoted_message_id is provided
                         if 'quoted_message_id' in content and content['quoted_message_id']:
                             content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
-                        inner_message = Event(**content)
-                        inner_message.event_name = event_name
+                        inner_message = Event(event_name=event_name, **content)
                         self._add_to_history(inner_message)
                         await self._process_direct_message(inner_message)
                     elif message_type == "file_upload":
@@ -486,8 +547,15 @@ class ThreadMessagingNetworkMod(BaseMod):
                         inner_message.event_name = event_name
                         self._add_to_history(inner_message)
                         await self._process_reaction_message(inner_message)
+                    elif (not message_type or message_type is None) and event_name == "thread.message":
+                        # Fallback: Assume it's a channel message if message_type is None or empty
+                        # This handles transport issues where message_type is lost
+                        inner_message = ChannelMessage(**content)
+                        inner_message.event_name = event_name
+                        self._add_to_history(inner_message)
+                        await self._process_channel_message(inner_message)
                     else:
-                        logger.warning(f"Unknown message_type in thread.message: {message_type}")
+                        logger.warning(f"Unknown message_type in thread.message: {message_type} (type: {type(message_type)})")
                 else:
                     logger.warning(f"Unknown thread event name: {event_name}")
                     return message  # Let other mods handle unknown event types
@@ -560,8 +628,9 @@ class ThreadMessagingNetworkMod(BaseMod):
         for agent_id in notify_agents:
             logger.info(f"🔧 THREAD MESSAGING: Creating notification for agent: {agent_id}")
             notification = Event(
+                event_name="thread.channel_message.notification",
                 source_id=self.network.network_id,
-                                payload={
+                payload={
                     "action": "channel_message_notification",
                     "message": message.model_dump(),
                     "channel": channel
@@ -1276,7 +1345,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             message: The message to add
         """
         self.message_history[message.event_id] = message
-        
+       
         # Trim history if it exceeds the maximum size
         if len(self.message_history) > self.max_history_size:
             # Remove oldest messages

@@ -132,22 +132,11 @@ class AINewsWorkerAgent(WorkerAgent):
                           f"🔥 **Now featuring real-time AI news from [ai2people.com](https://ai2people.com)!** 🚀")
         
         try:
-            await self._thread_adapter.send_channel_message(
-                channel="#general",
-                text=startup_message
-            )
+            ws = self.workspace()
+            ws.channel("#general").post(startup_message)
             logger.info("✅ Successfully sent startup message to general channel")
         except Exception as e:
             logger.error(f"❌ Failed to send startup message: {e}")
-            # Try with # prefix
-            try:
-                await self._thread_adapter.send_channel_message(
-                    channel="#general",
-                    text=startup_message
-                )
-                logger.info("✅ Successfully sent startup message to #general channel")
-            except Exception as e2:
-                logger.error(f"❌ Failed to send startup message to #general: {e2}")
         
         logger.info("✅ AI News Agent startup complete")
     

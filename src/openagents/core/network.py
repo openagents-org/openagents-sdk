@@ -257,8 +257,9 @@ class AgentNetwork:
                 if hasattr(transport, 'set_network_instance'):
                     transport.set_network_instance(self)
         
-        # Register network-level message handlers
-        self.message_handlers["mod_message"] = [self._handle_mod_message]
+        # Register network-level message handlers  
+        # NOTE: mod_message is handled by the event system, not message handlers to avoid duplication
+        # self.message_handlers["mod_message"] = [self._handle_mod_message]
     
     def _setup_event_system(self):
         """Set up the unified event system integration."""
@@ -552,15 +553,25 @@ class AgentNetwork:
         """
         try:
             message_id = getattr(message, 'message_id', None) or getattr(message, 'event_id', None)
-            logger.info(f"🔧 NETWORK: _handle_transport_message called: id={message_id}, type={message.message_type}, sender={sender_id}")
-            if hasattr(message, 'payload') and message.payload:
-                logger.info(f"🔧 NETWORK: Message payload keys: {list(message.payload.keys())}")
-                if 'mod' in message.payload:
-                    logger.info(f"🔧 NETWORK: Message is for mod: {message.payload['mod']}")
+            logger.info(f"🔧 NETWORK: _handle_transport_message called: id={message_id}, type={getattr(message, 'message_type', None)}, sender={sender_id}")
+            
+            try:
+                if hasattr(message, 'payload') and message.payload:
+                    logger.info(f"🔧 NETWORK: Message payload keys: {list(message.payload.keys())}")
+                    if 'mod' in message.payload:
+                        logger.info(f"🔧 NETWORK: Message is for mod: {message.payload['mod']}")
+                        
+                logger.info(f"🔧 NETWORK: Processing message {message_id} - continuing to duplicate check...")
+            except Exception as e:
+                logger.error(f"🔧 NETWORK: Exception during payload processing for {message_id}: {e}")
+                import traceback
+                logger.error(f"🔧 NETWORK: Traceback: {traceback.format_exc()}")
+                raise
             
             # Prevent infinite loops by tracking processed messages
+            logger.info(f"🔧 NETWORK: Checking if message {message_id} already processed. Total processed: {len(self.processed_message_ids)}")
             if message_id in self.processed_message_ids:
-                logger.debug(f"Skipping already processed message {message_id}")
+                logger.info(f"🔧 NETWORK: Skipping already processed message {message_id}")
                 return
             
             # Mark message as processed
@@ -574,7 +585,9 @@ class AgentNetwork:
                     self.processed_message_ids.discard(old_id)
             
             # Emit the event directly (message is already an Event)
+            logger.info(f"🔧 NETWORK: About to emit event for message {message_id}")
             await self.emit_event(message)
+            logger.info(f"🔧 NETWORK: Successfully emitted event for message {message_id}")
             
             # Check if this message needs to be routed to a specific target
             target = message.target_id or getattr(message, 'target_agent_id', None)
@@ -591,15 +604,16 @@ class AgentNetwork:
                 message_type = message.message_type
                 if not message_type:
                     # Auto-classify based on message properties  
-                    if message.target_agent_id:
-                        message_type = "direct_message"
-                    elif message.target_channel:
-                        message_type = "channel_message"
-                    elif message.relevant_mod and not message.target_agent_id and not message.target_channel:
+                    # IMPORTANT: Check relevant_mod FIRST to ensure mod messages are processed correctly
+                    if message.relevant_mod:
                         if "broadcast" in message.event_name.lower():
                             message_type = "broadcast_message"
                         else:
                             message_type = "mod_message"
+                    elif message.target_agent_id:
+                        message_type = "direct_message"
+                    elif message.target_channel:
+                        message_type = "channel_message"
                     else:
                         message_type = "broadcast_message"
                         
@@ -613,10 +627,8 @@ class AgentNetwork:
                             logger.warning(f"Failed to route broadcast message {message_id}")
                     else:
                         logger.debug(f"Skipping re-routing of broadcast message {message_id} from network itself")
-                elif message_type == "mod_message":
-                    # Handle mod messages locally - do NOT route to other agents
-                    logger.debug(f"Handling mod message {message_id} locally")
-                    await self._handle_mod_message(message)
+                # NOTE: Removed explicit mod_message handling here to avoid duplication
+                # mod_message type is now handled by the message_handlers system below (lines 651-654)
                 elif message_type == "transport":
                     # Check if this transport message contains a mod message
                     payload = message.payload or {}
@@ -698,6 +710,7 @@ class AgentNetwork:
                 # Call mod's process_system_message directly instead of using event system
                 logger.info(f"🔧 NETWORK: Handling Event {mod_message.message_id} locally, mod={target_mod_name}")
                 logger.info(f"🔧 NETWORK: Event sender={mod_message.source_id}, relevant_agent={mod_message.relevant_agent_id}")
+                
                 
                 # Call the mod's process_system_message method directly
                 await network_mod.process_system_message(mod_message)

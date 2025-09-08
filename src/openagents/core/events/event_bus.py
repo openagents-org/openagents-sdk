@@ -66,7 +66,8 @@ class EventBus:
             event: The event to emit
         """
         try:
-            logger.debug(f"Emitting event: {event.event_name} from {event.source_id}")
+            logger.info(f"🔧 EVENT BUS: Emitting event: {event.event_name} from {event.source_id}")
+            logger.info(f"🔧 EVENT BUS: Event visibility={event.visibility}, relevant_mod={event.relevant_mod}")
             
             # Add to history and update metrics
             self.event_history.append(event)
@@ -74,9 +75,17 @@ class EventBus:
             self.events_by_name[event.event_name] += 1
             
             # Handle mod-specific events first
-            if event.relevant_mod and event.visibility == EventVisibility.MOD_ONLY:
+            if (event.relevant_mod and event.visibility == EventVisibility.MOD_ONLY) or \
+               (event.event_name == "thread.message"):  # Fallback for thread messages with transport issues
+                if event.event_name == "thread.message" and not (event.relevant_mod and event.visibility == EventVisibility.MOD_ONLY):
+                    logger.info(f"🔧 EVENT BUS: Routing thread.message event via fallback (transport issue workaround)")
+                    # Temporarily set the correct mod for processing
+                    event.relevant_mod = "openagents.mods.communication.thread_messaging"
+                else:
+                    logger.info(f"🔧 EVENT BUS: Routing event to _handle_mod_event for mod: {event.relevant_mod}")
                 await self._handle_mod_event(event)
             else:
+                logger.info(f"🔧 EVENT BUS: Routing event to _deliver_to_subscribers")
                 # Handle regular events - deliver to subscribers
                 await self._deliver_to_subscribers(event)
             
@@ -94,6 +103,10 @@ class EventBus:
         if not event.relevant_mod:
             return
         
+        # Debug logging for thread.message events
+        if event.event_name == "thread.message":
+            logger.warning(f"🔧 EVENT BUS _handle_mod_event: Processing thread.message for mod {event.relevant_mod}")
+        
         handlers = self.mod_handlers.get(event.relevant_mod, [])
         if not handlers:
             logger.warning(f"No handlers registered for mod {event.relevant_mod}")
@@ -101,11 +114,21 @@ class EventBus:
         
         logger.debug(f"Delivering event {event.event_name} to {len(handlers)} mod handlers")
         
+        if event.event_name == "thread.message":
+            logger.warning(f"🔧 EVENT BUS _handle_mod_event: Found {len(handlers)} handlers for thread messaging mod")
+        
         for handler in handlers:
             try:
+                if event.event_name == "thread.message":
+                    logger.warning(f"🔧 EVENT BUS _handle_mod_event: Calling handler for thread.message")
                 await handler(event)
+                if event.event_name == "thread.message":
+                    logger.warning(f"🔧 EVENT BUS _handle_mod_event: Handler completed for thread.message")
             except Exception as e:
                 logger.error(f"Error in mod handler for {event.relevant_mod}: {e}")
+                if event.event_name == "thread.message":
+                    import traceback
+                    logger.error(f"🔧 EVENT BUS _handle_mod_event: Full traceback: {traceback.format_exc()}")
     
     async def _deliver_to_subscribers(self, event: Event) -> None:
         """Deliver event to all matching agent subscriptions."""

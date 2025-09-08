@@ -228,16 +228,18 @@ class ChannelConnection:
             
             # Create mod message for thread messaging
             mod_message = Event(
-                event_name="thread.channel_message",
+                event_name="thread.message",
                 source_id=self._client.agent_id,
                 relevant_mod=THREAD_MESSAGING_MOD_NAME,
                 target_agent_id=self._client.agent_id,
                 payload={
                     "action": "channel_message",
-                    "message_type": "channel_message",
+                    "message_type": "channel_message", 
                     "sender_id": self._client.agent_id,
-                    "channel": self.name,
+                    "channel": self.name.lstrip('#') if self.name else self.name,  # Normalize channel name
                     "content": {"text": message_content.get("text", str(message_content))},
+                    # Ensure channel is also passed as a direct field for ChannelMessage constructor
+                    "source_id": self._client.agent_id,
                     **kwargs
                 }
             )

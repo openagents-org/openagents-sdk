@@ -15,7 +15,7 @@ config:
   
   # Optional: List of protocol names to register with
   protocol_names:
-    - "openagents.mods.communication.simple_messaging"
+    - "openagents.mods.communication.thread_messaging"
   
   # Optional: List of sender IDs to ignore
   # ignored_sender_ids: 
@@ -25,8 +25,8 @@ config:
 # Connection configuration (optional - can be overridden by command line)
 connection:
   host: "localhost"
-  port: 8570
-  network_id: "openagents-network"
+  port: 8572
+  network_id: "knowledge-coordinator-1"
 
 # No environment variables required!
 # This agent works without any external dependencies or API keys.

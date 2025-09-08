@@ -14,6 +14,7 @@ from typing import Dict, List, Optional, Any, Callable, Union
 from dataclasses import dataclass
 
 from openagents.agents.runner import AgentRunner
+from openagents.core.workspace import Workspace
 from openagents.models.message_thread import MessageThread
 from openagents.models.messages import Event, EventNames
 from openagents.models.event import Event
@@ -253,14 +254,14 @@ class ProjectAgentContext(ProjectEventContext):
 
 class WorkerAgent(AgentRunner):
     """
-    A simplified, event-driven agent interface for thread messaging.
+    A simplified, event-driven agent interface for OpenAgents workspace.
     
     This class provides convenient handler methods for different types of messages
     and hides the complexity of the underlying messaging system.
     
     Example:
         class EchoAgent(WorkerAgent):
-            name = "echo"
+            default_agent_id = "echo"
             
             async def on_direct(self, msg):
                 await self.send_direct(to=msg.sender_id, text=f"Echo: {msg.text}")
@@ -314,37 +315,18 @@ class WorkerAgent(AgentRunner):
         self._project_mod_available = False
         
         logger.info(f"Initialized WorkerAgent '{self.default_agent_id}' with ID: {agent_id}")
+    
+    def workspace(self) -> Workspace:
+        """Get the workspace client."""
+        if self._workspace_client is None:
+            self._workspace_client = self.client.workspace()
+        return self._workspace_client
 
     async def setup(self):
         """Setup the WorkerAgent with thread messaging."""
         await super().setup()
         
         logger.info(f"Setting up WorkerAgent '{self.default_agent_id}'")
-        
-        # Find thread messaging adapter using multiple possible keys
-        thread_adapter = None
-        for key in ["ThreadMessagingAgentAdapter", "thread_messaging", "openagents.mods.communication.thread_messaging"]:
-            thread_adapter = self.get_mod_adapter(key)
-            if thread_adapter:
-                logger.info(f"Found thread messaging adapter with key: {key}")
-                break
-        
-        if not thread_adapter:
-            logger.error("Thread messaging adapter not found with any known key!")
-            return
-        
-        # Store reference for later use
-        self._thread_adapter = thread_adapter
-        
-        # Register for mod message notifications
-        if hasattr(thread_adapter, 'set_agent_mod_message_handler'):
-            thread_adapter.set_agent_mod_message_handler(self._handle_thread_mod_message)
-            logger.info("Registered for thread messaging notifications")
-        
-        # Register message handler for history responses
-        if hasattr(thread_adapter, 'register_message_handler'):
-            thread_adapter.register_message_handler("worker_agent_history", self._handle_history_response)
-            logger.info("Registered for message history responses")
         
         # Setup project functionality if available
         await self._setup_project_functionality()
@@ -380,14 +362,12 @@ class WorkerAgent(AgentRunner):
         logger.debug(f"WorkerAgent '{self.default_agent_id}' processing message from {incoming_message.source_id}")
         
         # Handle different message types
-        if isinstance(incoming_message, Event):
+        if incoming_message.is_direct_message():
             await self._handle_direct_message(incoming_message)
-        elif isinstance(incoming_message, Event):
+        elif incoming_message.is_broadcast_message():
             await self._handle_broadcast_message(incoming_message)
-        elif isinstance(incoming_message, Event):
-            await self._handle_mod_message(incoming_message)
         else:
-            logger.debug(f"Unhandled message type: {type(incoming_message)}")
+            await self._handle_system_message(incoming_message)
 
     async def _handle_direct_message(self, message: Event):
         """Handle direct messages."""
@@ -426,7 +406,7 @@ class WorkerAgent(AgentRunner):
         else:
             await self.on_channel_post(context)
 
-    async def _handle_mod_message(self, message: Event):
+    async def _handle_system_message(self, message: Event):
         """Handle mod messages from thread messaging."""
         if message.relevant_mod != 'thread_messaging':
             return
@@ -654,19 +634,14 @@ class WorkerAgent(AgentRunner):
             # Try to get workspace client for event subscription
             try:
                 # Get the network from the client
-                if hasattr(self.client, 'connector') and hasattr(self.client.connector, 'network'):
-                    network = self.client.connector.network
-                    if hasattr(network, 'workspace'):
-                        workspace = network.workspace()
-                        self._workspace_client = workspace
-                        
-                        # Subscribe to project events
-                        await self._setup_project_event_subscription()
-                        logger.info("Project event subscription setup complete")
-                    else:
-                        logger.debug("Network workspace not available")
-                else:
-                    logger.debug("Network not accessible from client")
+                workspace = self.workspace()
+                if workspace is None:
+                    logger.warning("Workspace not available")
+                    return
+                
+                # Subscribe to project events
+                await self._setup_project_event_subscription()
+                logger.info("Project event subscription setup complete")
             except Exception as e:
                 logger.warning(f"Could not setup project event subscription: {e}")
         else:

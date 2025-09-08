@@ -1,5 +1,5 @@
 import asyncio
-from typing import Dict, Any, List, Optional, Set, Type, Callable, Awaitable
+from typing import TYPE_CHECKING, Dict, Any, List, Optional, Set, Type, Callable, Awaitable
 import uuid
 import logging
 
@@ -13,6 +13,7 @@ from openagents.core.system_commands import LIST_AGENTS, LIST_MODS, GET_MOD_MANI
 from openagents.models.tool import AgentAdapterTool
 from openagents.models.message_thread import MessageThread
 from openagents.utils.verbose import verbose_print
+
 logger = logging.getLogger(__name__)
 
 
@@ -47,6 +48,11 @@ class AgentClient:
         if mod_adapters:
             for mod_adapter in mod_adapters:
                 self.register_mod_adapter(mod_adapter)
+    
+    def workspace(self):
+        """Get the workspace for this agent."""
+        from openagents.core.workspace import Workspace
+        return Workspace(self)
     
     async def _detect_transport_type(self, host: str, port: int) -> tuple[str, int]:
         """Detect the transport type of the network server.

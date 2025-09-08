@@ -84,6 +84,8 @@ class Event:
         self.payload = kwargs.pop('payload', {})
         self.metadata = kwargs.pop('metadata', {})
         self.text_representation = kwargs.pop('text_representation', None)
+        # Track if visibility was explicitly provided
+        visibility_provided = 'visibility' in kwargs
         self.visibility = kwargs.pop('visibility', EventVisibility.NETWORK)
         self.allowed_agents = kwargs.pop('allowed_agents', None)
         
@@ -92,17 +94,17 @@ class Event:
             logger.warning(f"Unknown fields passed to Event constructor: {list(kwargs.keys())}")
         
         # Call post-init validation
-        self.__post_init__()
+        self.__post_init__(visibility_provided)
     
-    def __post_init__(self):
+    def __post_init__(self, visibility_provided=False):
         """Validate event after creation."""
         # Validate event name is meaningful (not placeholder or generic)
         self._validate_event_name(self.event_name)
         
         # source_id is now required as a dataclass field, so no need to check for empty
         
-        # Auto-set visibility based on targeting
-        if self.visibility == EventVisibility.NETWORK:  # Only auto-set if default
+        # Auto-set visibility based on targeting, but only if not explicitly provided
+        if not visibility_provided and self.visibility == EventVisibility.NETWORK:  # Only auto-set if default and not explicitly provided
             if self.target_agent_id:
                 self.visibility = EventVisibility.DIRECT
             elif self.target_channel:
@@ -331,6 +333,12 @@ class Event:
             return "broadcast_message"
         else:
             return "system_message"
+    
+    # Backward compatibility properties for legacy code
+    @property
+    def source_agent_id(self) -> str:
+        """Backward compatibility alias for source_id."""
+        return self.source_id
 
 
 @dataclass
