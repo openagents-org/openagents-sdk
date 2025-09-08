@@ -9,8 +9,8 @@ import asyncio
 from unittest.mock import Mock, patch, AsyncMock, MagicMock
 from typing import Dict, Any
 
-from openagents.agents.simple_agent import (
-    SimpleAgentRunner, 
+from openagents.agents.simple_agent import SimpleAgentRunner
+from openagents.lms import (
     OpenAIProvider, 
     AnthropicProvider,
     BedrockProvider,

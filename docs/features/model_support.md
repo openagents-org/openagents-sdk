@@ -545,4 +545,4 @@ To add support for a new model provider:
 5. Add configuration example and documentation
 6. Create tests for the new provider
 
-See `src/openagents/agents/simple_agent.py` for implementation details.
+See `src/openagents/lms/providers.py` for provider implementation details and `src/openagents/agents/simple_agent.py` for the SimpleAgentRunner implementation.
