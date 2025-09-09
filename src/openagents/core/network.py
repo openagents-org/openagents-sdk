@@ -820,6 +820,11 @@ class AgentNetwork:
                 for agent_id, connection in self.connections.items():
                     time_since_activity = current_time - connection.last_activity
                     
+                    # Skip heartbeat checks for HTTP agents (identified by mock connections)
+                    if hasattr(connection.connection, '__class__') and 'Mock' in connection.connection.__class__.__name__:
+                        logger.debug(f"Skipping heartbeat check for HTTP agent {agent_id}")
+                        continue
+                    
                     if time_since_activity > self.agent_timeout:
                         # Try to ping the agent
                         if not await self._ping_agent(agent_id, connection):
@@ -1017,8 +1022,29 @@ class AgentNetwork:
             transport = transport_manager.get_active_transport()
             if transport and hasattr(transport, 'http_adapter') and transport.http_adapter:
                 # Convert message to dict format for HTTP adapter
-                message_dict = message.to_dict() if hasattr(message, 'to_dict') else message.model_dump() if hasattr(message, 'model_dump') else {}
-                transport.http_adapter.queue_message_for_agent(agent_id, message_dict)
+                message_dict = {}
+                try:
+                    if hasattr(message, 'to_dict'):
+                        message_dict = message.to_dict()
+                    elif hasattr(message, 'model_dump'):
+                        message_dict = message.model_dump()
+                    elif hasattr(message, '__dict__'):
+                        message_dict = message.__dict__.copy()
+                    elif isinstance(message, dict):
+                        message_dict = message.copy()
+                    else:
+                        # Fallback: create a basic message dict
+                        message_dict = {
+                            'message_type': 'notification',
+                            'payload': str(message),
+                            'timestamp': time.time()
+                        }
+                    
+                    logger.info(f"🔧 NETWORK: Queuing message for HTTP agent {agent_id}: {type(message).__name__}")
+                    logger.debug(f"🔧 NETWORK: HTTP message content: {message_dict}")
+                    transport.http_adapter.queue_message_for_agent(agent_id, message_dict)
+                except Exception as e:
+                    logger.error(f"🔧 NETWORK: Failed to convert message for HTTP agent {agent_id}: {e}")
         logger.info(f"🔧 NETWORK: Queued message for gRPC agent {agent_id}. Queue size: {len(self._agent_message_queues[agent_id])}")
     
     def _get_queued_messages(self, agent_id: str) -> List[Any]:

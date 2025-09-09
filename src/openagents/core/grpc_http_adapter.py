@@ -140,12 +140,15 @@ class GRPCHTTPAdapter:
         """Poll for messages for an agent."""
         try:
             agent_id = request.match_info['agent_id']
+            logger.info(f"🔧 HTTP_ADAPTER: poll_messages called for {agent_id}")
             
             # Get messages from queue
             messages = self.message_queues.get(agent_id, [])
+            logger.info(f"🔧 HTTP_ADAPTER: Found {len(messages)} messages for {agent_id}")
             
             # Clear the queue after retrieving messages
             self.message_queues[agent_id] = []
+            logger.info(f"🔧 HTTP_ADAPTER: Cleared message queue for {agent_id}")
             
             # Ensure messages are JSON serializable
             serializable_messages = []
@@ -737,12 +740,21 @@ class GRPCHTTPAdapter:
     
     def queue_message_for_agent(self, agent_id: str, message: Dict[str, Any]):
         """Queue a message for an agent to retrieve via polling."""
+        logger.info(f"🔧 HTTP_ADAPTER: queue_message_for_agent called for {agent_id}")
+        logger.info(f"🔧 HTTP_ADAPTER: message type: {type(message)}, keys: {list(message.keys()) if isinstance(message, dict) else 'Not a dict'}")
+        logger.info(f"🔧 HTTP_ADAPTER: agent_id in message_queues: {agent_id in self.message_queues}")
+        logger.info(f"🔧 HTTP_ADAPTER: current queue size for {agent_id}: {len(self.message_queues.get(agent_id, []))}")
+        
         # Check if this is a response to a pending HTTP request
         if hasattr(self, '_pending_requests') and self._pending_requests:
+            logger.info(f"🔧 HTTP_ADAPTER: Handling mod response for pending requests")
             self._handle_mod_response(message)
         
         if agent_id in self.message_queues:
             self.message_queues[agent_id].append(message)
+            logger.info(f"🔧 HTTP_ADAPTER: Message queued for {agent_id}. New queue size: {len(self.message_queues[agent_id])}")
+        else:
+            logger.error(f"🔧 HTTP_ADAPTER: Agent {agent_id} not found in message_queues! Available agents: {list(self.message_queues.keys())}")
     
     def _handle_mod_response(self, message: Dict[str, Any]):
         """Handle responses from mods and resolve pending HTTP requests."""
