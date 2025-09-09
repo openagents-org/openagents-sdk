@@ -279,6 +279,10 @@ export class OpenAgentsGRPCConnection {
         // Handle other thread events (channel_message.posted, etc.)
         console.log('📨 Handling thread event:', eventName);
         this.emit('message', message);
+      } else if (eventName === 'agent.mod_message.sent') {
+        // Handle mod messages (like document responses)
+        console.log('📨 Handling mod message:', eventName);
+        this.handleModMessage(message);
       } else {
         console.log(`📨 Unhandled message - type: ${messageType}, event: ${eventName}`);
       }
@@ -823,6 +827,64 @@ export class OpenAgentsGRPCConnection {
     } catch (error) {
       console.error('Error replacing lines:', error);
       return false;
+    }
+  }
+
+  private handleModMessage(message: any): void {
+    try {
+      // Extract the mod message content
+      const payload = message.payload;
+      if (!payload || !payload.content) {
+        console.log('⚠️ Mod message missing payload or content');
+        return;
+      }
+
+      const content = payload.content;
+      const contentEventName = content.event_name;
+      const contentPayload = content.payload;
+
+      console.log(`📨 Processing mod message with content event: ${contentEventName}`);
+
+      // Handle different types of mod responses
+      switch (contentEventName) {
+        case 'document.list.response':
+          console.log('📋 Document list response received:', contentPayload);
+          if (contentPayload && contentPayload.documents) {
+            console.log('📋 Emitting documents:', contentPayload.documents);
+            this.emit('documents', contentPayload.documents);
+          } else {
+            console.log('⚠️ No documents found in mod message response');
+            this.emit('documents', []); // Emit empty array to stop loading state
+          }
+          break;
+
+        case 'document.content.response':
+          console.log('📄 Document content response received:', contentPayload);
+          if (contentPayload && contentPayload.content) {
+            this.emit('document_content', {
+              document_id: contentPayload.document_id,
+              content: contentPayload.content,
+              comments: contentPayload.comments || [],
+              agent_presence: contentPayload.agent_presence || [],
+              version: contentPayload.version || 1
+            });
+          }
+          break;
+
+        case 'document.operation.response':
+          console.log('🔧 Document operation response received:', contentPayload);
+          if (contentPayload) {
+            this.emit('document_operation', contentPayload);
+          }
+          break;
+
+        default:
+          console.log(`📨 Unhandled mod content event: ${contentEventName}`);
+          break;
+      }
+
+    } catch (error) {
+      console.error('Error handling mod message:', error);
     }
   }
 }

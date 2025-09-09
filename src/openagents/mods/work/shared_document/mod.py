@@ -16,8 +16,8 @@ from typing import Dict, Any, List, Optional, Set
 from datetime import datetime, timedelta
 
 from openagents.core.base_mod import BaseMod
-from openagents.models.messages import Event, EventNames
 from openagents.models.event import Event
+from openagents.models.messages import EventNames
 from .document_messages import (
     CreateDocumentMessage,
     OpenDocumentMessage,
@@ -613,7 +613,11 @@ class SharedDocumentNetworkMod(BaseMod):
                 doc_message.event_name = event_name
                 await self._handle_create_document(doc_message, source_agent_id, request_id)
             elif event_name == "document.list" or event_name == "document.list.request" or message_type == "list_documents":
-                doc_message = ListDocumentsMessage(**content)
+                # Extract required positional arguments for Event dataclass
+                content_copy = content.copy()
+                event_name_arg = content_copy.pop('event_name', event_name)
+                source_id_arg = content_copy.pop('source_id', source_agent_id)
+                doc_message = ListDocumentsMessage(event_name_arg, source_id_arg, **content_copy)
                 doc_message.event_name = event_name
                 await self._handle_list_documents(doc_message, source_agent_id, request_id)
             elif event_name == "document.open" or event_name == "document.open.request" or message_type == "open_document":
@@ -734,6 +738,8 @@ class SharedDocumentNetworkMod(BaseMod):
             document.access_permissions = message.access_permissions.copy()
             document.access_permissions[source_agent_id] = "admin"  # Creator gets admin rights
             
+            # Document permissions configured
+            
             # Add creator as active agent
             document.add_agent(source_agent_id, "admin")
             
@@ -747,6 +753,7 @@ class SharedDocumentNetworkMod(BaseMod):
             
             # Send success response
             response = DocumentOperationResponse(
+                event_name="document.operation.response",
                 operation_id=document_id,
                 success=True,
                 source_id=self.network.network_id
@@ -786,11 +793,15 @@ class SharedDocumentNetworkMod(BaseMod):
             # Send document content with properly serialized agent presence
             serialized_presence = []
             for presence in document.agent_presence.values():
-                # Use model_dump with mode='json' to properly serialize datetime objects
-                presence_dict = presence.model_dump(mode='json')
+                # Use model_dump to properly serialize datetime objects
+                presence_dict = presence.model_dump()
+                # Convert datetime objects to ISO format strings
+                if 'last_activity' in presence_dict and hasattr(presence_dict['last_activity'], 'isoformat'):
+                    presence_dict['last_activity'] = presence_dict['last_activity'].isoformat()
                 serialized_presence.append(presence_dict)
             
             response = DocumentContentResponse(
+                event_name="document.content.response",
                 document_id=document_id,
                 content=document.content.copy(),
                 comments=[
@@ -830,6 +841,7 @@ class SharedDocumentNetworkMod(BaseMod):
             
             # Send success response
             response = DocumentOperationResponse(
+                event_name="document.operation.response",
                 operation_id=str(uuid.uuid4()),
                 success=True,
                 source_id=self.network.network_id
@@ -866,6 +878,7 @@ class SharedDocumentNetworkMod(BaseMod):
             
             # Send success response
             response = DocumentOperationResponse(
+                event_name="document.operation.response",
                 operation_id=operation.operation_id,
                 success=True,
                 source_id=self.network.network_id
@@ -901,6 +914,7 @@ class SharedDocumentNetworkMod(BaseMod):
             
             # Send success response
             response = DocumentOperationResponse(
+                event_name="document.operation.response",
                 operation_id=operation.operation_id,
                 success=True,
                 source_id=self.network.network_id
@@ -936,6 +950,7 @@ class SharedDocumentNetworkMod(BaseMod):
             
             # Send success response
             response = DocumentOperationResponse(
+                event_name="document.operation.response",
                 operation_id=operation.operation_id,
                 success=True,
                 source_id=self.network.network_id
@@ -971,6 +986,7 @@ class SharedDocumentNetworkMod(BaseMod):
             
             # Send success response
             response = DocumentOperationResponse(
+                event_name="document.operation.response",
                 operation_id=comment.comment_id,
                 success=True,
                 source_id=self.network.network_id
@@ -1002,6 +1018,7 @@ class SharedDocumentNetworkMod(BaseMod):
             
             # Send success response
             response = DocumentOperationResponse(
+                event_name="document.operation.response",
                 operation_id=message.comment_id,
                 success=success,
                 source_id=self.network.network_id
@@ -1064,6 +1081,7 @@ class SharedDocumentNetworkMod(BaseMod):
                 agent_presence = list(document.agent_presence.values())
             
             response = DocumentContentResponse(
+                event_name="document.content.response",
                 document_id=document_id,
                 content=document.content.copy(),
                 comments=comments,
@@ -1136,11 +1154,15 @@ class SharedDocumentNetworkMod(BaseMod):
                         "permission": document.access_permissions.get(source_agent_id, "none")
                     }
                     
-                    # Include closed documents if requested
-                    if message.include_closed or source_agent_id in document.active_agents:
+                    # Include documents if:
+                    # 1. include_closed is True, OR
+                    # 2. agent is active on the document, OR  
+                    # 3. agent has read permissions (for discovery)
+                    if message.include_closed or source_agent_id in document.active_agents or document.has_permission(source_agent_id, "read"):
                         documents.append(doc_info)
             
             response = DocumentListResponse(
+                event_name="document.list.response",
                 documents=documents,
                 source_id=self.network.network_id
             )
@@ -1237,7 +1259,7 @@ class SharedDocumentNetworkMod(BaseMod):
         """Send a response message to an agent."""
         try:
             # Include request_id in the content for proper matching
-            content = response.model_dump(mode='json')
+            content = response.model_dump()
             logger.info(f"🔧 _send_response - Original content keys: {list(content.keys())}")
             logger.info(f"🔧 _send_response - Received request_id: {request_id}")
             
@@ -1265,6 +1287,7 @@ class SharedDocumentNetworkMod(BaseMod):
         """Send an error response to an agent."""
         try:
             response = DocumentOperationResponse(
+                event_name="document.operation.response",
                 operation_id=str(uuid.uuid4()),
                 success=False,
                 error_message=error_message,
@@ -1397,6 +1420,7 @@ class SharedDocumentNetworkMod(BaseMod):
             
             # Create a document content response with updated line locks
             response = DocumentContentResponse(
+                event_name="document.content.response",
                 document_id=document_id,
                 content=document.content.copy(),
                 comments=[],  # Don't include comments in lock updates
