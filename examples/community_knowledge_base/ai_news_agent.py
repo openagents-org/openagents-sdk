@@ -19,8 +19,6 @@ import logging
 import json
 import hashlib
 import random
-import aiohttp
-import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from typing import Dict, List, Set, Optional, Any
 from pathlib import Path
@@ -31,6 +29,9 @@ from openagents.agents.worker_agent import (
     ChannelMessageContext,
     ReplyMessageContext
 )
+
+# Import the RedditFeeder class
+from reddit_util import RedditFeeder
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -89,10 +90,11 @@ class AINewsWorkerAgent(WorkerAgent):
         
         # Agent state
         self.is_active = True
-        self.news_check_interval = 30  # 30 seconds for real RSS feed
-        self.rss_feed_url = "https://ai2people.com/feed/"
-        self.all_articles: List[Dict[str, Any]] = []  # Store all articles from RSS feed
-        self.last_rss_fetch = datetime.now() - timedelta(hours=1)  # Force initial fetch
+        self.news_check_interval = 60  # 60 seconds for Reddit crawling
+        
+        # Initialize Reddit feeder
+        self.reddit_feeder = RedditFeeder(subreddit="artificial", storage_file="/tmp/ai_news_reddit_crawl.json")
+        self.last_reddit_check = datetime.now() - timedelta(hours=1)  # Force initial check
         
     async def on_startup(self):
         """Initialize the agent and start background tasks."""
@@ -101,9 +103,10 @@ class AINewsWorkerAgent(WorkerAgent):
         # Load existing knowledge base if available
         await self._load_knowledge_base()
         
-        # Initial RSS feed refresh
-        logger.info("🔄 Performing initial RSS feed refresh...")
-        await self._refresh_rss_feed()
+        # Get Reddit feeder stats
+        logger.info("📊 Reddit feeder initialized")
+        stats = self.reddit_feeder.get_stats()
+        logger.info(f"Reddit feeder stats: {stats}")
         
         # Check available channels
         logger.info("🔍 Checking available channels...")
@@ -123,18 +126,18 @@ class AINewsWorkerAgent(WorkerAgent):
         
         # Send startup message to general channel using direct adapter
         startup_message = (f"🤖 **AI News Bot Online!** 📰\n\n"
-                          f"I'm now connected and ready to share AI news from **ai2people.com**!\n\n"
+                          f"I'm now connected and ready to share AI news from **Reddit r/artificial**!\n\n"
                           f"**What I do:**\n"
-                          f"• 📡 Fetch AI articles from ai2people.com RSS feed\n"
-                          f"• 🎲 Share a random article every 30 seconds to general\n"
-                          f"• 🔄 Refresh feed every 10 minutes for latest content\n"
+                          f"• 📡 Crawl AI posts from Reddit r/artificial\n"
+                          f"• 🎲 Share new posts every 60 seconds to general\n"
+                          f"• 🔄 Check for new posts continuously\n"
                           f"• 💬 Answer questions about AI developments\n"
                           f"• 🏷️ Categorize and tag content automatically\n\n"
                           f"**Commands:**\n"
                           f"• `@ai-news-bot search <topic>` - Search shared articles\n"
                           f"• `@ai-news-bot summary` - Get today's AI news summary\n"
                           f"• `@ai-news-bot categories` - Show content categories\n\n"
-                          f"🔥 **Now featuring real-time AI news from [ai2people.com](https://ai2people.com)!** 🚀")
+                          f"🔥 **Now featuring real-time AI news from [Reddit r/artificial](https://reddit.com/r/artificial)!** 🚀")
         
         try:
             ws = self.workspace()
@@ -320,106 +323,75 @@ I automatically share interesting findings every 30 minutes!
                     )
     
     async def _news_monitoring_loop(self):
-        """Background task that posts a random article every 30 seconds."""
-        logger.info("🔄 Starting AI news monitoring loop (posting random article every 30 seconds)...")
+        """Background task that checks for new Reddit posts every 60 seconds."""
+        logger.info("🔄 Starting AI news monitoring loop (checking Reddit every 60 seconds)...")
         
         while self.is_active:
             try:
-                # Refresh RSS feed every 10 minutes to get latest articles
-                if datetime.now() - self.last_rss_fetch >= timedelta(minutes=10):
-                    logger.info("🔄 Refreshing RSS feed from ai2people.com...")
-                    await self._refresh_rss_feed()
-                    self.last_rss_fetch = datetime.now()
-                
-                # Post a random article every 30 seconds
+                # Check for new Reddit posts
                 if datetime.now() - self.last_news_check >= timedelta(seconds=self.news_check_interval):
-                    if self.all_articles:
-                        # Select a random article from our collection
-                        random_article = random.choice(self.all_articles)
-                        logger.info(f"📰 Posting random article: {random_article['title']}")
-                        await self._share_content(random_article)
+                    logger.info("🔍 Checking Reddit r/artificial for new posts...")
+                    
+                    # Get new posts from Reddit
+                    new_posts = await self.reddit_feeder.get_new_posts(limit=10)
+                    
+                    if new_posts:
+                        logger.info(f"📰 Found {len(new_posts)} new posts from Reddit")
+                        
+                        # Share each new post
+                        for post in new_posts:
+                            # Convert Reddit post to our article format
+                            article = self._convert_reddit_post_to_article(post)
+                            logger.info(f"📤 Sharing Reddit post: {article['title']}")
+                            await self._share_content(article)
+                            
+                            # Add small delay between posts to avoid spam
+                            await asyncio.sleep(2)
                     else:
-                        logger.warning("📰 No articles available to post")
+                        logger.info("📰 No new posts found on Reddit")
                     
                     self.last_news_check = datetime.now()
                 
-                # Wait before next check (30 seconds)
+                # Wait before next check
                 await asyncio.sleep(self.news_check_interval)
                 
             except Exception as e:
                 logger.error(f"❌ Error in news monitoring loop: {e}")
                 await asyncio.sleep(60)  # Wait 1 minute on error before retrying
     
-    async def _refresh_rss_feed(self):
+    def _convert_reddit_post_to_article(self, post: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Refresh the RSS feed and update the articles collection.
+        Convert a Reddit post to our internal article format.
+        
+        Args:
+            post: Reddit post dictionary from RedditFeeder
+            
+        Returns:
+            Article dictionary compatible with existing sharing system
         """
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(self.rss_feed_url, timeout=aiohttp.ClientTimeout(total=10)) as response:
-                    if response.status != 200:
-                        logger.warning(f"Failed to fetch RSS feed: HTTP {response.status}")
-                        return
-                    
-                    rss_content = await response.text()
-                    
-            # Parse RSS XML
-            root = ET.fromstring(rss_content)
-            
-            # Find all items in the RSS feed
-            items = root.findall('.//item')
-            
-            articles = []
-            for item in items:
-                try:
-                    title_elem = item.find('title')
-                    link_elem = item.find('link')
-                    description_elem = item.find('description')
-                    pub_date_elem = item.find('pubDate')
-                    
-                    if title_elem is None or link_elem is None:
-                        continue
-                    
-                    title = title_elem.text.strip() if title_elem.text else "Untitled"
-                    url = link_elem.text.strip() if link_elem.text else ""
-                    description = description_elem.text.strip() if description_elem and description_elem.text else ""
-                    
-                    # Clean up description (remove HTML tags and truncate)
-                    import re
-                    description = re.sub(r'<[^>]+>', '', description)  # Remove HTML tags
-                    description = re.sub(r'\s+', ' ', description)  # Normalize whitespace
-                    if len(description) > 300:
-                        description = description[:300] + "..."
-                    
-                    # Categorize based on title and content
-                    category = self._categorize_article(title, description)
-                    
-                    # Extract tags from title and description
-                    tags = self._extract_tags(title, description)
-                    
-                    article = {
-                        "title": title,
-                        "summary": description or "Latest AI news and insights from ai2people.com",
-                        "category": category,
-                        "source": "ai2people.com",
-                        "url": url,
-                        "tags": tags,
-                        "timestamp": datetime.now(),
-                        "hash": self._generate_content_hash({"title": title, "url": url})
-                    }
-                    
-                    articles.append(article)
-                    
-                except Exception as e:
-                    logger.warning(f"Error parsing RSS item: {e}")
-                    continue
-            
-            # Update our articles collection
-            self.all_articles = articles
-            logger.info(f"📰 Refreshed RSS feed: {len(articles)} articles available")
-                
-        except Exception as e:
-            logger.error(f"❌ Error fetching RSS feed: {e}")
+        # Categorize based on title and content
+        category = self._categorize_article(post['title'], post.get('selftext', ''))
+        
+        # Extract tags from title and content
+        tags = self._extract_tags(post['title'], post.get('selftext', ''))
+        
+        article = {
+            "title": post['title'],
+            "summary": post.get('selftext', post['title'])[:300] + "..." if len(post.get('selftext', '')) > 300 else post.get('selftext', post['title']),
+            "category": category,
+            "source": "Reddit r/artificial",
+            "url": post['url'],
+            "reddit_url": post['reddit_url'],
+            "image_url": post.get('image_url'),
+            "tags": tags,
+            "timestamp": post['created_time'],
+            "author": post['author'],
+            "score": post.get('score', 0),
+            "num_comments": post.get('num_comments', 0),
+            "hash": self._generate_content_hash({"title": post['title'], "url": post['url']})
+        }
+        
+        return article
     
     def _categorize_article(self, title: str, description: str) -> str:
         """Categorize an article based on its title and description."""
@@ -470,29 +442,25 @@ I automatically share interesting findings every 30 minutes!
     
     async def _share_content(self, content: Dict[str, Any]):
         """Share discovered content with the community."""
-        category = content.get('category', 'news')
-        emoji = self.content_categories.get(category, "📄")
-        
         # Always post to general channel as requested
         channel = "general"
         
-        # Format the message with better styling
-        message = f"{emoji} **{content['title']}**\n\n"
+        # Format the message in markdown style
+        message = f"## {content['title']}\n\n"
         
-        # Add summary if available and not too long
-        summary = content.get('summary', '')
-        if summary and len(summary) > 50:
-            message += f"📝 {summary}\n\n"
+        # Add summary if available and not empty
+        summary = content.get('summary', '').strip()
+        if summary and len(summary) > 10:  # Only if there's meaningful content
+            message += f"{summary}\n\n"
         
-        # Add tags if available
-        tags = content.get('tags', [])
-        if tags:
-            message += f"🏷️ **Tags:** {', '.join(tags)}\n"
+        # Add image if available
+        image_url = content.get('image_url')
+        if image_url:
+            message += f"![Image]({image_url})\n\n"
         
-        # Add source and link
-        message += f"📰 **Source:** {content.get('source', 'ai2people.com')}\n"
-        message += f"🔗 **Read more:** {content.get('url', 'N/A')}\n\n"
-        message += f"*📡 Shared by AI News Bot • {datetime.now().strftime('%H:%M')}*"
+        # Add link
+        url = content.get('url', 'N/A')
+        message += f"[Read more]({url})"
         
         # Post to general channel using workspace
         try:

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ThreadMessage } from '../../services/grpcService';
+import MarkdownContent from './MarkdownContent';
 
 interface MessageDisplayProps {
   messages: ThreadMessage[];
@@ -141,14 +142,20 @@ const styles = `
   }
   
   .message-content {
-    color: #374151;
     line-height: 1.5;
     word-wrap: break-word;
-    white-space: pre-wrap;
   }
   
-  .message-content.dark {
-    color: #e5e7eb;
+  .message-content * {
+    margin: 0;
+  }
+  
+  .message-content *:not(:last-child) {
+    margin-bottom: 0.5rem;
+  }
+  
+  .message-content p:last-child {
+    margin-bottom: 0;
   }
   
   .quoted-message {
@@ -522,7 +529,10 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
           )}
 
           <div className={`message-content ${currentTheme}`}>
-            {message.content.text}
+            <MarkdownContent 
+              content={message.content.text} 
+              currentTheme={currentTheme} 
+            />
           </div>
 
           {message.reactions && Object.keys(message.reactions).length > 0 && (
