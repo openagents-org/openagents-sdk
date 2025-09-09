@@ -48,6 +48,7 @@ class ChannelMessage(Event):
     mentioned_agent_id: Optional[str] = field(default=None)
     quoted_message_id: Optional[str] = field(default=None)
     quoted_text: Optional[str] = field(default=None)
+    reply_to_id: Optional[str] = field(default=None)  # Fix: Add reply_to_id field
     
     def __init__(self, event_name: str = "thread.channel_message.posted", source_id: str = "", **kwargs):
         """Initialize ChannelMessage with proper event name."""
@@ -65,6 +66,7 @@ class ChannelMessage(Event):
         mentioned_agent_id = kwargs.pop('mentioned_agent_id', None)
         quoted_message_id = kwargs.pop('quoted_message_id', None)
         quoted_text = kwargs.pop('quoted_text', None)
+        reply_to_id = kwargs.pop('reply_to_id', None)  # Fix: Extract reply_to_id from kwargs
         
         # Set target_channel in kwargs for Event
         kwargs['target_channel'] = channel
@@ -77,6 +79,7 @@ class ChannelMessage(Event):
         self.mentioned_agent_id = mentioned_agent_id
         self.quoted_message_id = quoted_message_id
         self.quoted_text = quoted_text
+        self.reply_to_id = reply_to_id  # Fix: Set reply_to_id field
     
     # Backward compatibility properties
     @property
@@ -137,6 +140,7 @@ class ChannelMessage(Event):
             "mentioned_agent_id": self.mentioned_agent_id,
             "quoted_message_id": self.quoted_message_id,
             "quoted_text": self.quoted_text,
+            "reply_to_id": self.reply_to_id,  # Fix: Include reply_to_id in model_dump
             # Backward compatibility fields
             "message_id": self.event_id,
             "sender_id": self.source_id,

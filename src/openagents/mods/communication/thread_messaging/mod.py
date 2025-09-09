@@ -341,12 +341,18 @@ class ThreadMessagingNetworkMod(BaseMod):
             logger.debug(f"Thread messaging capturing channel broadcast to {message.target_channel}")
             
             # Convert to ChannelMessage and process it
+            # Extract reply_to_id from payload if present
+            reply_to_id = None
+            if isinstance(message.payload, dict):
+                reply_to_id = message.payload.get('reply_to_id')
+            
             channel_message = ChannelMessage(
                 sender_id=message.source_id,
                 channel=message.target_channel,
                 content=message.payload,
                 timestamp=message.timestamp,
-                message_id=message.event_id
+                message_id=message.event_id,
+                reply_to_id=reply_to_id  # Fix: Pass reply_to_id to ChannelMessage
             )
             
             await self._process_channel_message(channel_message)
