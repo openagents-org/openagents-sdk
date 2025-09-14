@@ -111,7 +111,7 @@ class ProjectEchoAgentRunner(AgentRunner):
         echo_message = Event(
             event_name="agent.direct_message.sent",
             source_id=self.client.agent_id,
-            target_agent_id=sender_id,
+            destination_id=sender_id,
             payload={"text": echo_text},
             text_representation=echo_text,
             requires_response=False
@@ -130,7 +130,7 @@ class ProjectEchoAgentRunner(AgentRunner):
             greeting_text = f"Hello {sender_id}! I'm a project-aware echo agent. I can participate in projects and complete them!"
             greeting_message = Event(
                 sender_id=self.client.agent_id,
-                target_agent_id=sender_id,
+                destination_id=sender_id,
                 message_type="direct_message",
                 content={"text": greeting_text},
                 text_representation=greeting_text,

@@ -1213,7 +1213,7 @@ class SharedDocumentNetworkMod(BaseMod):
                     mod_message = Event(
                         event_name="agent.mod_message.sent",
                         source_id=self.network.network_id,
-                        target_agent_id=agent_id,
+                        destination_id=agent_id,
                         payload={
                             "relevant_mod": "shared_document",
                             "content": operation_message.model_dump()
@@ -1245,7 +1245,7 @@ class SharedDocumentNetworkMod(BaseMod):
                     mod_message = Event(
                         event_name="agent.mod_message.sent",
                         source_id=self.network.network_id,
-                        target_agent_id=other_agent_id,
+                        destination_id=other_agent_id,
                         payload={
                             "relevant_mod": "shared_document",
                             "content": presence_message.model_dump()
@@ -1273,7 +1273,7 @@ class SharedDocumentNetworkMod(BaseMod):
             mod_message = Event(
                 event_name="agent.mod_message.sent",
                 source_id=self.network.network_id,
-                target_agent_id=target_agent_id,
+                destination_id=target_agent_id,
                 payload={
                     "relevant_mod": "openagents.mods.work.shared_document",
                     "content": content

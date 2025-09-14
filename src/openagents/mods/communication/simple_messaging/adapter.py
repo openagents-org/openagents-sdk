@@ -94,7 +94,7 @@ class SimpleMessagingAgentAdapter(BaseModAdapter):
             message: The direct message to process
         """
         # Only process messages targeted to this agent
-        if message.target_agent_id != self.agent_id:
+        if message.destination_id != self.agent_id:
             return
             
         logger.debug(f"Received direct message from {message.source_id}")
@@ -164,8 +164,8 @@ class SimpleMessagingAgentAdapter(BaseModAdapter):
             logger.debug(f"File deletion response: {message.payload.get('success', False)}")
             return None  # Message was handled
         
-        # Return the message if we didn't handle it
-        logger.debug(f"SimpleMessagingAgentAdapter did not handle Event with action: {action}")
+        # Return the message if we didn't handle it (let client route to agent)
+        logger.debug(f"SimpleMessagingAgentAdapter did not handle Event with action: {action}, returning for agent processing")
         return message
     
     def shutdown(self) -> bool:
@@ -192,7 +192,7 @@ class SimpleMessagingAgentAdapter(BaseModAdapter):
         Returns:
             Event: The processed message (unchanged for simple messaging)
         """
-        logger.debug(f"Processing outgoing direct message to {message.target_agent_id}")
+        logger.debug(f"Processing outgoing direct message to {message.destination_id}")
         return message
     
     async def process_outgoing_broadcast_message(self, message: Event) -> Event:
@@ -234,7 +234,7 @@ class SimpleMessagingAgentAdapter(BaseModAdapter):
         message = Event(
             event_name="agent.direct_message.sent",
             source_id=self.agent_id,
-            target_agent_id=target_agent_id,
+            destination_id=target_agent_id,
             payload=content,
             relevant_mod="openagents.mods.communication.simple_messaging"
         )

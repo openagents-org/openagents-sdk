@@ -45,7 +45,7 @@ def wrap_message_for_mod(inner_message) -> Event:
         source_id=inner_message.source_id, 
         relevant_mod="openagents.mods.communication.thread_messaging", 
         payload=inner_message.model_dump(),
-        target_agent_id=inner_message.source_id
+        destination_id=inner_message.source_id
     )
 
 
@@ -57,13 +57,13 @@ class TestNewMessageTypes:
         message = Event(
             event_name="agent.direct_message.sent",
             source_id="alice",
-            target_agent_id="bob",
+            destination_id="bob",
             payload={"text": "Hello Bob!"},
             relevant_mod="thread_messaging"
         )
         
         assert message.source_id == "alice"
-        assert message.target_agent_id == "bob"
+        assert message.destination_id == "bob"
         assert message.payload["text"] == "Hello Bob!"
         assert message.get_message_type() == "direct_message"
     
@@ -72,7 +72,7 @@ class TestNewMessageTypes:
         message = Event(
             event_name="agent.direct_message.sent",
             source_id="alice",
-            target_agent_id="bob",
+            destination_id="bob",
             payload={"text": "I agree!"},
             relevant_mod="thread_messaging"
         )
@@ -125,7 +125,7 @@ class TestNewMessageTypes:
         assert message.reply_to_id == "original_msg"
         assert message.thread_level == 1
         assert message.channel == "development"
-        assert message.target_agent_id == ''  # Channel reply (empty string, not None)
+        assert message.destination_id == ''  # Channel reply (empty string, not None)
     
     def test_reply_message_direct(self):
         """Test creating direct message replies."""
@@ -134,13 +134,13 @@ class TestNewMessageTypes:
             reply_to_id="original_dm",
             content={"text": "Direct reply"},
             thread_level=2,
-            target_agent_id="alice",
+            destination_id="alice",
             quoted_message_id="context_msg",
             quoted_text="For context",
             mod="thread_messaging"
         )
         
-        assert message.target_agent_id == "alice"  # Direct reply
+        assert message.destination_id == "alice"  # Direct reply
         assert message.thread_level == 2
         assert message.channel is None
         assert message.quoted_message_id == "context_msg"
@@ -241,14 +241,14 @@ class TestNewMessageTypes:
         assert message.limit == 25
         assert message.offset == 10
         assert message.include_threads is True
-        assert message.target_agent_id == ''  # Empty string for channel operations
+        assert message.destination_id == ''  # Empty string for channel operations
     
     def test_message_retrieval_direct(self):
         """Test direct message retrieval."""
         message = MessageRetrievalMessage(
             sender_id="alice",
             action="retrieve_direct_messages",
-            target_agent_id="bob",
+            destination_id="bob",
             limit=50,
             offset=0,
             include_threads=False,
@@ -256,7 +256,7 @@ class TestNewMessageTypes:
         )
         
         assert message.action == "retrieve_direct_messages"
-        assert message.target_agent_id == "bob"
+        assert message.destination_id == "bob"
         assert message.channel is None
         assert message.include_threads is False
     
@@ -343,7 +343,7 @@ class TestThreadMessagingNetworkModRedesigned:
         inner_message = Event(
             event_name="agent.direct_message.sent",
             source_id="alice",
-            target_agent_id="bob",
+            destination_id="bob",
             payload={"text": "Hello Bob!"},
             relevant_mod="thread_messaging"
         )
@@ -537,7 +537,7 @@ class TestThreadMessagingNetworkModRedesigned:
         inner_dm1 = Event(
             event_name="agent.direct_message.sent",
             source_id="alice",
-            target_agent_id="bob",
+            destination_id="bob",
             payload={"text": "Hello Bob"},
             relevant_mod="thread_messaging"
         )
@@ -546,7 +546,7 @@ class TestThreadMessagingNetworkModRedesigned:
         inner_dm2 = Event(
             event_name="agent.direct_message.sent",
             source_id="bob",
-            target_agent_id="alice",
+            destination_id="alice",
             payload={"text": "Hi Alice"},
             relevant_mod="thread_messaging"
         )
@@ -556,7 +556,7 @@ class TestThreadMessagingNetworkModRedesigned:
         inner_retrieval_msg = MessageRetrievalMessage(
             sender_id="alice",
             action="retrieve_direct_messages",
-            target_agent_id="bob",
+            destination_id="bob",
             limit=10,
             offset=0,
             include_threads=True,

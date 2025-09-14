@@ -68,7 +68,7 @@ class AgentConnection:
             direct_message = Event(
                 event_name="agent.direct_message.sent",
                 source_id=self._client.agent_id,
-                target_agent_id=self.agent_id,
+                destination_id=self.agent_id,
                 payload=message_content,
                 **kwargs
             )
@@ -231,7 +231,7 @@ class ChannelConnection:
                 event_name="thread.message",
                 source_id=self._client.agent_id,
                 relevant_mod=THREAD_MESSAGING_MOD_NAME,
-                target_agent_id=self._client.agent_id,
+                destination_id=self._client.agent_id,
                 payload={
                     "action": "channel_message",
                     "message_type": "channel_message", 
@@ -283,7 +283,7 @@ class ChannelConnection:
                 event_name="thread.channel_message",
                 source_id=self._client.agent_id,
                 relevant_mod=THREAD_MESSAGING_MOD_NAME,
-                target_agent_id=self._client.agent_id,
+                destination_id=self._client.agent_id,
                 payload={
                     "message_type": "channel_message",
                     "sender_id": self._client.agent_id,
@@ -330,7 +330,7 @@ class ChannelConnection:
                 event_name="thread.message_retrieval",
                 source_id=self._client.agent_id,
                 relevant_mod=THREAD_MESSAGING_MOD_NAME,
-                target_agent_id=self._client.agent_id,
+                destination_id=self._client.agent_id,
                 payload={
                     "message_type": "message_retrieval",
                     "sender_id": self._client.agent_id,
@@ -422,7 +422,7 @@ class ChannelConnection:
                 event_name="thread.reply_message",
                 source_id=self._client.agent_id,
                 relevant_mod=THREAD_MESSAGING_MOD_NAME,
-                target_agent_id=self._client.agent_id,
+                destination_id=self._client.agent_id,
                 payload={
                     "message_type": "reply_message",
                     "sender_id": self._client.agent_id,
@@ -465,7 +465,7 @@ class ChannelConnection:
                 event_name="thread.file_upload",
                 source_id=self._client.agent_id,
                 relevant_mod=THREAD_MESSAGING_MOD_NAME,
-                target_agent_id=self._client.agent_id,
+                destination_id=self._client.agent_id,
                 payload={
                     "message_type": "file_upload",
                     "sender_id": self._client.agent_id,
@@ -511,7 +511,7 @@ class ChannelConnection:
                 event_name="thread.reaction",
                 source_id=self._client.agent_id,
                 relevant_mod=THREAD_MESSAGING_MOD_NAME,
-                target_agent_id=self._client.agent_id,
+                destination_id=self._client.agent_id,
                 payload={
                     "message_type": "reaction",
                     "sender_id": self._client.agent_id,
@@ -950,7 +950,7 @@ class Workspace:
                 event_name="thread.channel_info",
                 source_id=self._client.agent_id,
                 relevant_mod=THREAD_MESSAGING_MOD_NAME,
-                target_agent_id=self._client.agent_id,
+                destination_id=self._client.agent_id,
                 payload={
                     "message_type": "channel_info",
                     "sender_id": self._client.agent_id,
@@ -1176,7 +1176,7 @@ class Workspace:
             mod_message = Event(
                 event_name="project.create",
                 source_id=self._client.agent_id,
-                target_agent_id=self._client.agent_id,
+                destination_id=self._client.agent_id,
                 relevant_mod="openagents.mods.project.default",
                 payload={
                     "action": "project_creation",
@@ -1254,7 +1254,7 @@ class Workspace:
                 event_name="project.status",
                 source_id=self._client.agent_id,
                 relevant_mod="openagents.mods.project.default",
-                target_agent_id=self._client.agent_id,
+                destination_id=self._client.agent_id,
                 payload={
                     "message_type": "project_status",
                     "sender_id": self._client.agent_id,
@@ -1325,7 +1325,7 @@ class Workspace:
                 event_name="project.list",
                 source_id=self._client.agent_id,
                 relevant_mod="openagents.mods.project.default",
-                target_agent_id=self._client.agent_id,
+                destination_id=self._client.agent_id,
                 payload={
                     "message_type": "project_list",
                     "sender_id": self._client.agent_id,

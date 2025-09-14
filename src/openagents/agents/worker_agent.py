@@ -427,7 +427,7 @@ class WorkerAgent(AgentRunner):
             timestamp=message.timestamp,
             payload=message.payload,
             raw_message=message,
-            target_agent_id=message.target_agent_id,
+            target_agent_id=message.destination_id,
             quoted_message_id=getattr(message, 'quoted_message_id', None),
             quoted_text=getattr(message, 'quoted_text', None)
         )
@@ -474,6 +474,8 @@ class WorkerAgent(AgentRunner):
             await self._handle_reaction_notification(message)
         elif action == "file_upload_response":
             await self._handle_file_notification(message)
+        elif action == "direct_message":
+            await self._handle_direct_message_notification(message)
         else:
             logger.debug(f"Unhandled thread messaging action: {action}")
 
@@ -493,7 +495,25 @@ class WorkerAgent(AgentRunner):
         if self.ignore_own_messages and sender_id == self.client.agent_id:
             return
         
-        if message_type == "channel_message":
+        # Check if this is a reply message (either explicit reply_message type or channel_message with reply_to_id)
+        reply_to_id = channel_msg_data.get("reply_to_id")
+        
+        if message_type == "reply_message" or (message_type == "channel_message" and reply_to_id):
+            context = ReplyMessageContext(
+                message_id=message_id,
+                source_id=sender_id,
+                timestamp=timestamp,
+                payload=msg_content,
+                raw_message=message,
+                reply_to_id=reply_to_id or "",
+                target_agent_id=channel_msg_data.get("target_agent_id"),
+                channel=channel,
+                thread_level=channel_msg_data.get("thread_level", 1)
+            )
+            
+            await self.on_channel_reply(context)
+            
+        elif message_type == "channel_message":
             context = ChannelMessageContext(
                 message_id=message_id,
                 source_id=sender_id,
@@ -510,21 +530,6 @@ class WorkerAgent(AgentRunner):
                 await self.on_channel_mention(context)
             else:
                 await self.on_channel_post(context)
-                
-        elif message_type == "reply_message":
-            context = ReplyMessageContext(
-                message_id=message_id,
-                source_id=sender_id,
-                timestamp=timestamp,
-                payload=msg_content,
-                raw_message=message,
-                reply_to_id=channel_msg_data.get("reply_to_id", ""),
-                target_agent_id=channel_msg_data.get("target_agent_id"),
-                channel=channel,
-                thread_level=channel_msg_data.get("thread_level", 1)
-            )
-            
-            await self.on_channel_reply(context)
 
     async def _handle_reaction_notification(self, message: Event):
         """Handle reaction notifications."""
@@ -558,6 +563,29 @@ class WorkerAgent(AgentRunner):
         )
         
         await self.on_file_received(context)
+
+    async def _handle_direct_message_notification(self, message: Event):
+        """Handle direct message notifications."""
+        logger.info(f"🔧 WORKER_AGENT: Handling direct message notification")
+        
+        # Extract message details from the payload
+        source_id = message.payload.get("sender_id", "")
+        content = message.payload.get("content", {})
+        text = message.payload.get("text", "")
+        timestamp = message.payload.get("timestamp", 0)
+        
+        # Create EventContext for the on_direct method
+        context = EventContext(
+            message_id=message.event_id,
+            source_id=source_id,
+            timestamp=timestamp,
+            payload=content,
+            raw_message=message,
+            target_agent_id=message.destination_id or ""
+        )
+        
+        logger.info(f"🔧 WORKER_AGENT: Calling on_direct with source={source_id}, text='{context.text}'")
+        await self.on_direct(context)
 
     def _handle_history_response(self, data: Dict[str, Any], sender_id: str):
         """Handle message history responses from the thread messaging adapter."""
@@ -663,6 +691,8 @@ class WorkerAgent(AgentRunner):
             await self._handle_reaction_notification(message)
         elif action == "file_upload_response":
             await self._handle_file_notification(message)
+        elif action == "direct_message":
+            await self._handle_direct_message_notification(message)
         else:
             logger.debug(f"Unhandled thread messaging action: {action}")
 
@@ -682,7 +712,25 @@ class WorkerAgent(AgentRunner):
         if self.ignore_own_messages and sender_id == self.client.agent_id:
             return
         
-        if message_type == "channel_message":
+        # Check if this is a reply message (either explicit reply_message type or channel_message with reply_to_id)
+        reply_to_id = channel_msg_data.get("reply_to_id")
+        
+        if message_type == "reply_message" or (message_type == "channel_message" and reply_to_id):
+            context = ReplyMessageContext(
+                message_id=message_id,
+                source_id=sender_id,
+                timestamp=timestamp,
+                payload=msg_content,
+                raw_message=message,
+                reply_to_id=reply_to_id or "",
+                target_agent_id=channel_msg_data.get("target_agent_id"),
+                channel=channel,
+                thread_level=channel_msg_data.get("thread_level", 1)
+            )
+            
+            await self.on_channel_reply(context)
+            
+        elif message_type == "channel_message":
             context = ChannelMessageContext(
                 message_id=message_id,
                 source_id=sender_id,
@@ -699,21 +747,6 @@ class WorkerAgent(AgentRunner):
                 await self.on_channel_mention(context)
             else:
                 await self.on_channel_post(context)
-                
-        elif message_type == "reply_message":
-            context = ReplyMessageContext(
-                message_id=message_id,
-                sender_id=sender_id,
-                timestamp=timestamp,
-                content=msg_content,
-                raw_message=message,
-                reply_to_id=channel_msg_data.get("reply_to_id", ""),
-                target_agent_id=channel_msg_data.get("target_agent_id"),
-                channel=channel,
-                thread_level=channel_msg_data.get("thread_level", 1)
-            )
-            
-            await self.on_channel_reply(context)
 
     async def _handle_reaction_notification(self, message: Event):
         """Handle reaction notifications."""
@@ -747,6 +780,29 @@ class WorkerAgent(AgentRunner):
         )
         
         await self.on_file_received(context)
+
+    async def _handle_direct_message_notification(self, message: Event):
+        """Handle direct message notifications."""
+        logger.info(f"🔧 WORKER_AGENT: Handling direct message notification")
+        
+        # Extract message details from the payload
+        source_id = message.payload.get("sender_id", "")
+        content = message.payload.get("content", {})
+        text = message.payload.get("text", "")
+        timestamp = message.payload.get("timestamp", 0)
+        
+        # Create EventContext for the on_direct method
+        context = EventContext(
+            message_id=message.event_id,
+            source_id=source_id,
+            timestamp=timestamp,
+            payload=content,
+            raw_message=message,
+            target_agent_id=message.destination_id or ""
+        )
+        
+        logger.info(f"🔧 WORKER_AGENT: Calling on_direct with source={source_id}, text='{context.text}'")
+        await self.on_direct(context)
 
     def _handle_history_response(self, data: Dict[str, Any], sender_id: str):
         """Handle message history responses from the thread messaging adapter."""

@@ -7,7 +7,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 from openagents.models.event import Event, EventVisibility
-from openagents.core.message_processor import MessageProcessor
+from openagents.core.message_processor import EventProcessor
 from openagents.core.base_mod import BaseMod
 
 
@@ -67,7 +67,7 @@ def mock_network():
 @pytest.fixture
 def message_processor(mock_network):
     """Create a message processor with mock network."""
-    return MessageProcessor(mock_network)
+    return EventProcessor(mock_network)
 
 
 @pytest.mark.asyncio
@@ -77,7 +77,7 @@ async def test_event_message_type_classification():
     direct_event = Event(
         event_name="agent.direct_message.sent",
         source_id="agent1",
-        target_agent_id="agent2"
+        destination_id="agent2"
     )
     assert direct_event.is_direct_message() == True
     assert direct_event.is_broadcast_message() == False
@@ -117,7 +117,7 @@ async def test_direct_message_pipeline(message_processor, mock_network):
     message = Event(
         event_name="agent.direct_message.sent",
         source_id="agent1",
-        target_agent_id="agent2",
+        destination_id="agent2",
         payload={"text": "Hello"}
     )
     
@@ -205,7 +205,7 @@ async def test_system_message_outbound(message_processor, mock_network):
     message = Event(
         event_name="project.status.updated",
         source_id="project_mod",
-        target_agent_id="agent1",
+        destination_id="agent1",
         payload={"status": "completed"}
     )
     
@@ -233,7 +233,7 @@ async def test_mod_stops_processing(message_processor, mock_network):
     message = Event(
         event_name="agent.direct_message.sent",
         source_id="agent1",
-        target_agent_id="agent2",
+        destination_id="agent2",
         payload={"text": "Hello"}
     )
     

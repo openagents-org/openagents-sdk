@@ -20,7 +20,7 @@ from unittest.mock import AsyncMock, MagicMock
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
 from openagents.core.topology import CentralizedTopology, DecentralizedTopology, NetworkMode, create_topology
-from openagents.models.transport import TransportType, AgentInfo
+from openagents.models.transport import TransportType, AgentConnection
 
 
 class TestTopologyCreation:
@@ -39,7 +39,7 @@ class TestTopologyCreation:
         assert isinstance(topology, CentralizedTopology)
         # Test the attributes that actually exist
         assert topology.node_id == "test-net"
-        assert isinstance(topology.agents, dict)
+        assert isinstance(topology.agent_registry, dict)
         assert topology.server_mode is True
     
     def test_create_decentralized_topology(self):
@@ -55,7 +55,7 @@ class TestTopologyCreation:
         assert isinstance(topology, DecentralizedTopology)
         # Test the attributes that actually exist
         assert topology.node_id == "test-p2p"
-        assert isinstance(topology.agents, dict)
+        assert isinstance(topology.agent_registry, dict)
         assert "node1" in topology.bootstrap_nodes
 
 
@@ -76,7 +76,7 @@ class TestCentralizedTopology:
     @pytest.mark.asyncio
     async def test_agent_registration(self, topology):
         """Test agent registration."""
-        agent = AgentInfo(
+        agent = AgentConnection(
             agent_id="agent1",
             metadata={"name": "Agent 1"},
             capabilities=["chat"],
@@ -91,7 +91,7 @@ class TestCentralizedTopology:
     @pytest.mark.asyncio
     async def test_agent_discovery(self, topology):
         """Test agent discovery."""
-        agent1 = AgentInfo(
+        agent1 = AgentConnection(
             agent_id="agent1",
             metadata={"name": "Agent 1"},
             capabilities=["chat"],
@@ -110,7 +110,7 @@ class TestCentralizedTopology:
         """Test getting all agents."""
         assert len(topology.get_agents()) == 0
         
-        agent = AgentInfo(
+        agent = AgentConnection(
             agent_id="agent1",
             metadata={"name": "Agent 1"},
             capabilities=["chat"],

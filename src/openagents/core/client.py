@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING, Dict, Any, List, Optional, Set, Type, Callable
 import uuid
 import logging
 
+from openagents.models.detected_network_profile import DetectedNetworkProfile
+from openagents.models.transport import TransportType
 from openagents.utils.network_discovey import retrieve_network_details
 from openagents.core.connector import NetworkConnector
 from openagents.core.grpc_connector import GRPCNetworkConnector
@@ -13,6 +15,7 @@ from openagents.core.system_commands import LIST_AGENTS, LIST_MODS, GET_MOD_MANI
 from openagents.models.tool import AgentAdapterTool
 from openagents.models.message_thread import MessageThread
 from openagents.utils.verbose import verbose_print
+import aiohttp
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +36,6 @@ class AgentClient:
         self.agent_id = agent_id or "Agent-" + str(uuid.uuid4())[:8]
         self.mod_adapters: Dict[str, BaseModAdapter] = {}
         self.connector: Optional[NetworkConnector] = None
-        self._agent_list_callbacks: List[Callable[[List[Dict[str, Any]]], Awaitable[None]]] = []
-        self._mod_list_callbacks: List[Callable[[List[Dict[str, Any]]], Awaitable[None]]] = []
-        self._mod_manifest_callbacks: List[Callable[[Dict[str, Any]], Awaitable[None]]] = []
         
         # Message waiting infrastructure
         self._message_waiters: Dict[str, List[Dict[str, Any]]] = {
@@ -54,92 +54,45 @@ class AgentClient:
         from openagents.core.workspace import Workspace
         return Workspace(self)
     
-    async def _detect_transport_type(self, host: str, port: int) -> tuple[str, int]:
-        """Detect the transport type of the network server.
+    async def _detect_network_profile(self, host: str, port: int) -> Optional[DetectedNetworkProfile]:
+        """Detect the network profile and recommended transport type by calling the health check endpoint.
         
         Args:
             host: Server host address
             port: Server port
             
         Returns:
-            tuple: (transport_type, actual_port) where transport_type is 'grpc', 'grpc_http', or 'websocket'
+            DetectedNetworkProfile: Network profile with detected information, or None if detection failed
         """
-        # Try gRPC first
-        try:
-            import grpc
-            from grpc import aio
-            from openagents.proto import agent_service_pb2_grpc, agent_service_pb2
-            
-            logger.debug(f"Attempting gRPC detection on {host}:{port}")
-            
-            # Create a temporary gRPC channel
-            channel = aio.insecure_channel(f"{host}:{port}")
-            stub = agent_service_pb2_grpc.AgentServiceStub(channel)
-            
-            # Try to ping the gRPC server
-            from google.protobuf.timestamp_pb2 import Timestamp
-            timestamp = Timestamp()
-            timestamp.GetCurrentTime()
-            
-            ping_request = agent_service_pb2.PingRequest(
-                agent_id="transport-detection",
-                timestamp=timestamp
-            )
-            
+        # First try HTTP health check endpoint
+        logger.debug(f"Attempting HTTP health check on {host}:{port}")
+        
+        async with aiohttp.ClientSession() as session:
+            health_url = f"http://{host}:{port}/health"
             try:
-                logger.debug(f"Sending gRPC ping to {host}:{port}")
-                response = await asyncio.wait_for(stub.Ping(ping_request), timeout=3.0)
-                await channel.close()
-                logger.info(f"✅ Detected gRPC transport at {host}:{port} - success: {response.success}")
-                
-                # Check if HTTP adapter is available on port + 1000 for compatibility
-                http_port = port + 1000
-                try:
-                    import aiohttp
-                    async with aiohttp.ClientSession() as session:
-                        async with session.get(f"http://{host}:{http_port}/api/poll/test", timeout=aiohttp.ClientTimeout(total=1.0)) as response:
-                            if response.status in [200, 404]:  # 404 is expected for non-existent agent
-                                logger.info(f"Detected gRPC HTTP adapter at {host}:{http_port}")
-                                return ("grpc_http", http_port)
-                except Exception as http_e:
-                    logger.debug(f"gRPC HTTP adapter not available at {host}:{http_port}: {http_e}")
-                
-                # gRPC server is available, use it directly
-                return ("grpc", port)
+                async with session.get(health_url, timeout=aiohttp.ClientTimeout(total=10.0)) as response:
+                    if response.status == 200:
+                        health_data = await response.json()
+                        logger.info(f"✅ Successfully retrieved health check from {health_url}")
+                        if "data" in health_data:
+                            health_data = health_data["data"]
+                        
+                        # Create DetectedNetworkProfile from health check data
+                        profile = DetectedNetworkProfile.from_network_stats(health_data)
+                        
+                        # Set detected transport information
+                        profile.detected_host = host
+                        profile.detected_port = port
+                        profile.detected_transport = "http"
+                        
+                        return profile
+                    else:
+                        logger.debug(f"HTTP health check returned status {response.status}")
             except asyncio.TimeoutError:
-                logger.debug(f"gRPC ping timeout on {host}:{port}")
-                await channel.close()
-            except grpc.aio.AioRpcError as grpc_e:
-                logger.debug(f"gRPC RPC error on {host}:{port}: {grpc_e}")
-                await channel.close()
-            except Exception as ping_e:
-                logger.debug(f"gRPC ping failed on {host}:{port}: {ping_e}")
-                await channel.close()
-                
-        except ImportError as import_e:
-            logger.debug(f"gRPC libraries not available: {import_e}")
-        except Exception as e:
-            logger.debug(f"gRPC detection setup failed: {e}")
-        
-        # Try WebSocket detection before defaulting
-        try:
-            import websockets
-            from websockets.asyncio.client import connect
-            
-            logger.debug(f"Attempting WebSocket detection on {host}:{port}")
-            try:
-                ws = await asyncio.wait_for(connect(f"ws://{host}:{port}"), timeout=2.0)
-                await ws.close()
-                logger.info(f"✅ Detected WebSocket transport at {host}:{port}")
-                return ("websocket", port)
-            except Exception as ws_e:
-                logger.debug(f"WebSocket detection failed on {host}:{port}: {ws_e}")
-        except ImportError:
-            logger.debug("websockets library not available")
-        
-        # Default to WebSocket as final fallback
-        logger.info(f"Defaulting to WebSocket transport at {host}:{port}")
-        return ("websocket", port)
+                logger.debug(f"HTTP health check timeout on {health_url}")
+            except Exception as http_e:
+                logger.debug(f"HTTP health check failed on {health_url}: {http_e}")
+            return None
 
     async def connect_to_server(self, host: Optional[str] = None, port: Optional[int] = None, network_id: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None, max_message_size: int = 104857600) -> bool:
         """Connect to a network server.
@@ -176,7 +129,17 @@ class AgentClient:
             self.connector = None
         
         # Detect transport type and create appropriate connector
-        transport_type, actual_port = await self._detect_transport_type(host, port)
+        detected_profile = await self._detect_network_profile(host, port)
+        
+        if detected_profile is None:
+            logger.error(f"Failed to detect network at {host}:{port}")
+            return False
+        
+        transport_type = detected_profile.detected_transport
+        actual_port = detected_profile.detected_port or port
+        
+        logger.info(f"Detected network: {detected_profile.network_name} ({detected_profile.network_id})")
+        logger.info(f"Transport: {transport_type}, Port: {actual_port}")
         
         if transport_type == "grpc" or transport_type == "grpc_http":
             logger.info(f"Creating gRPC connector for agent {self.agent_id}")
@@ -203,9 +166,6 @@ class AgentClient:
             self.connector.register_message_handler("mod_message", self._handle_mod_message)
             
             # Register system command handlers
-            self.connector.register_system_handler(LIST_AGENTS, self._handle_list_agents_response)
-            self.connector.register_system_handler(LIST_MODS, self._handle_list_mods_response)
-            self.connector.register_system_handler(GET_MOD_MANIFEST, self._handle_mod_manifest_response)
             self.connector.register_system_handler("poll_messages", self._handle_poll_messages_response)
             
             # Start message polling for gRPC connectors (workaround for bidirectional messaging limitation)
@@ -260,20 +220,40 @@ class AgentClient:
         Returns:
             bool: True if registration was successful, False otherwise
         """
-        mod_name = mod_adapter.__class__.__name__
-        if mod_name in self.mod_adapters:
-            logger.warning(f"Protocol {mod_name} already registered with agent {self.agent_id}")
+        class_name = mod_adapter.__class__.__name__
+        module_name = getattr(mod_adapter, '_mod_name', None)
+        
+        if class_name in self.mod_adapters:
+            logger.warning(f"Protocol {class_name} already registered with agent {self.agent_id}")
             return False
         
         # Bind the agent to the mod
         mod_adapter.bind_agent(self.agent_id)
         
-        self.mod_adapters[mod_name] = mod_adapter
+        # Store adapter under class name (primary key)
+        self.mod_adapters[class_name] = mod_adapter
+        
+        # Also store under module name for backward compatibility if available
+        if module_name and module_name != class_name:
+            self.mod_adapters[module_name] = mod_adapter
+            
+        # Also store under full module path if the adapter module is available
+        module_path = getattr(mod_adapter.__class__, '__module__', None)
+        if module_path and module_path not in self.mod_adapters:
+            self.mod_adapters[module_path] = mod_adapter
+            
+            # Also store under parent module (e.g., "openagents.mods.communication.thread_messaging" 
+            # for "openagents.mods.communication.thread_messaging.adapter")
+            if '.' in module_path:
+                parent_module = '.'.join(module_path.split('.')[:-1])
+                if parent_module and parent_module not in self.mod_adapters:
+                    self.mod_adapters[parent_module] = mod_adapter
+        
         mod_adapter.initialize()
         if self.connector is not None:
             mod_adapter.bind_connector(self.connector)
             mod_adapter.on_connect()
-        logger.info(f"Registered mod adapter {mod_name} with agent {self.agent_id}")
+        logger.info(f"Registered mod adapter {class_name} with agent {self.agent_id}")
         return True
     
     def unregister_mod_adapter(self, mod_name: str) -> bool:
@@ -294,6 +274,10 @@ class AgentClient:
         logger.info(f"Unregistered mod adapter {mod_name} from agent {self.agent_id}")
         return True
     
+    async def send_event(self, event: Event) -> EventResponse:
+        """Send an event to the network."""
+        return await self.connector.send_event(event)
+    
     async def send_direct_message(self, message: Event) -> bool:
         """Send a direct message to another agent.
         
@@ -303,24 +287,35 @@ class AgentClient:
         Returns:
             bool: True if message was sent successfully
         """
-        verbose_print(f"🔄 AgentClient.send_direct_message called for message to {message.target_agent_id}")
+        print(f"🔄 AgentClient.send_direct_message called for agent {self.agent_id} to {message.destination_id}")
+        print(f"   Available mod adapters: {list(self.mod_adapters.keys())}")
+        print(f"   Connector: {self.connector}")
+        print(f"   Connector is_connected: {getattr(self.connector, 'is_connected', 'N/A')}")
+        verbose_print(f"🔄 AgentClient.send_direct_message called for message to {message.destination_id}")
         verbose_print(f"   Available mod adapters: {list(self.mod_adapters.keys())}")
         
         try:
             processed_message = message
             for mod_name, mod_adapter in self.mod_adapters.items():
-                verbose_print(f"   Processing through {mod_name} adapter...")
+                print(f"   Processing through {mod_name} adapter...")
                 processed_message = await mod_adapter.process_outgoing_direct_message(message)
+                print(f"   Result from {mod_name}: {'✅ message' if processed_message else '❌ None'}")
+                verbose_print(f"   Processing through {mod_name} adapter...")
                 verbose_print(f"   Result from {mod_name}: {'✅ message' if processed_message else '❌ None'}")
                 if processed_message is None:
                     return False
             
             if processed_message is not None:
+                print(f"🚀 Sending message via connector...")
+                print(f"   Final processed message event_name: {processed_message.event_name}")
+                print(f"   Final processed message target: {processed_message.destination_id}")
                 verbose_print(f"🚀 Sending message via connector...")
-                await self.connector.send_message(processed_message)
+                result = await self.connector.send_message(processed_message)
+                print(f"✅ Message sent via connector - result: {result}")
                 verbose_print(f"✅ Message sent via connector successfully")
-                return True
+                return result
             else:
+                print(f"❌ Message was filtered out by mod adapters - not sending")
                 verbose_print(f"❌ Message was filtered out by mod adapters - not sending")
                 return False
         except Exception as e:
@@ -382,6 +377,123 @@ class AgentClient:
         
         return await self.connector.send_system_request(command, **kwargs)
     
+    async def send_system_request_with_response(self, command: str, **kwargs) -> Optional[Dict[str, Any]]:
+        """Send a system request and wait for immediate response.
+        
+        Args:
+            command: The system command to send
+            **kwargs: Additional parameters for the command
+            
+        Returns:
+            Optional[Dict[str, Any]]: Response data if successful, None otherwise
+        """
+        if self.connector is None:
+            logger.warning(f"Agent {self.agent_id} is not connected to a network")
+            return None
+        
+        # Create system event
+        from openagents.models.event import Event
+        from openagents.config.globals import (
+            SYSTEM_EVENT_LIST_AGENTS, SYSTEM_EVENT_LIST_MODS, SYSTEM_EVENT_GET_MOD_MANIFEST
+        )
+        
+        # Map command to event name
+        event_name_map = {
+            LIST_AGENTS: SYSTEM_EVENT_LIST_AGENTS,
+            LIST_MODS: SYSTEM_EVENT_LIST_MODS,
+            GET_MOD_MANIFEST: SYSTEM_EVENT_GET_MOD_MANIFEST
+        }
+        
+        event_name = event_name_map.get(command, f"system.{command}")
+        
+        # Add agent_id to kwargs
+        kwargs['agent_id'] = self.agent_id
+        
+        system_event = Event(
+            event_name=event_name,
+            source_id=self.agent_id,
+            destination_id="system:system",
+            payload=kwargs
+        )
+        
+        # For gRPC connector, we can get immediate response
+        if hasattr(self.connector, 'stub'):  # gRPC connector
+            # Create a future to capture the response
+            response_future = asyncio.Future()
+            original_handler = None
+            
+            # Create temporary handler to capture response
+            async def temp_handler(data: Dict[str, Any]) -> None:
+                if not response_future.done():
+                    response_future.set_result(data)
+            
+            # Save original handler if exists
+            if command in self.connector.system_handlers:
+                original_handler = self.connector.system_handlers[command]
+            
+            # Register temporary handler
+            self.connector.register_system_handler(command, temp_handler)
+            
+            try:
+                # Send the message
+                success = await self.connector.send_message(system_event)
+                if not success:
+                    return None
+                
+                # Wait for response with timeout
+                try:
+                    response_data = await asyncio.wait_for(response_future, timeout=10.0)
+                    return response_data
+                except asyncio.TimeoutError:
+                    logger.error(f"Timeout waiting for {command} response")
+                    return None
+            finally:
+                # Restore original handler
+                if original_handler:
+                    self.connector.register_system_handler(command, original_handler)
+                else:
+                    # Remove the temporary handler
+                    if command in self.connector.system_handlers:
+                        del self.connector.system_handlers[command]
+        
+        else:  # WebSocket connector - use existing callback approach
+            # Create an event to signal when we have a response
+            response_event = asyncio.Event()
+            response_data = {}
+            
+            # Define a handler for the response
+            async def handle_response(data: Dict[str, Any]) -> None:
+                response_data.clear()
+                response_data.update(data)
+                response_event.set()
+            
+            # Save the original handler if it exists
+            original_handler = None
+            if command in self.connector.system_handlers:
+                original_handler = self.connector.system_handlers[command]
+            
+            # Register the handler
+            self.connector.register_system_handler(command, handle_response)
+            
+            try:
+                # Send the request
+                success = await self.connector.send_system_request(command, **kwargs)
+                if not success:
+                    logger.error(f"Failed to send {command} request")
+                    return None
+                
+                # Wait for the response with a timeout
+                try:
+                    await asyncio.wait_for(response_event.wait(), timeout=10.0)
+                    return response_data
+                except asyncio.TimeoutError:
+                    logger.error(f"Timeout waiting for {command} response")
+                    return None
+            finally:
+                # Restore the original handler if there was one
+                if original_handler:
+                    self.connector.register_system_handler(command, original_handler)
+    
     async def request_list_agents(self) -> bool:
         """Request a list of agents from the network server.
         
@@ -418,51 +530,13 @@ class AgentClient:
         Returns:
             List[Dict[str, Any]]: List of mod information dictionaries
         """
-        if self.connector is None:
-            logger.warning(f"Agent {self.agent_id} is not connected to a network")
+        response_data = await self.send_system_request_with_response(LIST_MODS)
+        if response_data and response_data.get("success"):
+            return response_data.get("mods", [])
+        else:
+            error = response_data.get("error", "Unknown error") if response_data else "No response"
+            logger.error(f"Failed to list mods: {error}")
             return []
-        
-        # Create an event to signal when we have a response
-        response_event = asyncio.Event()
-        response_data = []
-        
-        # Define a handler for the LIST_MODS response
-        async def handle_list_mods_response(data: Dict[str, Any]) -> None:
-            if data.get("success"):
-                mods = data.get("mods", [])
-                response_data.clear()
-                response_data.extend(mods)
-            else:
-                error = data.get("error", "Unknown error")
-                logger.error(f"Failed to list mods: {error}")
-            response_event.set()
-        
-        # Save the original handler if it exists
-        original_handler = None
-        if LIST_MODS in self.connector.system_handlers:
-            original_handler = self.connector.system_handlers[LIST_MODS]
-        
-        # Register the handler
-        self.connector.register_system_handler(LIST_MODS, handle_list_mods_response)
-        
-        try:
-            # Send the request
-            success = await self.request_list_mods()
-            if not success:
-                logger.error("Failed to send list_mods request")
-                return []
-            
-            # Wait for the response with a timeout
-            try:
-                await asyncio.wait_for(response_event.wait(), timeout=10.0)
-                return response_data
-            except asyncio.TimeoutError:
-                logger.error("Timeout waiting for list_mods response")
-                return []
-        finally:
-            # Restore the original handler if there was one
-            if original_handler:
-                self.connector.register_system_handler(LIST_MODS, original_handler)
     
     
     async def list_agents(self) -> List[Dict[str, Any]]:
@@ -471,51 +545,13 @@ class AgentClient:
         Returns:
             List[Dict[str, Any]]: List of agent information dictionaries
         """
-        if self.connector is None:
-            logger.warning(f"Agent {self.agent_id} is not connected to a network")
+        response_data = await self.send_system_request_with_response(LIST_AGENTS)
+        if response_data and response_data.get("success"):
+            return response_data.get("agents", [])
+        else:
+            error = response_data.get("error", "Unknown error") if response_data else "No response"
+            logger.error(f"Failed to list agents: {error}")
             return []
-        
-        # Create an event to signal when we have a response
-        response_event = asyncio.Event()
-        response_data = []
-        
-        # Define a handler for the LIST_AGENTS response
-        async def handle_list_agents_response(data: Dict[str, Any]) -> None:
-            if data.get("success"):
-                agents = data.get("agents", [])
-                response_data.clear()
-                response_data.extend(agents)
-            else:
-                error = data.get("error", "Unknown error")
-                logger.error(f"Failed to list agents: {error}")
-            response_event.set()
-        
-        # Save the original handler if it exists
-        original_handler = None
-        if LIST_AGENTS in self.connector.system_handlers:
-            original_handler = self.connector.system_handlers[LIST_AGENTS]
-        
-        # Register the handler
-        self.connector.register_system_handler(LIST_AGENTS, handle_list_agents_response)
-        
-        try:
-            # Send the request
-            success = await self.send_system_request(LIST_AGENTS)
-            if not success:
-                logger.error("Failed to send list_agents request")
-                return []
-            
-            # Wait for the response with a timeout
-            try:
-                await asyncio.wait_for(response_event.wait(), timeout=10.0)
-                return response_data
-            except asyncio.TimeoutError:
-                logger.error("Timeout waiting for list_agents response")
-                return []
-        finally:
-            # Restore the original handler if there was one
-            if original_handler:
-                self.connector.register_system_handler(LIST_AGENTS, original_handler)
     
     
     async def get_mod_manifest(self, mod_name: str) -> Optional[Dict[str, Any]]:
@@ -527,51 +563,13 @@ class AgentClient:
         Returns:
             Optional[Dict[str, Any]]: Protocol manifest or None if not found
         """
-        if self.connector is None:
-            logger.warning(f"Agent {self.agent_id} is not connected to a network")
+        response_data = await self.send_system_request_with_response(GET_MOD_MANIFEST, mod_name=mod_name)
+        if response_data and response_data.get("success"):
+            return response_data.get("manifest", {})
+        else:
+            error = response_data.get("error", "Unknown error") if response_data else "No response"
+            logger.error(f"Failed to get mod manifest for {mod_name}: {error}")
             return None
-        
-        # Create an event to signal when we have a response
-        response_event = asyncio.Event()
-        response_data = {}
-        
-        # Define a handler for the GET_MOD_MANIFEST response
-        async def handle_mod_manifest_response(data: Dict[str, Any]) -> None:
-            if data.get("success"):
-                manifest = data.get("manifest", {})
-                response_data.clear()
-                response_data.update(manifest)
-            else:
-                error = data.get("error", "Unknown error")
-                logger.error(f"Failed to get mod manifest: {error}")
-            response_event.set()
-        
-        # Save the original handler if it exists
-        original_handler = None
-        if GET_MOD_MANIFEST in self.connector.system_handlers:
-            original_handler = self.connector.system_handlers[GET_MOD_MANIFEST]
-        
-        # Register the handler
-        self.connector.register_system_handler(GET_MOD_MANIFEST, handle_mod_manifest_response)
-        
-        try:
-            # Send the request
-            success = await self.send_system_request(GET_MOD_MANIFEST, mod_name=mod_name)
-            if not success:
-                logger.error(f"Failed to send get_mod_manifest request for {mod_name}")
-                return None
-            
-            # Wait for the response with a timeout
-            try:
-                await asyncio.wait_for(response_event.wait(), timeout=10.0)
-                return response_data if response_data else None
-            except asyncio.TimeoutError:
-                logger.error(f"Timeout waiting for get_mod_manifest response for {mod_name}")
-                return None
-        finally:
-            # Restore the original handler if there was one
-            if original_handler:
-                self.connector.register_system_handler(GET_MOD_MANIFEST, original_handler)
 
     def get_tools(self) -> List[AgentAdapterTool]:
         """Get all tools from registered mod adapters.
@@ -602,9 +600,11 @@ class AgentClient:
         threads = {}
         
         # Collect conversation threads from all registered mod adapters
+        print(f"🔧 CLIENT: get_messsage_threads called, found {len(self.mod_adapters)} adapters")
         for mod_name, adapter in self.mod_adapters.items():
             try:
                 adapter_threads = adapter.message_threads
+                print(f"🔧 CLIENT: Adapter {mod_name} has {len(adapter_threads) if adapter_threads else 0} threads")
                 if adapter_threads:
                     # Merge the adapter's threads into our collection
                     for thread_id, thread in adapter_threads.items():
@@ -628,85 +628,6 @@ class AgentClient:
         
         return threads
     
-    def register_agent_list_callback(self, callback: Callable[[List[Dict[str, Any]]], Awaitable[None]]) -> None:
-        """Register a callback for agent list responses.
-        
-        Args:
-            callback: Async function to call when an agent list is received
-        """
-        self._agent_list_callbacks.append(callback)
-    
-    def register_mod_list_callback(self, callback: Callable[[List[Dict[str, Any]]], Awaitable[None]]) -> None:
-        """Register a callback for mod list responses.
-        
-        Args:
-            callback: Async function to call when a mod list is received
-        """
-        self._mod_list_callbacks.append(callback)
-    
-    def register_mod_manifest_callback(self, callback: Callable[[Dict[str, Any]], Awaitable[None]]) -> None:
-        """Register a callback for mod manifest responses.
-        
-        Args:
-            callback: Async function to call when a mod manifest is received
-        """
-        self._mod_manifest_callbacks.append(callback)
-    
-    async def _handle_list_agents_response(self, data: Dict[str, Any]) -> None:
-        """Handle a list_agents response from the network server.
-        
-        Args:
-            data: Response data
-        """
-        agents = data.get("agents", [])
-        logger.debug(f"Received list of {len(agents)} agents")
-        
-        # Call registered callbacks
-        for callback in self._agent_list_callbacks:
-            try:
-                await callback(agents)
-            except Exception as e:
-                logger.error(f"Error in agent list callback: {e}")
-    
-    async def _handle_list_mods_response(self, data: Dict[str, Any]) -> None:
-        """Handle a list_mods response from the network server.
-        
-        Args:
-            data: Response data
-        """
-        mods = data.get("mods", [])
-        logger.debug(f"Received list of mods")
-        
-        # Call registered callbacks
-        for callback in self._mod_list_callbacks:
-            try:
-                await callback(mods)
-            except Exception as e:
-                logger.error(f"Error in mod list callback: {e}")
-    
-    async def _handle_mod_manifest_response(self, data: Dict[str, Any]) -> None:
-        """Handle a get_mod_manifest response from the network server.
-        
-        Args:
-            data: Response data
-        """
-        success = data.get("success", False)
-        mod_name = data.get("mod_name", "unknown")
-        
-        if success:
-            manifest = data.get("manifest", {})
-            logger.debug(f"Received manifest for protocol {mod_name}")
-        else:
-            error = data.get("error", "Unknown error")
-            logger.warning(f"Failed to get manifest for protocol {mod_name}: {error}")
-            manifest = {}
-        
-        # Call registered callbacks
-        for callback in self._mod_manifest_callbacks:
-            try:
-                await callback(data)
-            except Exception as e:
-                logger.error(f"Error in protocol manifest callback: {e}")
     
     async def _handle_direct_message(self, message: Event) -> None:
         """Handle a direct message from another agent.
@@ -751,12 +672,20 @@ class AgentClient:
         Args:
             message: The message to handle
         """
-        logger.info(f"🔧 CLIENT: Handling Event from {message.sender_id}, mod={message.relevant_mod}, action={message.content.get('action')}")
-        logger.info(f"🔧 CLIENT: Event content keys: {list(message.content.keys()) if message.content else 'None'}")
-        logger.info(f"🔧 CLIENT: Agent ID: {self.agent_id}, Message relevant_agent_id: {message.relevant_agent_id}")
+        print(f"🔧 CLIENT: Handling Event from {message.source_id}, mod={message.relevant_mod}, event={message.event_name}")
+        print(f"🔧 CLIENT: Event payload keys: {list(message.payload.keys()) if message.payload else 'None'}")
+        print(f"🔧 CLIENT: Agent ID: {self.agent_id}, Message target_agent_id: {message.destination_id}")
+        logger.info(f"🔧 CLIENT: Handling Event from {message.source_id}, mod={message.relevant_mod}, event={message.event_name}")
+        logger.info(f"🔧 CLIENT: Event payload keys: {list(message.payload.keys()) if message.payload else 'None'}")
+        logger.info(f"🔧 CLIENT: Agent ID: {self.agent_id}, Message target_agent_id: {message.destination_id}")
         
-        # Notify any waiting functions first
-        await self._notify_message_waiters("mod_message", message)
+        # Determine waiter type based on event name and notify waiters
+        if "direct_message" in message.event_name:
+            await self._notify_message_waiters("direct_message", message)
+        elif "broadcast_message" in message.event_name:
+            await self._notify_message_waiters("broadcast_message", message)
+        else:
+            await self._notify_message_waiters("mod_message", message)
         
         # Process through mod adapters first
         processed_by_adapter = False
@@ -788,6 +717,7 @@ class AgentClient:
                     
                     # Add the Event to the thread
                     mod_adapter.message_threads[thread_id].add_message(message)
+                    print(f"🔧 CLIENT: Added Event {message.event_name} to thread {thread_id} in {mod_name} adapter for agent processing")
                     logger.debug(f"Added Event to thread {thread_id} in {mod_name} adapter for agent processing")
                     added_to_thread = True
                     break
@@ -908,53 +838,170 @@ class AgentClient:
         """Start periodic polling for messages (gRPC workaround)."""
         logger.info(f"🔧 CLIENT: Starting message polling for agent {self.agent_id}")
         
+        poll_count = 0
         while True:
             try:
-                await asyncio.sleep(2.0)  # Poll every 2 seconds
+                await asyncio.sleep(1.0)  # Poll every 1 second for faster message delivery
+                poll_count += 1
+                logger.debug(f"🔧 CLIENT: Polling attempt #{poll_count} for agent {self.agent_id}")
                 
                 if hasattr(self.connector, 'poll_messages') and self.connector.is_connected:
                     await self.connector.poll_messages()
                 else:
+                    logger.info(f"🔧 CLIENT: Stopping polling for agent {self.agent_id} - connector not available or disconnected")
                     break  # Stop polling if connector doesn't support it or is disconnected
                     
             except Exception as e:
-                logger.error(f"Error in message polling: {e}")
+                logger.error(f"🔧 CLIENT: Error in message polling for agent {self.agent_id}: {e}")
                 await asyncio.sleep(5.0)  # Wait longer on error
     
-    async def _handle_poll_messages_response(self, data: Dict[str, Any]) -> None:
+    async def _handle_poll_messages_response(self, data) -> None:
         """Handle poll_messages system command response."""
-        logger.info(f"🔧 CLIENT: Received poll_messages response for agent {self.agent_id}")
+        logger.info(f"🔧 CLIENT: Received poll_messages response for agent {self.agent_id} - data type: {type(data)}")
+        logger.debug(f"🔧 CLIENT: Response data: {data}")
         
-        if data.get("success"):
-            messages = data.get("messages", [])
-            logger.info(f"🔧 CLIENT: Processing {len(messages)} polled messages")
-            
-            for message_data in messages:
-                try:
-                    # Reconstruct the message object
-                    if message_data.get("message_type") == "mod_message":
-                        # Reconstruct Event
-                        mod_message = Event(
-                            event_name="mod.message.received",
-                            source_id=message_data.get("sender_id", ""),
-                            relevant_mod=message_data.get("mod", ""),
-                            target_agent_id=message_data.get("relevant_agent_id", ""),
-                            payload={
-                                "action": message_data.get("action", ""),
-                                **message_data.get("content", {})
-                            },
-                            event_id=message_data.get("message_id", ""),
-                            timestamp=message_data.get("timestamp", 0)
-                        )
-                        
-                        logger.info(f"🔧 CLIENT: Processing polled Event: {mod_message.relevant_mod}, action: {mod_message.payload.get('action', 'unknown')}")
-                        await self._handle_mod_message(mod_message)
-                    else:
-                        logger.debug(f"🔧 CLIENT: Skipping non-Event: {message_data.get('message_type')}")
-                        
-                except Exception as e:
-                    logger.error(f"Error processing polled message: {e}")
+        # Handle both dict format (system_commands format) and list format (direct messages)
+        messages = []
+        if isinstance(data, list):
+            # Direct list of messages from gRPC servicer
+            messages = data
+            logger.info(f"🔧 CLIENT: Received direct list of {len(messages)} messages")
+        elif isinstance(data, dict):
+            if data.get("success"):
+                messages = data.get("messages", [])
+                logger.info(f"🔧 CLIENT: Extracted {len(messages)} messages from success response")
+                if len(messages) == 0:
+                    logger.debug(f"🔧 CLIENT: Response data keys: {list(data.keys())}")
+                    logger.debug(f"🔧 CLIENT: Messages field content: {data.get('messages', 'MISSING')}")
+            elif "messages" in data:
+                # Handle case where dict has messages directly without success field  
+                messages = data.get("messages", [])
+                logger.info(f"🔧 CLIENT: Extracted {len(messages)} messages from response dict")
+            else:
+                logger.warning(f"🔧 CLIENT: Poll messages response failed: {data.get('error', 'Unknown error')}")
+                return
         else:
-            error = data.get("error", "Unknown error")
-            logger.error(f"Poll messages failed: {error}")
+            logger.warning(f"🔧 CLIENT: Unexpected poll_messages response format: {type(data)} - {data}")
+            return
+        
+        logger.info(f"🔧 CLIENT: Processing {len(messages)} polled messages")
+        
+        def safe_timestamp(ts_value):
+            """Convert timestamp to float, handling both string and numeric formats."""
+            if isinstance(ts_value, str):
+                try:
+                    # Try to parse as float first
+                    return float(ts_value)
+                except ValueError:
+                    # If it's an ISO string, convert to timestamp
+                    import datetime
+                    try:
+                        dt = datetime.datetime.fromisoformat(ts_value.replace('Z', '+00:00'))
+                        return dt.timestamp()
+                    except ValueError:
+                        return 0.0
+            elif isinstance(ts_value, (int, float)):
+                return float(ts_value)
+            else:
+                return 0.0
+        
+        for message_data in messages:
+            try:
+                # Reconstruct the message object based on event_name
+                event_name = message_data.get("event_name", "")
+                message_type = message_data.get("message_type", "")
+                
+                logger.debug(f"🔧 CLIENT: Processing polled message - event_name: {event_name}, message_type: {message_type}")
+                
+                # Handle different types of polled messages
+                if event_name == "thread.direct_message.notification":
+                    # Handle thread direct message notification
+                    payload = message_data.get("payload", {})
+                    original_message = payload.get("message", {})
+                    
+                    # Reconstruct Event from thread notification
+                    mod_message = Event(
+                        event_name="thread.direct_message.notification",
+                        source_id=message_data.get("source_id", ""),
+                        destination_id=message_data.get("target_agent_id", ""),
+                        payload=payload,
+                        event_id=message_data.get("event_id", ""),
+                        timestamp=safe_timestamp(message_data.get("timestamp", 0))
+                    )
+                    
+                elif event_name == "thread.channel_message.notification":
+                    # Handle thread channel message notification (includes replies)
+                    payload = message_data.get("payload", {})
+                    original_message = payload.get("message", {})
+                    
+                    # Reconstruct Event from thread notification
+                    mod_message = Event(
+                        event_name="thread.channel_message.notification",
+                        source_id=message_data.get("source_id", ""),
+                        destination_id=message_data.get("target_agent_id", ""),
+                        payload=payload,
+                        event_id=message_data.get("event_id", ""),
+                        timestamp=safe_timestamp(message_data.get("timestamp", 0))
+                    )
+                elif event_name == "agent.direct_message.sent":
+                    # Handle direct message from simple messaging
+                    mod_message = Event(
+                        event_name=event_name,
+                        source_id=message_data.get("source_id", ""),
+                        destination_id=message_data.get("target_agent_id", ""),
+                        payload=message_data.get("payload", {}),
+                        event_id=message_data.get("event_id", ""),
+                        timestamp=safe_timestamp(message_data.get("timestamp", 0))
+                    )
+                elif event_name == "agent.broadcast_message.sent":
+                    # Handle broadcast message from simple messaging
+                    mod_message = Event(
+                        event_name=event_name,
+                        source_id=message_data.get("source_id", ""),
+                        destination_id=message_data.get("target_agent_id", ""),
+                        payload=message_data.get("payload", {}),
+                        event_id=message_data.get("event_id", ""),
+                        timestamp=safe_timestamp(message_data.get("timestamp", 0))
+                    )
+                elif message_type == "mod_message":
+                    # Handle legacy mod message format
+                    mod_message = Event(
+                        event_name="mod.message.received",
+                        source_id=message_data.get("sender_id", ""),
+                        relevant_mod=message_data.get("mod", ""),
+                        destination_id=message_data.get("relevant_agent_id", ""),
+                        payload={
+                            "action": message_data.get("action", ""),
+                            **message_data.get("content", {})
+                        },
+                        event_id=message_data.get("message_id", ""),
+                        timestamp=safe_timestamp(message_data.get("timestamp", 0))
+                    )
+                else:
+                    # Handle generic messages by creating an Event and calling registered handlers
+                    logger.debug(f"🔧 CLIENT: Handling generic message - event_name: {event_name}, message_type: {message_type}")
+                    mod_message = Event(
+                        event_name=event_name or message_type or "generic.message",
+                        source_id=message_data.get("source_id", ""),
+                        destination_id=message_data.get("target_agent_id", ""),
+                        payload=message_data.get("payload", {}),
+                        event_id=message_data.get("event_id", ""),
+                        timestamp=safe_timestamp(message_data.get("timestamp", 0))
+                    )
+                    
+                    # For generic messages, also try calling gRPC connector handlers
+                    if hasattr(self.connector, 'message_handlers') and event_name in self.connector.message_handlers:
+                        logger.info(f"🔧 CLIENT: Calling gRPC connector handler for {event_name}")
+                        try:
+                            for handler in self.connector.message_handlers[event_name]:
+                                await handler(mod_message)
+                        except Exception as e:
+                            logger.error(f"Error calling gRPC connector handler: {e}")
+                    
+                # Process the reconstructed event
+                logger.info(f"🔧 CLIENT: Processing polled Event: {mod_message.event_name}, payload keys: {list(mod_message.payload.keys()) if mod_message.payload else 'None'}")
+                await self._handle_mod_message(mod_message)
+                    
+            except Exception as e:
+                logger.error(f"Error processing polled message: {e}")
     

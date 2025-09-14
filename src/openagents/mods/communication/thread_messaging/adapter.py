@@ -106,7 +106,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             message: The direct message to process
         """
         # Only process messages targeted to this agent
-        if message.target_agent_id != self.agent_id:
+        if message.destination_id != self.agent_id:
             return
             
         logger.debug(f"Received direct message from {message.source_id}")
@@ -169,6 +169,8 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             await self._handle_reaction_notification(message)
         elif action == "channel_message_notification":
             await self._handle_channel_message_notification(message)
+        elif action == "direct_message_notification":
+            await self._handle_direct_message_notification(message)
         else:
             logger.debug(f"Unhandled thread messaging action: {action}")
     
@@ -208,7 +210,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             payload["quoted_text"] = quoted_text
         
         # Create direct message 
-        direct_msg = Event(event_name="agent.direct_message.sent", source_id=self.agent_id, target_agent_id=target_agent_id, payload=payload)
+        direct_msg = Event(event_name="agent.direct_message.sent", source_id=self.agent_id, destination_id=target_agent_id, payload=payload)
         
         # Wrap in Event for proper transport
         wrapper_payload = direct_msg.model_dump()
@@ -287,7 +289,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             visibility=EventVisibility.MOD_ONLY
         )
         logger.info(f"🔧 ADAPTER: Created Event with visibility={message.visibility}, relevant_mod={message.relevant_mod}")
-        logger.info(f"🔧 ADAPTER: Event target_agent_id={message.target_agent_id}, target_channel={message.target_channel}")
+        logger.info(f"🔧 ADAPTER: Event target_agent_id={message.destination_id}, target_channel={message.target_channel}")
         
         await self.connector.send_mod_message(message)
         logger.debug(f"Sent channel message to {channel}")
@@ -312,6 +314,56 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
                 logger.error(f"Error forwarding channel notification to agent: {e}")
         else:
             logger.warning(f"🔧 THREAD MESSAGING ADAPTER: No agent mod message handler registered")
+    
+    async def _handle_direct_message_notification(self, message: Event) -> None:
+        """Handle a direct message notification from the network.
+        
+        Args:
+            message: The direct message notification
+        """
+        logger.info(f"🔧 THREAD MESSAGING ADAPTER: Received direct message notification")
+        logger.info(f"🔧 THREAD MESSAGING ADAPTER: Notification content: {message.payload}")
+        
+        # Extract the original message from the notification
+        try:
+            original_message_data = message.payload.get("message", {})
+            sender_id = message.payload.get("sender_id", "")
+            
+            if original_message_data:
+                # Convert notification back to a direct message event for the agent
+                from openagents.models.event import Event
+                
+                # Create a direct message event that the agent can handle
+                direct_message_event = Event(
+                    event_name="thread.message",
+                    source_id=sender_id,
+                    destination_id=message.destination_id,
+                    payload={
+                        "action": "direct_message",
+                        "message_type": "direct_message",
+                        "sender_id": sender_id,
+                        "content": original_message_data.get("payload", {}),
+                        "text": original_message_data.get("text_representation", ""),
+                        "timestamp": original_message_data.get("timestamp", 0)
+                    },
+                    event_id=original_message_data.get("event_id", ""),
+                    timestamp=original_message_data.get("timestamp", 0)
+                )
+                
+                logger.info(f"🔧 THREAD MESSAGING ADAPTER: Converted notification to direct message event")
+                
+                # Forward the converted direct message to the agent's Event handler
+                if hasattr(self, '_agent_mod_message_handler') and self._agent_mod_message_handler:
+                    await self._agent_mod_message_handler(direct_message_event)
+                    logger.info(f"🔧 THREAD MESSAGING ADAPTER: Forwarded converted direct message to agent handler")
+                else:
+                    logger.warning(f"🔧 THREAD MESSAGING ADAPTER: No agent handler available for direct message")
+            else:
+                logger.warning(f"🔧 THREAD MESSAGING ADAPTER: No original message found in notification")
+                
+        except Exception as e:
+            logger.error(f"Error processing direct message notification: {e}")
+            logger.debug(f"Notification payload: {message.payload}")
     
     def set_agent_mod_message_handler(self, handler):
         """Set the agent's Event handler for forwarding notifications.
@@ -479,7 +531,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         reply_msg = ReplyMessage(
             source_id=self.agent_id,
             reply_to_id=reply_to_id,
-            target_agent_id=target_agent_id,
+            destination_id=target_agent_id,
             payload=content,
             quoted_message_id=quoted_message_id,
             quoted_text=quoted_text
@@ -571,7 +623,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         retrieval_msg = MessageRetrievalMessage(
             source_id=self.agent_id,
             action="retrieve_direct_messages",
-            target_agent_id=target_agent_id,
+            destination_id=target_agent_id,
             limit=limit,
             offset=offset,
             include_threads=include_threads

@@ -245,7 +245,7 @@ class GRPCHTTPAdapter:
                     event_name="thread.message",
                     source_id=sender_id,
                     relevant_mod="openagents.mods.communication.thread_messaging",
-                    target_agent_id=sender_id,
+                    destination_id=sender_id,
                     payload=mod_content,
                     timestamp=int(time.time())
                 )
@@ -598,7 +598,7 @@ class GRPCHTTPAdapter:
                 event_name=event_name,
                 source_id=agent_id,
                 relevant_mod="openagents.mods.communication.thread_messaging",
-                target_agent_id=agent_id,
+                destination_id=agent_id,
                 payload=mod_content,
                 timestamp=int(time.time())
             )
@@ -677,7 +677,7 @@ class GRPCHTTPAdapter:
                 event_name=event_name,
                 source_id=agent_id,
                 relevant_mod="openagents.mods.work.shared_document",
-                target_agent_id=agent_id,
+                destination_id=agent_id,
                 payload=mod_content,
                 timestamp=int(time.time())
             )
@@ -1149,7 +1149,7 @@ class GRPCHTTPAdapter:
                     event_name="thread.file_upload",
                     source_id=agent_id,
                     relevant_mod="openagents.mods.communication.thread_messaging",
-                    target_agent_id=agent_id,
+                    destination_id=agent_id,
                     payload={
                         "message_type": "file_upload",
                         "sender_id": agent_id,

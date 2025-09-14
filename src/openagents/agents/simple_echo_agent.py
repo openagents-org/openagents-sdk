@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Dict, List, Optional
 
@@ -37,6 +38,9 @@ class SimpleEchoAgentRunner(AgentRunner):
             incoming_thread_id: ID of the thread containing the incoming message
             incoming_message: The incoming message to react to
         """
+        print(f"🎯 ECHO AGENT: react method called with message from {incoming_message.source_id}")
+        print(f"   Message type: {type(incoming_message).__name__}")
+        print(f"   Content: {incoming_message.payload}")
         logger.info(f"🎯 Echo agent received message from {incoming_message.source_id}")
         logger.info(f"   Message type: {type(incoming_message).__name__}")
         logger.info(f"   Content: {incoming_message.payload}")
@@ -60,7 +64,7 @@ class SimpleEchoAgentRunner(AgentRunner):
             echo_message = Event(
                 event_name="agent.direct_message.sent",
                 source_id=self.client.agent_id,
-                target_agent_id=sender_id,
+                destination_id=sender_id,
                 payload={
                     "text": echo_text,
                     "protocol": "openagents.mods.communication.simple_messaging",
@@ -71,8 +75,13 @@ class SimpleEchoAgentRunner(AgentRunner):
             )
             
             # Send the echo message back
-            await self.client.send_direct_message(echo_message)
-            logger.info(f"✅ Sent echo message back to {sender_id}: {echo_text}")
+            logger.info(f"🔧 ECHO: About to call self.client.send_direct_message")
+            logger.info(f"🔧 ECHO: Client type: {type(self.client)}")
+            logger.info(f"🔧 ECHO: Client hasattr send_direct_message: {hasattr(self.client, 'send_direct_message')}")
+            result = await self.client.send_direct_message(echo_message)
+            logger.info(f"✅ Sent echo message back to {sender_id}: {echo_text} - success: {result}")
+            if not result:
+                logger.error(f"❌ Failed to send echo message to {sender_id}")
             
         elif "broadcast_message" in incoming_message.event_name:
             logger.info(f"Processing broadcast message from {sender_id}")
@@ -83,7 +92,7 @@ class SimpleEchoAgentRunner(AgentRunner):
                 greeting_message = Event(
                     event_name="agent.direct_message.sent",
                     source_id=self.client.agent_id,
-                    target_agent_id=sender_id,
+                    destination_id=sender_id,
                     payload={
                         "text": greeting_text,
                         "protocol": "openagents.mods.communication.simple_messaging",

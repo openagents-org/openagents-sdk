@@ -222,11 +222,11 @@ class NetworkConnector:
         if not message_type:
             # Auto-classify based on message properties
             # Prioritize based on targeting: direct > channel > broadcast > mod
-            if message.target_agent_id:
+            if message.destination_id:
                 message_type = "direct_message"
             elif message.target_channel:
                 message_type = "channel_message"
-            elif message.relevant_mod and not message.target_agent_id and not message.target_channel:
+            elif message.relevant_mod and not message.destination_id and not message.target_channel:
                 # Could be either broadcast or mod message - check event_name for hint
                 if "broadcast" in message.event_name.lower():
                     message_type = "broadcast_message"

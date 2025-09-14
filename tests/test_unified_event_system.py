@@ -12,7 +12,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 from openagents.core.events import EventBus
 from openagents.models.event import Event, EventSubscription, EventVisibility, EventNames
-from openagents.core.events.event_bridge import EventBridge
 from openagents.models.messages import Event, EventNames
 
 
@@ -38,7 +37,7 @@ class TestEvent:
         direct_event = Event(
             event_name="agent.direct_message.sent",
             source_id="agent1",
-            target_agent_id="agent2"
+            destination_id="agent2"
         )
         assert direct_event.visibility == EventVisibility.DIRECT
         
@@ -87,7 +86,7 @@ class TestEvent:
         direct_event = Event(
             event_name="agent.direct_message.sent",
             source_id="agent1",
-            target_agent_id="agent2",
+            destination_id="agent2",
             visibility=EventVisibility.DIRECT
         )
         assert direct_event.is_visible_to_agent("agent1")  # Source always sees
@@ -110,7 +109,7 @@ class TestEvent:
         original_event = Event(
             event_name="test.event",
             source_id="agent1",
-            target_agent_id="agent2",
+            destination_id="agent2",
             payload={"key": "value"},
             allowed_agents={"agent1", "agent2"}
         )
@@ -309,110 +308,6 @@ class TestEventBus:
         assert len(event_bus.get_agent_subscriptions("agent1")) == 0
         assert "agent1" not in event_bus.agent_event_queues
 
-
-class TestEventBridge:
-    """Test the EventBridge for backward compatibility."""
-    
-    def test_direct_message_to_event(self):
-        """Test converting Event to Event."""
-        message = Event(
-            event_name="agent.direct_message.sent",
-            event_id="msg1",
-            source_id="agent1",
-            target_agent_id="agent2",
-            payload={"text": "Hello!"},
-            timestamp=int(time.time())
-        )
-        
-        event = EventBridge.message_to_event(message)
-        
-        assert event.event_name == EventNames.AGENT_DIRECT_MESSAGE_SENT
-        assert event.source_id == "agent1"
-        assert event.target_agent_id == "agent2"
-        assert event.payload == {"text": "Hello!"}
-        assert event.visibility == EventVisibility.DIRECT
-    
-    def test_broadcast_message_to_event(self):
-        """Test converting Event to Event."""
-        message = Event(
-            event_name="network.broadcast.sent",
-            event_id="msg1",
-            source_id="agent1",
-            payload={"announcement": "Server maintenance"},
-            timestamp=int(time.time())
-        )
-        
-        event = EventBridge.message_to_event(message)
-        
-        assert event.event_name == EventNames.NETWORK_BROADCAST_SENT
-        assert event.source_id == "agent1"
-        assert event.target_agent_id is None
-        assert event.payload == {"announcement": "Server maintenance"}
-        assert event.visibility == EventVisibility.NETWORK
-    
-    def test_mod_message_to_event(self):
-        """Test converting Event to Event."""
-        message = Event(
-            event_name="mod.generic.message_received",
-            event_id="msg1",
-            source_id="agent1",
-            relevant_mod="openagents.mods.project.default",
-            relevant_agent_id="agent1",
-            payload={
-                "action": "project_creation",
-                "project_name": "Test Project"
-            },
-            timestamp=int(time.time())
-        )
-        
-        event = EventBridge.message_to_event(message)
-        
-        assert event.event_name == "mod.generic.message_received"  # Pass-through since EventBridge is now unified
-        assert event.source_id == "agent1"
-        assert event.relevant_mod == "openagents.mods.project.default"
-        assert event.payload["project_name"] == "Test Project"
-        assert event.visibility == EventVisibility.MOD_ONLY
-    
-    def test_event_to_direct_message(self):
-        """Test converting Event back to Event."""
-        event = Event(
-            event_id="evt1",
-            event_name=EventNames.AGENT_DIRECT_MESSAGE_SENT,
-            source_id="agent1",
-            target_agent_id="agent2",
-            payload={"text": "Hello!"},
-            timestamp=int(time.time())
-        )
-        
-        message = EventBridge.event_to_message(event)
-        
-        assert isinstance(message, Event)
-        assert message.event_id == "evt1"
-        assert message.source_id == "agent1"
-        assert message.target_agent_id == "agent2"
-        assert message.payload == {"text": "Hello!"}
-    
-    def test_event_to_mod_message(self):
-        """Test converting Event back to Event."""
-        event = Event(
-            event_id="evt1",
-            event_name=EventNames.PROJECT_CREATION_REQUESTED,
-            source_id="agent1",
-            relevant_mod="project.default",
-            payload={
-                "message_type": "project_creation",
-                "project_name": "Test Project"
-            },
-            timestamp=int(time.time())
-        )
-        
-        message = EventBridge.event_to_message(event)
-        
-        assert isinstance(message, Event)
-        assert message.event_id == "evt1"
-        assert message.source_id == "agent1"
-        assert message.relevant_mod == "project.default"
-        assert message.payload["project_name"] == "Test Project"
 
 
 if __name__ == "__main__":

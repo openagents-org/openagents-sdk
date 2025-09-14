@@ -131,14 +131,14 @@ class TestSimpleCentralizedNetwork:
         direct_msg = Event(
             event_name="agent.direct_message.sent",
             source_id="agent-1",
-            target_agent_id="agent-2",
+            destination_id="agent-2",
             payload={"text": "Hello Agent 2!"},
             event_id="test-msg-1"
         )
         
         # Verify message structure
         assert direct_msg.source_id == "agent-1"
-        assert direct_msg.target_agent_id == "agent-2"
+        assert direct_msg.destination_id == "agent-2"
         assert direct_msg.payload == {"text": "Hello Agent 2!"}
         assert "direct_message" in direct_msg.event_name
         
@@ -189,14 +189,14 @@ class TestSimpleCentralizedNetwork:
         message = Event(
             event_name="agent.direct_message.sent",
             source_id="agent-1",
-            target_agent_id="agent-2", 
+            destination_id="agent-2", 
             payload={"text": "Integration test message"},
             event_id="integration-test-1"
         )
         
         # This demonstrates the framework is working even if message delivery isn't perfect
         try:
-            result = await self.coordinator_network.send_message(message)
+            result = await self.coordinator_network.send(message)
             logger.info(f"Message send result: {result}")
         except Exception as e:
             logger.info(f"Message send attempt completed with: {e}")

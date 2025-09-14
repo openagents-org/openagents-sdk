@@ -107,7 +107,7 @@ class SimpleMessagingNetworkMod(BaseMod):
         Returns:
             Optional[Event]: The processed message, or None if processing should stop
         """
-        logger.debug(f"Simple messaging mod processing direct message from {message.source_id} to {message.target_agent_id}")
+        logger.debug(f"Simple messaging mod processing direct message from {message.source_id} to {message.destination_id}")
         
         # Add the message to history
         self._add_to_history(message)

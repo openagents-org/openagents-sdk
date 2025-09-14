@@ -151,7 +151,7 @@ class TestMessageHandling:
         message = Event(
             event_name="agent.direct_message.received",
             source_id="user1",
-            target_agent_id="test-agent",
+            destination_id="test-agent",
             payload={"text": "Hello agent!"},
             text_representation="Hello agent!"
         )
@@ -218,7 +218,7 @@ class TestMessageHandling:
         message = Event(
             event_name="agent.direct_message.received",
             source_id="test-agent",  # Same as agent ID
-            target_agent_id="other-agent",
+            destination_id="other-agent",
             payload={"text": "Self message"}
         )
         

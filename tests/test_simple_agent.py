@@ -226,7 +226,7 @@ class TestSimpleAgentRunnerWithMockedAPI:
         """Create a test message."""
         return Event(
             sender_id="test-user",
-            target_agent_id="test-agent",
+            destination_id="test-agent",
             content={"text": "Hello, test agent!"},
             text_representation="Hello, test agent!"
         )

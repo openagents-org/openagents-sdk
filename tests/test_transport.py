@@ -31,7 +31,7 @@ class TestEvent:
         )
         
         assert message.source_id == "agent1"
-        assert message.target_agent_id == "agent2"
+        assert message.destination_id == "agent2"
         assert message.event_name == "agent.direct_message.sent"
         assert message.payload["content"] == "Hello!"
         assert message.event_id is not None

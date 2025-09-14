@@ -145,16 +145,16 @@ class TestSimpleMessaging:
         test_message = Event(
             event_name="agent.direct_message.sent",
             source_id=agent1_id,
-            target_agent_id=agent2_id,
+            destination_id=agent2_id,
             payload={"text": "Hello from TestAgent1!"},
             message_type="direct"
         )
         
         # Test that we can create the message and convert it to transport format
         # (This tests the message creation and conversion logic)
-        transport_message = self.network._convert_to_transport_message(test_message)
+        transport_message = test_message
         assert transport_message.source_id == agent1_id
-        assert transport_message.target_agent_id == agent2_id
+        assert transport_message.destination_id == agent2_id
         assert transport_message.payload["text"] == "Hello from TestAgent1!"
 
         # Verify that both agents are registered
@@ -187,7 +187,7 @@ class TestSimpleMessaging:
         )
 
         # Send the broadcast message
-        success = await self.network.send_message(broadcast_message)
+        success = await self.network.send(broadcast_message)
         assert success, "Failed to send broadcast message"
         
         # Wait for message to be processed
@@ -225,7 +225,7 @@ class TestSimpleMessaging:
             original_content = f.read()
         
         # Create a file transfer message
-        file_message = Event(event_name="agent.direct_message.sent", source_id=agent1_id, target_agent_id=agent2_id, payload={
+        file_message = Event(event_name="agent.direct_message.sent", source_id=agent1_id, destination_id=agent2_id, payload={
                 "file_data": original_content.decode('utf-8'),
                 "filename": "test_file.txt",
                 "file_size": len(original_content)
@@ -234,9 +234,9 @@ class TestSimpleMessaging:
         )
         
         # Test message creation and conversion
-        transport_message = self.network._convert_to_transport_message(file_message)
+        transport_message = file_message
         assert transport_message.source_id == agent1_id
-        assert transport_message.target_agent_id == agent2_id
+        assert transport_message.destination_id == agent2_id
         assert "file_data" in transport_message.payload
 
         # Verify that both agents are still registered
@@ -266,7 +266,7 @@ class TestSimpleMessaging:
             file_message = Event(
                 event_name="agent.direct_message.sent",
                 source_id=agent1_id,
-                target_agent_id=agent2_id,
+                destination_id=agent2_id,
                 payload={
                     "type": "file_transfer",
                     "filename": "test.txt",
@@ -277,7 +277,7 @@ class TestSimpleMessaging:
             
             # Test message creation
             assert file_message.source_id == agent1_id
-            assert file_message.target_agent_id == agent2_id
+            assert file_message.destination_id == agent2_id
             assert file_message.payload["data"] == test_content
 
             # Verify network state

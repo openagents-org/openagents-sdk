@@ -72,7 +72,7 @@ async def main():
                 "project_goal": "Demonstrate event system"
             }
         )
-        await network.emit_event(project_event)
+        await network.emit_to_event_bus(project_event)
         print("📤 Emitted project.created event")
         
         # Emit a channel message event
@@ -85,20 +85,20 @@ async def main():
                 "message_id": "msg-456"
             }
         )
-        await network.emit_event(channel_event)
+        await network.emit_to_event_bus(channel_event)
         print("📤 Emitted channel.message.posted event")
         
         # Emit a direct message event
         direct_event = Event(
             event_name=EventNames.AGENT_DIRECT_MESSAGE_SENT,
             source_agent_id="event-demo-agent",
-            target_agent_id="other-agent",
+            destination_id="other-agent",
             payload={
                 "text": "Direct message via events!",
                 "message_id": "dm-789"
             }
         )
-        await network.emit_event(direct_event)
+        await network.emit_to_event_bus(direct_event)
         print("📤 Emitted agent.direct_message.sent event")
         
         # Wait for events to be processed

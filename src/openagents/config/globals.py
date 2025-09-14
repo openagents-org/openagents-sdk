@@ -26,8 +26,24 @@ SHARED_DOCUMENT_MOD_NAME = "openagents.mods.work.shared_document"
 # Default configuration values
 
 # Network defaults
-DEFAULT_NETWORK_PORT = 8570
-DEFAULT_NETWORK_HOST = "localhost"
+DEFAULT_TRANSPORT_ADDRESS = {
+    "http": {
+        "host": "0.0.0.0",
+        "port": 8700
+    },
+    "websocket": {
+        "host": "0.0.0.0",
+        "port": 8400
+    },
+    "grpc": {
+        "host": "0.0.0.0",
+        "port": 8600
+    },
+    "libp2p": {
+        "host": "0.0.0.0",
+        "port": 0
+    }
+}
 
 # Client defaults
 DEFAULT_CLIENT_TIMEOUT = 30.0
@@ -50,3 +66,27 @@ BROADCAST_MESSAGE_TYPE = "broadcast_message"
 # Mod directions
 MOD_DIRECTION_INBOUND = "inbound"
 MOD_DIRECTION_OUTBOUND = "outbound"
+
+# ===== SYSTEM EVENT NAMES =====
+SYSTEM_EVENT_HEALTH_CHECK = "system.health_check"
+SYSTEM_EVENT_REGISTER_AGENT = "system.register_agent"
+SYSTEM_EVENT_UNREGISTER_AGENT = "system.unregister_agent"
+SYSTEM_EVENT_LIST_AGENTS = "system.list_agents"
+SYSTEM_EVENT_LIST_MODS = "system.list_mods"
+SYSTEM_EVENT_GET_MOD_MANIFEST = "system.get_mod_manifest"
+SYSTEM_EVENT_GET_NETWORK_INFO = "system.get_network_info"
+SYSTEM_EVENT_PING_AGENT = "system.ping_agent"
+SYSTEM_EVENT_HEARTBEAT = "system.heartbeat"
+SYSTEM_EVENT_CLAIM_AGENT_ID = "system.claim_agent_id"
+SYSTEM_EVENT_VALIDATE_CERTIFICATE = "system.validate_certificate"
+SYSTEM_EVENT_POLL_MESSAGES = "system.poll_messages"
+SYSTEM_EVENT_SUBSCRIBE_EVENTS = "system.subscribe_events"
+SYSTEM_EVENT_UNSUBSCRIBE_EVENTS = "system.unsubscribe_events"
+
+SYSTEM_NOTIFICAITON_REGISTER_AGENT = "system.notification.register_agent"
+SYSTEM_NOTIFICAITON_UNREGISTER_AGENT = "system.notification.unregister_agent"
+
+AGENT_EVENT_MESSAGE = "agent.message"
+
+SYSTEM_AGENT_ID = "system:system"
+BROADCAST_AGENT_ID = "agent:broadcast"
