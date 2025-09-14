@@ -141,6 +141,7 @@ class AgentRunner(ABC):
             while self._running:
                 # Get all message threads from the client
                 message_threads = self.client.get_messsage_threads()
+                print(f"🔍 AGENT_RUNNER: Checking for messages... Found {len(message_threads)} threads")
                 # logger.info(f"🔧 AGENT_RUNNER: Checking for messages... Found {len(message_threads)} threads")
                 # print(f"🔍 Checking for messages... Found {len(message_threads)} threads")
                 
@@ -153,12 +154,12 @@ class AgentRunner(ABC):
                 unprocessed_count = 0
                 
                 for thread_id, thread in message_threads.items():
-                    # print(f"   Thread {thread_id}: {len(thread.messages)} messages")
+                    print(f"   Thread {thread_id}: {len(thread.messages)} messages")
                     for message in thread.messages:
                         total_messages += 1
                         # Check if message hasn't been processed (regardless of requires_response)
                         message_id = str(message.message_id)
-                        # print(f"     Message {message_id[:8]}... from {message.source_id}, requires_response={message.requires_response}, processed={message_id in self._processed_message_ids}")
+                        print(f"     Message {message_id[:8]}... from {message.source_id}, processed={message_id in self._processed_message_ids}")
                         if message_id not in self._processed_message_ids:
                             unprocessed_count += 1
                             # Find the earliest unprocessed message by timestamp
@@ -171,6 +172,8 @@ class AgentRunner(ABC):
                 
                 # If we found an unprocessed message, process it
                 if unprocessed_message and unprocessed_thread_id:
+                    print(f"🔧 AGENT_RUNNER: Found unprocessed message {unprocessed_message.message_id[:8]}... from {unprocessed_message.source_id}")
+                    print(f"🎯 Processing message {unprocessed_message.message_id[:8]}... from {unprocessed_message.source_id}")
                     # logger.info(f"🔧 AGENT_RUNNER: Found unprocessed message {unprocessed_message.message_id[:8]}... from {unprocessed_message.source_id}")
                     # print(f"🎯 Processing message {unprocessed_message.message_id[:8]}... from {unprocessed_message.source_id}")
                     # Mark the message as processed to avoid processing it again
@@ -195,8 +198,9 @@ class AgentRunner(ABC):
                         filtered_threads[thread_id] = filtered_thread
                     
                     # Call react with the filtered threads and the unprocessed message
-                    # logger.info(f"🔧 AGENT_RUNNER: Calling react method for message {unprocessed_message.message_id[:8]}...")
+                    print(f"🔧 AGENT_RUNNER: Calling react method for message {unprocessed_message.message_id[:8]}...")
                     await self.react(filtered_threads, unprocessed_thread_id, unprocessed_message)
+                    print(f"🔧 AGENT_RUNNER: react method completed for message {unprocessed_message.message_id[:8]}")
                 else:
                     await asyncio.sleep(self._interval or 1)
                     # print("😴 No unprocessed messages found, sleeping...")

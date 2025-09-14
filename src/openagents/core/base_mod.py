@@ -1,10 +1,12 @@
 from typing import Dict, Any, Optional, List, Set, TYPE_CHECKING
 from abc import ABC, abstractmethod
 import logging
+from warnings import deprecated
 
 # Use TYPE_CHECKING to avoid circular imports
 if TYPE_CHECKING:
     from openagents.core.network import AgentNetworkServer
+from openagents.models.event_response import EventResponse
 from openagents.models.messages import Event, EventNames
 
 logger = logging.getLogger(__name__)
@@ -124,6 +126,22 @@ class BaseMod(ABC):
         """
         self._config.update(config)
 
+    async def process_event(self, event: Event) -> Optional[EventResponse]:
+        """Process an event and return the response.
+
+        A mod can intercept and process the event by returning an event response.
+        Once an event response is return, the event will not be processed by any other mod and will not be delivered to the destination.
+        If the mod wants to allow the event to be processed by other mods or be delivered, it should return None.
+        
+        Args:
+            event: The event to process
+
+        Returns:
+            Optional[EventResponse]: The response to the event, or None if the event is not processed
+        """
+        return None
+    
+    @deprecated("Use process_event instead")
     async def process_system_message(self, message: Event) -> Optional[Event]:
         """Process a system message in the ordered mod pipeline.
         
@@ -143,6 +161,7 @@ class BaseMod(ABC):
         """
         return message
 
+    @deprecated("Use process_event instead")
     async def process_direct_message(self, message: Event) -> Optional[Event]:
         """Process a direct message in the ordered mod pipeline.
         
@@ -162,6 +181,7 @@ class BaseMod(ABC):
         """
         return message
     
+    @deprecated("Use process_event instead")
     async def process_broadcast_message(self, message: Event) -> Optional[Event]:
         """Process a broadcast message in the ordered mod pipeline.
         

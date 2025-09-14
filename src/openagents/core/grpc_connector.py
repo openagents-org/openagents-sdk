@@ -108,19 +108,19 @@ class GRPCNetworkConnector:
             self.channel = self.aio.insecure_channel(address, options=options)
             self.stub = self.agent_service_pb2_grpc.AgentServiceStub(self.channel)
             
-            # Test connection with ping
-            ping_request = self.agent_service_pb2.PingRequest(
+            # Test connection with heartbeat
+            heartbeat_request = self.agent_service_pb2.HeartbeatRequest(
                 agent_id=self.agent_id,
                 timestamp=self._to_timestamp(time.time())
             )
             
             try:
-                ping_response = await self.stub.Ping(ping_request, timeout=5.0)
-                if not ping_response.success:
-                    logger.error("Server ping failed")
+                heartbeat_response = await self.stub.Heartbeat(heartbeat_request, timeout=5.0)
+                if not heartbeat_response.success:
+                    logger.error("Server heartbeat failed")
                     return False
             except Exception as e:
-                logger.error(f"Failed to ping gRPC server: {e}")
+                logger.error(f"Failed to send heartbeat to gRPC server: {e}")
                 return False
             
             # Register with server
@@ -280,14 +280,48 @@ class GRPCNetworkConnector:
                 if not message.relevant_agent_id:
                     message.relevant_agent_id = self.agent_id
             
-            # Send event via gRPC
-            grpc_message = self._to_grpc_event(message)
+            # Debug logging for direct messages
+            if "direct_message" in message.event_name:
+                print(f"🔧 GRPC: Sending direct message from {message.source_id} to {message.destination_id}")
+                print(f"🔧 GRPC: Message event_name: {message.event_name}")
+                logger.info(f"🔧 GRPC: Sending direct message from {message.source_id} to {message.destination_id}")
+                logger.info(f"🔧 GRPC: Message event_name: {message.event_name}")
+                logger.info(f"🔧 GRPC: Message payload: {message.payload}")
             
-            # Send the event to the server (using existing SendMessage for now)
-            response = await self.stub.SendMessage(grpc_message)  # TODO: Update to SendEvent when protobuf is updated
+            # Send event via unified gRPC SendEvent
+            grpc_event = self._to_grpc_event(message)
+            
+            # Debug logging for troubleshooting
+            logger.info(f"🔧 GRPC_CONNECTOR: About to send unified event {message.event_name} via SendEvent")
+            logger.debug(f"🔧 GRPC_CONNECTOR: Event details - source: {message.source_id}, target: {message.destination_id}")
+            
+            # Send the event to the server using unified SendEvent
+            response = await self.stub.SendEvent(grpc_event)
             
             if response.success:
                 logger.debug(f"Successfully sent gRPC event {message.event_id}")
+                
+                # Handle system command responses
+                if message.event_name.startswith('system.') and response.response_data:
+                    command = message.event_name[7:]  # Remove 'system.' prefix
+                    logger.debug(f"🔧 GRPC: Processing system command response for {command}")
+                    
+                    try:
+                        # Decode the response data 
+                        import json
+                        response_data = json.loads(response.response_data.value.decode('utf-8'))
+                        logger.debug(f"🔧 GRPC: System response data: {response_data}")
+                        
+                        # Call the registered system handler if available
+                        if command in self.system_handlers:
+                            await self.system_handlers[command](response_data)
+                            logger.debug(f"🔧 GRPC: Called system handler for {command}")
+                        else:
+                            logger.warning(f"🔧 GRPC: No system handler registered for {command}")
+                            
+                    except Exception as e:
+                        logger.error(f"🔧 GRPC: Error processing system command response for {command}: {e}")
+                
                 return True
             else:
                 logger.error(f"Failed to send gRPC event {message.event_id}: {response.error_message}")
@@ -327,51 +361,17 @@ class GRPCNetworkConnector:
             # Automatically include the agent_id in system requests
             kwargs['agent_id'] = self.agent_id
             
-            # Create system command request
-            request_data = {
-                "command": command,
-                "data": kwargs,
-                "request_id": str(uuid.uuid4())
-            }
-            
-            # Convert to gRPC format and serialize kwargs to protobuf Any field
-            from google.protobuf.any_pb2 import Any
-            import json
-            
-            # Serialize kwargs to Any field
-            data_any = Any()
-            data_any.type_url = "type.googleapis.com/openagents.SystemCommandData"
-            data_any.value = json.dumps(kwargs).encode('utf-8')
-            
-            system_request = self.agent_service_pb2.SystemCommandRequest(
-                command=command,
-                request_id=request_data["request_id"],
-                data=data_any
+            # Send as unified event with system.* event_name
+            system_event = Event(
+                event_name=f"system.{command}",
+                source_id=self.agent_id,
+                payload=kwargs,
+                event_id=str(uuid.uuid4()),
+                timestamp=time.time()
             )
             
-            response = await self.stub.SendSystemCommand(system_request)
-            
-            # Process the response data if available
-            if response.success and response.data:
-                try:
-                    import json
-                    data_str = response.data.value.decode('utf-8')
-                    if not data_str.strip():
-                        logger.debug(f"Empty response data for gRPC system command: {command}")
-                        return response.success
-                    response_data = json.loads(data_str)
-                    
-                    # Call the registered system handler if available
-                    if command in self.system_handlers:
-                        logger.info(f"🔧 GRPC: Processing system response for command: {command}")
-                        await self.system_handlers[command](response_data)
-                    else:
-                        logger.debug(f"No handler registered for system command: {command}")
-                        
-                except Exception as e:
-                    logger.error(f"Error processing gRPC system response: {e}")
-            
-            return response.success
+            logger.debug(f"Sending system command '{command}' as unified event: system.{command}")
+            return await self.send_message(system_event)
             
         except Exception as e:
             logger.error(f"Failed to send gRPC system request: {e}")
@@ -396,6 +396,13 @@ class GRPCNetworkConnector:
             return []
         
         try:
+            # Register a system handler for poll_messages if not already registered
+            if POLL_MESSAGES not in self.system_handlers:
+                logger.info(f"🔧 GRPC: Registering poll_messages handler for agent {self.agent_id}")
+                self.register_system_handler(POLL_MESSAGES, self._handle_poll_messages_response)
+            else:
+                logger.info(f"🔧 GRPC: poll_messages handler already registered for agent {self.agent_id}")
+            
             # Send poll_messages system request
             success = await self.send_system_request(POLL_MESSAGES)
             if success:
@@ -407,6 +414,65 @@ class GRPCNetworkConnector:
         except Exception as e:
             logger.error(f"Failed to poll messages: {e}")
             return []
+    
+    async def _handle_poll_messages_response(self, response_data: Dict[str, Any]) -> None:
+        """Handle poll_messages system command response.
+        
+        Args:
+            response_data: Response data containing messages
+        """
+        logger.info(f"🔧 GRPC: Received poll_messages response with data: {type(response_data)}")
+        
+        try:
+            # Extract messages from response
+            messages = []
+            if isinstance(response_data, list):
+                # Direct list of messages
+                messages = response_data
+                logger.info(f"🔧 GRPC: Received direct list of {len(messages)} messages")
+            elif isinstance(response_data, dict):
+                if 'messages' in response_data:
+                    # Response wrapped in a dict with 'messages' key
+                    messages = response_data['messages']
+                    logger.info(f"🔧 GRPC: Extracted {len(messages)} messages from response dict")
+                else:
+                    logger.warning(f"🔧 GRPC: Dict response missing 'messages' key: {list(response_data.keys())}")
+                    return
+            else:
+                logger.warning(f"🔧 GRPC: Unexpected poll_messages response format: {type(response_data)} - {response_data}")
+                return
+            
+            logger.info(f"🔧 GRPC: Processing {len(messages)} polled messages for {self.agent_id}")
+            
+            # Process each message
+            for message_data in messages:
+                try:
+                    # Convert message data to Event
+                    from openagents.models.event import Event
+                    from openagents.utils.message_util import parse_message_dict
+                    
+                    # Parse the message based on its structure
+                    if isinstance(message_data, dict):
+                        if 'event_name' in message_data:
+                            # This is an Event
+                            event = Event(**message_data)
+                        else:
+                            # This might be a legacy message format
+                            event = parse_message_dict(message_data)
+                        
+                        # Route the message through the connector's message handlers
+                        await self.consume_message(event)
+                        logger.debug(f"🔧 GRPC: Successfully processed polled message: {event.event_id}")
+                        
+                    else:
+                        logger.warning(f"🔧 GRPC: Invalid message format in poll response: {message_data}")
+                        
+                except Exception as e:
+                    logger.error(f"🔧 GRPC: Error processing polled message: {e}")
+                    logger.debug(f"🔧 GRPC: Problematic message data: {message_data}")
+                    
+        except Exception as e:
+            logger.error(f"🔧 GRPC: Error handling poll_messages response: {e}")
     
     def _to_grpc_message(self, message: Event):
         """Convert internal message to gRPC message format."""
@@ -487,36 +553,42 @@ class GRPCNetworkConnector:
         return grpc_message
     
     def _to_grpc_event(self, event: Event):
-        """Convert internal event to gRPC message format (temporary - will be updated with new protobuf)."""
-        # For now, convert Event to the existing gRPC message format
-        # This will be updated when we update the protobuf definitions
-        grpc_message = self.agent_service_pb2.Message(
-            message_id=event.event_id,
-            sender_id=event.source_id,
-            target_id=event.target_agent_id or '',
-            message_type=event.event_name,  # Use event_name as message_type
-            timestamp=self._to_timestamp(event.timestamp)
+        """Convert internal event to unified gRPC Event format."""
+        # Create unified gRPC Event
+        grpc_event = self.agent_service_pb2.Event(
+            event_id=event.event_id,
+            event_name=event.event_name,
+            source_id=event.source_id,
+            target_agent_id=event.destination_id or '',
+            timestamp=self._to_timestamp(event.timestamp),
+            visibility=event.visibility if hasattr(event, 'visibility') else 'network'
         )
         
-        # Serialize event data to protobuf Any field
+        # Add metadata
+        if event.metadata:
+            for key, value in event.metadata.items():
+                grpc_event.metadata[key] = str(value)
+        
+        # Serialize event payload to protobuf Any field
         try:
             from google.protobuf.any_pb2 import Any
             from google.protobuf.struct_pb2 import Struct
             
-            # Convert event to protobuf Struct
+            # Convert event payload to protobuf Struct
             struct = Struct()
-            event_data = event.to_dict()
-            struct.update(self._make_json_serializable(event_data))
+            if event.payload:
+                payload_data = self._make_json_serializable(event.payload)
+                struct.update(payload_data)
             
             # Pack into Any field
             any_field = Any()
             any_field.Pack(struct)
-            grpc_message.payload.CopyFrom(any_field)
+            grpc_event.payload.CopyFrom(any_field)
             
         except Exception as e:
-            logger.warning(f"Failed to serialize event content: {e}")
+            logger.warning(f"Failed to serialize event payload: {e}")
         
-        return grpc_message
+        return grpc_event
     
     def _make_json_serializable(self, obj):
         """Convert an object to be JSON serializable, handling gRPC types."""

@@ -85,12 +85,12 @@ def create_testing_simple_agent(agent_id: str = None):
             logger.info(f"Agent {self.client.agent_id} received message from {sender_id}: {text}")
             
             # Handle direct messages - echo back
-            if incoming_message.target_agent_id:
-                logger.info(f"Processing direct message from {sender_id} to {incoming_message.target_agent_id}")
+            if incoming_message.destination_id:
+                logger.info(f"Processing direct message from {sender_id} to {incoming_message.destination_id}")
                 echo_message = Event(
                     event_name="agent.direct_message.sent",
                     source_id=self.client.agent_id,
-                    target_agent_id=sender_id,
+                    destination_id=sender_id,
                     relevant_mod="openagents.mods.communication.simple_messaging",
                     payload={"text": f"Echo: {text}"},
                     text_representation=f"Echo: {text}",
@@ -106,7 +106,7 @@ def create_testing_simple_agent(agent_id: str = None):
                     greeting_message = Event(
                         event_name="agent.direct_message.sent",
                         source_id=self.client.agent_id,
-                        target_agent_id=sender_id,
+                        destination_id=sender_id,
                         relevant_mod="openagents.mods.communication.simple_messaging",
                         payload={"text": f"Hello {sender_id}! Nice to meet you!"},
                         text_representation=f"Hello {sender_id}! Nice to meet you!",
@@ -283,7 +283,7 @@ class TestSimpleAgentRunner:
         direct_message = Event(
             event_name="agent.direct_message.sent",
             source_id=self.test_agent.client.agent_id,
-            target_agent_id=self.simple_agent.client.agent_id,
+            destination_id=self.simple_agent.client.agent_id,
             relevant_mod="openagents.mods.communication.simple_messaging",
             payload={"text": test_text},
             text_representation=test_text,
@@ -484,7 +484,7 @@ class TestSimpleAgentRunner:
             direct_message = Event(
                 event_name="agent.direct_message.sent",
                 source_id=self.test_agent.client.agent_id,
-                target_agent_id=self.simple_agent.client.agent_id,
+                destination_id=self.simple_agent.client.agent_id,
                 relevant_mod="openagents.mods.communication.simple_messaging",
                 payload={"text": test_text},
                 text_representation=test_text,

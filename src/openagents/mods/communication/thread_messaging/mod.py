@@ -313,7 +313,7 @@ class ThreadMessagingNetworkMod(BaseMod):
         Returns:
             Optional[Event]: The processed message, or None if processing should stop
         """
-        logger.debug(f"Thread messaging mod processing direct message from {message.source_id} to {message.target_agent_id}")
+        logger.debug(f"Thread messaging mod processing direct message from {message.source_id} to {message.destination_id}")
         
         # Add to history for thread messaging
         self._add_to_history(message)
@@ -394,6 +394,12 @@ class ThreadMessagingNetworkMod(BaseMod):
             # Extract the inner message from the Event content
             try:
                 content = message.payload if hasattr(message, 'payload') else message.content
+                
+                # Fix: Map sender_id to source_id for all message types that extend Event
+                # This is needed because the Event class expects source_id but message content uses sender_id
+                if isinstance(content, dict) and 'sender_id' in content and 'source_id' not in content:
+                    content = content.copy()  # Don't modify the original
+                    content['source_id'] = content['sender_id']
                 
                 # Convert protobuf content to dict if needed
                 if event_name == "thread.message":
@@ -560,6 +566,7 @@ class ThreadMessagingNetworkMod(BaseMod):
                         # Populate quoted_text if quoted_message_id is provided
                         if 'quoted_message_id' in content and content['quoted_message_id']:
                             content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
+                        
                         inner_message = Event(event_name=event_name, **content)
                         self._add_to_history(inner_message)
                         await self._process_direct_message(inner_message)
@@ -675,7 +682,7 @@ class ThreadMessagingNetworkMod(BaseMod):
                     "channel": channel
                 },
                 direction="inbound",
-                target_agent_id=agent_id
+                destination_id=agent_id
             )
             logger.info(f"🔧 THREAD MESSAGING: Notification target_id will be: {notification.relevant_agent_id}")
             logger.info(f"🔧 THREAD MESSAGING: Notification content: {notification.content}")
@@ -694,7 +701,48 @@ class ThreadMessagingNetworkMod(BaseMod):
         Args:
             message: The direct message to process
         """
-        logger.debug(f"Processing direct message from {message.source_id} to {message.target_agent_id}")
+        logger.debug(f"Processing direct message from {message.source_id} to {message.destination_id}")
+        
+        # Get target agent ID from the message
+        target_agent_id = None
+        if hasattr(message, 'target_agent_id') and message.destination_id:
+            target_agent_id = message.destination_id
+        else:
+            # Try to extract from nested content
+            if hasattr(message, 'payload') and message.payload:
+                if isinstance(message.payload, dict):
+                    target_agent_id = message.payload.get('target_agent_id')
+        
+        if not target_agent_id:
+            logger.warning(f"Direct message missing target_agent_id: {message}")
+            return
+            
+        # Send notification to target agent
+        logger.info(f"🔧 THREAD MESSAGING: Processing direct message from {message.source_id} to {target_agent_id}")
+        
+        try:
+            from openagents.models.event import Event as EventModel
+            
+            # Create direct message notification
+            notification = EventModel(
+                event_name="thread.direct_message.notification",
+                source_id=self.network.network_id,
+                payload={
+                    "action": "direct_message_notification",
+                    "message": message.model_dump() if hasattr(message, 'model_dump') else message.__dict__,
+                    "sender_id": message.source_id
+                },
+                direction="inbound",
+                destination_id=target_agent_id
+            )
+            
+            await self.network.send_message(notification)
+            logger.info(f"✅ THREAD MESSAGING: Sent direct message notification to agent {target_agent_id}")
+            
+        except Exception as e:
+            logger.error(f"❌ THREAD MESSAGING: Failed to send direct message notification to {target_agent_id}: {e}")
+            import traceback
+            traceback.print_exc()
     
     async def _process_reply_message(self, message: ReplyMessage) -> None:
         """Process a reply message and manage thread creation/updates.
@@ -772,7 +820,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             response = Event(
                 event_name="thread.file.upload_response",
                 source_id=self.network.network_id,
-                target_agent_id=message.source_id,
+                destination_id=message.source_id,
                 relevant_mod="openagents.mods.communication.thread_messaging",
                 payload={
                     "action": "file_upload_response",
@@ -791,7 +839,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             response = Event(
                 event_name="thread.file.upload_response",
                 source_id=self.network.network_id,
-                target_agent_id=message.source_id,
+                destination_id=message.source_id,
                 relevant_mod="openagents.mods.communication.thread_messaging",
                 payload={
                     "action": "file_upload_response",
@@ -834,7 +882,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             response = Event(
                 event_name="thread.file.download_response",
                 source_id=self.network.network_id,
-                target_agent_id=agent_id,
+                destination_id=agent_id,
                 payload={
                     "action": "file_download_response",
                     "success": False,
@@ -853,7 +901,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             response = Event(
                 event_name="thread.file.download_response",
                 source_id=self.network.network_id,
-                target_agent_id=agent_id,
+                destination_id=agent_id,
                 payload={
                     "action": "file_download_response",
                     "success": False,
@@ -875,7 +923,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             response = Event(
                 event_name="thread.file.download_response",
                 source_id=self.network.network_id,
-                target_agent_id=agent_id,
+                destination_id=agent_id,
                 payload={
                     "action": "file_download_response",
                     "success": True,
@@ -895,7 +943,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             response = Event(
                 event_name="thread.file.download_response",
                 source_id=self.network.network_id,
-                target_agent_id=agent_id,
+                destination_id=agent_id,
                 payload={
                     "action": "file_download_response",
                     "success": False,
@@ -937,7 +985,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             response = Event(
                 event_name="thread.channels.list_response",
                 source_id=self.network.network_id,
-                target_agent_id=message.source_id,
+                destination_id=message.source_id,
                 payload={
                     "action": "list_channels_response",
                     "success": True,
@@ -989,7 +1037,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             response = Event(
                 event_name="thread.channel_messages.retrieval_response",
                 source_id=self.network.network_id,
-                target_agent_id=agent_id,
+                destination_id=agent_id,
                 payload={
                     "action": "retrieve_channel_messages_response",
                     "success": False,
@@ -1005,7 +1053,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             response = Event(
                 event_name="thread.channel_messages.retrieval_response",
                 source_id=self.network.network_id,
-                target_agent_id=agent_id,
+                destination_id=agent_id,
                 payload={
                     "action": "retrieve_channel_messages_response",
                     "success": False,
@@ -1080,7 +1128,7 @@ class ThreadMessagingNetworkMod(BaseMod):
         response = Event(
             event_name="thread.channel_messages.retrieval_response",
             source_id=self.network.network_id,
-            target_agent_id=agent_id,
+            destination_id=agent_id,
             payload={
                 "action": "retrieve_channel_messages_response",
                 "success": True,
@@ -1102,7 +1150,7 @@ class ThreadMessagingNetworkMod(BaseMod):
         Args:
             message: The retrieval request message
         """
-        target_agent_id = message.target_agent_id
+        target_agent_id = message.destination_id
         agent_id = message.source_id
         limit = message.limit
         offset = message.offset
@@ -1113,7 +1161,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             response = Event(
                 event_name="thread.direct_messages.retrieval_response",
                 source_id=self.network.network_id,
-                target_agent_id=agent_id,
+                destination_id=agent_id,
                 payload={
                     "action": "retrieve_direct_messages_response",
                     "success": False,
@@ -1128,11 +1176,11 @@ class ThreadMessagingNetworkMod(BaseMod):
         direct_messages = []
         for msg_id, msg in self.message_history.items():
             # Check if this is a direct message between the agents (check for target_agent_id field)
-            has_target_agent = hasattr(msg, 'target_agent_id') and msg.target_agent_id
+            has_target_agent = hasattr(msg, 'target_agent_id') and msg.destination_id
             is_direct_msg_between_agents = (
                 has_target_agent and 
-                ((msg.source_id == agent_id and msg.target_agent_id == target_agent_id) or
-                 (msg.source_id == target_agent_id and msg.target_agent_id == agent_id))
+                ((msg.source_id == agent_id and msg.destination_id == target_agent_id) or
+                 (msg.source_id == target_agent_id and msg.destination_id == agent_id))
             )
             
             if is_direct_msg_between_agents:
@@ -1161,10 +1209,10 @@ class ThreadMessagingNetworkMod(BaseMod):
                 direct_messages.append(msg_data)
             
             # Also include replies if they're between these agents
-            elif include_threads and isinstance(msg, ReplyMessage) and msg.target_agent_id:
+            elif include_threads and isinstance(msg, ReplyMessage) and msg.destination_id:
                 is_reply_between_agents = (
-                    (msg.source_id == agent_id and msg.target_agent_id == target_agent_id) or
-                    (msg.source_id == target_agent_id and msg.target_agent_id == agent_id)
+                    (msg.source_id == agent_id and msg.destination_id == target_agent_id) or
+                    (msg.source_id == target_agent_id and msg.destination_id == agent_id)
                 )
                 
                 if is_reply_between_agents:
@@ -1201,7 +1249,7 @@ class ThreadMessagingNetworkMod(BaseMod):
         response = Event(
             event_name="thread.direct_messages.retrieval_response",
             source_id=self.network.network_id,
-            target_agent_id=agent_id,
+            destination_id=agent_id,
             payload={
                 "action": "retrieve_direct_messages_response",
                 "success": True,
@@ -1253,7 +1301,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             response = Event(
                 event_name="thread.reaction.response",
                 source_id=self.network.network_id,
-                target_agent_id=agent_id,
+                destination_id=agent_id,
                 payload={
                     "action": "reaction_response",
                     "success": False,
@@ -1306,7 +1354,7 @@ class ThreadMessagingNetworkMod(BaseMod):
         response = Event(
             event_name="thread.reaction.response",
             source_id=self.network.network_id,
-            target_agent_id=agent_id,
+            destination_id=agent_id,
             payload={
                 "action": "reaction_response",
                 "success": success,
@@ -1328,7 +1376,7 @@ class ThreadMessagingNetworkMod(BaseMod):
         if isinstance(target_message, Event):
             # Notify both participants in the direct conversation
             notify_agents.add(target_message.source_id)
-            notify_agents.add(target_message.target_agent_id)
+            notify_agents.add(target_message.destination_id)
         elif isinstance(target_message, ChannelMessage):
             # Notify agents in the channel
             notify_agents.update(self.channel_agents.get(target_message.channel, set()))
@@ -1348,7 +1396,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             notification = Event(
                 event_name="thread.reaction.notification",
                 source_id=self.network.network_id,
-                target_agent_id=notify_agent,
+                destination_id=notify_agent,
                 payload={
                     "action": "reaction_notification",
                     "target_message_id": target_message_id,

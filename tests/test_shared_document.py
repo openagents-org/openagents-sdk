@@ -56,7 +56,7 @@ def wrap_message_for_mod(inner_message) -> Event:
         mod_name="shared_document",
         content=inner_message.model_dump(),
         source_agent_id=inner_message.source_agent_id,
-        target_agent_id=getattr(inner_message, 'target_agent_id', None)
+        destination_id=getattr(inner_message, 'target_agent_id', None)
     )
 
 

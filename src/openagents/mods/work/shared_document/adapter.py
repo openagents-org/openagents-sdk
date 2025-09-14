@@ -1077,7 +1077,7 @@ class SharedDocumentAgentAdapter(BaseModAdapter):
                 source_id=self.agent_id,
                 relevant_mod="shared_document",
                 payload=message.model_dump(),
-                target_agent_id=self.agent_id
+                destination_id=self.agent_id
             )
             
             await self.network_interface.send_mod_message(mod_message)

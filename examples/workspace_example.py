@@ -217,7 +217,7 @@ async def main():
                 target_channel="#test",
                 payload={"text": "Direct emission test"}
             )
-            await network.emit_event(test_event)
+            await network.emit_to_event_bus(test_event)
             print(f"   Direct event emitted: {test_event.event_name}")
             
             # Test posting with mention

@@ -262,7 +262,7 @@ class OpenConvertDiscoveryAdapter(BaseModAdapter):
             event_name="discovery.conversion.announce",
             source_id=self.agent_id,
             relevant_mod=self.mod_name,
-            target_agent_id=self.agent_id,
+            destination_id=self.agent_id,
             payload={
                 "action": ANNOUNCE_CONVERSION_CAPABILITIES,
                 "conversion_capabilities": capabilities_copy

@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../s
 
 from openagents.core.network import AgentNetwork, create_network
 from openagents.models.network_config import NetworkConfig, NetworkMode
-from openagents.models.transport import TransportType, AgentInfo
+from openagents.models.transport import TransportType, AgentConnection
 from openagents.models.messages import (
     Event,
     Event,
@@ -139,7 +139,7 @@ class TestAgentNetwork:
         
         # Verify the AgentInfo was created correctly
         call_args = network.topology.register_agent.call_args[0][0]
-        assert isinstance(call_args, AgentInfo)
+        assert isinstance(call_args, AgentConnection)
         assert call_args.agent_id == agent_id
         assert call_args.capabilities == ["chat", "search"]
     
@@ -174,7 +174,7 @@ class TestAgentNetwork:
         message = Event(
             event_name="agent.direct_message.sent",
             source_id="agent1",
-            target_agent_id="agent2",
+            destination_id="agent2",
             payload={"text": "Hello, agent2!"}
         )
         
@@ -190,14 +190,14 @@ class TestAgentNetwork:
         """Test agent discovery."""
         # Mock the topology discover_peers method
         mock_agents = [
-            AgentInfo(
+            AgentConnection(
                 agent_id="agent1",
                 metadata={"name": "Agent 1"},
                 capabilities=["chat"],
                 transport_type=TransportType.WEBSOCKET,
                 address="127.0.0.1:8570"
             ),
-            AgentInfo(
+            AgentConnection(
                 agent_id="agent2", 
                 metadata={"name": "Agent 2"},
                 capabilities=["search"],
@@ -220,7 +220,7 @@ class TestAgentNetwork:
         """Test getting all agents."""
         # Mock the topology get_agents method
         mock_agents = {
-            "agent1": AgentInfo(
+            "agent1": AgentConnection(
                 agent_id="agent1",
                 metadata={"name": "Agent 1"},
                 capabilities=["chat"],
@@ -238,7 +238,7 @@ class TestAgentNetwork:
     def test_get_agent(self, network):
         """Test getting a specific agent."""
         # Mock the topology get_agent method
-        mock_agent = AgentInfo(
+        mock_agent = AgentConnection(
             agent_id="agent1",
             metadata={"name": "Agent 1"},
             capabilities=["chat"],
@@ -277,7 +277,7 @@ class TestAgentNetwork:
         """Test network statistics generation."""
         # Mock the get_agents method
         mock_agents = {
-            "agent1": AgentInfo(
+            "agent1": AgentConnection(
             agent_id="agent1",
             metadata={"name": "Agent 1"},
                 capabilities=["chat"],
@@ -367,13 +367,13 @@ class TestErrorHandling:
         message = Event(
             event_name="invalid.event.type", 
             source_id="agent1", 
-            target_agent_id="agent2",  # This agent doesn't exist
+            destination_id="agent2",  # This agent doesn't exist
             payload={"text": "Hello!"}
         )
         
         # With the new MessageProcessor, messages to non-existent agents fail
         # This is better than the old system which might have silently dropped messages
-        result = await network.send_message(message)
+        result = await network.send(message)
         assert result is False  # Should fail because target agent doesn't exist
 
 
