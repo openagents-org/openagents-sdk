@@ -1,19 +1,16 @@
 """
-gRPC Transport Implementation for OpenAgents.
+HTTP Transport Implementation for OpenAgents.
 
-This module provides the gRPC transport implementation and servicer for agent communication.
+This module provides the HTTP transport implementation for agent communication.
 """
 
 import json
 import logging
-import re
+import time
 from typing import Dict, Any, Optional
 
-import grpc
-from grpc import aio
-from openagents.config.globals import SYSTEM_EVENT_REGISTER_AGENT, SYSTEM_EVENT_HEALTH_CHECK
-from openagents.proto import agent_service_pb2_grpc, agent_service_pb2
-from aiohttp import web, WSMsgType
+from openagents.config.globals import SYSTEM_EVENT_REGISTER_AGENT, SYSTEM_EVENT_HEALTH_CHECK, SYSTEM_EVENT_POLL_MESSAGES, SYSTEM_EVENT_UNREGISTER_AGENT
+from aiohttp import web
 
 from .base import Transport
 from openagents.models.transport import TransportType, ConnectionState, ConnectionInfo
@@ -181,8 +178,28 @@ class HttpTransport(Transport):
             
             logger.info(f"HTTP Agent unregistration: {agent_id}")
             
-            # TODO: Implement actual unregistration logic with network instance
-            return web.json_response({'success': True})
+            # Create unregister event
+            unregister_event = Event(
+                event_name=SYSTEM_EVENT_UNREGISTER_AGENT,
+                source_id=agent_id,
+                payload={
+                    "agent_id": agent_id
+                }
+            )
+            
+            # Process the unregistration event through the event handler
+            event_response = await self.call_event_handler(unregister_event)
+            
+            if event_response and event_response.success:
+                logger.info(f"✅ Successfully unregistered HTTP agent {agent_id}")
+                return web.json_response({'success': True})
+            else:
+                error_message = event_response.message if event_response else 'No response from event handler'
+                logger.error(f"❌ Unregistration failed for HTTP agent {agent_id}: {error_message}")
+                return web.json_response({
+                    'success': False,
+                    'error_message': f'Unregistration failed: {error_message}'
+                }, status=500)
             
         except Exception as e:
             logger.error(f"Error in HTTP unregister_agent: {e}")
@@ -204,13 +221,98 @@ class HttpTransport(Transport):
             
             logger.debug(f"HTTP polling messages for agent: {agent_id}")
             
-            # TODO: Implement actual message polling logic
-            # This would typically check for pending messages for the agent
-            # and return them in the response
+            # Create poll messages event
+            poll_event = Event(
+                event_name=SYSTEM_EVENT_POLL_MESSAGES,
+                source_id=agent_id,
+                destination_id="system:system",
+                payload={"agent_id": agent_id}
+            )
+            
+            # Send the poll request through event handler
+            response = await self.call_event_handler(poll_event)
+            
+            if not response or not response.success:
+                logger.warning(f"Poll messages request failed: {response.message if response else 'No response'}")
+                return web.json_response({
+                    'success': False,
+                    'messages': [],
+                    'agent_id': agent_id,
+                    'error_message': response.message if response else 'No response from event handler'
+                })
+            
+            # Extract messages from response data
+            messages = []
+            if response.data:
+                try:
+                    # Handle different response data structures
+                    response_messages = []
+                    
+                    if isinstance(response.data, list):
+                        # Direct list of messages
+                        response_messages = response.data
+                        logger.debug(f"🔧 HTTP: Received direct list of {len(response_messages)} messages")
+                    elif isinstance(response.data, dict):
+                        if 'messages' in response.data:
+                            # Response wrapped in a dict with 'messages' key
+                            response_messages = response.data['messages']
+                            logger.debug(f"🔧 HTTP: Extracted {len(response_messages)} messages from response dict")
+                        else:
+                            logger.warning(f"🔧 HTTP: Dict response missing 'messages' key: {list(response.data.keys())}")
+                            response_messages = []
+                    else:
+                        logger.warning(f"🔧 HTTP: Unexpected poll_messages response format: {type(response.data)} - {response.data}")
+                        response_messages = []
+                    
+                    logger.info(f"🔧 HTTP: Processing {len(response_messages)} polled messages for {agent_id}")
+                    
+                    # Convert each message to dict format for HTTP response
+                    for message_data in response_messages:
+                        try:
+                            if isinstance(message_data, dict):
+                                if 'event_name' in message_data:
+                                    # This is already an Event structure - use as is
+                                    messages.append(message_data)
+                                    logger.debug(f"🔧 HTTP: Successfully included message: {message_data.get('event_id', 'no-id')}")
+                                else:
+                                    # This might be a legacy message format - try to parse it
+                                    from openagents.utils.message_util import parse_message_dict
+                                    event = parse_message_dict(message_data)
+                                    if event:
+                                        # Convert Event object to dict
+                                        event_dict = {
+                                            'event_id': event.event_id,
+                                            'event_name': event.event_name,
+                                            'source_id': event.source_id,
+                                            'destination_id': event.destination_id,
+                                            'payload': event.payload,
+                                            'timestamp': event.timestamp,
+                                            'metadata': event.metadata,
+                                            'visibility': getattr(event, 'visibility', 'network')
+                                        }
+                                        messages.append(event_dict)
+                                        logger.debug(f"🔧 HTTP: Successfully parsed legacy message to Event: {event.event_id}")
+                                    else:
+                                        logger.warning(f"🔧 HTTP: Failed to parse message data: {message_data}")
+                            else:
+                                logger.warning(f"🔧 HTTP: Invalid message format in poll response: {message_data}")
+                                
+                        except Exception as e:
+                            logger.error(f"🔧 HTTP: Error processing polled message: {e}")
+                            logger.debug(f"🔧 HTTP: Problematic message data: {message_data}")
+                    
+                    logger.info(f"🔧 HTTP: Successfully converted {len(messages)} messages for HTTP response")
+                    
+                except Exception as e:
+                    logger.error(f"🔧 HTTP: Error parsing poll_messages response: {e}")
+                    messages = []
+            else:
+                logger.debug(f"🔧 HTTP: No messages in poll response")
+                messages = []
             
             return web.json_response({
                 'success': True,
-                'messages': [],  # Empty for now - implement actual message queue
+                'messages': messages,
                 'agent_id': agent_id
             })
             
@@ -244,26 +346,31 @@ class HttpTransport(Transport):
             logger.debug(f"HTTP unified event: {event_name} from {source_id}")
             
             # Create internal Event from HTTP request
-            from datetime import datetime
             event = Event(
                 event_name=event_name,
                 source_id=source_id,
                 destination_id=target_agent_id,
                 payload=payload,
                 event_id=event_id,
-                timestamp=datetime.now(),
+                timestamp=int(time.time()),
                 metadata=metadata,
                 visibility=visibility
             )
             
             # Route through unified handler (similar to gRPC)
-            response_data = await self._handle_sent_event(event)
+            event_response = await self._handle_sent_event(event)
+            
+            # Extract response data from EventResponse
+            response_data = None
+            if event_response and hasattr(event_response, 'data') and event_response.data:
+                response_data = event_response.data
             
             return web.json_response({
-                'success': response_data.get('success', True) if response_data else True,
+                'success': event_response.success if event_response else True,
+                'message': event_response.message if event_response else '',
                 'event_id': event_id,
-                'response_data': response_data,
-                'error_message': response_data.get('error', '') if response_data else ''
+                'data': response_data,
+                'event_name': event_name
             })
             
         except Exception as e:
@@ -277,11 +384,9 @@ class HttpTransport(Transport):
         """Unified event handler that routes both regular messages and system commands."""
         logger.debug(f"Processing HTTP unified event: {event.event_name} from {event.source_id}")
         
-        # Notify registered event handlers
-        await self.call_event_handler(event)
-        
-        # Return basic success response
-        return {'success': True}
+        # Notify registered event handlers and return the response
+        response = await self.call_event_handler(event)
+        return response
     
     async def peer_connect(self, peer_id: str, metadata: Dict[str, Any] = None) -> bool:
         """Connect to a peer (HTTP doesn't maintain persistent connections)."""
