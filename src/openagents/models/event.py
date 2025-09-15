@@ -292,8 +292,8 @@ class Event(BaseModel):
     def target_id(self) -> Optional[str]:
         return self.destination_id
     
-    @deprecated("Use destination_id instead")
     @property 
+    @deprecated("Use destination_id instead")
     def relevant_agent_id(self) -> Optional[str]:
         return self.destination_id
         

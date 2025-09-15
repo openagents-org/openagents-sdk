@@ -8,7 +8,6 @@ from openagents.models.detected_network_profile import DetectedNetworkProfile
 from openagents.models.event_response import EventResponse
 from openagents.models.transport import TransportType
 from openagents.utils.network_discovey import retrieve_network_details
-from openagents.core.connector import NetworkConnector
 from openagents.core.grpc_connector import GRPCNetworkConnector
 from openagents.models.event import Event
 from openagents.core.base_mod_adapter import BaseModAdapter
@@ -39,7 +38,7 @@ class AgentClient:
         """
         self.agent_id = agent_id or "Agent-" + str(uuid.uuid4())[:8]
         self.mod_adapters: Dict[str, BaseModAdapter] = {}
-        self.connector: Optional[NetworkConnector] = None
+        self.connector: Optional[GRPCNetworkConnector] = None
         
         # Event waiting infrastructure
         self._event_waiters: List[Dict[str, Any]] = []

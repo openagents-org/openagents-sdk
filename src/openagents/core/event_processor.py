@@ -38,7 +38,7 @@ class ModEventProcessor:
     - If an event is sent from a mod, then the event will not by processed by the same mod.
     """
     
-    def __init__(self, mods: OrderedDict[str, BaseMod]):
+    def __init__(self, mods: OrderedDict[str, 'BaseMod']):
         """Initialize the message processor.
         
         Args:

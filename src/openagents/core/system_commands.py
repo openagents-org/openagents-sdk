@@ -26,7 +26,6 @@ from openagents.config.globals import (
 )
 from openagents.models.event import Event
 from openagents.models.event_response import EventResponse
-from openagents.core.event_gateway import MAX_PROCESSED_EVENT_IDS
 if TYPE_CHECKING:
     from openagents.core.network import AgentNetwork
 
