@@ -87,7 +87,7 @@ class BaseMod(ABC):
         logger.info(f"Mod {self.mod_name} bound to network {network.network_id}")
         return True
     
-    def handle_register_agent(self, agent_id: str, metadata: Dict[str, Any]) -> bool:
+    async def handle_register_agent(self, agent_id: str, metadata: Dict[str, Any]) -> Optional[EventResponse]:
         """Handle agent registration with this network mod.
         
         Args:
@@ -95,20 +95,20 @@ class BaseMod(ABC):
             metadata: Agent metadata including capabilities
             
         Returns:
-            bool: True if registration was successful, False otherwise
+            Optional[EventResponse]: The response to the event, or None if the mod doesn't want to stop the event from being processed by other mods
         """
-        return True
+        return None
     
-    def handle_unregister_agent(self, agent_id: str) -> bool:
+    async def handle_unregister_agent(self, agent_id: str) -> Optional[EventResponse]:
         """Handle agent unregistration from this network mod.
         
         Args:
             agent_id: Unique identifier for the agent
             
         Returns:
-            bool: True if unregistration was successful, False otherwise
+            Optional[EventResponse]: The response to the event, or None if the mod doesn't want to stop the event from being processed by other mods
         """
-        return True
+        return None
 
     def get_state(self) -> Dict[str, Any]:
         """Get the current state of the mod.
@@ -125,6 +125,17 @@ class BaseMod(ABC):
             config: The configuration to update
         """
         self._config.update(config)
+    
+    async def send_event(self, event: Event) -> Optional[EventResponse]:
+        """Send an event to the network.
+        
+        Args:
+            event: The event to send
+        
+        Returns:
+            Optional[EventResponse]: The response to the event, or None if the event is not processed
+        """
+        return await self.network.process_event(event)
 
     async def process_event(self, event: Event) -> Optional[EventResponse]:
         """Process an event and return the response.
@@ -139,7 +150,12 @@ class BaseMod(ABC):
         Returns:
             Optional[EventResponse]: The response to the event, or None if the event is not processed
         """
-        return None
+        response = None
+        if event.event_name == "system.notification.register_agent":
+            response = await self.handle_register_agent(event.payload.get("agent_id"), event.payload.get("metadata"))
+        elif event.event_name == "system.notification.unregister_agent":
+            response = await self.handle_unregister_agent(event.payload.get("agent_id"))
+        return response
     
     @deprecated("Use process_event instead")
     async def process_system_message(self, message: Event) -> Optional[Event]:

@@ -14,7 +14,7 @@ from datetime import datetime
 
 from openagents.core.client import AgentClient
 
-# Removed WorkspaceEvents import - events are now handled at network level
+# Removed WorkspaceEvents import - events are now handled by the client
 from openagents.models.messages import Event, EventNames
 from openagents.config.globals import THREAD_MESSAGING_MOD_NAME, DEFAULT_CHANNELS
 
@@ -49,9 +49,9 @@ class AgentConnection:
         Returns:
             bool: True if message sent successfully
         """
-        # Ensure we're connected to the network
+        # Ensure we're connected to the client
         if not await self.workspace._ensure_connected():
-            logger.error("Could not establish network connection")
+            logger.error("Could not establish client connection")
             return False
             
         try:
@@ -76,7 +76,7 @@ class AgentConnection:
             # Send through client
             success = await self._client.send_direct_message(direct_message)
             
-            # Events are now emitted automatically at network level
+            # Events are now emitted automatically by the client
             
             return success
             
@@ -90,13 +90,13 @@ class AgentConnection:
         Returns:
             Dict with agent information or None if not available
         """
-        # Ensure we're connected to the network
+        # Ensure we're connected to the client
         if not await self.workspace._ensure_connected():
-            logger.error("Could not establish network connection")
+            logger.error("Could not establish client connection")
             return None
             
         try:
-            # Get agent info from the workspace's network connection
+            # Get agent info from the workspace's client connection
             # This would need to be implemented with proper agent discovery
             # For now, return basic info
             return {
@@ -118,9 +118,9 @@ class AgentConnection:
         Returns:
             Dict containing the message content, or None if timeout
         """
-        # Ensure we're connected to the network
+        # Ensure we're connected to the client
         if not await self.workspace._ensure_connected():
-            logger.error("Could not establish network connection")
+            logger.error("Could not establish client connection")
             return None
             
         try:
@@ -214,9 +214,9 @@ class ChannelConnection:
         Returns:
             bool: True if message sent successfully
         """
-        # Ensure we're connected to the network
+        # Ensure we're connected to the client
         if not await self.workspace._ensure_connected():
-            logger.error("Could not establish network connection")
+            logger.error("Could not establish client connection")
             return False
             
         try:
@@ -247,7 +247,7 @@ class ChannelConnection:
             # Send through workspace
             success = await self.workspace._send_mod_message(mod_message)
             
-            # Events are now emitted automatically at network level
+            # Events are now emitted automatically by the client
             
             return success
             
@@ -266,9 +266,9 @@ class ChannelConnection:
         Returns:
             bool: True if message sent successfully
         """
-        # Ensure we're connected to the network
+        # Ensure we're connected to the client
         if not await self.workspace._ensure_connected():
-            logger.error("Could not establish network connection")
+            logger.error("Could not establish client connection")
             return False
             
         try:
@@ -297,7 +297,7 @@ class ChannelConnection:
             # Send through workspace's method
             success = await self.workspace._send_mod_message(mod_message)
             
-            # Events are now emitted automatically at network level
+            # Events are now emitted automatically by the client
             
             return success
             
@@ -316,9 +316,9 @@ class ChannelConnection:
         Returns:
             List of message dictionaries
         """
-        # Ensure we're connected to the network
+        # Ensure we're connected to the client
         if not await self.workspace._ensure_connected():
-            logger.error("Could not establish network connection")
+            logger.error("Could not establish client connection")
             return []
             
         try:
@@ -405,9 +405,9 @@ class ChannelConnection:
         Returns:
             bool: True if reply sent successfully
         """
-        # Ensure we're connected to the network
+        # Ensure we're connected to the client
         if not await self.workspace._ensure_connected():
-            logger.error("Could not establish network connection")
+            logger.error("Could not establish client connection")
             return False
             
         try:
@@ -449,9 +449,9 @@ class ChannelConnection:
         Returns:
             File UUID if successful, None otherwise
         """
-        # Ensure we're connected to the network
+        # Ensure we're connected to the client
         if not await self.workspace._ensure_connected():
-            logger.error("Could not establish network connection")
+            logger.error("Could not establish client connection")
             return None
             
         try:
@@ -500,9 +500,9 @@ class ChannelConnection:
         Returns:
             bool: True if reaction was successful
         """
-        # Ensure we're connected to the network
+        # Ensure we're connected to the client
         if not await self.workspace._ensure_connected():
-            logger.error("Could not establish network connection")
+            logger.error("Could not establish client connection")
             return False
             
         try:
@@ -538,9 +538,9 @@ class ChannelConnection:
         Returns:
             Dict containing the reply message, or None if timeout
         """
-        # Ensure we're connected to the network
+        # Ensure we're connected to the client
         if not await self.workspace._ensure_connected():
-            logger.error("Could not establish network connection")
+            logger.error("Could not establish client connection")
             return None
             
         try:
@@ -589,9 +589,9 @@ class ChannelConnection:
         Returns:
             Dict containing the post message, or None if timeout
         """
-        # Ensure we're connected to the network
+        # Ensure we're connected to the client
         if not await self.workspace._ensure_connected():
-            logger.error("Could not establish network connection")
+            logger.error("Could not establish client connection")
             return None
             
         try:
@@ -643,9 +643,9 @@ class ChannelConnection:
         Returns:
             Dict containing the reaction info, or None if timeout
         """
-        # Ensure we're connected to the network
+        # Ensure we're connected to the client
         if not await self.workspace._ensure_connected():
-            logger.error("Could not establish network connection")
+            logger.error("Could not establish client connection")
             return None
             
         try:
@@ -711,19 +711,14 @@ class Workspace:
     communication and other collaborative features.
     """
     
-    def __init__(self, client: AgentClient, network=None):
+    def __init__(self, client: AgentClient):
         """Initialize a workspace.
         
         Args:
-            client: AgentClient instance for network communication
-            network: Optional network instance for direct mod communication
+            client: AgentClient instance for communication
         """
         self._client = client
-        self._network = network
         
-        # Register this workspace with the network for direct response delivery
-        if self._network and hasattr(self._network, '_register_workspace'):
-            self._network._register_workspace(self._client.agent_id, self)
         self._channels_cache: Dict[str, ChannelConnection] = {}
         self._agents_cache: Dict[str, AgentConnection] = {}
         self._last_channels_fetch: Optional[datetime] = None
@@ -731,14 +726,14 @@ class Workspace:
         self._auto_connect_config: Optional[Dict[str, Any]] = None
         self._is_connected: bool = False
         
-        # Events are now handled at network level - no workspace events
+        # Events are now handled by the client - no workspace events
         
         # Initialize response handling
         self._pending_responses: Dict[str, asyncio.Future] = {}
         self._handlers_setup: bool = False
     
     async def _send_mod_message(self, mod_message) -> bool:
-        """Send a mod message either directly to network or through connector.
+        """Send a mod message through connector.
         
         Args:
             mod_message: Event to send
@@ -746,34 +741,10 @@ class Workspace:
         Returns:
             bool: True if message was sent successfully
         """
-        # Send the message through the network's mod system if available, otherwise through connector
-        if self._network and hasattr(self._network, '_handle_mod_message'):
-            logger.info(f"🔧 WORKSPACE: Sending message directly to network mod system")
-            # Convert Event to transport Message format for network processing
-            from openagents.core.transport import Message
-            # Create payload with mod-specific fields and content
-            payload = {
-                "mod": mod_message.relevant_mod,
-                "action": mod_message.payload.get('action') if mod_message.payload else None,
-                "relevant_agent_id": mod_message.target_agent_id,
-                **mod_message.payload  # Merge payload at top level
-            }
-            transport_message = Message(
-                source_id=mod_message.source_id,
-                target_id="",
-                message_type="mod_message",
-                payload=payload,
-                message_id=mod_message.event_id,
-                timestamp=mod_message.timestamp
-            )
-            await self._network._handle_mod_message(transport_message)
-            logger.info(f"🔧 WORKSPACE: Sent message directly to network mod system")
-            return True
-        else:
-            logger.info(f"🔧 WORKSPACE: Sending message through connector")
-            success = await self._client.connector.send_message(mod_message)
-            logger.info(f"🔧 WORKSPACE: Connector send result: {success}")
-            return success
+        logger.info(f"🔧 WORKSPACE: Sending message through connector")
+        success = await self._client.connector.send_message(mod_message)
+        logger.info(f"🔧 WORKSPACE: Connector send result: {success}")
+        return success
     
     def _setup_message_handlers(self) -> None:
         """Set up message handlers for workspace responses."""
@@ -884,7 +855,7 @@ class Workspace:
             logger.error(f"Error handling project response: {e}")
     
     async def _ensure_connected(self) -> bool:
-        """Ensure the workspace client is connected to the network.
+        """Ensure the workspace client is connected.
         
         Returns:
             bool: True if connected successfully, False otherwise
@@ -935,9 +906,9 @@ class Workspace:
             if cache_age < 30:  # Use cache if less than 30 seconds old
                 return list(self._channels_cache.keys())
         
-        # Ensure we're connected to the network
+        # Ensure we're connected to the client
         if not await self._ensure_connected():
-            logger.error("Could not establish network connection")
+            logger.error("Could not establish client connection")
             # Return cached channels as fallback
             return list(self._channels_cache.keys()) if self._channels_cache else DEFAULT_CHANNELS
             
@@ -1040,7 +1011,7 @@ class Workspace:
         return self._channels_cache[channel_name]
     
     async def agents(self, refresh: bool = False) -> List[str]:
-        """List all online agents in the network.
+        """List all online agents accessible through the client.
         
         Args:
             refresh: Whether to refresh the agent list from the server
@@ -1048,14 +1019,14 @@ class Workspace:
         Returns:
             List of agent IDs
         """
-        # Ensure we're connected to the network
+        # Ensure we're connected to the client
         if not await self._ensure_connected():
-            logger.error("Could not establish network connection")
+            logger.error("Could not establish client connection")
             return []
             
         try:
-            # Get agents from the network
-            # This would ideally use the network's agent discovery functionality
+            # Get agents from the client
+            # This would ideally use the client's agent discovery functionality
             # For now, we'll use the client's list_agents method if available
             if hasattr(self._client, 'list_agents'):
                 agents_info = await self._client.list_agents()
@@ -1106,9 +1077,9 @@ class Workspace:
         if not channel_name.startswith('#'):
             channel_name = f"#{channel_name}"
         
-        # Ensure we're connected to the network
+        # Ensure we're connected to the client
         if not await self._ensure_connected():
-            logger.error("Could not establish network connection")
+            logger.error("Could not establish client connection")
             return self.channel(channel_name)  # Return channel object anyway
             
         try:
@@ -1135,11 +1106,11 @@ class Workspace:
         """
         return self._client
     
-    # Events property removed - use network.events instead
+    # Events property removed - use client events instead
     # @property
     # def events(self) -> 'WorkspaceEvents':
-    #     """DEPRECATED: Events are now handled at network level. Use network.events instead."""
-    #     raise AttributeError("workspace.events is deprecated. Use network.events.subscribe() instead.")
+    #     """DEPRECATED: Events are now handled by the client. Use client events instead."""
+    #     raise AttributeError("workspace.events is deprecated. Use client events instead.")
     
     async def start_project(self, project, timeout: float = 10.0) -> Dict[str, Any]:
         """Start a new project with project-based collaboration.
@@ -1152,14 +1123,14 @@ class Workspace:
             Dict containing project creation result with project_id, channel_name, etc.
             
         Raises:
-            RuntimeError: If project mod is not enabled in the network
+            RuntimeError: If project mod is not enabled
         """
         # Import here to avoid circular imports
         from openagents.workspace import Project
         
-        # Ensure we're connected to the network
+        # Ensure we're connected to the client
         if not await self._ensure_connected():
-            raise RuntimeError("Could not establish network connection")
+            raise RuntimeError("Could not establish client connection")
         
         # Set up message handlers if not already done
         self._setup_message_handlers()
@@ -1241,9 +1212,9 @@ class Workspace:
         Returns:
             Dict containing project status and details
         """
-        # Ensure we're connected to the network
+        # Ensure we're connected to the client
         if not await self._ensure_connected():
-            raise RuntimeError("Could not establish network connection")
+            raise RuntimeError("Could not establish client connection")
         
         try:
             # Generate unique request ID for correlation
@@ -1312,9 +1283,9 @@ class Workspace:
         Returns:
             Dict containing list of projects
         """
-        # Ensure we're connected to the network
+        # Ensure we're connected to the client
         if not await self._ensure_connected():
-            raise RuntimeError("Could not establish network connection")
+            raise RuntimeError("Could not establish client connection")
         
         try:
             # Generate unique request ID for correlation
