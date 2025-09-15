@@ -15,17 +15,18 @@ from openagents.config.globals import (
     SYSTEM_EVENT_LIST_MODS,
     SYSTEM_EVENT_GET_MOD_MANIFEST,
     SYSTEM_EVENT_GET_NETWORK_INFO,
-    SYSTEM_EVENT_PING_AGENT,
     SYSTEM_EVENT_CLAIM_AGENT_ID,
     SYSTEM_EVENT_VALIDATE_CERTIFICATE,
     SYSTEM_EVENT_POLL_MESSAGES,
     SYSTEM_EVENT_SUBSCRIBE_EVENTS,
     SYSTEM_EVENT_UNSUBSCRIBE_EVENTS,
     SYSTEM_EVENT_HEALTH_CHECK,
-    SYSTEM_EVENT_HEARTBEAT
+    SYSTEM_EVENT_HEARTBEAT,
+    SYSTEM_EVENT_PING_AGENT
 )
 from openagents.models.event import Event
 from openagents.models.event_response import EventResponse
+from openagents.models.transport import TransportType
 if TYPE_CHECKING:
     from openagents.core.network import AgentNetwork
 
@@ -76,7 +77,7 @@ class SystemCommandProcessor:
         # Execute the command
         if event_name in self.command_handlers:
             try:
-                return await self.command_handlers[event_name](self, system_event)
+                return await self.command_handlers[event_name](system_event)
             except Exception as e:
                 self.logger.error(f"Error processing system event {event_name}: {e}")
                 import traceback
@@ -130,11 +131,12 @@ class SystemCommandProcessor:
     async def handle_register_agent(self, event: Event) -> EventResponse:
         """Handle the register_agent command."""
         agent_id = event.payload.get("agent_id", event.source_id)
+        transport_type = event.payload.get("transport_type", TransportType.GRPC)
         metadata = event.payload.get("metadata", {})
         certificate = event.payload.get("certificate", None)
         force_reconnect = event.payload.get("force_reconnect", False)
 
-        return await self.network.register_agent(agent_id, metadata, certificate, force_reconnect)
+        return await self.network.register_agent(agent_id, transport_type, metadata, certificate, force_reconnect)
     
     async def handle_unregister_agent(self, event: Event) -> EventResponse:
         """Handle the unregister_agent command."""
@@ -145,7 +147,8 @@ class SystemCommandProcessor:
         """Handle the list_agents command."""
         requesting_agent_id = event.payload.get("agent_id", event.source_id)
         
-        if requesting_agent_id not in self.network.deprecated_agents:
+        agent_registry = self.network.get_agent_registry()
+        if requesting_agent_id not in agent_registry:
             self.logger.warning(f"Agent {requesting_agent_id} not registered")
             return EventResponse(
                 success=False,
@@ -154,7 +157,8 @@ class SystemCommandProcessor:
             
         # Prepare agent list with relevant information
         agent_list = []
-        for agent_id, metadata in self.network.deprecated_agents.items():
+        for agent_id, info in agent_registry.items():
+            metadata = info.metadata
             agent_info = {
                 "agent_id": agent_id,
                 "name": metadata.get("name", agent_id),
@@ -179,7 +183,8 @@ class SystemCommandProcessor:
         
         self.logger.info(f"🔧 LIST_MODS: Request from agent_id: {requesting_agent_id}")
         
-        if requesting_agent_id not in self.network.deprecated_agents:
+        agent_registry = self.network.get_agent_registry()
+        if requesting_agent_id not in agent_registry:
             self.logger.warning(f"Agent {requesting_agent_id} not registered")
             return EventResponse(
                 success=False,
@@ -252,7 +257,8 @@ class SystemCommandProcessor:
         requesting_agent_id = event.payload.get("agent_id", event.source_id)
         mod_name = event.payload.get("mod_name")
         
-        if requesting_agent_id not in self.network.deprecated_agents:
+        agent_registry = self.network.get_agent_registry()
+        if requesting_agent_id not in agent_registry:
             self.logger.warning(f"Agent {requesting_agent_id} not registered")
             return EventResponse(
                 success=False,
@@ -334,7 +340,7 @@ class SystemCommandProcessor:
             "node_id": self.network.network_id,
             "mode": "centralized" if hasattr(self.network.topology, 'server_mode') else "decentralized",
             "mods": list(self.network.mods.keys()),
-            "agent_count": len(self.network.deprecated_agents)
+            "agent_count": len(self.network.get_agent_registry())
         }
         
         # Include workspace path if available in metadata
@@ -360,7 +366,7 @@ class SystemCommandProcessor:
     async def handle_heartbeat(self, event: Event) -> EventResponse:
         """Handle the ping_agent command."""
         # Record heartbeat
-        self.network.topology.record_heartbeat(event.parse_source().source_id)
+        await self.network.topology.record_heartbeat(event.parse_source().source_id)
         return EventResponse(
             success=True,
             message="Ping successful",
@@ -459,18 +465,16 @@ class SystemCommandProcessor:
                 message="Missing agent_id"
             )
         
-        if requesting_agent_id not in self.network.deprecated_agents:
+        agent_registry = self.network.get_agent_registry()
+        if requesting_agent_id not in agent_registry:
             self.logger.warning(f"Agent {requesting_agent_id} not registered")
             return EventResponse(
                 success=False,
                 message="Agent not registered"
             )
         
-        # Get queued messages for the agent
-        messages = []
-        if hasattr(self.network, '_get_queued_messages'):
-            messages = self.network._get_queued_messages(requesting_agent_id)
-            self.logger.info(f"🔧 POLL_MESSAGES: Retrieved {len(messages)} messages for {requesting_agent_id}")
+        # Get queued messages for the agent from event gateway
+        messages = self.network.event_gateway.poll_events(requesting_agent_id)
         
         # Convert messages to serializable format
         serialized_messages = []
@@ -543,7 +547,8 @@ class SystemCommandProcessor:
         
         self.logger.info(f"🔧 SUBSCRIBE_EVENTS: Request from agent_id: {requesting_agent_id}")
         
-        if requesting_agent_id not in self.network.deprecated_agents:
+        agent_registry = self.network.get_agent_registry()
+        if requesting_agent_id not in agent_registry:
             self.logger.warning(f"Agent {requesting_agent_id} not registered")
             return EventResponse(
                 success=False,
@@ -559,7 +564,7 @@ class SystemCommandProcessor:
         subscription = self.network.event_gateway.subscribe(
             agent_id=requesting_agent_id,
             event_patterns=event_patterns,
-            channel_filter=channels if channels else None
+            channels=channels if channels else []
         )
         
         response_data = {
@@ -581,7 +586,6 @@ class SystemCommandProcessor:
             message=f"Successfully subscribed to {len(event_patterns)} event patterns",
             data=response_data
         )
-        
 
     async def handle_unsubscribe_events(self, event: Event) -> EventResponse:
         """Handle the unsubscribe_events command."""
@@ -590,7 +594,8 @@ class SystemCommandProcessor:
         
         self.logger.info(f"🔧 UNSUBSCRIBE_EVENTS: Request from agent_id: {requesting_agent_id}")
         
-        if requesting_agent_id not in self.network.deprecated_agents:
+        agent_registry = self.network.get_agent_registry()
+        if requesting_agent_id not in agent_registry:
             self.logger.warning(f"Agent {requesting_agent_id} not registered")
             return EventResponse(
                 success=False,

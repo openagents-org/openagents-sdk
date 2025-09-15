@@ -331,7 +331,6 @@ class InsertLinesMessage(Event):
 class RemoveLinesMessage(Event):
     """Message for removing lines from a document."""
     
-    message_type: str = Field("remove_lines", description="Remove lines message type")
     document_id: str = Field(..., description="Document ID")
     start_line: int = Field(..., description="Start line number to remove (1-based)")
     end_line: int = Field(..., description="End line number to remove (1-based, inclusive)")
@@ -355,6 +354,11 @@ class RemoveLinesMessage(Event):
         start_line = kwargs.pop('start_line', 1)
         end_line = kwargs.pop('end_line', 1)
         
+        # Set message_type in payload for backward compatibility
+        if 'payload' not in kwargs:
+            kwargs['payload'] = {}
+        kwargs['payload']['message_type'] = 'remove_lines'
+        
         # Call parent constructor with required positional arguments
         super().__init__(event_name, source_id, **kwargs)
         
@@ -371,11 +375,10 @@ class RemoveLinesMessage(Event):
 class ReplaceLinesMessage(Event):
     """Message for replacing lines in a document."""
     
-    message_type: str = Field("replace_lines", description="Replace lines message type")
     document_id: str = Field(..., description="Document ID")
     start_line: int = Field(..., description="Start line number to replace (1-based)")
     end_line: int = Field(..., description="End line number to replace (1-based, inclusive)")
-    content: List[str] = Field(..., description="New content lines")
+    new_lines: List[str] = Field(..., description="New content lines")
     
     @field_validator('start_line', 'end_line')
     @classmethod
@@ -385,9 +388,9 @@ class ReplaceLinesMessage(Event):
             raise ValueError('Line numbers must be 1 or greater')
         return v
     
-    @field_validator('content')
+    @field_validator('new_lines')
     @classmethod
-    def validate_content(cls, v):
+    def validate_new_lines(cls, v):
         """Validate content lines."""
         for line in v:
             if len(line) > 10000:
@@ -406,6 +409,11 @@ class ReplaceLinesMessage(Event):
         end_line = kwargs.pop('end_line', 1)
         content = kwargs.pop('content', [])
         
+        # Set message_type in payload for backward compatibility
+        if 'payload' not in kwargs:
+            kwargs['payload'] = {}
+        kwargs['payload']['message_type'] = 'replace_lines'
+        
         # Call parent constructor with required positional arguments
         super().__init__(event_name, source_id, **kwargs)
         
@@ -413,7 +421,17 @@ class ReplaceLinesMessage(Event):
         self.document_id = document_id
         self.start_line = start_line
         self.end_line = end_line
-        self.content = content
+        self.new_lines = content
+    
+    @property
+    def content(self) -> List[str]:
+        """Backward compatibility: content maps to new_lines."""
+        return self.new_lines
+    
+    @content.setter
+    def content(self, value: List[str]):
+        """Backward compatibility: content maps to new_lines."""
+        self.new_lines = value
     
     def model_post_init(self, __context):
         """Validate that start_line <= end_line."""
@@ -506,9 +524,30 @@ class AddCommentMessage(Event):
 class RemoveCommentMessage(Event):
     """Message for removing a comment from a document."""
     
-    message_type: str = Field("remove_comment", description="Remove comment message type")
     document_id: str = Field(..., description="Document ID")
     comment_id: str = Field(..., description="Comment ID to remove")
+    
+    def __init__(self, event_name: str = "document.remove_comment.requested", source_id: str = "", **kwargs):
+        """Initialize RemoveCommentMessage with proper event name."""
+        # Handle backward compatibility for sender_id
+        if 'sender_id' in kwargs:
+            source_id = kwargs.pop('sender_id')
+        
+        # Extract request specific fields
+        document_id = kwargs.pop('document_id', '')
+        comment_id = kwargs.pop('comment_id', '')
+        
+        # Set message_type in payload for backward compatibility
+        if 'payload' not in kwargs:
+            kwargs['payload'] = {}
+        kwargs['payload']['message_type'] = 'remove_comment'
+        
+        # Call parent constructor with required positional arguments
+        super().__init__(event_name, source_id, **kwargs)
+        
+        # Set request specific fields
+        self.document_id = document_id
+        self.comment_id = comment_id
 
 @dataclass
 class UpdateCursorPositionMessage(Event):
@@ -602,7 +641,6 @@ class UpdateCursorPositionMessage(Event):
 class GetDocumentContentMessage(Event):
     """Message for requesting document content."""
     
-    message_type: str = Field("get_document_content", description="Get document content message type")
     document_id: str = Field(..., description="Document ID")
     include_comments: bool = Field(True, description="Whether to include comments")
     include_presence: bool = Field(True, description="Whether to include agent presence")
@@ -618,6 +656,11 @@ class GetDocumentContentMessage(Event):
         include_comments = kwargs.pop('include_comments', True)
         include_presence = kwargs.pop('include_presence', True)
         
+        # Set message_type in payload for backward compatibility
+        if 'payload' not in kwargs:
+            kwargs['payload'] = {}
+        kwargs['payload']['message_type'] = 'get_document_content'
+        
         # Call parent constructor with required positional arguments
         super().__init__(event_name, source_id, **kwargs)
         
@@ -629,7 +672,6 @@ class GetDocumentContentMessage(Event):
 class GetDocumentHistoryMessage(Event):
     """Message for requesting document operation history."""
     
-    message_type: str = Field("get_document_history", description="Get document history message type")
     document_id: str = Field(..., description="Document ID")
     limit: int = Field(50, description="Maximum number of operations to retrieve")
     offset: int = Field(0, description="Number of operations to skip")
@@ -644,6 +686,11 @@ class GetDocumentHistoryMessage(Event):
         document_id = kwargs.pop('document_id', '')
         limit = kwargs.pop('limit', 50)
         offset = kwargs.pop('offset', 0)
+        
+        # Set message_type in payload for backward compatibility
+        if 'payload' not in kwargs:
+            kwargs['payload'] = {}
+        kwargs['payload']['message_type'] = 'get_document_history'
         
         # Call parent constructor with required positional arguments
         super().__init__(event_name, source_id, **kwargs)
@@ -664,7 +711,6 @@ class GetDocumentHistoryMessage(Event):
 class ListDocumentsMessage(Event):
     """Message for listing available documents."""
     
-    message_type: str = Field("list_documents", description="List documents message type")
     include_closed: bool = Field(False, description="Whether to include closed documents")
     
     def __init__(self, event_name: str = "document.list.get", source_id: str = "", **kwargs):
@@ -676,6 +722,11 @@ class ListDocumentsMessage(Event):
         # Extract request specific fields
         include_closed = kwargs.pop('include_closed', False)
         
+        # Set message_type in payload for backward compatibility
+        if 'payload' not in kwargs:
+            kwargs['payload'] = {}
+        kwargs['payload']['message_type'] = 'list_documents'
+        
         # Call parent constructor with required positional arguments
         super().__init__(event_name, source_id, **kwargs)
         
@@ -685,7 +736,6 @@ class ListDocumentsMessage(Event):
 class GetAgentPresenceMessage(Event):
     """Message for getting agent presence information."""
     
-    message_type: str = Field("get_agent_presence", description="Get agent presence message type")
     document_id: str = Field(..., description="Document ID")
     
     def __init__(self, event_name: str = "document.presence.get", source_id: str = "", **kwargs):
@@ -696,6 +746,11 @@ class GetAgentPresenceMessage(Event):
         
         # Extract request specific fields
         document_id = kwargs.pop('document_id', '')
+        
+        # Set message_type in payload for backward compatibility
+        if 'payload' not in kwargs:
+            kwargs['payload'] = {}
+        kwargs['payload']['message_type'] = 'get_agent_presence'
         
         # Call parent constructor with required positional arguments
         super().__init__(event_name, source_id, **kwargs)
@@ -708,7 +763,6 @@ class GetAgentPresenceMessage(Event):
 class DocumentOperationResponse(Event):
     """Response message for document operations."""
     
-    message_type: str = "document_operation_response"
     operation_id: str = Field(..., description="Original operation ID")
     success: bool = Field(..., description="Whether operation was successful")
     error_message: Optional[str] = Field(None, description="Error message if operation failed")
@@ -727,6 +781,11 @@ class DocumentOperationResponse(Event):
         error_message = kwargs.pop('error_message', None)
         conflict_detected = kwargs.pop('conflict_detected', False)
         conflict_details = kwargs.pop('conflict_details', None)
+        
+        # Set message_type in payload for backward compatibility
+        if 'payload' not in kwargs:
+            kwargs['payload'] = {}
+        kwargs['payload']['message_type'] = 'document_operation_response'
         
         # Call parent constructor with required positional arguments
         super().__init__(event_name, source_id, **kwargs)
@@ -759,9 +818,8 @@ class DocumentOperationResponse(Event):
 class DocumentContentResponse(Event):
     """Response message containing document content."""
     
-    message_type: str = "document_content_response"
     document_id: str = Field(..., description="Document ID")
-    content: List[str] = Field(..., description="Document lines")
+    document_lines: List[str] = Field(..., description="Document lines")
     comments: List[DocumentComment] = Field(default_factory=list, description="Document comments")
     agent_presence: List[AgentPresence] = Field(default_factory=list, description="Agent presence information")
     version: int = Field(..., description="Document version number")
@@ -783,17 +841,32 @@ class DocumentContentResponse(Event):
         line_authors = kwargs.pop('line_authors', {})
         line_locks = kwargs.pop('line_locks', {})
         
+        # Set message_type in payload for backward compatibility
+        if 'payload' not in kwargs:
+            kwargs['payload'] = {}
+        kwargs['payload']['message_type'] = 'document_content_response'
+        
         # Call parent constructor with required positional arguments
         super().__init__(event_name, source_id, **kwargs)
         
         # Set response specific fields
         self.document_id = document_id
-        self.content = content
+        self.document_lines = content
         self.comments = comments
         self.agent_presence = agent_presence
         self.version = version
         self.line_authors = line_authors
         self.line_locks = line_locks
+    
+    @property
+    def content(self) -> List[str]:
+        """Backward compatibility: content maps to document_lines."""
+        return self.document_lines
+    
+    @content.setter
+    def content(self, value: List[str]):
+        """Backward compatibility: content maps to document_lines."""
+        self.document_lines = value
     
     def model_dump(self) -> Dict[str, Any]:
         """Override model_dump to include DocumentContentResponse-specific fields."""
@@ -818,7 +891,6 @@ class DocumentContentResponse(Event):
 class DocumentListResponse(Event):
     """Response message containing list of documents."""
     
-    message_type: str = "document_list_response"
     documents: List[Dict[str, Any]] = Field(..., description="List of document metadata")
     
     def __init__(self, event_name: str = "document.list.response", source_id: str = "", **kwargs):
@@ -829,6 +901,11 @@ class DocumentListResponse(Event):
         
         # Extract response specific fields
         documents = kwargs.pop('documents', [])
+        
+        # Set message_type in payload for backward compatibility
+        if 'payload' not in kwargs:
+            kwargs['payload'] = {}
+        kwargs['payload']['message_type'] = 'document_list_response'
         
         # Call parent constructor with required positional arguments
         super().__init__(event_name, source_id, **kwargs)
@@ -853,39 +930,152 @@ class DocumentListResponse(Event):
 class DocumentHistoryResponse(Event):
     """Response message containing document operation history."""
     
-    message_type: str = "document_history_response"
     document_id: str = Field(..., description="Document ID")
     operations: List[Dict[str, Any]] = Field(..., description="Operation history")
     total_operations: int = Field(..., description="Total number of operations")
+    
+    def __init__(self, event_name: str = "document.history.response", source_id: str = "", **kwargs):
+        """Initialize DocumentHistoryResponse with proper event name."""
+        # Handle backward compatibility for sender_id
+        if 'sender_id' in kwargs:
+            source_id = kwargs.pop('sender_id')
+        
+        # Extract response specific fields
+        document_id = kwargs.pop('document_id', '')
+        operations = kwargs.pop('operations', [])
+        total_operations = kwargs.pop('total_operations', 0)
+        
+        # Set message_type in payload for backward compatibility
+        if 'payload' not in kwargs:
+            kwargs['payload'] = {}
+        kwargs['payload']['message_type'] = 'document_history_response'
+        
+        # Call parent constructor with required positional arguments
+        super().__init__(event_name, source_id, **kwargs)
+        
+        # Set response specific fields
+        self.document_id = document_id
+        self.operations = operations
+        self.total_operations = total_operations
 
 class AgentPresenceResponse(Event):
     """Response message containing agent presence information."""
     
-    message_type: str = Field("agent_presence_response", description="Agent presence response type")
     document_id: str = Field(..., description="Document ID")
     agent_presence: List[AgentPresence] = Field(..., description="Agent presence information")
+    
+    def __init__(self, event_name: str = "document.presence.response", source_id: str = "", **kwargs):
+        """Initialize AgentPresenceResponse with proper event name."""
+        # Handle backward compatibility for sender_id
+        if 'sender_id' in kwargs:
+            source_id = kwargs.pop('sender_id')
+        
+        # Extract response specific fields
+        document_id = kwargs.pop('document_id', '')
+        agent_presence = kwargs.pop('agent_presence', [])
+        
+        # Set message_type in payload for backward compatibility
+        if 'payload' not in kwargs:
+            kwargs['payload'] = {}
+        kwargs['payload']['message_type'] = 'agent_presence_response'
+        
+        # Call parent constructor with required positional arguments
+        super().__init__(event_name, source_id, **kwargs)
+        
+        # Set response specific fields
+        self.document_id = document_id
+        self.agent_presence = agent_presence
 
 # Line Locking Messages
 class AcquireLineLockMessage(Event):
     """Message to acquire a lock on a specific line."""
     
-    message_type: str = Field("acquire_line_lock", description="Acquire line lock message type")
     document_id: str = Field(..., description="Document ID")
     line_number: int = Field(..., description="Line number to lock (1-based)")
+    
+    def __init__(self, event_name: str = "document.line_lock.acquire", source_id: str = "", **kwargs):
+        """Initialize AcquireLineLockMessage with proper event name."""
+        # Handle backward compatibility for sender_id
+        if 'sender_id' in kwargs:
+            source_id = kwargs.pop('sender_id')
+        
+        # Extract request specific fields
+        document_id = kwargs.pop('document_id', '')
+        line_number = kwargs.pop('line_number', 1)
+        
+        # Set message_type in payload for backward compatibility
+        if 'payload' not in kwargs:
+            kwargs['payload'] = {}
+        kwargs['payload']['message_type'] = 'acquire_line_lock'
+        
+        # Call parent constructor with required positional arguments
+        super().__init__(event_name, source_id, **kwargs)
+        
+        # Set request specific fields
+        self.document_id = document_id
+        self.line_number = line_number
 
 class ReleaseLineLockMessage(Event):
     """Message to release a lock on a specific line."""
     
-    message_type: str = Field("release_line_lock", description="Release line lock message type")
     document_id: str = Field(..., description="Document ID")
     line_number: int = Field(..., description="Line number to unlock (1-based)")
+    
+    def __init__(self, event_name: str = "document.line_lock.release", source_id: str = "", **kwargs):
+        """Initialize ReleaseLineLockMessage with proper event name."""
+        # Handle backward compatibility for sender_id
+        if 'sender_id' in kwargs:
+            source_id = kwargs.pop('sender_id')
+        
+        # Extract request specific fields
+        document_id = kwargs.pop('document_id', '')
+        line_number = kwargs.pop('line_number', 1)
+        
+        # Set message_type in payload for backward compatibility
+        if 'payload' not in kwargs:
+            kwargs['payload'] = {}
+        kwargs['payload']['message_type'] = 'release_line_lock'
+        
+        # Call parent constructor with required positional arguments
+        super().__init__(event_name, source_id, **kwargs)
+        
+        # Set request specific fields
+        self.document_id = document_id
+        self.line_number = line_number
 
 class LineLockResponse(Event):
     """Response message for line lock operations."""
     
-    message_type: str = Field("line_lock_response", description="Line lock response type")
     document_id: str = Field(..., description="Document ID")
     line_number: int = Field(..., description="Line number")
     success: bool = Field(..., description="Whether the lock operation was successful")
     locked_by: Optional[str] = Field(None, description="Agent ID that holds the lock (if failed)")
     error_message: Optional[str] = Field(None, description="Error message if operation failed")
+    
+    def __init__(self, event_name: str = "document.line_lock.response", source_id: str = "", **kwargs):
+        """Initialize LineLockResponse with proper event name."""
+        # Handle backward compatibility for sender_id
+        if 'sender_id' in kwargs:
+            source_id = kwargs.pop('sender_id')
+        
+        # Extract response specific fields
+        document_id = kwargs.pop('document_id', '')
+        line_number = kwargs.pop('line_number', 1)
+        success = kwargs.pop('success', False)
+        locked_by = kwargs.pop('locked_by', None)
+        error_message = kwargs.pop('error_message', None)
+        
+        # Set message_type in payload for backward compatibility
+        if 'payload' not in kwargs:
+            kwargs['payload'] = {}
+        kwargs['payload']['message_type'] = 'line_lock_response'
+        
+        # Call parent constructor with required positional arguments
+        super().__init__(event_name, source_id, **kwargs)
+        
+        # Set response specific fields
+        self.document_id = document_id
+        self.line_number = line_number
+        self.success = success
+        self.locked_by = locked_by
+        self.error_message = error_message

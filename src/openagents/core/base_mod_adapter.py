@@ -1,9 +1,9 @@
 from typing import Dict, Any, Optional, List
 from abc import ABC, abstractmethod
+from openagents.core.grpc_connector import GRPCNetworkConnector
 from openagents.models.messages import Event, EventNames
 from openagents.models.event import Event
 from openagents.models.tool import AgentAdapterTool
-from openagents.core.connector import NetworkConnector
 from openagents.models.message_thread import MessageThread
 
 class BaseModAdapter(ABC):
@@ -32,7 +32,7 @@ class BaseModAdapter(ABC):
         """
         self._agent_id = agent_id
     
-    def bind_connector(self, connector: NetworkConnector) -> None:
+    def bind_connector(self, connector: GRPCNetworkConnector) -> None:
         """Bind this mod adapter to a connector.
         
         Args:
@@ -50,11 +50,11 @@ class BaseModAdapter(ABC):
         return self._message_threads
         
     @property
-    def connector(self) -> NetworkConnector:
+    def connector(self) -> GRPCNetworkConnector:
         """Get the connector for the mod adapter.
         
         Returns:
-            NetworkConnector: The connector for the mod adapter
+            GRPCNetworkConnector: The connector for the mod adapter
         """
         return self._connector
     

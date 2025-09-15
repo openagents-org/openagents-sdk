@@ -203,7 +203,7 @@ class Event(BaseModel):
             role = NetworkRole.SYSTEM
             target_id = "system"
 
-        return EventDestination(role=NetworkRole(role), desitnation_id=target_id)
+        return EventDestination(role=role, desitnation_id=target_id)
     
     @field_validator('source_id')
     @classmethod
@@ -217,15 +217,9 @@ class Event(BaseModel):
     def auto_set_visibility(self):
         """Auto-set visibility based on targeting if not explicitly provided."""
         # Only auto-set if using default visibility
-        if self.visibility == EventVisibility.NETWORK:
-            if self.destination_id:
-                self.visibility = EventVisibility.DIRECT
-            elif self.channel:
-                self.visibility = EventVisibility.CHANNEL
-            elif self.relevant_mod:
-                self.visibility = EventVisibility.MOD_ONLY
-        
+        # TODO: to be implemented
         return self
+        
 
     def matches_pattern(self, pattern: str) -> bool:
         """Check if this event matches a subscription pattern."""
@@ -358,7 +352,7 @@ class EventSubscription(BaseModel):
     subscription_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     agent_id: str
     event_patterns: List[str]  # e.g., ["project.*", "channel.message.*"]
-    channels: Set[str] = Field(default_factory=set)
+    channels: Set[str] = Field(default_factory=set) # Limit the subscription to only specific channels; If empty, the subscription is not limited to any channel
     created_timestamp: int = Field(default_factory=lambda: int(time.time()))
     is_active: bool = True
     

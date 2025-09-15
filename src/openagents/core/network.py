@@ -10,7 +10,7 @@ import time
 import yaml
 from typing import Dict, Any, List, Optional, Callable, Awaitable, OrderedDict, Union, Set, TYPE_CHECKING
 
-from openagents.config.globals import SYSTEM_AGENT_ID, SYSTEM_EVENT_REGISTER_AGENT, SYSTEM_NOTIFICAITON_REGISTER_AGENT, SYSTEM_NOTIFICAITON_UNREGISTER_AGENT
+from openagents.config.globals import SYSTEM_AGENT_ID, SYSTEM_EVENT_REGISTER_AGENT, SYSTEM_NOTIFICAITON_REGISTER_AGENT, SYSTEM_NOTIFICAITON_UNREGISTER_AGENT, WORKSPACE_DEFAULT_MOD_NAME
 from openagents.core.base_mod import BaseMod
 from openagents.models.event_response import EventResponse
 
@@ -44,6 +44,9 @@ class AgentNetwork:
         # Create topology
         topology_mode = NetworkMode.DECENTRALIZED if str(config.mode) == str(ConfigNetworkMode.DECENTRALIZED) else NetworkMode.CENTRALIZED
         self.topology = create_topology(topology_mode, self.network_id, self.config)
+        
+        # Set network instance reference on topology
+        self.topology.set_network_instance(self)
         
         # Network state
         self.is_running = False
@@ -302,9 +305,12 @@ class AgentNetwork:
                 return EventResponse(success=False, message=f"Agent {agent_id} already registered with network")
             
 
-        success = self.topology.register_agent(agent_info)
+        success = await self.topology.register_agent(agent_info)
         
         if success:
+            # Register agent with event gateway to create event queue
+            self.event_gateway.register_agent(agent_id)
+            
             # Notify mods about agent registration
             registration_notification = Event(
                 event_name=SYSTEM_NOTIFICAITON_REGISTER_AGENT,
@@ -387,7 +393,7 @@ class AgentNetwork:
                 "transport_type": info.transport_type,
                 "address": info.address
             } for agent_id, info in agent_registry.items()},
-            "mods": [mod.model_dump() for mod in self.config.mods.values()],
+            "mods": [mod.model_dump() for mod in self.config.mods],
             "topology_mode": self.config.mode if isinstance(self.config.mode, str) else self.config.mode.value,
             "transports": [transport.model_dump() for transport in self.config.transports],
             "manifest_transport": self.config.manifest_transport,

@@ -31,6 +31,15 @@ class NetworkTopology(ABC):
         self.transports: Dict[TransportType, Transport] = {}
         self.agent_registry: Dict[str, AgentConnection] = {}
         self.is_running = False
+        self.network_instance = None  # Reference to the network instance
+    
+    def set_network_instance(self, network_instance):
+        """Set the network instance reference for this topology.
+        
+        Args:
+            network_instance: The network instance that owns this topology
+        """
+        self.network_instance = network_instance
     
     @abstractmethod
     async def initialize(self) -> bool:
@@ -153,7 +162,7 @@ class NetworkTopology(ABC):
             connection = self.agent_registry[agent_id]
             transport_type = connection.transport_type
             if transport_type in self.transports:
-                await self.transports[transport_type].cleanup_agent(agent_id)
+                self.transports[transport_type].cleanup_agent(agent_id)
             del self.agent_registry[agent_id]
     
 
@@ -189,6 +198,10 @@ class CentralizedTopology(NetworkTopology):
                 else:
                     logger.error(f"Unsupported transport type: {transport_type}")
                     continue
+                
+                # Set network instance reference on transport
+                if hasattr(transport, 'network_instance'):
+                    transport.network_instance = self.network_instance
                 
                 # Initialize transport
                 if not await transport.initialize():
@@ -231,7 +244,7 @@ class CentralizedTopology(NetworkTopology):
             connection = self.agent_registry[agent_id]
             transport_type = connection.transport_type
             if transport_type in self.transports:
-                await self.transports[transport_type].cleanup_agent(agent_id)
+                self.transports[transport_type].cleanup_agent(agent_id)
             del self.agent_registry[agent_id]
 
     async def _heartbeat_monitor(self) -> None:
@@ -298,12 +311,13 @@ class CentralizedTopology(NetworkTopology):
         # TODO: send out an event in the system
 
         logger.info(f"Registered agent {agent_info.agent_id} in centralized registry")
+        return True
     
     async def unregister_agent(self, agent_id: str) -> bool:
         """Unregister an agent from the centralized registry."""
         # TODO: send out an event in the system
 
-        super().unregister_agent(agent_id)
+        await super().unregister_agent(agent_id)
 
         logger.info(f"Unregistered agent {agent_id} from centralized registry")
     
@@ -353,6 +367,10 @@ class DecentralizedTopology(NetworkTopology):
                 else:
                     logger.error(f"Unsupported transport type: {transport_type}")
                     continue
+                
+                # Set network instance reference on transport
+                if hasattr(transport, 'network_instance'):
+                    transport.network_instance = self.network_instance
                 
                 # Initialize transport
                 if not await transport.initialize():

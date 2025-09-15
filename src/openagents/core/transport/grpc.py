@@ -8,6 +8,7 @@ import json
 import logging
 import re
 from typing import Dict, Any, Optional
+import time
 
 import grpc
 from grpc import aio
@@ -43,13 +44,18 @@ class OpenAgentsGRPCServicer(agent_service_pb2_grpc.AgentServiceServicer):
                 destination_id=request.target_agent_id or None,
                 payload=payload,
                 event_id=request.event_id,
-                timestamp=request.timestamp.ToDatetime() if request.timestamp else None,
+                timestamp=int(request.timestamp.ToDatetime().timestamp()) if request.timestamp else time.time(),
                 metadata=dict(request.metadata) if request.metadata else {},
                 visibility=request.visibility if request.visibility else "network"
             )
             
             # Route through unified handler
-            response_data = await self._handle_sent_event(event)
+            event_response = await self._handle_sent_event(event)
+            
+            # Extract response data from EventResponse
+            response_data = None
+            if event_response and hasattr(event_response, 'data') and event_response.data:
+                response_data = event_response.data
             
             # Serialize response data if available
             protobuf_response_data = None
@@ -66,8 +72,8 @@ class OpenAgentsGRPCServicer(agent_service_pb2_grpc.AgentServiceServicer):
                     logger.error(f"🔧 GRPC_TRANSPORT: JSON serialization failed for {request.event_name}: {serialization_error}")
             
             return agent_service_pb2.EventResponse(
-                success=response_data.get('success', True) if response_data else True,
-                message=response_data.get('message', response_data.get('error', '')) if response_data else '',
+                success=event_response.success if event_response else True,
+                message=event_response.message if event_response else '',
                 data=protobuf_response_data,
                 event_name=request.event_name
             )
@@ -121,19 +127,16 @@ class OpenAgentsGRPCServicer(agent_service_pb2_grpc.AgentServiceServicer):
         )
         try:
             return_data = await self.transport.call_event_handler(register_event)
-            logger.info(f"✅ Successfully registered agent {request.agent_id} with network {return_data.get('network_name', '')}")
+            logger.info(f"✅ Successfully registered agent {request.agent_id} with network")
             return agent_service_pb2.RegisterAgentResponse(
                 success=return_data.success,
-                message=return_data.message,
-                data=return_data.data,
-                event_name=return_data.event_name
+                error_message=return_data.message if not return_data.success else ""
             )
         except Exception as e:
             logger.error(f"Error calling event handler: {e}")
             return agent_service_pb2.RegisterAgentResponse(
                 success=False,
-                message=str(e),
-                event_name=request.event_name
+                error_message=str(e)
             )
     
     async def UnregisterAgent(self, request, context):
@@ -212,8 +215,9 @@ class OpenAgentsGRPCServicer(agent_service_pb2_grpc.AgentServiceServicer):
         """Unified event handler that routes both regular messages and system commands."""
         logger.debug(f"Processing unified event: {event.event_name} from {event.source_id}")
         
-        # Notify registered event handlers
-        await self.transport.call_event_handler(event)
+        # Notify registered event handlers and return the response
+        response = await self.transport.call_event_handler(event)
+        return response
 
 class GRPCTransport(Transport):
     """gRPC transport implementation."""
@@ -327,6 +331,27 @@ class GRPCTransport(Transport):
         except Exception as e:
             logger.error(f"Failed to start gRPC server: {e}")
             return False
+    
+    async def peer_connect(self, peer_id: str, metadata: Dict[str, Any] = None) -> bool:
+        """Connect to a gRPC peer."""
+        logger.debug(f"gRPC transport peer_connect called for {peer_id}")
+        # For gRPC, connections are managed by the gRPC framework
+        # We just track the peer in our connections
+        if peer_id not in self.peer_connections:
+            self.peer_connections[peer_id] = ConnectionInfo(
+                peer_id=peer_id,
+                transport_type=TransportType.GRPC,
+                connection_state=ConnectionState.CONNECTED,
+                metadata=metadata or {}
+            )
+        return True
+    
+    async def peer_disconnect(self, peer_id: str) -> bool:
+        """Disconnect from a gRPC peer."""
+        logger.debug(f"gRPC transport peer_disconnect called for {peer_id}")
+        if peer_id in self.peer_connections:
+            del self.peer_connections[peer_id]
+        return True
 
 
 # Convenience function for creating gRPC transport
