@@ -31,6 +31,10 @@ class BasicTestNetworkMod(BaseMod):
         """Initialize the basic test mod for a network."""
         super().__init__(mod_name=mod_name)
         
+        # Register event handlers using the elegant pattern
+        self.register_event_handler(self._handle_test_ping, "test.ping")
+        self.register_event_handler(self._handle_test_get_state, "test.get_state")
+        
         # Initialize mod state
         self.registered_agents: Set[str] = set()
         self.processed_events: List[Dict[str, Any]] = []
@@ -115,6 +119,9 @@ class BasicTestNetworkMod(BaseMod):
     async def process_event(self, event: Event) -> Optional[EventResponse]:
         """Process an event and return the response.
         
+        This method handles general event processing logic and then delegates
+        to specific handlers registered via register_event_handler.
+        
         Args:
             event: The event to process
             
@@ -146,45 +153,56 @@ class BasicTestNetworkMod(BaseMod):
             response_data = self.test_responses[event.event_name]
             logger.info(f"Returning custom test response for {event.event_name}")
             return EventResponse(
-                event_id=event.event_id,
                 success=response_data.get("success", True),
-                payload=response_data.get("payload", {}),
-                error_message=response_data.get("error_message")
+                data=response_data.get("payload", {}),
+                message=response_data.get("error_message", "Custom test response")
             )
         
         # Check if we should intercept this event (for testing purposes)
         if self.intercept_events:
             logger.info(f"Intercepting event {event.event_name} - stopping further processing")
             return EventResponse(
-                event_id=event.event_id,
                 success=True,
-                payload={"intercepted": True, "mod": self.mod_name}
+                data={"intercepted": True, "mod": self.mod_name}
             )
         
-        # Handle specific test events
-        if event.event_name == "test.ping":
-            logger.info(f"Received ping from {event.source_id}")
-            return EventResponse(
-                event_id=event.event_id,
-                success=True,
-                payload={
-                    "pong": True,
-                    "mod": self.mod_name,
-                    "timestamp": time.time(),
-                    "agent_count": len(self.registered_agents)
-                }
-            )
-        
-        if event.event_name == "test.get_state":
-            logger.info(f"State request from {event.source_id}")
-            return EventResponse(
-                event_id=event.event_id,
-                success=True,
-                payload=self.get_state()
-            )
-        
-        # Allow event to continue processing
+        # Delegate to base class for registered event handlers
         return await super().process_event(event)
+    
+    async def _handle_test_ping(self, event: Event) -> Optional[EventResponse]:
+        """Handle test ping events.
+        
+        Args:
+            event: The ping event to process
+            
+        Returns:
+            EventResponse: Response with pong data
+        """
+        logger.info(f"Received ping from {event.source_id}")
+        return EventResponse(
+            success=True,
+            data={
+                "pong": True,
+                "mod": self.mod_name,
+                "timestamp": time.time(),
+                "agent_count": len(self.registered_agents)
+            }
+        )
+    
+    async def _handle_test_get_state(self, event: Event) -> Optional[EventResponse]:
+        """Handle test get state events.
+        
+        Args:
+            event: The get state event to process
+            
+        Returns:
+            EventResponse: Response with mod state data
+        """
+        logger.info(f"State request from {event.source_id}")
+        return EventResponse(
+            success=True,
+            data=self.get_state()
+        )
     
     def set_test_response(self, event_name: str, response_data: Dict[str, Any]) -> None:
         """Set a custom response for a specific event type (for testing).

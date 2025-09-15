@@ -1,7 +1,9 @@
-from typing import Dict, Any, Optional, List, Set, TYPE_CHECKING
+from typing import Awaitable, Callable, Dict, Any, Optional, List, Set, TYPE_CHECKING, Union
 from abc import ABC, abstractmethod
 import logging
 from warnings import deprecated
+
+from pydantic import BaseModel, Field
 
 # Use TYPE_CHECKING to avoid circular imports
 if TYPE_CHECKING:
@@ -10,6 +12,11 @@ from openagents.models.event_response import EventResponse
 from openagents.models.messages import Event, EventNames
 
 logger = logging.getLogger(__name__)
+
+class EventHandlerEntry(BaseModel):
+    
+    handler: Callable[[Event], Awaitable[Optional[EventResponse]]]
+    patterns: List[str] = Field(default_factory=list)
 
 
 class BaseMod(ABC):
@@ -28,8 +35,26 @@ class BaseMod(ABC):
         self._mod_name = mod_name
         self._network = None  # Will be set when registered with a network
         self._config = {}
+        self._event_handlers: List[EventHandlerEntry] = []
+        
+        self._register_default_event_handlers()
 
         logger.info(f"Initializing network mod {self.mod_name}")
+    
+    def _register_default_event_handlers(self) -> None:
+        """Register default event handlers for the mod."""
+        async def handle_register_agent(event: Event) -> Optional[EventResponse]:
+            return await self.handle_register_agent(event.payload.get("agent_id"), event.payload.get("metadata"))
+        async def handle_unregister_agent(event: Event) -> Optional[EventResponse]:
+            return await self.handle_unregister_agent(event.payload.get("agent_id"))    
+        self.register_event_handler(
+            handle_register_agent,
+            "system.notification.register_agent"
+        )
+        self.register_event_handler(
+            handle_unregister_agent,
+            "system.notification.unregister_agent"
+        )
     
     def initialize(self) -> bool:
         """Initialize the mod.
@@ -46,6 +71,25 @@ class BaseMod(ABC):
             bool: True if shutdown was successful, False otherwise
         """
         return True
+    
+    def register_event_handler(self, handler: Callable[[Event], Awaitable[EventResponse]], patterns: Union[List[str], str]) -> None:
+        """Register an event handler for the mod.
+        
+        Args:
+            handler: The handler function to register
+            patterns: The patterns to match the event
+        """
+        if isinstance(patterns, str):
+            patterns = [patterns]
+        self._event_handlers.append(EventHandlerEntry(handler=handler, patterns=patterns))
+    
+    def unregister_event_handler(self, handler: Callable[[Event], Awaitable[EventResponse]]) -> None:
+        """Unregister an event handler for the mod.
+        
+        Args:
+            handler: The handler function to unregister
+        """
+        self._event_handlers = [entry for entry in self._event_handlers if entry.handler != handler]
     
     @property
     def mod_name(self) -> str:
@@ -66,11 +110,11 @@ class BaseMod(ABC):
         return self._config
 
     @property
-    def network(self) -> Optional["Network"]:
+    def network(self) -> Optional[Any]:
         """Get the network this mod is registered with.
         
         Returns:
-            Optional[Network]: The network this mod is registered with
+            Optional[Any]: The network this mod is registered with
         """
         return self._network
         
@@ -151,70 +195,9 @@ class BaseMod(ABC):
             Optional[EventResponse]: The response to the event, or None if the event is not processed
         """
         response = None
-        if event.event_name == "system.notification.register_agent":
-            response = await self.handle_register_agent(event.payload.get("agent_id"), event.payload.get("metadata"))
-        elif event.event_name == "system.notification.unregister_agent":
-            response = await self.handle_unregister_agent(event.payload.get("agent_id"))
+        for handler_entry in self._event_handlers:
+            if any(event.matches_pattern(pattern) for pattern in handler_entry.patterns):
+                response = await handler_entry.handler(event)
+                if response:
+                    break
         return response
-    
-    @deprecated("Use process_event instead")
-    async def process_system_message(self, message: Event) -> Optional[Event]:
-        """Process a system message in the ordered mod pipeline.
-        
-        System messages are processed through all mods in order. This is called for:
-        - Inbound system messages (agent → system): processed by all mods, then network core
-        - Internal system messages (mod → network): processed by all mods, then network core
-        
-        If this mod handles the message and wants to stop further processing,
-        return None. Otherwise, return the original or modified message to continue
-        processing through the next mod in the pipeline.
-        
-        Args:
-            message: The system message to handle (event_name not starting with "agent.direct_message." or "agent.broadcast_message.")
-        
-        Returns:
-            Optional[Event]: Processed message to continue processing, or None to stop propagation
-        """
-        return message
-
-    @deprecated("Use process_event instead")
-    async def process_direct_message(self, message: Event) -> Optional[Event]:
-        """Process a direct message in the ordered mod pipeline.
-        
-        Direct messages are processed through all mods in order before being delivered
-        to the target agent. This is called for messages with event_name starting with
-        "agent.direct_message."
-        
-        If this mod handles the message and wants to stop delivery to the target agent,
-        return None. Otherwise, return the original or modified message to continue
-        processing through the next mod in the pipeline.
-        
-        Args:
-            message: The direct message to handle (event_name starts with "agent.direct_message.")
-        
-        Returns:
-            Optional[Event]: Processed message to continue processing, or None to stop propagation
-        """
-        return message
-    
-    @deprecated("Use process_event instead")
-    async def process_broadcast_message(self, message: Event) -> Optional[Event]:
-        """Process a broadcast message in the ordered mod pipeline.
-        
-        Broadcast messages are processed through all mods in order before being delivered
-        to all agents in the network. This is called for messages with event_name starting
-        with "agent.broadcast_message."
-        
-        If this mod handles the message and wants to stop delivery to all agents,
-        return None. Otherwise, return the original or modified message to continue
-        processing through the next mod in the pipeline.
-        
-        Args:
-            message: The broadcast message to handle (event_name starts with "agent.broadcast_message.")
-        
-        Returns:
-            Optional[Event]: Processed message to continue processing, or None to stop propagation
-        """
-        return message
-    
-    
