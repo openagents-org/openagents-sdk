@@ -121,9 +121,8 @@ class ThreadMessagingNetworkMod(BaseMod):
         self.register_event_handler(self._handle_thread_channels, ["thread.channels.info", "thread.channels.list"])
         self.register_event_handler(self._handle_thread_message_retrieval, ["thread.messages.retrieve", "thread.channel_messages.retrieve", "thread.direct_messages.retrieve"])
         self.register_event_handler(self._handle_thread_reactions, ["thread.reaction.add", "thread.reaction.remove", "thread.reaction.toggle"])
-        self.register_event_handler(self._handle_thread_direct_message, ["thread.direct_message.sent", "thread.direct_message.post"])
+        self.register_event_handler(self._handle_thread_direct_message, ["thread.direct_message.sent", "thread.direct_message.post", "thread.direct_message.received"])
         self.register_event_handler(self._handle_thread_channel_message, ["thread.channel_message.sent", "thread.channel_message.post"])
-        self.register_event_handler(self._handle_thread_generic_message, "thread.message")
         
         # Initialize mod state
         self.active_agents: Set[str] = set()
@@ -165,8 +164,18 @@ class ThreadMessagingNetworkMod(BaseMod):
             request_id = message.payload.get('request_id')
             if request_id:
                 return request_id
-        # Fallback to message_id
-        return message.event_id
+        
+        # Fallback to event_id if available
+        if hasattr(message, 'event_id') and message.event_id:
+            return message.event_id
+        
+        # Final fallback to message_id if available
+        if hasattr(message, 'message_id') and message.message_id:
+            return message.message_id
+            
+        # Last resort: generate a unique ID
+        import uuid
+        return str(uuid.uuid4())
     
     def _initialize_default_channels(self) -> None:
         """Initialize default channels from configuration."""
@@ -364,9 +373,18 @@ class ThreadMessagingNetworkMod(BaseMod):
         # Extract the inner message from the Event content
         content = event.payload if hasattr(event, 'payload') else event.content
         
-        # Fix: Map sender_id to source_id for all message types that extend Event
-        if isinstance(content, dict) and 'sender_id' in content and 'source_id' not in content:
+        # Ensure content is a dictionary
+        if not isinstance(content, dict):
+            content = {}
+        else:
             content = content.copy()  # Don't modify the original
+        
+        # Set source_id from the event if not already present
+        if 'source_id' not in content:
+            content['source_id'] = event.source_id
+        
+        # Fix: Map sender_id to source_id for all message types that extend Event
+        if 'sender_id' in content and 'source_id' not in content:
             content['source_id'] = content['sender_id']
         
         # Convert protobuf content to dict if needed
@@ -401,6 +419,10 @@ class ThreadMessagingNetworkMod(BaseMod):
                         content_dict[field_name] = str(field_value)
             content = content_dict
             logger.debug(f"Converted protobuf content to dict: {content}")
+            
+            # Ensure source_id is set after protobuf conversion
+            if 'source_id' not in content:
+                content['source_id'] = event.source_id
         
         return content
     
@@ -442,7 +464,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             event: The thread file upload event to process
             
         Returns:
-            Optional[EventResponse]: The response to the event
+            Optional[EventResponse]: The response to the event with file upload data
         """
         content = self._prepare_thread_event_content(event)
         if content is None:
@@ -451,12 +473,12 @@ class ThreadMessagingNetworkMod(BaseMod):
         try:
             inner_message = FileUploadMessage(**content)
             self._add_to_history(inner_message)
-            await self._process_file_upload(inner_message)
+            upload_data = await self._process_file_upload(inner_message)
             
             return EventResponse(
                 success=True,
                 message=f"Thread file upload event {event.event_name} processed successfully",
-                data={"event_name": event.event_name, "event_id": event.event_id}
+                data=upload_data
             )
         except Exception as e:
             logger.error(f"Error processing thread file upload event: {e}")
@@ -479,12 +501,12 @@ class ThreadMessagingNetworkMod(BaseMod):
             inner_message = FileOperationMessage(**content)
             inner_message.event_name = event.event_name
             self._add_to_history(inner_message)
-            await self._process_file_operation(inner_message)
+            operation_data = await self._process_file_operation(inner_message)
             
             return EventResponse(
                 success=True,
                 message=f"Thread file operation event {event.event_name} processed successfully",
-                data={"event_name": event.event_name, "event_id": event.event_id}
+                data=operation_data
             )
         except Exception as e:
             logger.error(f"Error processing thread file operation event: {e}")
@@ -497,7 +519,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             event: The thread channel info event to process
             
         Returns:
-            Optional[EventResponse]: The response to the event
+            Optional[EventResponse]: The response to the event with channel data
         """
         content = self._prepare_thread_event_content(event)
         if content is None:
@@ -507,16 +529,22 @@ class ThreadMessagingNetworkMod(BaseMod):
             inner_message = ChannelInfoMessage(**content)
             inner_message.event_name = event.event_name
             self._add_to_history(inner_message)
-            await self._process_channel_info_request(inner_message)
+            
+            # Get the channel info data directly
+            channel_data = self._process_channel_info_request(inner_message)
             
             return EventResponse(
-                success=True,
-                message=f"Thread channel info event {event.event_name} processed successfully",
-                data={"event_name": event.event_name, "event_id": event.event_id}
+                success=channel_data["success"],
+                message=f"Channel info retrieved successfully" if channel_data["success"] else channel_data.get("error", "Unknown error"),
+                data=channel_data
             )
         except Exception as e:
             logger.error(f"Error processing thread channel info event: {e}")
-            return None
+            return EventResponse(
+                success=False,
+                message=f"Error processing channel info request: {str(e)}",
+                data={"error": str(e)}
+            )
     
     async def _handle_thread_message_retrieval(self, event: Event) -> Optional[EventResponse]:
         """Handle thread message retrieval events.
@@ -525,7 +553,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             event: The thread message retrieval event to process
             
         Returns:
-            Optional[EventResponse]: The response to the event
+            Optional[EventResponse]: The response to the event with message data
         """
         content = self._prepare_thread_event_content(event)
         if content is None:
@@ -535,16 +563,22 @@ class ThreadMessagingNetworkMod(BaseMod):
             inner_message = MessageRetrievalMessage(**content)
             inner_message.event_name = event.event_name
             self._add_to_history(inner_message)
-            await self._process_message_retrieval_request(inner_message)
+            
+            # Get the message retrieval data directly
+            retrieval_data = self._process_message_retrieval_request(inner_message)
             
             return EventResponse(
-                success=True,
-                message=f"Thread message retrieval event {event.event_name} processed successfully",
-                data={"event_name": event.event_name, "event_id": event.event_id}
+                success=retrieval_data["success"],
+                message=f"Message retrieval completed successfully" if retrieval_data["success"] else retrieval_data.get("error", "Unknown error"),
+                data=retrieval_data
             )
         except Exception as e:
             logger.error(f"Error processing thread message retrieval event: {e}")
-            return None
+            return EventResponse(
+                success=False,
+                message=f"Error processing message retrieval request: {str(e)}",
+                data={"error": str(e)}
+            )
     
     async def _handle_thread_reactions(self, event: Event) -> Optional[EventResponse]:
         """Handle thread reaction events.
@@ -553,26 +587,33 @@ class ThreadMessagingNetworkMod(BaseMod):
             event: The thread reaction event to process
             
         Returns:
-            Optional[EventResponse]: The response to the event
+            Optional[EventResponse]: The response to the event with reaction data
         """
         content = self._prepare_thread_event_content(event)
         if content is None:
             return None
         
         try:
+            logger.debug(f"Creating ReactionMessage with content: {content}")
             inner_message = ReactionMessage(**content)
             inner_message.event_name = event.event_name
             self._add_to_history(inner_message)
-            await self._process_reaction_message(inner_message)
+            
+            # Get the reaction data directly
+            reaction_data = await self._process_reaction_message(inner_message)
             
             return EventResponse(
-                success=True,
-                message=f"Thread reaction event {event.event_name} processed successfully",
-                data={"event_name": event.event_name, "event_id": event.event_id}
+                success=reaction_data["success"],
+                message=f"Reaction processed successfully" if reaction_data["success"] else reaction_data.get("error", "Unknown error"),
+                data=reaction_data
             )
         except Exception as e:
             logger.error(f"Error processing thread reaction event: {e}")
-            return None
+            return EventResponse(
+                success=False,
+                message=f"Error processing reaction request: {str(e)}",
+                data={"error": str(e)}
+            )
     
     async def _handle_thread_direct_message(self, event: Event) -> Optional[EventResponse]:
         """Handle thread direct message events.
@@ -636,119 +677,6 @@ class ThreadMessagingNetworkMod(BaseMod):
             logger.error(f"Error processing thread channel message event: {e}")
             return None
     
-    async def _handle_thread_generic_message(self, event: Event) -> Optional[EventResponse]:
-        """Handle generic thread.message events by examining message_type in payload.
-        
-        Args:
-            event: The generic thread message event to process
-            
-        Returns:
-            Optional[EventResponse]: The response to the event
-        """
-        content = self._prepare_thread_event_content(event)
-        if content is None:
-            return None
-        
-        try:
-            # Convert protobuf fields to dict if needed BEFORE extracting message_type
-            if isinstance(content, dict) and 'payload' in content and hasattr(content['payload'], 'fields'):
-                logger.debug(f"Converting protobuf payload to dict for thread.message")
-                payload = content['payload']
-                content_dict = {}
-                for field_name, field_value in payload.fields.items():
-                    # Handle specific fields that should be nested structs
-                    if field_name == 'content' and hasattr(field_value, 'struct_value'):
-                        # Handle nested struct (like content.text)
-                        nested_dict = {}
-                        for nested_name, nested_value in field_value.struct_value.fields.items():
-                            if hasattr(nested_value, 'string_value'):
-                                nested_dict[nested_name] = nested_value.string_value
-                        content_dict[field_name] = nested_dict
-                    elif hasattr(field_value, 'string_value'):
-                        content_dict[field_name] = field_value.string_value
-                    elif hasattr(field_value, 'number_value'):
-                        content_dict[field_name] = field_value.number_value
-                    elif hasattr(field_value, 'bool_value'):
-                        content_dict[field_name] = field_value.bool_value
-                    elif hasattr(field_value, 'null_value'):
-                        content_dict[field_name] = None
-                    else:
-                        # Use WhichOneof to get the actual field type
-                        field_type = field_value.WhichOneof('kind') if hasattr(field_value, 'WhichOneof') else None
-                        if field_type:
-                            content_dict[field_name] = getattr(field_value, field_type)
-                        else:
-                            content_dict[field_name] = str(field_value)
-                content = content_dict
-                logger.debug(f"Converted protobuf payload to dict: {content}")
-            
-            message_type = content.get("message_type") if isinstance(content, dict) else None
-            logger.debug(f"Processing generic thread.message with message_type: {message_type}")
-            
-            if message_type == "reply_message":
-                # Populate quoted_text if quoted_message_id is provided
-                if 'quoted_message_id' in content and content['quoted_message_id']:
-                    content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
-                inner_message = ReplyMessage(**content)
-                inner_message.event_name = event.event_name
-                self._add_to_history(inner_message)
-                await self._process_reply_message(inner_message)
-            elif message_type == "channel_message":
-                # Populate quoted_text if quoted_message_id is provided
-                if 'quoted_message_id' in content and content['quoted_message_id']:
-                    content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
-                inner_message = ChannelMessage(**content)
-                inner_message.event_name = event.event_name
-                self._add_to_history(inner_message)
-                await self._process_channel_message(inner_message)
-            elif message_type == "direct_message":
-                # Populate quoted_text if quoted_message_id is provided
-                if 'quoted_message_id' in content and content['quoted_message_id']:
-                    content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
-                inner_message = Event(event_name=event.event_name, **content)
-                self._add_to_history(inner_message)
-                await self._process_direct_message(inner_message)
-            elif message_type == "file_upload":
-                inner_message = FileUploadMessage(**content)
-                inner_message.event_name = event.event_name
-                self._add_to_history(inner_message)
-                await self._process_file_upload(inner_message)
-            elif message_type == "file_operation":
-                inner_message = FileOperationMessage(**content)
-                inner_message.event_name = event.event_name
-                self._add_to_history(inner_message)
-                await self._process_file_operation(inner_message)
-            elif message_type == "channel_info":
-                inner_message = ChannelInfoMessage(**content)
-                inner_message.event_name = event.event_name
-                await self._process_channel_info_request(inner_message)
-            elif message_type == "message_retrieval":
-                inner_message = MessageRetrievalMessage(**content)
-                inner_message.event_name = event.event_name
-                await self._process_message_retrieval_request(inner_message)
-            elif message_type == "reaction_message":
-                inner_message = ReactionMessage(**content)
-                inner_message.event_name = event.event_name
-                self._add_to_history(inner_message)
-                await self._process_reaction_message(inner_message)
-            elif (not message_type or message_type is None) and event.event_name == "thread.message":
-                # Fallback: Assume it's a channel message if message_type is None or empty
-                inner_message = ChannelMessage(**content)
-                inner_message.event_name = event.event_name
-                self._add_to_history(inner_message)
-                await self._process_channel_message(inner_message)
-            else:
-                logger.warning(f"Unknown message_type in thread.message: {message_type}")
-                return None
-            
-            return EventResponse(
-                success=True,
-                message=f"Generic thread message event processed successfully (type: {message_type})",
-                data={"event_name": event.event_name, "event_id": event.event_id, "message_type": message_type}
-            )
-        except Exception as e:
-            logger.error(f"Error processing generic thread message event: {e}")
-            return None
     
     
     async def _process_broadcast_event(self, event: Event) -> Optional[EventResponse]:
@@ -766,9 +694,16 @@ class ThreadMessagingNetworkMod(BaseMod):
         self._add_to_history(event)
         
         # Check if this is a channel message that should be handled by thread messaging
-        if hasattr(event, 'target_channel') and event.target_channel:
+        # For channel messages, the destination_id should be in format "channel:channelname"
+        channel_name = None
+        if event.destination_id and event.destination_id.startswith('channel:'):
+            channel_name = event.destination_id.split(':', 1)[1]
+        elif hasattr(event, 'payload') and event.payload and event.payload.get('channel'):
+            channel_name = event.payload.get('channel')
+            
+        if channel_name:
             # This is a channel broadcast - thread messaging should handle it
-            logger.debug(f"Thread messaging capturing channel broadcast to {event.target_channel}")
+            logger.debug(f"Thread messaging capturing channel broadcast to {channel_name}")
             
             # Convert to ChannelMessage and process it
             # Extract reply_to_id from payload if present
@@ -778,7 +713,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             
             channel_message = ChannelMessage(
                 sender_id=event.source_id,
-                channel=event.target_channel,
+                channel=channel_name,
                 content=event.payload,
                 timestamp=event.timestamp,
                 message_id=event.event_id,
@@ -790,8 +725,8 @@ class ThreadMessagingNetworkMod(BaseMod):
             # Return response to stop further processing - thread messaging handled this
             return EventResponse(
                 success=True,
-                message=f"Channel message processed and distributed to channel {event.target_channel}",
-                data={"channel": event.target_channel, "message_id": event.event_id}
+                message=f"Channel message processed and distributed to channel {channel_name}",
+                data={"channel": channel_name, "message_id": event.event_id}
             )
         
         # Check if this is a channel message based on payload
@@ -889,18 +824,17 @@ class ThreadMessagingNetworkMod(BaseMod):
                 event_name="thread.channel_message.notification",
                 source_id=self.network.network_id,
                 payload={
-                    "action": "channel_message_notification",
                     "message": message.model_dump(),
                     "channel": channel
                 },
                 direction="inbound",
                 destination_id=agent_id
             )
-            logger.info(f"🔧 THREAD MESSAGING: Notification target_id will be: {notification.relevant_agent_id}")
+            logger.info(f"🔧 THREAD MESSAGING: Notification target_id will be: {notification.destination_id}")
             logger.info(f"🔧 THREAD MESSAGING: Notification content: {notification.content}")
             
             try:
-                await self.network.send_message(notification)
+                await self.network.process_event(notification)
                 logger.info(f"✅ THREAD MESSAGING: Sent channel message notification to agent {agent_id}")
             except Exception as e:
                 logger.error(f"❌ THREAD MESSAGING: Failed to send channel message notification to {agent_id}: {e}")
@@ -940,7 +874,6 @@ class ThreadMessagingNetworkMod(BaseMod):
                 event_name="thread.direct_message.notification",
                 source_id=self.network.network_id,
                 payload={
-                    "action": "direct_message_notification",
                     "message": message.model_dump() if hasattr(message, 'model_dump') else message.__dict__,
                     "sender_id": message.source_id
                 },
@@ -948,7 +881,7 @@ class ThreadMessagingNetworkMod(BaseMod):
                 destination_id=target_agent_id
             )
             
-            await self.network.send_message(notification)
+            await self.network.process_event(notification)
             logger.info(f"✅ THREAD MESSAGING: Sent direct message notification to agent {target_agent_id}")
             
         except Exception as e:
@@ -1000,11 +933,14 @@ class ThreadMessagingNetworkMod(BaseMod):
             else:
                 logger.warning(f"Could not create thread - max nesting level reached")
     
-    async def _process_file_upload(self, message: FileUploadMessage) -> None:
+    async def _process_file_upload(self, message: FileUploadMessage) -> Dict[str, Any]:
         """Process a file upload request.
         
         Args:
             message: The file upload message
+            
+        Returns:
+            Dict[str, Any]: File upload response data
         """
         file_id = str(uuid.uuid4())
         
@@ -1028,46 +964,33 @@ class ThreadMessagingNetworkMod(BaseMod):
                 "path": str(file_path)
             }
             
-            # Send response with file UUID
-            response = Event(
-                event_name="thread.file.upload_response",
-                source_id=self.network.network_id,
-                destination_id=message.source_id,
-                relevant_mod="openagents.mods.communication.thread_messaging",
-                payload={
-                    "action": "file_upload_response",
-                    "success": True,
-                    "file_id": file_id,
-                    "filename": message.filename,
-                    "request_id": self._get_request_id(message)
-                }
-            )
-            await self.network.send_message(response)
-            
             logger.info(f"File uploaded: {message.filename} -> {file_id}")
+            
+            # Return response data instead of sending event
+            return {
+                "success": True,
+                "file_id": file_id,
+                "filename": message.filename,
+                "request_id": self._get_request_id(message)
+            }
         
         except Exception as e:
-            # Send error response
-            response = Event(
-                event_name="thread.file.upload_response",
-                source_id=self.network.network_id,
-                destination_id=message.source_id,
-                relevant_mod="openagents.mods.communication.thread_messaging",
-                payload={
-                    "action": "file_upload_response",
-                    "success": False,
-                    "error": str(e),
-                    "request_id": self._get_request_id(message)
-                }
-            )
-            await self.network.send_message(response)
             logger.error(f"File upload failed: {e}")
+            # Return error response data instead of sending event
+            return {
+                "success": False,
+                "error": str(e),
+                "request_id": self._get_request_id(message)
+            }
     
-    async def _process_file_operation(self, message: FileOperationMessage) -> None:
+    async def _process_file_operation(self, message: FileOperationMessage) -> Dict[str, Any]:
         """Process file operations like download.
         
         Args:
             message: The file operation message
+            
+        Returns:
+            Dict[str, Any]: File operation response data
         """
         # Try to determine action from event_name first, fallback to message.action
         action = getattr(message, 'action', 'download')
@@ -1079,50 +1002,43 @@ class ThreadMessagingNetworkMod(BaseMod):
             # Add other file operations as needed
         
         if action == "download":
-            await self._handle_file_download(message.source_id, message.file_id, message)
+            return await self._handle_file_download(message.source_id, message.file_id, message)
+        else:
+            return {
+                "success": False,
+                "error": f"Unknown file operation: {action}",
+                "request_id": self._get_request_id(message)
+            }
     
-    async def _handle_file_download(self, agent_id: str, file_id: str, request_message: Event) -> None:
+    async def _handle_file_download(self, agent_id: str, file_id: str, request_message: Event) -> Dict[str, Any]:
         """Handle a file download request.
         
         Args:
             agent_id: ID of the requesting agent
             file_id: UUID of the file to download
             request_message: The original request message
+            
+        Returns:
+            Dict[str, Any]: File download response data
         """
         if file_id not in self.files:
             # File not found
-            response = Event(
-                event_name="thread.file.download_response",
-                source_id=self.network.network_id,
-                destination_id=agent_id,
-                payload={
-                    "action": "file_download_response",
-                    "success": False,
-                    "error": "File not found",
-                    "request_id": request_message.event_id
-                }
-            )
-            await self.network.send_message(response)
-            return
+            return {
+                "success": False,
+                "error": "File not found",
+                "request_id": request_message.event_id
+            }
         
         file_info = self.files[file_id]
         file_path = Path(file_info["path"])
         
         if not file_path.exists():
             # File deleted from storage
-            response = Event(
-                event_name="thread.file.download_response",
-                source_id=self.network.network_id,
-                destination_id=agent_id,
-                payload={
-                    "action": "file_download_response",
-                    "success": False,
-                    "error": "File no longer available",
-                    "request_id": request_message.event_id
-                }
-            )
-            await self.network.send_message(response)
-            return
+            return {
+                "success": False,
+                "error": "File no longer available",
+                "request_id": request_message.event_id
+            }
         
         try:
             # Read and encode file
@@ -1131,46 +1047,35 @@ class ThreadMessagingNetworkMod(BaseMod):
             
             encoded_content = base64.b64encode(file_content).decode("utf-8")
             
-            # Send file content
-            response = Event(
-                event_name="thread.file.download_response",
-                source_id=self.network.network_id,
-                destination_id=agent_id,
-                payload={
-                    "action": "file_download_response",
-                    "success": True,
-                    "file_id": file_id,
-                    "filename": file_info["filename"],
-                    "mime_type": file_info["mime_type"],
-                    "content": encoded_content,
-                    "request_id": request_message.event_id
-                }
-            )
-            await self.network.send_message(response)
-            
             logger.debug(f"Sent file {file_id} to agent {agent_id}")
+            
+            # Return file content data
+            return {
+                "success": True,
+                "file_id": file_id,
+                "filename": file_info["filename"],
+                "mime_type": file_info["mime_type"],
+                "content": encoded_content,
+                "request_id": request_message.event_id
+            }
         
         except Exception as e:
-            # Send error response
-            response = Event(
-                event_name="thread.file.download_response",
-                source_id=self.network.network_id,
-                destination_id=agent_id,
-                payload={
-                    "action": "file_download_response",
-                    "success": False,
-                    "error": str(e),
-                    "request_id": request_message.event_id
-                }
-            )
-            await self.network.send_message(response)
             logger.error(f"File download failed: {e}")
+            # Return error response data
+            return {
+                "success": False,
+                "error": str(e),
+                "request_id": request_message.event_id
+            }
     
-    async def _process_channel_info_request(self, message: ChannelInfoMessage) -> None:
-        """Process a channel info request.
+    def _process_channel_info_request(self, message: ChannelInfoMessage) -> Dict[str, Any]:
+        """Process a channel info request and return the data.
         
         Args:
             message: The channel info request message
+            
+        Returns:
+            Dict[str, Any]: The channel info response data
         """
         # Determine action from event_name if possible, fallback to message.action
         action = getattr(message, 'action', 'list_channels')
@@ -1194,24 +1099,26 @@ class ThreadMessagingNetworkMod(BaseMod):
                     'agent_count': len(agents_in_channel)
                 })
             
-            response = Event(
-                event_name="thread.channels.list_response",
-                source_id=self.network.network_id,
-                destination_id=message.source_id,
-                payload={
-                    "action": "list_channels_response",
-                    "success": True,
-                    "channels": channels_data,
-                    "request_id": self._get_request_id(message)
-                }
-            )
-            await self.network.send_message(response)
+            return {
+                "success": True,
+                "channels": channels_data,
+                "request_id": self._get_request_id(message)
+            }
+        
+        return {
+            "success": False,
+            "error": f"Unknown action: {action}",
+            "request_id": self._get_request_id(message)
+        }
     
-    async def _process_message_retrieval_request(self, message: MessageRetrievalMessage) -> None:
-        """Process a message retrieval request.
+    def _process_message_retrieval_request(self, message: MessageRetrievalMessage) -> Dict[str, Any]:
+        """Process a message retrieval request and return the data.
         
         Args:
             message: The message retrieval request
+            
+        Returns:
+            Dict[str, Any]: The message retrieval response data
         """
         # Determine action from event_name if possible, fallback to message.action
         action = getattr(message, 'action', 'retrieve_channel_messages')
@@ -1228,53 +1135,45 @@ class ThreadMessagingNetworkMod(BaseMod):
                 action = "retrieve_channel_messages"
         
         if action == "retrieve_channel_messages":
-            await self._handle_channel_messages_retrieval(message)
+            return self._handle_channel_messages_retrieval(message)
         elif action == "retrieve_direct_messages":
-            await self._handle_direct_messages_retrieval(message)
+            return self._handle_direct_messages_retrieval(message)
+        else:
+            return {
+                "action": "unknown_action",
+                "success": False,
+                "error": f"Unknown retrieval action: {action}",
+                "request_id": self._get_request_id(message)
+            }
     
-    async def _handle_channel_messages_retrieval(self, message: MessageRetrievalMessage) -> None:
-        """Handle channel messages retrieval request.
+    def _handle_channel_messages_retrieval(self, message: MessageRetrievalMessage) -> Dict[str, Any]:
+        """Handle channel messages retrieval request and return the data.
         
         Args:
             message: The retrieval request message
+            
+        Returns:
+            Dict[str, Any]: The channel messages retrieval response data
         """
         channel = message.channel
         agent_id = message.source_id
-        limit = message.limit
-        offset = message.offset
+        limit = int(message.limit)
+        offset = int(message.offset)
         include_threads = message.include_threads
         
         if not channel:
-            # Send error response
-            response = Event(
-                event_name="thread.channel_messages.retrieval_response",
-                source_id=self.network.network_id,
-                destination_id=agent_id,
-                payload={
-                    "action": "retrieve_channel_messages_response",
-                    "success": False,
-                    "error": "Channel name is required",
-                    "request_id": self._get_request_id(message)
-                }
-            )
-            await self.network.send_message(response)
-            return
+            return {
+                "success": False,
+                "error": "Channel name is required",
+                "request_id": self._get_request_id(message)
+            }
         
         if channel not in self.channels:
-            # Send error response
-            response = Event(
-                event_name="thread.channel_messages.retrieval_response",
-                source_id=self.network.network_id,
-                destination_id=agent_id,
-                payload={
-                    "action": "retrieve_channel_messages_response",
-                    "success": False,
-                    "error": f"Channel '{channel}' not found",
-                    "request_id": self._get_request_id(message)
-                }
-            )
-            await self.network.send_message(response)
-            return
+            return {
+                "success": False,
+                "error": f"Channel '{channel}' not found",
+                "request_id": self._get_request_id(message)
+            }
         
         # Find channel messages
         channel_messages = []
@@ -1336,53 +1235,40 @@ class ThreadMessagingNetworkMod(BaseMod):
         total_count = len(channel_messages)
         paginated_messages = channel_messages[offset:offset + limit]
         
-        # Send response
-        response = Event(
-            event_name="thread.channel_messages.retrieval_response",
-            source_id=self.network.network_id,
-            destination_id=agent_id,
-            payload={
-                "action": "retrieve_channel_messages_response",
-                "success": True,
-                "channel": channel,
-                "messages": paginated_messages,
-                "total_count": total_count,
-                "offset": offset,
-                "limit": limit,
-                "has_more": (offset + limit) < total_count,
-                "request_id": self._get_request_id(message)
-            }
-        )
-        await self.network.send_message(response)
-        logger.debug(f"Sent {len(paginated_messages)} channel messages for {channel} to {agent_id}")
+        logger.debug(f"Retrieved {len(paginated_messages)} channel messages for {channel}")
+        
+        return {
+            "success": True,
+            "channel": channel,
+            "messages": paginated_messages,
+            "total_count": total_count,
+            "offset": offset,
+            "limit": limit,
+            "has_more": (offset + limit) < total_count,
+            "request_id": self._get_request_id(message)
+        }
     
-    async def _handle_direct_messages_retrieval(self, message: MessageRetrievalMessage) -> None:
-        """Handle direct messages retrieval request.
+    def _handle_direct_messages_retrieval(self, message: MessageRetrievalMessage) -> Dict[str, Any]:
+        """Handle direct messages retrieval request and return the data.
         
         Args:
             message: The retrieval request message
+            
+        Returns:
+            Dict[str, Any]: The direct messages retrieval response data
         """
         target_agent_id = message.destination_id
         agent_id = message.source_id
-        limit = message.limit
-        offset = message.offset
+        limit = int(message.limit)
+        offset = int(message.offset)
         include_threads = message.include_threads
         
         if not target_agent_id:
-            # Send error response
-            response = Event(
-                event_name="thread.direct_messages.retrieval_response",
-                source_id=self.network.network_id,
-                destination_id=agent_id,
-                payload={
-                    "action": "retrieve_direct_messages_response",
-                    "success": False,
-                    "error": "Target agent ID is required",
-                    "request_id": self._get_request_id(message)
-                }
-            )
-            await self.network.send_message(response)
-            return
+            return {
+                "success": False,
+                "error": "Target agent ID is required",
+                "request_id": self._get_request_id(message)
+            }
         
         # Find direct messages between the two agents
         direct_messages = []
@@ -1457,27 +1343,20 @@ class ThreadMessagingNetworkMod(BaseMod):
         total_count = len(direct_messages)
         paginated_messages = direct_messages[offset:offset + limit]
         
-        # Send response
-        response = Event(
-            event_name="thread.direct_messages.retrieval_response",
-            source_id=self.network.network_id,
-            destination_id=agent_id,
-            payload={
-                "action": "retrieve_direct_messages_response",
-                "success": True,
-                "target_agent_id": target_agent_id,
-                "messages": paginated_messages,
-                "total_count": total_count,
-                "offset": offset,
-                "limit": limit,
-                "has_more": (offset + limit) < total_count,
-                "request_id": message.event_id
-            }
-        )
-        await self.network.send_message(response)
-        logger.debug(f"Sent {len(paginated_messages)} direct messages with {target_agent_id} to {agent_id}")
+        logger.debug(f"Retrieved {len(paginated_messages)} direct messages with {target_agent_id}")
+        
+        return {
+            "success": True,
+            "target_agent_id": target_agent_id,
+            "messages": paginated_messages,
+            "total_count": total_count,
+            "offset": offset,
+            "limit": limit,
+            "has_more": (offset + limit) < total_count,
+            "request_id": self._get_request_id(message)
+        }
     
-    async def _process_reaction_message(self, message: ReactionMessage) -> None:
+    async def _process_reaction_message(self, message: ReactionMessage) -> Dict[str, Any]:
         """Process a reaction message.
         
         Args:
@@ -1508,23 +1387,13 @@ class ThreadMessagingNetworkMod(BaseMod):
         # Check if the target message exists
         if target_message_id not in self.message_history:
             logger.warning(f"Cannot react: target message {target_message_id} not found")
-            
-            # Send error response
-            response = Event(
-                event_name="thread.reaction.response",
-                source_id=self.network.network_id,
-                destination_id=agent_id,
-                payload={
-                    "action": "reaction_response",
-                    "success": False,
-                    "error": f"Target message {target_message_id} not found",
-                    "target_message_id": target_message_id,
-                    "reaction_type": reaction_type,
-                    "request_id": self._get_request_id(message)
-                }
-            )
-            await self.network.send_message(response)
-            return
+            return {
+                "success": False,
+                "error": f"Target message {target_message_id} not found",
+                "target_message_id": target_message_id,
+                "reaction_type": reaction_type,
+                "request_id": self._get_request_id(message)
+            }
         
         # Initialize reactions for the message if not exists
         if target_message_id not in self.reactions:
@@ -1562,24 +1431,18 @@ class ThreadMessagingNetworkMod(BaseMod):
             else:
                 logger.debug(f"{agent_id} doesn't have {reaction_type} reaction on message {target_message_id}")
         
-        # Send response
-        response = Event(
-            event_name="thread.reaction.response",
-            source_id=self.network.network_id,
-            destination_id=agent_id,
-            payload={
-                "action": "reaction_response",
-                "success": success,
-                "target_message_id": target_message_id,
-                "reaction_type": reaction_type,
-                "action_taken": action,
-                "total_reactions": len(self.reactions.get(target_message_id, {}).get(reaction_type, set())),
-                "request_id": message.event_id
-            }
-        )
-        await self.network.send_message(response)
+        # Return response data
+        reaction_response = {
+            "success": success,
+            "target_message_id": target_message_id,
+            "reaction_type": reaction_type,
+            "action_taken": action,
+            "total_reactions": len(self.reactions.get(target_message_id, {}).get(reaction_type, set())),
+            "request_id": self._get_request_id(message)
+        }
         
         # Notify other agents about the reaction (broadcast to interested parties)
+        # Note: We still send notifications to other agents since they need to know about reactions
         target_message = self.message_history[target_message_id]
         
         # Determine who should be notified based on the message type
@@ -1610,7 +1473,6 @@ class ThreadMessagingNetworkMod(BaseMod):
                 source_id=self.network.network_id,
                 destination_id=notify_agent,
                 payload={
-                    "action": "reaction_notification",
                     "target_message_id": target_message_id,
                     "reaction_type": reaction_type,
                     "reacting_agent": agent_id,
@@ -1618,7 +1480,9 @@ class ThreadMessagingNetworkMod(BaseMod):
                     "total_reactions": len(self.reactions.get(target_message_id, {}).get(reaction_type, set()))
                 }
             )
-            await self.network.send_message(notification)
+            await self.network.process_event(notification)
+        
+        return reaction_response
     
     def get_state(self) -> Dict[str, Any]:
         """Get the current state of the Thread Messaging protocol.
