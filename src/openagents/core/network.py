@@ -56,12 +56,6 @@ class AgentNetwork:
         self.mods: OrderedDict[str, BaseMod] = OrderedDict()
         self.mod_manifests: Dict[str, Any] = {}
         
-        # Workspace tracking for direct response delivery
-        self._registered_workspaces: Dict[str, Any] = {}  # agent_id -> workspace
-        
-        # Agent client tracking for direct message delivery
-        self._registered_agent_clients: Dict[str, Any] = {}  # agent_id -> agent_client
-        
         # Agent identity management
         self.identity_manager = AgentIdentityManager()
         
@@ -466,26 +460,6 @@ class AgentNetwork:
         
         logger.info(f"Created workspace with client ID: {client_id}")
         return workspace
-    
-    def _register_workspace(self, agent_id: str, workspace) -> None:
-        """Register a workspace for direct response delivery.
-        
-        Args:
-            agent_id: ID of the workspace client
-            workspace: Workspace instance
-        """
-        self._registered_workspaces[agent_id] = workspace
-        logger.info(f"Registered workspace for agent {agent_id}")
-    
-    def _register_agent_client(self, agent_id: str, agent_client) -> None:
-        """Register an agent client for direct message delivery.
-        
-        Args:
-            agent_id: ID of the agent
-            agent_client: AgentClient instance
-        """
-        self._registered_agent_clients[agent_id] = agent_client
-        logger.info(f"Registered agent client for agent {agent_id}")
 
 
 def create_network(config: Union[NetworkConfig, str, Path]) -> AgentNetwork:
