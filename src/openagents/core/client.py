@@ -191,9 +191,17 @@ class AgentClient:
             self.connector.register_event_handler(self._handle_event)
             
             # Start message polling for gRPC connectors (workaround for bidirectional messaging limitation)
-            if hasattr(self.connector, 'poll_messages'):
-                logger.info(f"🔧 Starting message polling for  agent {self.agent_id}")
-                asyncio.create_task(self._start_message_polling())
+            assert hasattr(self.connector, 'is_polling'), "Connector must have is_polling attribute"
+            if self.connector.is_polling:
+                if hasattr(self.connector, 'poll_messages'):
+                    logger.info(f"🔧 Starting message polling for  agent {self.agent_id}")
+                    asyncio.create_task(self._start_message_polling())
+                else:
+                    raise SystemError("Connector must have poll_messages method")
+            else:
+                # TODO: Implement proper bidirectional messaging later
+                # TODO: Create a task for periodic heartbeat
+                raise NotImplementedError("Bidirectional messaging is not supported yet")
             
         
         return success

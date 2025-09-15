@@ -50,6 +50,7 @@ class GRPCNetworkConnector:
         self.stub = None
         self.stream = None
         self.is_connected = False
+        self.is_polling = False
         
         # Message handling
         self.event_handlers: List[Callable[[Any], Awaitable[None]]] = []
