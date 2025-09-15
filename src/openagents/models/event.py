@@ -11,6 +11,7 @@ import uuid
 from enum import Enum
 from typing import Dict, Any, Optional, Set, List
 import logging
+from warnings import deprecated
 from aiohttp.hdrs import DESTINATION
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -291,14 +292,11 @@ class Event(BaseModel):
     def target_id(self) -> Optional[str]:
         return self.destination_id
     
-    @property  
+    @deprecated("Use destination_id instead")
+    @property 
     def relevant_agent_id(self) -> Optional[str]:
         return self.destination_id
         
-    @relevant_agent_id.setter
-    def relevant_agent_id(self, value: Optional[str]):
-        self.destination_id = value
-
     def to_dict(self) -> Dict[str, Any]:
         """Convert event to dictionary for serialization."""
         return self.model_dump()

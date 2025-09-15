@@ -17,6 +17,7 @@ from openagents.proto import agent_service_pb2_grpc, agent_service_pb2
 from .base import Transport
 from openagents.models.transport import TransportType, ConnectionState, ConnectionInfo
 from openagents.models.event import Event
+from openagents.models.event_response import EventResponse
 
 logger = logging.getLogger(__name__)
 
@@ -283,16 +284,23 @@ class GRPCTransport(Transport):
             logger.error(f"Error disconnecting from gRPC peer {peer_id}: {e}")
             return False
     
-    async def send(self, message: Event) -> bool:
+    async def send(self, message: Event) -> EventResponse:
         """Send event via gRPC."""
+        # TODO: Implement gRPC message sending
         try:
             # gRPC message sending is typically handled by the servicer
             # This is a simplified implementation
             logger.debug(f"Sending gRPC message from {message.source_id} to {message.destination_id}")
-            return True
+            return EventResponse(
+                success=True,
+                message="Event sent successfully via gRPC transport"
+            )
         except Exception as e:
             logger.error(f"Error sending gRPC message: {e}")
-            return False
+            return EventResponse(
+                success=False,
+                message=f"Error sending gRPC message: {str(e)}"
+            )
     
     async def listen(self, address: str) -> bool:
         """Start gRPC server."""
