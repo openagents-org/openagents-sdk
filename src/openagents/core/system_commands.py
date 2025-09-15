@@ -474,7 +474,7 @@ class SystemCommandProcessor:
             )
         
         # Get queued messages for the agent from event gateway
-        messages = self.network.event_gateway.poll_events(requesting_agent_id)
+        messages = await self.network.event_gateway.poll_events(requesting_agent_id)
         
         # Convert messages to serializable format
         serialized_messages = []

@@ -10,14 +10,11 @@ import json
 import logging
 import time
 from typing import Dict, Any, Optional, Callable, Awaitable, List
-import uuid
 
 from openagents.config.globals import SYSTEM_EVENT_POLL_MESSAGES
 from openagents.models.event_response import EventResponse
 from openagents.models.messages import Event, EventNames
 from openagents.models.event import Event
-from openagents.utils.message_util import parse_message_dict
-from .system_commands import REGISTER_AGENT, LIST_AGENTS, LIST_MODS, GET_MOD_MANIFEST, PING_AGENT, CLAIM_AGENT_ID, VALIDATE_CERTIFICATE, POLL_MESSAGES
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +47,7 @@ class GRPCNetworkConnector:
         self.stub = None
         self.stream = None
         self.is_connected = False
-        self.is_polling = False
+        self.is_polling = True  # gRPC uses polling for message retrieval
         
         # Message handling
         self.event_handlers: List[Callable[[Any], Awaitable[None]]] = []

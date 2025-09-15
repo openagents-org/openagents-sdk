@@ -10,7 +10,7 @@ from openagents.models.detected_network_profile import DetectedNetworkProfile, D
 from openagents.models.event_response import EventResponse
 from openagents.models.transport import TransportType
 from openagents.utils.network_discovey import retrieve_network_details
-from openagents.core.grpc_connector import GRPCNetworkConnector
+from openagents.core.connectors.grpc_connector import GRPCNetworkConnector
 from openagents.models.event import Event
 from openagents.core.base_mod_adapter import BaseModAdapter
 from openagents.models.messages import Event, EventNames
