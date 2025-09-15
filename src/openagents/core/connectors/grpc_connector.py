@@ -15,11 +15,12 @@ from openagents.config.globals import SYSTEM_EVENT_POLL_MESSAGES
 from openagents.models.event_response import EventResponse
 from openagents.models.messages import Event, EventNames
 from openagents.models.event import Event
+from openagents.core.connectors.base import NetworkConnector
 
 logger = logging.getLogger(__name__)
 
 
-class GRPCNetworkConnector:
+class GRPCNetworkConnector(NetworkConnector):
     """Handles gRPC network connections and message passing for agents.
     
     This connector allows agents to connect to gRPC-based networks using
@@ -36,23 +37,16 @@ class GRPCNetworkConnector:
             metadata: Agent metadata to send during registration
             max_message_size: Maximum message size in bytes (default 100MB)
         """
-        self.host = host
-        self.port = port
-        self.agent_id = agent_id
-        self.metadata = metadata or {}
+        # Initialize base connector
+        super().__init__(host, port, agent_id, metadata)
+        
         self.max_message_size = max_message_size
+        self.is_polling = True  # gRPC uses polling for message retrieval
         
         # gRPC components
         self.channel = None
         self.stub = None
         self.stream = None
-        self.is_connected = False
-        self.is_polling = True  # gRPC uses polling for message retrieval
-        
-        # Message handling
-        self.event_handlers: List[Callable[[Any], Awaitable[None]]] = []
-        self.system_handlers = {}
-        self.event_listener_task = None
         
         # gRPC modules (loaded on demand)
         self.grpc = None
@@ -193,47 +187,8 @@ class GRPCNetworkConnector:
             logger.error(f"Error disconnecting from gRPC network: {e}")
             return False
     
-    def register_event_handler(self, handler: Callable[[Any], Awaitable[None]]) -> None:
-        """Register a handler for events.
-        
-        Args:
-            handler: Async function to call when event is received
-        """
-        if handler not in self.event_handlers:
-            self.event_handlers.append(handler)
-            logger.debug(f"Registered gRPC event handler")
-    
-    def unregister_event_handler(self, handler: Callable[[Any], Awaitable[None]]) -> bool:
-        """Unregister an event handler.
-        
-        Args:
-            handler: The handler function to remove
-            
-        Returns:
-            bool: True if handler was removed, False if not found
-        """
-        if handler in self.event_handlers:
-            self.event_handlers.remove(handler)
-            logger.debug(f"Unregistered gRPC event handler")
-            return True
-        return False
-    
-    
     # Note: Streaming methods removed for simplicity
     # TODO: Implement bidirectional streaming for better performance
-    
-    async def consume_message(self, message: Event) -> None:
-        """Consume a message on the agent side.
-        
-        Args:
-            message: Message to consume
-        """
-        # Call all registered event handlers
-        for handler in reversed(self.event_handlers):
-            try:
-                await handler(message)
-            except Exception as e:
-                logger.error(f"Error in gRPC event handler: {e}")
     
     async def send_event(self, message: Event) -> EventResponse:
         """Send an event via gRPC.
@@ -246,24 +201,12 @@ class GRPCNetworkConnector:
         """
         if not self.is_connected:
             logger.debug(f"Agent {self.agent_id} is not connected to gRPC network")
-            return EventResponse(
-                success=False,
-                message="Agent is not connected to gRPC network"
-            )
+            return self._create_error_response("Agent is not connected to gRPC network")
             
         try:
-            # Validate and ensure required event fields are set
-            if not message.source_id:
-                message.source_id = self.agent_id
-            
-            if not message.event_name:
-                return EventResponse(
-                    success=False,
-                    message="Event name is required"
-                )
-            
-            if not message.event_id:
-                logger.warning(f"Event missing event_id, this may cause issues")
+            # Validate event using base class method
+            if not self._validate_event(message):
+                return self._create_error_response("Event validation failed")
             
             # Send event via unified gRPC SendEvent
             grpc_event = self._to_grpc_event(message)
@@ -298,18 +241,10 @@ class GRPCNetworkConnector:
             
             if response.success:
                 logger.debug(f"Successfully sent gRPC event {message.event_id}")
-                return EventResponse(
-                    success=True,
-                    message=response.message,
-                    data=response_data
-                )
+                return self._create_success_response(response.message, response_data)
             else:
                 logger.error(f"Failed to send gRPC event {message.event_id}: {response.message}")
-                return EventResponse(
-                    success=False,
-                    message=response.message,
-                    data=response_data
-                )
+                return self._create_error_response(response.message)
                 
         except Exception as e:
             # Handle gRPC-specific errors
@@ -323,10 +258,7 @@ class GRPCNetworkConnector:
                     error_message = f"gRPC error: {e.details()}"
             
             logger.error(error_message)
-            return EventResponse(
-                success=False,
-                message=error_message
-            )
+            return self._create_error_response(error_message)
      
     async def poll_messages(self) -> List[Event]:
         """Poll for queued messages from the gRPC network server.
