@@ -12,6 +12,8 @@ import time
 from typing import Dict, Any, Optional, Callable, Awaitable, List
 import uuid
 
+from openagents.config.globals import SYSTEM_EVENT_POLL_MESSAGES
+from openagents.models.event_response import EventResponse
 from openagents.models.messages import Event, EventNames
 from openagents.models.event import Event
 from openagents.utils.message_util import parse_message_dict
@@ -50,9 +52,9 @@ class GRPCNetworkConnector:
         self.is_connected = False
         
         # Message handling
-        self.message_handlers: Dict[str, List[Callable[[Any], Awaitable[None]]]] = {}
+        self.event_handlers: List[Callable[[Any], Awaitable[None]]] = []
         self.system_handlers = {}
-        self.message_listener_task = None
+        self.event_listener_task = None
         
         # gRPC modules (loaded on demand)
         self.grpc = None
@@ -158,10 +160,10 @@ class GRPCNetworkConnector:
             self.is_connected = False
             
             # Cancel message listener task if exists
-            if hasattr(self, 'message_listener_task') and self.message_listener_task and not self.message_listener_task.done():
-                self.message_listener_task.cancel()
+            if hasattr(self, 'message_listener_task') and self.event_listener_task and not self.event_listener_task.done():
+                self.event_listener_task.cancel()
                 try:
-                    await self.message_listener_task
+                    await self.event_listener_task
                 except asyncio.CancelledError:
                     pass
             
@@ -193,49 +195,31 @@ class GRPCNetworkConnector:
             logger.error(f"Error disconnecting from gRPC network: {e}")
             return False
     
-    def register_message_handler(self, message_type: str, handler: Callable[[Any], Awaitable[None]]) -> None:
-        """Register a handler for a specific message type.
+    def register_event_handler(self, handler: Callable[[Any], Awaitable[None]]) -> None:
+        """Register a handler for events.
         
         Args:
-            message_type: Type of message to handle
-            handler: Async function to call when message is received
+            handler: Async function to call when event is received
         """
-        if message_type not in self.message_handlers:
-            self.message_handlers[message_type] = []
-        
-        if handler not in self.message_handlers[message_type]:
-            self.message_handlers[message_type].append(handler)
-            logger.debug(f"Registered gRPC handler for message type: {message_type}")
+        if handler not in self.event_handlers:
+            self.event_handlers.append(handler)
+            logger.debug(f"Registered gRPC event handler")
     
-    def unregister_message_handler(self, message_type: str, handler: Callable[[Any], Awaitable[None]]) -> bool:
-        """Unregister a handler for a specific message type.
+    def unregister_event_handler(self, handler: Callable[[Any], Awaitable[None]]) -> bool:
+        """Unregister an event handler.
         
         Args:
-            message_type: Type of message to handle
             handler: The handler function to remove
             
         Returns:
             bool: True if handler was removed, False if not found
         """
-        if message_type in self.message_handlers and handler in self.message_handlers[message_type]:
-            self.message_handlers[message_type].remove(handler)
-            logger.debug(f"Unregistered gRPC handler for message type: {message_type}")
-            
-            if not self.message_handlers[message_type]:
-                del self.message_handlers[message_type]
-                
+        if handler in self.event_handlers:
+            self.event_handlers.remove(handler)
+            logger.debug(f"Unregistered gRPC event handler")
             return True
         return False
     
-    def register_system_handler(self, command: str, handler: Callable[[Dict[str, Any]], Awaitable[None]]) -> None:
-        """Register a handler for a specific system command response.
-        
-        Args:
-            command: Type of system command response to handle
-            handler: Async function to call when system response is received
-        """
-        self.system_handlers[command] = handler
-        logger.debug(f"Registered gRPC handler for system command: {command}")
     
     # Note: Streaming methods removed for simplicity
     # TODO: Implement bidirectional streaming for better performance
@@ -246,311 +230,197 @@ class GRPCNetworkConnector:
         Args:
             message: Message to consume
         """
-        if isinstance(message, Event):
-            message.relevant_agent_id = self.agent_id
-            
-        message_type = message.message_type
-        if message_type in self.message_handlers:
-            for handler in reversed(self.message_handlers[message_type]):
-                try:
-                    await handler(message)
-                except Exception as e:
-                    logger.error(f"Error in gRPC message handler for {message_type}: {e}")
+        # Call all registered event handlers
+        for handler in reversed(self.event_handlers):
+            try:
+                await handler(message)
+            except Exception as e:
+                logger.error(f"Error in gRPC event handler: {e}")
     
-    async def send_message(self, message: Event) -> bool:
+    async def send_event(self, message: Event) -> EventResponse:
         """Send an event via gRPC.
         
         Args:
             message: Event to send (now extends Event)
             
         Returns:
-            bool: True if event sent successfully, False otherwise
+            EventResponse: The response from the server
         """
         if not self.is_connected:
             logger.debug(f"Agent {self.agent_id} is not connected to gRPC network")
-            return False
+            return EventResponse(
+                success=False,
+                message="Agent is not connected to gRPC network"
+            )
             
         try:
-            # Ensure source_id is set (Event field)
+            # Validate and ensure required event fields are set
             if not message.source_id:
                 message.source_id = self.agent_id
             
-            # For Event backward compatibility
-            if isinstance(message, Event):
-                if not message.relevant_agent_id:
-                    message.relevant_agent_id = self.agent_id
+            if not message.event_name:
+                return EventResponse(
+                    success=False,
+                    message="Event name is required"
+                )
             
-            # Debug logging for direct messages
-            if "direct_message" in message.event_name:
-                print(f"🔧 GRPC: Sending direct message from {message.source_id} to {message.destination_id}")
-                print(f"🔧 GRPC: Message event_name: {message.event_name}")
-                logger.info(f"🔧 GRPC: Sending direct message from {message.source_id} to {message.destination_id}")
-                logger.info(f"🔧 GRPC: Message event_name: {message.event_name}")
-                logger.info(f"🔧 GRPC: Message payload: {message.payload}")
+            if not message.event_id:
+                logger.warning(f"Event missing event_id, this may cause issues")
             
             # Send event via unified gRPC SendEvent
             grpc_event = self._to_grpc_event(message)
             
-            # Debug logging for troubleshooting
-            logger.info(f"🔧 GRPC_CONNECTOR: About to send unified event {message.event_name} via SendEvent")
-            logger.debug(f"🔧 GRPC_CONNECTOR: Event details - source: {message.source_id}, target: {message.destination_id}")
-            
             # Send the event to the server using unified SendEvent
             response = await self.stub.SendEvent(grpc_event)
             
+            # Convert gRPC response to EventResponse
+            response_data = None
+            if response.data and response.data.value:
+                try:
+                    # Try to unpack as protobuf Struct first
+                    from google.protobuf.struct_pb2 import Struct
+                    from google.protobuf.json_format import MessageToDict
+                    
+                    struct = Struct()
+                    if response.data.Unpack(struct):
+                        response_data = MessageToDict(struct)
+                        logger.debug(f"Successfully unpacked response data as protobuf Struct")
+                    else:
+                        # Fallback to JSON decoding
+                        import json
+                        response_data = json.loads(response.data.value.decode('utf-8'))
+                        logger.debug(f"Successfully decoded response data as JSON")
+                except Exception as e:
+                    logger.warning(f"Failed to decode response data: {e}")
+                    # Last resort: try to extract raw string
+                    try:
+                        response_data = {"raw_response": response.data.value.decode('utf-8')}
+                    except:
+                        response_data = {"error": "Failed to decode response data"}
+            
             if response.success:
                 logger.debug(f"Successfully sent gRPC event {message.event_id}")
-                
-                # Handle system command responses
-                if message.event_name.startswith('system.') and response.response_data:
-                    command = message.event_name[7:]  # Remove 'system.' prefix
-                    logger.debug(f"🔧 GRPC: Processing system command response for {command}")
-                    
-                    try:
-                        # Decode the response data 
-                        import json
-                        response_data = json.loads(response.response_data.value.decode('utf-8'))
-                        logger.debug(f"🔧 GRPC: System response data: {response_data}")
-                        
-                        # Call the registered system handler if available
-                        if command in self.system_handlers:
-                            await self.system_handlers[command](response_data)
-                            logger.debug(f"🔧 GRPC: Called system handler for {command}")
-                        else:
-                            logger.warning(f"🔧 GRPC: No system handler registered for {command}")
-                            
-                    except Exception as e:
-                        logger.error(f"🔧 GRPC: Error processing system command response for {command}: {e}")
-                
-                return True
+                return EventResponse(
+                    success=True,
+                    message=response.message,
+                    data=response_data
+                )
             else:
-                logger.error(f"Failed to send gRPC event {message.event_id}: {response.error_message}")
-                return False
+                logger.error(f"Failed to send gRPC event {message.event_id}: {response.message}")
+                return EventResponse(
+                    success=False,
+                    message=response.message,
+                    data=response_data
+                )
                 
         except Exception as e:
-            logger.error(f"Failed to send gRPC message: {e}")
-            return False
-    
-    async def send_direct_message(self, message: Event) -> bool:
-        """Send a direct message to another agent."""
-        return await self.send_message(message)
-    
-    async def send_broadcast_message(self, message: Event) -> bool:
-        """Send a broadcast message to all connected agents."""
-        return await self.send_message(message)
-    
-    async def send_mod_message(self, message: Event) -> bool:
-        """Send a mod message to another agent."""
-        return await self.send_message(message)
-    
-    async def send_system_request(self, command: str, **kwargs) -> bool:
-        """Send a system request to the gRPC network server.
-        
-        Args:
-            command: The system command to send
-            **kwargs: Additional parameters for the command
+            # Handle gRPC-specific errors
+            error_message = f"Failed to send gRPC message: {str(e)}"
             
-        Returns:
-            bool: True if request was sent successfully
-        """
-        if not self.is_connected:
-            logger.debug(f"Agent {self.agent_id} is not connected to gRPC network")
-            return False
-        
-        try:
-            # Automatically include the agent_id in system requests
-            kwargs['agent_id'] = self.agent_id
+            # Check for common gRPC errors
+            if hasattr(e, 'code'):
+                if hasattr(e.code(), 'name'):
+                    error_message = f"gRPC error {e.code().name}: {e.details()}"
+                else:
+                    error_message = f"gRPC error: {e.details()}"
             
-            # Send as unified event with system.* event_name
-            system_event = Event(
-                event_name=f"system.{command}",
-                source_id=self.agent_id,
-                payload=kwargs,
-                event_id=str(uuid.uuid4()),
-                timestamp=time.time()
+            logger.error(error_message)
+            return EventResponse(
+                success=False,
+                message=error_message
             )
-            
-            logger.debug(f"Sending system command '{command}' as unified event: system.{command}")
-            return await self.send_message(system_event)
-            
-        except Exception as e:
-            logger.error(f"Failed to send gRPC system request: {e}")
-            return False
-    
-    async def list_agents(self) -> bool:
-        """Request a list of agents from the gRPC network server."""
-        return await self.send_system_request(LIST_AGENTS)
-    
-    async def list_mods(self) -> bool:
-        """Request a list of mods from the gRPC network server."""
-        return await self.send_system_request(LIST_MODS)
-    
-    async def poll_messages(self) -> List[Dict[str, Any]]:
+     
+    async def poll_messages(self) -> List[Event]:
         """Poll for queued messages from the gRPC network server.
         
         Returns:
-            List of messages waiting for this agent
+            List of Event objects waiting for this agent
         """
         if not self.is_connected:
             logger.debug(f"Agent {self.agent_id} is not connected to gRPC network")
             return []
         
         try:
-            # Register a system handler for poll_messages if not already registered
-            if POLL_MESSAGES not in self.system_handlers:
-                logger.info(f"🔧 GRPC: Registering poll_messages handler for agent {self.agent_id}")
-                self.register_system_handler(POLL_MESSAGES, self._handle_poll_messages_response)
-            else:
-                logger.info(f"🔧 GRPC: poll_messages handler already registered for agent {self.agent_id}")
+            # Create poll messages event
+            poll_event = Event(
+                event_name=SYSTEM_EVENT_POLL_MESSAGES,
+                source_id=self.agent_id,
+                destination_id="system:system",
+                payload={"agent_id": self.agent_id}
+            )
             
-            # Send poll_messages system request
-            success = await self.send_system_request(POLL_MESSAGES)
-            if success:
-                # The response will be handled by the system command response handler
-                # For now, return empty list as this is async
+            # Send the poll request
+            response = await self.send_event(poll_event)
+            
+            if not response or not response.success:
+                logger.warning(f"Poll messages request failed: {response.message if response else 'No response'}")
                 return []
+            
+            # Extract messages from response data
+            messages = []
+            if response.data:
+                try:
+                    # Handle different response data structures
+                    response_messages = []
+                    
+                    if isinstance(response.data, list):
+                        # Direct list of messages
+                        response_messages = response.data
+                        logger.debug(f"🔧 GRPC: Received direct list of {len(response_messages)} messages")
+                    elif isinstance(response.data, dict):
+                        if 'messages' in response.data:
+                            # Response wrapped in a dict with 'messages' key
+                            response_messages = response.data['messages']
+                            logger.debug(f"🔧 GRPC: Extracted {len(response_messages)} messages from response dict")
+                        else:
+                            logger.warning(f"🔧 GRPC: Dict response missing 'messages' key: {list(response.data.keys())}")
+                            return []
+                    else:
+                        logger.warning(f"🔧 GRPC: Unexpected poll_messages response format: {type(response.data)} - {response.data}")
+                        return []
+                    
+                    logger.info(f"🔧 GRPC: Processing {len(response_messages)} polled messages for {self.agent_id}")
+                    
+                    # Convert each message to Event object
+                    for message_data in response_messages:
+                        try:
+                            if isinstance(message_data, dict):
+                                if 'event_name' in message_data:
+                                    # This is already an Event structure
+                                    event = Event(**message_data)
+                                    messages.append(event)
+                                    logger.debug(f"🔧 GRPC: Successfully converted message to Event: {event.event_id}")
+                                else:
+                                    # This might be a legacy message format - try to parse it
+                                    from openagents.utils.message_util import parse_message_dict
+                                    event = parse_message_dict(message_data)
+                                    if event:
+                                        messages.append(event)
+                                        logger.debug(f"🔧 GRPC: Successfully parsed legacy message to Event: {event.event_id}")
+                                    else:
+                                        logger.warning(f"🔧 GRPC: Failed to parse message data: {message_data}")
+                            else:
+                                logger.warning(f"🔧 GRPC: Invalid message format in poll response: {message_data}")
+                                
+                        except Exception as e:
+                            logger.error(f"🔧 GRPC: Error processing polled message: {e}")
+                            logger.debug(f"🔧 GRPC: Problematic message data: {message_data}")
+                    
+                    logger.info(f"🔧 GRPC: Successfully converted {len(messages)} messages to Events")
+                    for event in messages:
+                        self.consume_message(event)
+                    return messages
+                    
+                except Exception as e:
+                    logger.error(f"🔧 GRPC: Error parsing poll_messages response: {e}")
+                    return []
             else:
+                logger.debug(f"🔧 GRPC: No messages in poll response")
                 return []
+                
         except Exception as e:
             logger.error(f"Failed to poll messages: {e}")
             return []
-    
-    async def _handle_poll_messages_response(self, response_data: Dict[str, Any]) -> None:
-        """Handle poll_messages system command response.
-        
-        Args:
-            response_data: Response data containing messages
-        """
-        logger.info(f"🔧 GRPC: Received poll_messages response with data: {type(response_data)}")
-        
-        try:
-            # Extract messages from response
-            messages = []
-            if isinstance(response_data, list):
-                # Direct list of messages
-                messages = response_data
-                logger.info(f"🔧 GRPC: Received direct list of {len(messages)} messages")
-            elif isinstance(response_data, dict):
-                if 'messages' in response_data:
-                    # Response wrapped in a dict with 'messages' key
-                    messages = response_data['messages']
-                    logger.info(f"🔧 GRPC: Extracted {len(messages)} messages from response dict")
-                else:
-                    logger.warning(f"🔧 GRPC: Dict response missing 'messages' key: {list(response_data.keys())}")
-                    return
-            else:
-                logger.warning(f"🔧 GRPC: Unexpected poll_messages response format: {type(response_data)} - {response_data}")
-                return
-            
-            logger.info(f"🔧 GRPC: Processing {len(messages)} polled messages for {self.agent_id}")
-            
-            # Process each message
-            for message_data in messages:
-                try:
-                    # Convert message data to Event
-                    from openagents.models.event import Event
-                    from openagents.utils.message_util import parse_message_dict
-                    
-                    # Parse the message based on its structure
-                    if isinstance(message_data, dict):
-                        if 'event_name' in message_data:
-                            # This is an Event
-                            event = Event(**message_data)
-                        else:
-                            # This might be a legacy message format
-                            event = parse_message_dict(message_data)
-                        
-                        # Route the message through the connector's message handlers
-                        await self.consume_message(event)
-                        logger.debug(f"🔧 GRPC: Successfully processed polled message: {event.event_id}")
-                        
-                    else:
-                        logger.warning(f"🔧 GRPC: Invalid message format in poll response: {message_data}")
-                        
-                except Exception as e:
-                    logger.error(f"🔧 GRPC: Error processing polled message: {e}")
-                    logger.debug(f"🔧 GRPC: Problematic message data: {message_data}")
-                    
-        except Exception as e:
-            logger.error(f"🔧 GRPC: Error handling poll_messages response: {e}")
-    
-    def _to_grpc_message(self, message: Event):
-        """Convert internal message to gRPC message format."""
-        # Create protobuf message
-        grpc_message = self.agent_service_pb2.Message(
-            message_id=message.message_id,
-            sender_id=message.sender_id,
-            target_id=getattr(message, 'target_agent_id', '') or getattr(message, 'target_id', ''),
-            message_type=message.message_type,
-            timestamp=self._to_timestamp(time.time())
-        )
-        
-        # Serialize message content to protobuf Any field
-        try:
-            from google.protobuf.any_pb2 import Any
-            from google.protobuf.struct_pb2 import Struct
-            
-            # Convert message content to protobuf Struct
-            struct = Struct()
-            
-            # For Event, include mod-specific fields
-            if isinstance(message, Event):
-                # Include the mod field and other Event attributes
-                mod_data = {
-                    "mod": message.mod,
-                    "action": getattr(message, 'action', None),
-                    "direction": getattr(message, 'direction', None),
-                    "relevant_agent_id": getattr(message, 'relevant_agent_id', None)
-                }
-                # Add content
-                if message.content:
-                    if isinstance(message.content, dict):
-                        # Make sure content is JSON serializable
-                        serializable_content = self._make_json_serializable(message.content)
-                        mod_data.update(serializable_content)
-                    else:
-                        mod_data["content"] = str(message.content)
-                
-                struct.update(mod_data)
-            else:
-                # Handle other message types by serializing all fields
-                message_data = {}
-                
-                # For ProjectNotificationMessage and other special types, include all fields
-                if hasattr(message, 'project_id'):
-                    message_data["project_id"] = getattr(message, 'project_id', '')
-                if hasattr(message, 'notification_type'):
-                    message_data["notification_type"] = getattr(message, 'notification_type', '')
-                if hasattr(message, 'content'):
-                    if isinstance(message.content, dict):
-                        message_data["content"] = self._make_json_serializable(message.content)
-                    else:
-                        message_data["content"] = str(message.content)
-                
-                # Add any other fields that might be relevant
-                for field in ['target_agent_id', 'channel_name', 'action']:
-                    if hasattr(message, field):
-                        value = getattr(message, field, None)
-                        if value is not None:
-                            message_data[field] = self._make_json_serializable(value)
-                
-                if message_data:
-                    struct.update(message_data)
-                elif hasattr(message, 'content') and message.content:
-                    if isinstance(message.content, dict):
-                        struct.update(message.content)
-                    else:
-                        struct.update({"content": str(message.content)})
-            
-            # Pack into Any
-            any_payload = Any()
-            any_payload.Pack(struct)
-            grpc_message.payload.CopyFrom(any_payload)
-            
-        except Exception as e:
-            logger.warning(f"Failed to serialize message content: {e}")
-        
-        return grpc_message
     
     def _to_grpc_event(self, event: Event):
         """Convert internal event to unified gRPC Event format."""
@@ -672,80 +542,3 @@ class GRPCNetworkConnector:
     def _from_timestamp(self, timestamp) -> float:
         """Convert protobuf timestamp to Python timestamp."""
         return timestamp.ToSeconds()
-    
-    # Compatibility methods for existing NetworkConnector interface
-    async def wait_mod_message(self, mod_name: str, filter_dict: Optional[Dict[str, Any]] = None, timeout: float = 5.0) -> Optional[Event]:
-        """Wait for a mod message from the specified mod that matches the filter criteria."""
-        if not self.is_connected:
-            logger.debug(f"Agent {self.agent_id} is not connected to gRPC network")
-            return None
-            
-        # Create a future to store the response
-        response_future = asyncio.Future()
-        
-        async def temp_mod_handler(msg: Event) -> None:
-            # Check if this is the message we're waiting for
-            if (msg.mod == mod_name and 
-                msg.relevant_agent_id == self.agent_id):
-                
-                # If filter_dict is provided, check if all key-value pairs match in the content
-                if filter_dict:
-                    matches = True
-                    for key, value in filter_dict.items():
-                        if key not in msg.content or msg.content[key] != value:
-                            matches = False
-                            break
-                    
-                    if matches:
-                        response_future.set_result(msg)
-                else:
-                    # No filter, accept any message from this mod
-                    response_future.set_result(msg)
-        
-        # Register the temporary handler
-        self.register_message_handler("mod_message", temp_mod_handler)
-        
-        try:
-            # Wait for the response with timeout
-            try:
-                response = await asyncio.wait_for(response_future, timeout)
-                return response
-            except asyncio.TimeoutError:
-                filter_str = f" with filter {filter_dict}" if filter_dict else ""
-                logger.warning(f"Timeout waiting for gRPC mod message: {mod_name}{filter_str}")
-                return None
-                
-        finally:
-            # Unregister the temporary handler
-            self.unregister_message_handler("mod_message", temp_mod_handler)
-    
-    async def wait_direct_message(self, sender_id: str, timeout: float = 5.0) -> Optional[Event]:
-        """Wait for a direct message from the specified sender."""
-        if not self.is_connected:
-            logger.debug(f"Agent {self.agent_id} is not connected to gRPC network")
-            return None
-            
-        # Create a future to be resolved when the message is received
-        response_future = asyncio.Future()
-        
-        # Create a temporary handler that will resolve the future when the message arrives
-        async def temp_direct_handler(msg: Event) -> None:
-            # Check if this is the message we're waiting for
-            if msg.source_id == sender_id:
-                response_future.set_result(msg)
-        
-        # Register the temporary handler
-        self.register_message_handler("direct_message", temp_direct_handler)
-        
-        try:
-            # Wait for the response with timeout
-            try:
-                response = await asyncio.wait_for(response_future, timeout)
-                return response
-            except asyncio.TimeoutError:
-                logger.warning(f"Timeout waiting for gRPC direct message from: {sender_id}")
-                return None
-                
-        finally:
-            # Unregister the temporary handler
-            self.unregister_message_handler("direct_message", temp_direct_handler)

@@ -119,72 +119,30 @@ class BaseModAdapter(ABC):
             
         self._message_threads[thread_id].add_message(message)
     
-    async def process_incoming_direct_message(self, message: Event) -> Optional[Event]:
-        """Process an incoming message sent to this agent.
-        
-        Args:
-            message: The message to handle
-        
-        Returns:
-            Optional[Event]: The processed message, or None for stopping the message from being processed further by other adapters
+    async def process_incoming_event(self, event: Event) -> Optional[Event]:
         """
-        return message
-    
-    async def process_incoming_broadcast_message(self, message: Event) -> Optional[Event]:
-        """Process an incoming broadcast message.
-        
-        Args:
-            message: The message to handle
-        
-        Returns:
-            Optional[Event]: The processed message, or None for stopping the message from being processed further by other adapters
-        """
-        return message
-    
-    async def process_incoming_mod_message(self, message: Event) -> Optional[Event]:
-        """Process an incoming mod message.
-        
-        Args:
-            message: The message to handle
-        
-        Returns:
-            Optional[Event]: The processed message, or None for stopping the message from being processed further by other adapters
-        """
-        return message
-    
-    async def process_outgoing_direct_message(self, message: Event) -> Optional[Event]:
-        """Process an outgoing message sent to another agent.
-        
-        Args:
-            message: The message to handle
-        
-        Returns:
-            Optional[Event]: The processed message, or None for stopping the message from being processed further by other adapters
-        """
-        return message
-        
-    async def process_outgoing_broadcast_message(self, message: Event) -> Optional[Event]:
-        """Process an outgoing broadcast message.
-        
-        Args:
-            message: The message to handle
-        
-        Returns:
-            Optional[Event]: The processed message, or None for stopping the message from being processed further by other adapters
-        """
-        return message
+        Process an incoming event.
 
-    async def process_outgoing_mod_message(self, message: Event) -> Optional[Event]:
-        """Process an outgoing mod message.
-        
         Args:
-            message: The message to handle
-        
+            event: The event to process
+
         Returns:
-            Optional[Event]: The processed message, or None for stopping the message from being processed further by other adapters
+            Optional[Event]: The processed event, or None for stopping the event from being processed further by other adapters
         """
-        return message
-    
+        return event
+
+    async def process_outgoing_event(self, event: Event) -> Optional[Event]:
+        """
+        Process an outgoing event.
+
+        Args:
+            event: The event to process
+
+        Returns:
+            Optional[Event]: The processed event, or None for stopping the event from being processed further by other adapters
+        """
+        return event
+
     async def get_tools(self) -> List[AgentAdapterTool]:
         """Get the tools for the mod adapter.
         
