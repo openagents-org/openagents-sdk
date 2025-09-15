@@ -107,13 +107,22 @@ class AgentClient:
             logger.error(f"Failed to detect network at {host}:{port}")
             return None
 
-    async def connect_to_server(self, host: Optional[str] = None, port: Optional[int] = None, network_id: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None, max_message_size: int = 104857600) -> bool:
+    async def connect_to_server(
+        self,
+        host: Optional[str] = None,
+        port: Optional[int] = None,
+        network_id: Optional[str] = None,
+        enforce_transport_type: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        max_message_size: int = 104857600
+    ) -> bool:
         """Connect to a network server.
         
         Args:
             host: Server host address
             port: Server port
             network_id: ID of the network to connect to
+            enforce_transport_type: Enforce a specific transport type (grpc, http, websocket)
             metadata: Metadata to send to the server
             max_message_size: Maximum WebSocket message size in bytes (default 10MB)
             
@@ -149,8 +158,24 @@ class AgentClient:
             return False
         
         assert isinstance(detected_profile, DetectedNetworkProfile)
-        transport_type = detected_profile.recommended_transport
+        transport_type = None
         optimal_transport = None
+
+        if enforce_transport_type:
+            for transport in detected_profile.transports:
+                if transport.type.value == enforce_transport_type:
+                    transport_type = enforce_transport_type
+                    break
+            if transport_type is None:
+                raise ValueError(f"The network does not support enforced transport type: {enforce_transport_type}")
+        else:
+            transport_type = detected_profile.recommended_transport
+            if transport_type is None and len(detected_profile.transports) > 0:
+                # Use the first transport type that is supported
+                transport_type = detected_profile.transports[0].type.value
+            if transport_type is None:
+                raise ValueError("No supported transport types found in the network")
+
         for transport in detected_profile.transports:
             if transport.type.value == transport_type:
                 optimal_transport = transport
@@ -171,7 +196,9 @@ class AgentClient:
             # Use the main gRPC port, not the HTTP adapter port
             self.connector = GRPCNetworkConnector(optimal_transport_host, optimal_transport_port, self.agent_id, metadata, max_message_size)
         elif transport_type == "http":
-            raise NotImplementedError("HTTP transport is not supported yet")
+            logger.info(f"Creating HTTP connector for agent {self.agent_id}")
+            from openagents.core.connectors.http_connector import HTTPNetworkConnector
+            self.connector = HTTPNetworkConnector(optimal_transport_host, optimal_transport_port, self.agent_id, metadata)
         elif transport_type == "websocket":
             raise NotImplementedError("WebSocket transport is not supported yet")
         else:
@@ -206,7 +233,15 @@ class AgentClient:
         
         return success
 
-    async def connect(self, host: Optional[str] = None, port: Optional[int] = None, network_id: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None, max_message_size: int = 104857600) -> bool:
+    async def connect(
+        self, 
+        host: Optional[str] = None, 
+        port: Optional[int] = None, 
+        network_id: Optional[str] = None,
+        enforce_transport_type: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None, 
+        max_message_size: int = 104857600
+    ) -> bool:
         """Connect to a network server (alias for connect_to_server).
         
         This is a cleaner alias for the connect_to_server method.
@@ -215,13 +250,14 @@ class AgentClient:
             host: Server host address
             port: Server port  
             network_id: ID of the network to connect to
+            enforce_transport_type: Enforce a specific transport type (grpc, http, websocket)
             metadata: Metadata to send to the server
             max_message_size: Maximum WebSocket message size in bytes (default 10MB)
             
         Returns:
             bool: True if connection successful
         """
-        return await self.connect_to_server(host, port, network_id, metadata, max_message_size)
+        return await self.connect_to_server(host, port, network_id, enforce_transport_type, metadata, max_message_size)
     
     async def disconnect(self) -> bool:
         """Disconnect from the network server."""
