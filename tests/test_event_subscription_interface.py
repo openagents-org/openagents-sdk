@@ -128,7 +128,7 @@ class TestEventSubscriptionInterface:
         await channel.post("Hello from interface test!")
         
         echo_conn = ws.agent("echo-agent")
-        await echo_conn.send_direct_message("Test message")
+        await echo_conn.send_message("Test message")
         
         # Read a couple events then shut down
         events_received = []

@@ -39,7 +39,7 @@ class AgentConnection:
         self.workspace = workspace
         self._client = workspace._client
         
-    async def send_direct_message(self, content: Union[str, Dict[str, Any]], **kwargs) -> bool:
+    async def send_message(self, content: Union[str, Dict[str, Any]], **kwargs) -> bool:
         """Send a direct message to this agent.
         
         Args:
@@ -168,7 +168,7 @@ class AgentConnection:
             Dict containing the reply message content, or None if timeout or send failed
         """
         # Send the message first
-        success = await self.send_direct_message(content, **kwargs)
+        success = await self.send_message(content, **kwargs)
         if not success:
             logger.error(f"Failed to send message to agent {self.agent_id}")
             return None
