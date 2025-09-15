@@ -80,8 +80,8 @@ class ChannelMessage(Event):
         attachment_filename = kwargs.pop('attachment_filename', None)
         attachment_size = kwargs.pop('attachment_size', None)
         
-        # Set target_channel in kwargs for Event
-        kwargs['target_channel'] = channel
+        # Set destination_id for channel routing
+        kwargs['destination_id'] = f'channel:{channel}' if channel else None
         
         # Call parent constructor
         super().__init__(event_name=event_name, source_id=source_id, **kwargs)
@@ -144,7 +144,7 @@ class ChannelMessage(Event):
             "source_id": self.source_id,
             "source_type": self.source_type,
             "target_agent_id": self.destination_id,
-            "target_channel": self.target_channel,
+            "target_channel": self.channel,
             "relevant_mod": self.relevant_mod,
             "requires_response": self.requires_response,
             "response_to": self.response_to,
@@ -212,7 +212,7 @@ class ReplyMessage(Event):
             # Channel reply: target_agent_id should be empty string, not None
             kwargs['target_agent_id'] = ''
         if channel:
-            kwargs['target_channel'] = channel
+            kwargs['destination_id'] = f'channel:{channel}'
         
         # Call parent constructor
         super().__init__(event_name=event_name, source_id=source_id, **kwargs)
@@ -269,7 +269,7 @@ class ReplyMessage(Event):
             "source_id": self.source_id,
             "source_type": self.source_type,
             "target_agent_id": self.destination_id if self.destination_id else None,
-            "target_channel": self.target_channel,
+            "target_channel": self.channel,
             "relevant_mod": self.relevant_mod,
             "requires_response": self.requires_response,
             "response_to": self.response_to,
@@ -380,7 +380,7 @@ class FileUploadMessage(Event):
             "source_id": self.source_id,
             "source_type": self.source_type,
             "target_agent_id": self.destination_id,
-            "target_channel": self.target_channel,
+            "target_channel": self.channel,
             "relevant_mod": self.relevant_mod,
             "requires_response": self.requires_response,
             "response_to": self.response_to,
@@ -487,7 +487,7 @@ class FileOperationMessage(Event):
             "source_id": self.source_id,
             "source_type": self.source_type,
             "target_agent_id": self.destination_id,
-            "target_channel": self.target_channel,
+            "target_channel": self.channel,
             "relevant_mod": self.relevant_mod,
             "requires_response": self.requires_response,
             "response_to": self.response_to,
@@ -521,6 +521,7 @@ class ChannelInfoMessage(Event):
     
     # Channel info specific fields
     action: str = field(default="list_channels")
+    request_id: Optional[str] = field(default=None)
     
     def __init__(self, event_name: str = "thread.channels.info_requested", source_id: str = "", **kwargs):
         """Initialize ChannelInfoMessage with proper event name."""
@@ -589,7 +590,7 @@ class ChannelInfoMessage(Event):
             "source_id": self.source_id,
             "source_type": self.source_type,
             "target_agent_id": self.destination_id,
-            "target_channel": self.target_channel,
+            "target_channel": self.channel,
             "relevant_mod": self.relevant_mod,
             "requires_response": self.requires_response,
             "response_to": self.response_to,
@@ -626,6 +627,7 @@ class MessageRetrievalMessage(Event):
     limit: int = field(default=50)
     offset: int = field(default=0)
     include_threads: bool = field(default=True)
+    request_id: Optional[str] = field(default=None)
     
     def __init__(self, event_name: str = "", source_id: str = "", **kwargs):
         """Initialize MessageRetrievalMessage with dynamic event name based on action."""
@@ -676,7 +678,7 @@ class MessageRetrievalMessage(Event):
             # Channel operations: target_agent_id should be empty string, not None
             kwargs['target_agent_id'] = ''
         if channel:
-            kwargs['target_channel'] = channel
+            kwargs['destination_id'] = f'channel:{channel}'
         
         # Call parent constructor
         super().__init__(event_name=event_name, source_id=source_id, **kwargs)
@@ -734,7 +736,7 @@ class MessageRetrievalMessage(Event):
             "source_id": self.source_id,
             "source_type": self.source_type,
             "target_agent_id": self.destination_id,
-            "target_channel": self.target_channel,
+            "target_channel": self.channel,
             "relevant_mod": self.relevant_mod,
             "requires_response": self.requires_response,
             "response_to": self.response_to,
@@ -779,9 +781,14 @@ class ReactionMessage(Event):
     target_message_id: str = Field(..., description="ID of the message being reacted to")
     reaction_type: str = Field(..., description="Type of reaction emoji")
     action: str = Field("add", description="Action: 'add' or 'remove'")
+    request_id: Optional[str] = field(default=None)
     
     def __init__(self, event_name: str = "", source_id: str = "", **kwargs):
         """Initialize ReactionMessage with dynamic event name based on action."""
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug(f"ReactionMessage.__init__ called with kwargs: {kwargs}")
+        
         # Map old field names to modern API
         if 'sender_id' in kwargs:
             source_id = kwargs.pop('sender_id')
@@ -797,6 +804,8 @@ class ReactionMessage(Event):
         action = kwargs.pop('action', 'add')
         request_id = kwargs.pop('request_id', None)  # Preserve request_id for HTTP correlation
         
+        logger.debug(f"Extracted fields: target_message_id={target_message_id}, reaction_type={reaction_type}, action={action}")
+        
         # Generate event name based on action if not provided
         if not event_name:
             if action == 'add':
@@ -806,8 +815,16 @@ class ReactionMessage(Event):
             else:
                 event_name = "thread.reaction.updated"
         
-        # Call parent constructor
-        super().__init__(event_name=event_name, source_id=source_id, **kwargs)
+        # Call parent constructor with required fields
+        super().__init__(
+            event_name=event_name, 
+            source_id=source_id, 
+            target_message_id=target_message_id,
+            reaction_type=reaction_type,
+            action=action,
+            request_id=request_id,
+            **kwargs
+        )
         
         # Set reaction specific fields
         self.target_message_id = target_message_id
