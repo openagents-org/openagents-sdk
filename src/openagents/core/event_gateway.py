@@ -242,6 +242,9 @@ class EventGateway:
         """
         Poll events from a specific agent's queue.
         """
+        # Record heartbeat
+        self.network.topology.record_heartbeat(agent_id)
+
         if agent_id in self.agent_event_queues:
             queue = self.agent_event_queues[agent_id]
             events = []

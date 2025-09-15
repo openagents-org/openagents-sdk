@@ -226,7 +226,6 @@ class GRPCTransport(Transport):
         super().__init__(TransportType.GRPC, config)
         self.server = None
         self.servicer = None
-        self.network_instance = None  # Reference to network instance
         self.host = self.config.get('host', 'localhost')
         self.port = self.config.get('port', 50051)
     

@@ -45,9 +45,6 @@ class AgentNetwork:
         topology_mode = NetworkMode.DECENTRALIZED if str(config.mode) == str(ConfigNetworkMode.DECENTRALIZED) else NetworkMode.CENTRALIZED
         self.topology = create_topology(topology_mode, self.network_id, self.config)
         
-        # Set network instance reference on topology
-        self.topology.set_network_instance(self)
-        
         # Network state
         self.is_running = False
         self.start_time: Optional[float] = None

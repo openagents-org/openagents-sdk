@@ -31,15 +31,6 @@ class NetworkTopology(ABC):
         self.transports: Dict[TransportType, Transport] = {}
         self.agent_registry: Dict[str, AgentConnection] = {}
         self.is_running = False
-        self.network_instance = None  # Reference to the network instance
-    
-    def set_network_instance(self, network_instance):
-        """Set the network instance reference for this topology.
-        
-        Args:
-            network_instance: The network instance that owns this topology
-        """
-        self.network_instance = network_instance
     
     @abstractmethod
     async def initialize(self) -> bool:
@@ -198,10 +189,6 @@ class CentralizedTopology(NetworkTopology):
                 else:
                     logger.error(f"Unsupported transport type: {transport_type}")
                     continue
-                
-                # Set network instance reference on transport
-                if hasattr(transport, 'network_instance'):
-                    transport.network_instance = self.network_instance
                 
                 # Initialize transport
                 if not await transport.initialize():
@@ -367,10 +354,6 @@ class DecentralizedTopology(NetworkTopology):
                 else:
                     logger.error(f"Unsupported transport type: {transport_type}")
                     continue
-                
-                # Set network instance reference on transport
-                if hasattr(transport, 'network_instance'):
-                    transport.network_instance = self.network_instance
                 
                 # Initialize transport
                 if not await transport.initialize():
