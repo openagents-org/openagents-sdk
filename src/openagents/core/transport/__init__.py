@@ -11,6 +11,7 @@ from .base import Transport, Message
 # Import transport implementations  
 from .websocket import WebSocketTransport, create_websocket_transport
 from .grpc import GRPCTransport, OpenAgentsGRPCServicer, create_grpc_transport
+from .http import HttpTransport
 
 # Import transport types and models
 from openagents.models.transport import (
@@ -29,6 +30,7 @@ __all__ = [
     # Transport implementations
     "WebSocketTransport", 
     "GRPCTransport",
+    "HttpTransport",
     "OpenAgentsGRPCServicer",
     
     # Convenience functions

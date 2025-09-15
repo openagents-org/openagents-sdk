@@ -11,7 +11,7 @@ from typing import Dict, Any, Optional
 
 import grpc
 from grpc import aio
-from openagents.config.globals import SYSTEM_EVENT_REGISTER_AGENT
+from openagents.config.globals import SYSTEM_EVENT_REGISTER_AGENT, SYSTEM_EVENT_HEALTH_CHECK
 from openagents.proto import agent_service_pb2_grpc, agent_service_pb2
 from aiohttp import web, WSMsgType
 
@@ -39,6 +39,7 @@ class HttpTransport(Transport):
 
     def setup_routes(self):
         """Setup HTTP routes."""
+        # Add both /health and /api/health for compatibility
         self.app.router.add_get('/api/health', self.health_check)
         self.app.router.add_post('/api/register', self.register_agent)
         self.app.router.add_post('/api/unregister', self.unregister_agent)
@@ -46,7 +47,9 @@ class HttpTransport(Transport):
         self.app.router.add_post('/api/send_event', self.send_message)
     
     async def initialize(self) -> bool:
+        """Initialize HTTP transport."""
         self.is_initialized = True
+        return True
     
     async def shutdown(self) -> bool:
        """Shutdown HTTP transport."""
@@ -63,10 +66,67 @@ class HttpTransport(Transport):
     async def health_check(self, request):
         """Handle health check requests."""
         logger.debug("HTTP health check requested")
+        
+        # Create a system health check event
+        health_check_event = Event(
+            event_name=SYSTEM_EVENT_HEALTH_CHECK,
+            source_id="http_transport",
+            destination_id="system:system",
+            payload={}
+        )
+        
+        # Send the health check event and get response
+        network_stats = {}
+        if hasattr(self, 'network_instance') and self.network_instance:
+            try:
+                # Process the health check event through the network's event gateway
+                event_response = await self.network_instance.process_event(health_check_event)
+                
+                if event_response and event_response.success and event_response.data:
+                    network_stats = event_response.data
+                    logger.debug("Successfully retrieved network stats via health check event")
+                else:
+                    logger.warning(f"Health check event failed: {event_response.message if event_response else 'No response'}")
+                    raise Exception("Health check event failed")
+                    
+            except Exception as e:
+                logger.warning(f"Failed to process health check event: {e}")
+                # Provide minimal stats if health check event fails
+                network_stats = {
+                    "network_id": getattr(self.network_instance, 'network_id', 'unknown'),
+                    "network_name": getattr(self.network_instance, 'network_name', 'Unknown Network'),
+                    "is_running": getattr(self.network_instance, 'is_running', False),
+                    "uptime_seconds": 0,
+                    "agent_count": 0,
+                    "agents": {},
+                    "mods": [],
+                    "topology_mode": "centralized",
+                    "transports": [],
+                    "manifest_transport": "http",
+                    "recommended_transport": "grpc",
+                    "max_connections": 100
+                }
+        else:
+            # Provide minimal default stats if no network instance
+            network_stats = {
+                "network_id": "unknown",
+                "network_name": "Unknown Network",
+                "is_running": False,
+                "uptime_seconds": 0,
+                "agent_count": 0,
+                "agents": {},
+                "mods": [],
+                "topology_mode": "centralized",
+                "transports": [],
+                "manifest_transport": "http",
+                "recommended_transport": "grpc",
+                "max_connections": 100
+            }
+        
         return web.json_response({
+            'success': True,
             'status': 'healthy',
-            'transport': 'http',
-            'timestamp': json.dumps(None, default=str)  # Will be current time when serialized
+            'data': network_stats
         })
     
     async def register_agent(self, request):
@@ -287,6 +347,16 @@ class HttpTransport(Transport):
         
         # Return basic success response
         return {'success': True}
+    
+    async def peer_connect(self, peer_id: str, metadata: Dict[str, Any] = None) -> bool:
+        """Connect to a peer (HTTP doesn't maintain persistent connections)."""
+        logger.debug(f"HTTP transport peer_connect called for {peer_id}")
+        return True
+    
+    async def peer_disconnect(self, peer_id: str) -> bool:
+        """Disconnect from a peer (HTTP doesn't maintain persistent connections)."""
+        logger.debug(f"HTTP transport peer_disconnect called for {peer_id}")
+        return True
 
     async def listen(self, address: str) -> bool:
         runner = web.AppRunner(self.app)
@@ -303,7 +373,8 @@ class HttpTransport(Transport):
         
         logger.info(f"HTTP transport listening on {host}:{port}")
         self.is_listening = True
-        return runner
+        self.site = site  # Store the site for shutdown
+        return True
 
 
 # Convenience function for creating HTTP transport

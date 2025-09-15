@@ -137,7 +137,7 @@ class GRPCNetworkConnector:
                 logger.error(f"Agent registration failed: {register_response.error_message}")
                 return False
             
-            logger.info(f"Connected to gRPC network: {register_response.network_name}")
+            logger.info(f"Connected to gRPC network successfully")
             
             # For now, skip bidirectional streaming and use unary calls
             # TODO: Implement proper streaming later
@@ -408,7 +408,7 @@ class GRPCNetworkConnector:
                     
                     logger.info(f"🔧 GRPC: Successfully converted {len(messages)} messages to Events")
                     for event in messages:
-                        self.consume_message(event)
+                        await self.consume_message(event)
                     return messages
                     
                 except Exception as e:

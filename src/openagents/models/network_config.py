@@ -79,6 +79,8 @@ class NetworkConfig(BaseModel):
         ],
         description="List of transport configurations"
     )
+    manifest_transport: Optional[str] = Field("http", description="Transport used for manifests")
+    recommended_transport: Optional[str] = Field("grpc", description="Recommended transport type")
     
     # Security configuration
     encryption_enabled: bool = Field(True, description="Whether encryption is enabled")

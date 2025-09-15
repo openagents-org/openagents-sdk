@@ -211,15 +211,60 @@ class EventGateway:
     
     async def deliver_to_agent(self, event: Event, agent_id: str):
         """
-        Deliver an event to a specific agent's queue.
+        Deliver an event to a specific agent's queue, filtered by agent's subscriptions.
+        """
+        if agent_id not in self.agent_event_queues:
+            logger.debug(f"Agent {agent_id} has no event queue, skipping delivery")
+            return
+        
+        # Check if agent has any subscriptions
+        if agent_id in self.agent_subscriptions and self.agent_subscriptions[agent_id]:
+            # Agent has subscriptions - check if event matches any of them
+            event_matches = False
+            for subscription in self.agent_subscriptions[agent_id]:
+                if subscription.is_active and subscription.matches_event(event):
+                    event_matches = True
+                    logger.debug(f"Event {event.event_name} matches subscription {subscription.subscription_id} for agent {agent_id}")
+                    break
+            
+            if not event_matches:
+                logger.debug(f"Event {event.event_name} does not match any subscriptions for agent {agent_id}, skipping delivery")
+                return
+        else:
+            # Agent has no subscriptions - deliver all events (default behavior)
+            logger.debug(f"Agent {agent_id} has no active subscriptions, delivering event {event.event_name}")
+        
+        # Deliver the event to the agent's queue
+        await self.agent_event_queues[agent_id].put(event)
+        logger.debug(f"Delivered event {event.event_name} to agent {agent_id}")
+    
+    def poll_events(self, agent_id: str) -> List[Event]:
+        """
+        Poll events from a specific agent's queue.
         """
         if agent_id in self.agent_event_queues:
-            await self.agent_event_queues[agent_id].put(event)
-            logger.debug(f"Delivered event {event.event_name} to agent {agent_id}")
+            queue = self.agent_event_queues[agent_id]
+            events = []
+            while not queue.empty():
+                event = queue.get_nowait()
+                events.append(event)
+            return events
         else:
-            logger.debug(f"Agent {agent_id} has no event queue, skipping delivery")
+            logger.debug(f"Agent {agent_id} has no event queue, returning empty list")
+            return []
+
     
-    def subscribe(self, agent_id: str, event_patterns: List[str], **filters) -> EventSubscription:
+    def register_agent(self, agent_id: str):
+        """
+        Register an agent with the event gateway by creating an event queue.
+        """
+        if agent_id not in self.agent_event_queues:
+            self.agent_event_queues[agent_id] = asyncio.Queue()
+            logger.debug(f"Created event queue for agent {agent_id}")
+        else:
+            logger.debug(f"Agent {agent_id} already has an event queue")
+    
+    def subscribe(self, agent_id: str, event_patterns: List[str], channels: Optional[List[str]] = None) -> EventSubscription:
         """
         Subscribe an agent to events matching the given patterns.
         """
@@ -230,7 +275,7 @@ class EventGateway:
         subscription = EventSubscription(
             agent_id=agent_id,
             event_patterns=event_patterns,
-            channels=set(filters.get('channel_filter', []))
+            channels=set(channels) if channels else set()
         )
         self.agent_subscriptions[agent_id].append(subscription)
         logger.info(f"Agent {agent_id} subscribed to patterns {event_patterns}")

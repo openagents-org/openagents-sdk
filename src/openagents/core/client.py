@@ -4,7 +4,9 @@ import uuid
 import logging
 from warnings import deprecated
 
-from openagents.models.detected_network_profile import DetectedNetworkProfile
+from pydantic import BaseModel, Field
+
+from openagents.models.detected_network_profile import DetectedNetworkProfile, DetectedTransportInfo
 from openagents.models.event_response import EventResponse
 from openagents.models.transport import TransportType
 from openagents.utils.network_discovey import retrieve_network_details
@@ -13,7 +15,7 @@ from openagents.models.event import Event
 from openagents.core.base_mod_adapter import BaseModAdapter
 from openagents.models.messages import Event, EventNames
 from openagents.config.globals import (
-    SYSTEM_EVENT_LIST_AGENTS, SYSTEM_EVENT_LIST_MODS, SYSTEM_EVENT_GET_MOD_MANIFEST
+    AGENT_EVENT_MESSAGE, SYSTEM_EVENT_LIST_AGENTS, SYSTEM_EVENT_LIST_MODS, SYSTEM_EVENT_GET_MOD_MANIFEST, SYSTEM_EVENT_SUBSCRIBE_EVENTS, SYSTEM_EVENT_UNSUBSCRIBE_EVENTS
 )
 from openagents.models.tool import AgentAdapterTool
 from openagents.models.message_thread import MessageThread
@@ -21,6 +23,19 @@ from openagents.utils.verbose import verbose_print
 import aiohttp
 
 logger = logging.getLogger(__name__)
+
+class EventHandlerEntry(BaseModel):
+    model_config = {"arbitrary_types_allowed": True}
+    
+    handler: Callable[[Event], Awaitable[None]]
+    patterns: List[str] = Field(default_factory=list)
+
+class EventWaitingEntry(BaseModel):
+    model_config = {"arbitrary_types_allowed": True}
+    
+    event: asyncio.Event
+    condition: Optional[Callable[[Event], bool]] = None
+    result: Dict[str, Any] = Field(default_factory=dict)
 
 
 class AgentClient:
@@ -41,10 +56,10 @@ class AgentClient:
         self.connector: Optional[GRPCNetworkConnector] = None
         
         # Event waiting infrastructure
-        self._event_waiters: List[Dict[str, Any]] = []
+        self._event_waiters: List[EventWaitingEntry] = []
         
         # Event handlers in the client level
-        self._event_handlers: List[Dict[str, Any]] = []
+        self._event_handlers: List[EventHandlerEntry] = []
 
         # Register mod adapters if provided
         if mod_adapters:
@@ -61,18 +76,17 @@ class AgentClient:
         
         Args:
             host: Server host address
-            port: Server port
+            port: Server port (could be gRPC port, we'll try HTTP port first)
             
         Returns:
             DetectedNetworkProfile: Network profile with detected information, or None if detection failed
         """
-        # First try HTTP health check endpoint
-        logger.debug(f"Attempting HTTP health check on {host}:{port}")
-        
         async with aiohttp.ClientSession() as session:
-            health_url = f"http://{host}:{port}/health"
+            health_url = f"http://{host}:{port}/api/health"
+            logger.debug(f"Attempting HTTP health check on {health_url}")
+            
             try:
-                async with session.get(health_url, timeout=aiohttp.ClientTimeout(total=10.0)) as response:
+                async with session.get(health_url, timeout=aiohttp.ClientTimeout(total=5.0)) as response:
                     if response.status == 200:
                         health_data = await response.json()
                         logger.info(f"✅ Successfully retrieved health check from {health_url}")
@@ -82,18 +96,15 @@ class AgentClient:
                         # Create DetectedNetworkProfile from health check data
                         profile = DetectedNetworkProfile.from_network_stats(health_data)
                         
-                        # Set detected transport information
-                        profile.detected_host = host
-                        profile.detected_port = port
-                        profile.detected_transport = "http"
-                        
                         return profile
                     else:
-                        logger.debug(f"HTTP health check returned status {response.status}")
+                        logger.debug(f"HTTP health check returned status {response.status} on {health_url}")
             except asyncio.TimeoutError:
                 logger.debug(f"HTTP health check timeout on {health_url}")
             except Exception as http_e:
                 logger.debug(f"HTTP health check failed on {health_url}: {http_e}")
+            
+            logger.error(f"Failed to detect network at {host}:{port}")
             return None
 
     async def connect_to_server(self, host: Optional[str] = None, port: Optional[int] = None, network_id: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None, max_message_size: int = 104857600) -> bool:
@@ -141,14 +152,16 @@ class AgentClient:
         transport_type = detected_profile.recommended_transport
         optimal_transport = None
         for transport in detected_profile.transports:
-            if transport.transport_type == transport_type:
+            if transport.type.value == transport_type:
                 optimal_transport = transport
                 break
         if optimal_transport is None:
             logger.error(f"Failed to find optimal transport for {transport_type}")
             return False
-        optimal_transport_host = optimal_transport.host
-        optimal_transport_port = optimal_transport.port
+        
+        # Extract host and port from transport config
+        optimal_transport_host = optimal_transport.config.get("host", host)
+        optimal_transport_port = optimal_transport.config.get("port", port)
         
         logger.info(f"Detected network: {detected_profile.network_name} ({detected_profile.network_id})")
         logger.info(f"Transport: {transport_type}, Host: {optimal_transport_host}, Port: {optimal_transport_port}")
@@ -182,17 +195,6 @@ class AgentClient:
                 logger.info(f"🔧 Starting message polling for  agent {self.agent_id}")
                 asyncio.create_task(self._start_message_polling())
             
-            # Register this client with the network for direct message delivery (if network is accessible)
-            # This is a workaround for gRPC transport not supporting bidirectional messaging
-            try:
-                # Try to get network instance through connector
-                if hasattr(self.connector, 'network_instance') or hasattr(self.connector, '_network_instance'):
-                    network = getattr(self.connector, 'network_instance', None) or getattr(self.connector, '_network_instance', None)
-                    if network and hasattr(network, '_register_agent_client'):
-                        network._register_agent_client(self.agent_id, self)
-                        logger.info(f"🔧 Registered agent client {self.agent_id} for direct message delivery")
-            except Exception as e:
-                logger.debug(f"Could not register agent client for direct delivery: {e}")
         
         return success
 
@@ -312,27 +314,27 @@ class AgentClient:
                 verbose_print(f"   Processing through {mod_name} adapter...")
                 verbose_print(f"   Result from {mod_name}: {'✅ event' if processed_event else '❌ None'}")
                 if processed_event is None:
-                    return False
+                    return None
             
             if processed_event is not None:
                 print(f"🚀 Sending event via connector...")
                 print(f"   Final processed event name: {processed_event.event_name}")
                 print(f"   Final processed event target: {processed_event.destination_id}")
                 verbose_print(f"🚀 Sending event via connector...")
-                result = await self.connector.send_message(processed_event)
+                result = await self.connector.send_event(processed_event)
                 print(f"✅ Event sent via connector - result: {result}")
                 verbose_print(f"✅ Event sent via connector successfully")
                 return result
             else:
                 print(f"❌ Event was filtered out by mod adapters - not sending")
                 verbose_print(f"❌ Event was filtered out by mod adapters - not sending")
-                return False
+                return None
         except Exception as e:
             print(f"❌ Connector failed to send event: {e}")
             print(f"Exception type: {type(e).__name__}")
             import traceback
             traceback.print_exc()
-            return False
+            return None
     
     async def list_mods(self) -> List[Dict[str, Any]]:
         """Get a list of available mods from the network server.
@@ -594,11 +596,11 @@ class AgentClient:
         event_waiter = asyncio.Event()
         result_event = {"event": None}
         
-        waiter_entry = {
-            "event": event_waiter,
-            "condition": condition,
-            "result": result_event
-        }
+        waiter_entry = EventWaitingEntry(
+            event=event_waiter,
+            condition=condition,
+            result=result_event
+        )
         
         # Add to event waiters list
         self._event_waiters.append(waiter_entry)
@@ -625,18 +627,18 @@ class AgentClient:
         waiters_to_notify = []
         
         for waiter in self._event_waiters[:]:  # Create a copy
-            condition = waiter["condition"]
+            condition = waiter.condition
             
             # Check if event matches condition
             if condition is None or condition(event):
-                waiter["result"]["event"] = event
+                waiter.result["event"] = event
                 waiters_to_notify.append(waiter)
                 # Remove from waiters list since it's been satisfied
                 self._event_waiters.remove(waiter)
         
         # Notify all matching waiters
         for waiter in waiters_to_notify:
-            waiter["event"].set()
+            waiter.event.set()
     
     async def _start_message_polling(self):
         """Start periodic polling for messages (gRPC workaround)."""
@@ -659,39 +661,61 @@ class AgentClient:
                 logger.error(f"🔧 CLIENT: Error in message polling for agent {self.agent_id}: {e}")
                 await asyncio.sleep(5.0)  # Wait longer on error
     
-    def register_event_handler(self, handler: Callable[[Event], Awaitable[None]], pattern: Optional[str] = None) -> None:
+    async def subscribe_events(self, event_patterns: List[str], channels: Optional[List[str]] = None) -> Optional[EventResponse]:
+        """Subscribe to events matching the given patterns."""
+        if self.connector is None:
+            logger.warning(f"Agent {self.agent_id} is not connected to a network")
+            return
+
+        request = Event(
+            event_name=SYSTEM_EVENT_SUBSCRIBE_EVENTS,
+            source_id=self.agent_id,
+            destination_id=None,
+            payload={
+                "event_patterns": event_patterns,
+                "channels": channels
+            }
+        )
+        return await self.send_event(request)
+    
+    async def unsubscribe_events(self, subscription_id: str) -> Optional[EventResponse]:
+        """Unsubscribe from events matching the given patterns."""
+        if self.connector is None:
+            logger.warning(f"Agent {self.agent_id} is not connected to a network")
+            return
+        
+        request = Event(
+            event_name=SYSTEM_EVENT_UNSUBSCRIBE_EVENTS,
+            source_id=self.agent_id,
+            destination_id=None,
+            payload={
+                "subscription_id": subscription_id
+            }
+        )
+        return await self.send_event(request)
+    
+    def register_event_handler(
+        self,
+        handler: Callable[[Event], Awaitable[None]], 
+        event_patterns: Optional[List[str]] = None,
+    ) -> None:
         """Register an event handler for the agent.
         
         Args:
             handler: The handler function to register
-            pattern: Optional pattern to filter event names. Supports wildcards (*) and exact matches.
-                    If None, handler will receive all events.
+            event_patterns: Optional list of patterns to filter event names. Supports wildcards (*) and exact matches.
+                           If None, handler will receive all events.
         """
-        import re
-        
         # Create handler entry
-        handler_entry = {
-            "handler": handler,
-            "pattern": pattern,
-            "compiled_pattern": None
-        }
-        
-        # Compile pattern if provided
-        if pattern:
-            # Convert wildcard pattern to regex
-            # Replace * with .* and escape other regex special characters
-            escaped_pattern = re.escape(pattern).replace(r'\*', '.*')
-            # Ensure full match
-            regex_pattern = f"^{escaped_pattern}$"
-            try:
-                handler_entry["compiled_pattern"] = re.compile(regex_pattern)
-            except re.error as e:
-                logger.error(f"Invalid event pattern '{pattern}': {e}")
-                return
+        handler_entry = EventHandlerEntry(
+            handler=handler,
+            patterns=event_patterns or []
+        )
         
         # Add to handlers list
         self._event_handlers.append(handler_entry)
-        logger.debug(f"Registered event handler with pattern: {pattern or 'all events'}")
+        patterns_str = ", ".join(event_patterns) if event_patterns else "all events"
+        logger.debug(f"Registered event handler with patterns: {patterns_str}")
     
     def register_agent_message_handler(self, handler: Callable[[Event], Awaitable[None]]) -> None:
         """Register an event handler for the agent.
@@ -699,7 +723,23 @@ class AgentClient:
         Args:
             handler: The handler function to register
         """
-        self.register_event_handler(handler, "agent.*")
+        self.register_event_handler(handler, ["agent.*"])
+    
+    async def send_agent_message(self, destination_id: str, payload: Dict[str, Any]) -> Optional[EventResponse]:
+        """Send a simple message to an agent. 
+        This is a
+        
+        Args:
+            destination_id: The ID of the agent to send the message to
+            payload: The payload of the message
+        """
+        message = Event(
+            event_name=AGENT_EVENT_MESSAGE,
+            source_id=self.agent_id,
+            destination_id=destination_id,
+            payload=payload
+        )
+        return await self.send_event(message)
     
     def unregister_event_handler(self, handler: Callable[[Event], Awaitable[None]]) -> bool:
         """Unregister an event handler from the agent.
@@ -711,9 +751,10 @@ class AgentClient:
             bool: True if handler was found and removed, False otherwise
         """
         for i, handler_entry in enumerate(self._event_handlers):
-            if handler_entry["handler"] == handler:
+            if handler_entry.handler == handler:
                 del self._event_handlers[i]
-                logger.debug(f"Unregistered event handler with pattern: {handler_entry['pattern'] or 'all events'}")
+                patterns_str = ", ".join(handler_entry.patterns) if handler_entry.patterns else "all events"
+                logger.debug(f"Unregistered event handler with patterns: {patterns_str}")
                 return True
         
         logger.warning("Event handler not found for unregistration")
@@ -727,17 +768,23 @@ class AgentClient:
         """
         for handler_entry in self._event_handlers:
             try:
-                # Check if pattern matches
+                # Check if any pattern matches
                 pattern_matches = True
-                if handler_entry["compiled_pattern"]:
-                    pattern_matches = bool(handler_entry["compiled_pattern"].match(event.event_name))
+                if handler_entry.patterns:
+                    # If patterns are specified, at least one must match
+                    pattern_matches = any(
+                        event.matches_pattern(pattern)
+                        for pattern in handler_entry.patterns
+                    )
                 
                 if pattern_matches:
-                    logger.debug(f"Calling event handler for pattern: {handler_entry['pattern'] or 'all events'}")
-                    await handler_entry["handler"](event)
+                    patterns_str = ", ".join(handler_entry.patterns) if handler_entry.patterns else "all events"
+                    logger.debug(f"Calling event handler for patterns: {patterns_str}")
+                    await handler_entry.handler(event)
                     
             except Exception as e:
-                logger.error(f"Error in event handler for pattern '{handler_entry['pattern']}': {e}")
+                patterns_str = ", ".join(handler_entry.patterns) if handler_entry.patterns else "all events"
+                logger.error(f"Error in event handler for patterns '{patterns_str}': {e}")
                 import traceback
                 traceback.print_exc()
     
@@ -891,4 +938,3 @@ class AgentClient:
                     
             except Exception as e:
                 logger.error(f"Error processing polled message: {e}")
-    
