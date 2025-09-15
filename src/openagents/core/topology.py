@@ -15,7 +15,7 @@ import uuid
 from openagents.config.globals import DEFAULT_TRANSPORT_ADDRESS
 from openagents.models.event import Event
 
-from .transport import Transport, Message
+from .transports import Transport, Message
 from openagents.models.transport import TransportType, AgentConnection
 from openagents.models.network_config import NetworkConfig, NetworkMode
 
@@ -178,13 +178,13 @@ class CentralizedTopology(NetworkTopology):
                 
                 # Create transport instance based on type
                 if transport_type == TransportType.HTTP:
-                    from .transport import HttpTransport
+                    from .transports import HttpTransport
                     transport = HttpTransport(transport_config.config)
                 elif transport_type == TransportType.WEBSOCKET:
-                    from .transport import WebSocketTransport
+                    from .transports import WebSocketTransport
                     transport = WebSocketTransport(transport_config.config)
                 elif transport_type == TransportType.GRPC:
-                    from .transport import GRPCTransport
+                    from .transports import GRPCTransport
                     transport = GRPCTransport(transport_config.config)
                 else:
                     logger.error(f"Unsupported transport type: {transport_type}")
@@ -343,13 +343,13 @@ class DecentralizedTopology(NetworkTopology):
                 
                 # Create transport instance based on type
                 if transport_type == TransportType.HTTP:
-                    from .transport import HttpTransport
+                    from .transports import HttpTransport
                     transport = HttpTransport(transport_config.get("config", {}))
                 elif transport_type == TransportType.WEBSOCKET:
-                    from .transport import WebSocketTransport
+                    from .transports import WebSocketTransport
                     transport = WebSocketTransport(transport_config.get("config", {}))
                 elif transport_type == TransportType.GRPC:
-                    from .transport import GRPCTransport
+                    from .transports import GRPCTransport
                     transport = GRPCTransport(transport_config.get("config", {}))
                 else:
                     logger.error(f"Unsupported transport type: {transport_type}")

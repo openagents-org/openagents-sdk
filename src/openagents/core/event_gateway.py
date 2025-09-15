@@ -238,12 +238,12 @@ class EventGateway:
         await self.agent_event_queues[agent_id].put(event)
         logger.debug(f"Delivered event {event.event_name} to agent {agent_id}")
     
-    def poll_events(self, agent_id: str) -> List[Event]:
+    async def poll_events(self, agent_id: str) -> List[Event]:
         """
         Poll events from a specific agent's queue.
         """
         # Record heartbeat
-        self.network.topology.record_heartbeat(agent_id)
+        await self.network.topology.record_heartbeat(agent_id)
 
         if agent_id in self.agent_event_queues:
             queue = self.agent_event_queues[agent_id]

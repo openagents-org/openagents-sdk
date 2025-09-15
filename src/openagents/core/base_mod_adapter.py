@@ -1,6 +1,6 @@
 from typing import Dict, Any, Optional, List
 from abc import ABC, abstractmethod
-from openagents.core.grpc_connector import GRPCNetworkConnector
+from openagents.core.connectors.grpc_connector import GRPCNetworkConnector
 from openagents.models.messages import Event, EventNames
 from openagents.models.event import Event
 from openagents.models.tool import AgentAdapterTool

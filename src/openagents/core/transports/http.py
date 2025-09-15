@@ -75,39 +75,21 @@ class HttpTransport(Transport):
             payload={}
         )
         
-        # Send the health check event and get response
-        network_stats = {}
-        if hasattr(self, 'network_instance') and self.network_instance:
-            try:
-                # Process the health check event through the network's event gateway
-                event_response = await self.network_instance.process_event(health_check_event)
+        # Send the health check event and get response using the event handler
+        try:
+            # Process the health check event through the registered event handler
+            event_response = await self.call_event_handler(health_check_event)
+            
+            if event_response and event_response.success and event_response.data:
+                network_stats = event_response.data
+                logger.debug("Successfully retrieved network stats via health check event")
+            else:
+                logger.warning(f"Health check event failed: {event_response.message if event_response else 'No response'}")
+                raise Exception("Health check event failed")
                 
-                if event_response and event_response.success and event_response.data:
-                    network_stats = event_response.data
-                    logger.debug("Successfully retrieved network stats via health check event")
-                else:
-                    logger.warning(f"Health check event failed: {event_response.message if event_response else 'No response'}")
-                    raise Exception("Health check event failed")
-                    
-            except Exception as e:
-                logger.warning(f"Failed to process health check event: {e}")
-                # Provide minimal stats if health check event fails
-                network_stats = {
-                    "network_id": getattr(self.network_instance, 'network_id', 'unknown'),
-                    "network_name": getattr(self.network_instance, 'network_name', 'Unknown Network'),
-                    "is_running": getattr(self.network_instance, 'is_running', False),
-                    "uptime_seconds": 0,
-                    "agent_count": 0,
-                    "agents": {},
-                    "mods": [],
-                    "topology_mode": "centralized",
-                    "transports": [],
-                    "manifest_transport": "http",
-                    "recommended_transport": "grpc",
-                    "max_connections": 100
-                }
-        else:
-            # Provide minimal default stats if no network instance
+        except Exception as e:
+            logger.warning(f"Failed to process health check event: {e}")
+            # Provide minimal stats if health check event fails
             network_stats = {
                 "network_id": "unknown",
                 "network_name": "Unknown Network",
@@ -156,74 +138,27 @@ class HttpTransport(Transport):
                     "force_reconnect": True
                 }
             )
-            return_data = await self.call_event_handler(register_event)
-            if hasattr(self, 'network_instance') and self.network_instance:
-                try:
-                    # Register with network topology/agent tracking
-                    success = await self.network_instance.register_agent(agent_id, metadata)
-                    network_name = self.network_instance.network_name
-                    network_id = self.network_instance.network_id
-                    
-                    # Also register with system commands for poll_messages support
-                    from openagents.core.system_commands import default_registry
-                    
-                    # Create a mock connection for HTTP agents
-                    class MockHTTPConnection:
-                        def __init__(self, agent_id):
-                            self.agent_id = agent_id
-                        
-                        async def send(self, message_str):
-                            """Mock send method - HTTP agents use polling instead."""
-                            pass
-                    
-                    # Register agent in system commands for polling support
-                    command_data = {
-                        "agent_id": agent_id,
-                        "metadata": metadata,
-                        "transport_type": TransportType.HTTP,
-                        "certificate": data.get('certificate', None),
-                        "force_reconnect": True
-                    }
-                    
-                    mock_connection = MockHTTPConnection(agent_id)
-                    
-                    # Execute system command registration
-                    if "register_agent" in default_registry.command_handlers:
-                        await default_registry.command_handlers["register_agent"](
-                            "register_agent",
-                            command_data, 
-                            mock_connection,
-                            self.network_instance
-                        )
-                    
-                    if success:
-                        logger.info(f"✅ Successfully registered HTTP agent {agent_id} with network {network_name}")
-                        return web.json_response({
-                            'success': True,
-                            'network_name': network_name,
-                            'network_id': network_id
-                        })
-                    else:
-                        logger.error(f"❌ Network registration failed for HTTP agent {agent_id}")
-                        return web.json_response({
-                            'success': False,
-                            'error_message': 'Network registration failed'
-                        }, status=500)
-                        
-                except Exception as e:
-                    logger.error(f"❌ Error during HTTP agent registration: {e}")
-                    return web.json_response({
-                        'success': False,
-                        'error_message': f'Registration error: {str(e)}'
-                    }, status=500)
-            else:
-                logger.warning(f"⚠️ No network instance available for registering HTTP agent {agent_id}")
-                # Fallback to basic acknowledgment
+            # Process the registration event through the event handler
+            event_response = await self.call_event_handler(register_event)
+            
+            if event_response and event_response.success:
+                # Extract network information from the response
+                network_name = event_response.data.get('network_name', 'Unknown Network') if event_response.data else 'Unknown Network'
+                network_id = event_response.data.get('network_id', 'unknown') if event_response.data else 'unknown'
+                
+                logger.info(f"✅ Successfully registered HTTP agent {agent_id} with network {network_name}")
                 return web.json_response({
                     'success': True,
-                    'network_name': 'TestNetwork',
-                    'network_id': 'http-network'
+                    'network_name': network_name,
+                    'network_id': network_id
                 })
+            else:
+                error_message = event_response.message if event_response else 'No response from event handler'
+                logger.error(f"❌ Network registration failed for HTTP agent {agent_id}: {error_message}")
+                return web.json_response({
+                    'success': False,
+                    'error_message': f'Registration failed: {error_message}'
+                }, status=500)
                 
         except Exception as e:
             logger.error(f"Error in HTTP register_agent: {e}")
