@@ -88,7 +88,7 @@ class Event(BaseModel):
     """
     
     # Core identification - REQUIRED FIELDS FIRST
-    event_name: str  # e.g., "agent.direct_message", "project.run.completed" - REQUIRED
+    event_name: str  # e.g., "agent.message", "project.run.completed" - REQUIRED
     source_id: str  # The agent or mod that generated this event - REQUIRED
     
     # Core identification - OPTIONAL FIELDS WITH DEFAULTS
@@ -403,8 +403,7 @@ class EventNames:
     # Agent events
     AGENT_CONNECTED = "agent.connected"
     AGENT_DISCONNECTED = "agent.disconnected"
-    AGENT_DIRECT_MESSAGE_SENT = "agent.direct_message.sent"
-    AGENT_DIRECT_MESSAGE_RECEIVED = "agent.direct_message.received"
+    AGENT_MESSAGE = "agent.message"
     
     # Network events
     NETWORK_BROADCAST_SENT = "network.broadcast.sent"

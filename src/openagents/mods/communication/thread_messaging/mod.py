@@ -21,6 +21,7 @@ from pathlib import Path
 from openagents.core.base_mod import BaseMod
 from openagents.models.messages import Event, EventNames
 from openagents.models.event import Event
+from openagents.models.event_response import EventResponse
 from .thread_messages import (
     Event,
     ChannelMessage, 
@@ -109,6 +110,20 @@ class ThreadMessagingNetworkMod(BaseMod):
     def __init__(self, mod_name: str = "thread_messaging"):
         """Initialize the thread messaging mod for a network."""
         super().__init__(mod_name=mod_name)
+        
+        # Register event handlers using the elegant pattern
+        self.register_event_handler(self._handle_agent_message, "agent.message")
+        
+        # Register specific thread event handlers
+        self.register_event_handler(self._handle_thread_reply, ["thread.reply.sent", "thread.reply.post"])
+        self.register_event_handler(self._handle_thread_file_upload, ["thread.file.upload", "thread.file.upload_requested"])
+        self.register_event_handler(self._handle_thread_file_operation, ["thread.file.download", "thread.file.operation"])
+        self.register_event_handler(self._handle_thread_channels, ["thread.channels.info", "thread.channels.list"])
+        self.register_event_handler(self._handle_thread_message_retrieval, ["thread.messages.retrieve", "thread.channel_messages.retrieve", "thread.direct_messages.retrieve"])
+        self.register_event_handler(self._handle_thread_reactions, ["thread.reaction.add", "thread.reaction.remove", "thread.reaction.toggle"])
+        self.register_event_handler(self._handle_thread_direct_message, ["thread.direct_message.sent", "thread.direct_message.post"])
+        self.register_event_handler(self._handle_thread_channel_message, ["thread.channel_message.sent", "thread.channel_message.post"])
+        self.register_event_handler(self._handle_thread_generic_message, "thread.message")
         
         # Initialize mod state
         self.active_agents: Set[str] = set()
@@ -233,7 +248,7 @@ class ThreadMessagingNetworkMod(BaseMod):
         
         return True
     
-    def handle_register_agent(self, agent_id: str, metadata: Dict[str, Any]) -> None:
+    async def handle_register_agent(self, agent_id: str, metadata: Dict[str, Any]) -> Optional[EventResponse]:
         """Register an agent with the thread messaging protocol.
         
         Args:
@@ -285,8 +300,10 @@ class ThreadMessagingNetworkMod(BaseMod):
             logger.info(f"📺 Channel '{ch_name}': {len(ch_agents)} agents -> {list(ch_agents)}")
         
         logger.info(f"🔗 Agent {agent_id} channels: {list(self.agent_channels[agent_id])}")
+        
+        return None  # Don't intercept the registration event
     
-    def handle_unregister_agent(self, agent_id: str) -> None:
+    async def handle_unregister_agent(self, agent_id: str) -> Optional[EventResponse]:
         """Unregister an agent from the thread messaging protocol.
         
         Args:
@@ -303,320 +320,515 @@ class ThreadMessagingNetworkMod(BaseMod):
                 del self.agent_channels[agent_id]
             
             logger.info(f"Unregistered agent {agent_id} from Thread Messaging protocol")
+        
+        return None  # Don't intercept the unregistration event
     
-    async def process_direct_message(self, message: Event) -> Optional[Event]:
-        """Process a direct message in the mod pipeline.
+    async def _handle_agent_message(self, event: Event) -> Optional[EventResponse]:
+        """Handle agent message events (both direct and broadcast).
         
         Args:
-            message: The direct message to process (event_name starts with "agent.direct_message.")
+            event: The agent message event to process
             
         Returns:
-            Optional[Event]: The processed message, or None if processing should stop
+            Optional[EventResponse]: None to allow the event to continue processing, or EventResponse if intercepted
         """
-        logger.debug(f"Thread messaging mod processing direct message from {message.source_id} to {message.destination_id}")
+        logger.debug(f"Thread messaging mod processing agent message from {event.source_id} to {event.destination_id}")
         
-        # Add to history for thread messaging
-        self._add_to_history(message)
+        # Add to history for potential retrieval
+        self._add_to_history(event)
         
-        # Thread messaging mod doesn't interfere with direct messages, let them continue
-        return message
+        # Check if this is a broadcast message (destination_id is "agent:broadcast")
+        if event.destination_id == "agent:broadcast":
+            # Handle broadcast message logic
+            return await self._process_broadcast_event(event)
+        else:
+            # Handle direct message - thread messaging mod doesn't interfere with direct messages, let them continue
+            return None
     
-    async def process_broadcast_message(self, message: Event) -> Optional[Event]:
-        """Process a broadcast message in the mod pipeline.
+    
+    def _prepare_thread_event_content(self, event: Event) -> Optional[Dict[str, Any]]:
+        """Prepare and extract content from a thread event.
         
         Args:
-            message: The broadcast message to process (event_name starts with "agent.broadcast_message.")
+            event: The thread event to process
             
         Returns:
-            Optional[Event]: The processed message, or None if processing should stop
+            Optional[Dict[str, Any]]: Prepared content dictionary, or None if invalid
         """
-        logger.debug(f"Thread messaging mod processing broadcast message from {message.source_id}")
+        # Prevent infinite loops - don't process messages we generated
+        if (self.network and event.source_id == self.network.network_id and 
+            event.relevant_mod == "openagents.mods.communication.thread_messaging"):
+            logger.debug("Skipping thread messaging response message to prevent infinite loop")
+            return None
+        
+        # Extract the inner message from the Event content
+        content = event.payload if hasattr(event, 'payload') else event.content
+        
+        # Fix: Map sender_id to source_id for all message types that extend Event
+        if isinstance(content, dict) and 'sender_id' in content and 'source_id' not in content:
+            content = content.copy()  # Don't modify the original
+            content['source_id'] = content['sender_id']
+        
+        # Convert protobuf content to dict if needed
+        if hasattr(content, 'fields'):
+            logger.debug(f"Converting protobuf content to dict")
+            content_dict = {}
+            for field_name, field_value in content.fields.items():
+                if hasattr(field_value, 'string_value'):
+                    content_dict[field_name] = field_value.string_value
+                elif hasattr(field_value, 'struct_value'):
+                    # Handle nested struct (like content.text)
+                    nested_dict = {}
+                    for nested_name, nested_value in field_value.struct_value.fields.items():
+                        if hasattr(nested_value, 'string_value'):
+                            nested_dict[nested_name] = nested_value.string_value
+                    content_dict[field_name] = nested_dict
+                elif hasattr(field_value, 'number_value'):
+                    content_dict[field_name] = field_value.number_value
+                elif hasattr(field_value, 'bool_value'):
+                    content_dict[field_name] = field_value.bool_value
+                elif hasattr(field_value, 'null_value'):
+                    content_dict[field_name] = None
+                else:
+                    # Try to get the value using WhichOneof
+                    if hasattr(field_value, 'WhichOneof'):
+                        which = field_value.WhichOneof('kind')
+                        if which:
+                            content_dict[field_name] = getattr(field_value, which)
+                        else:
+                            content_dict[field_name] = str(field_value)
+                    else:
+                        content_dict[field_name] = str(field_value)
+            content = content_dict
+            logger.debug(f"Converted protobuf content to dict: {content}")
+        
+        return content
+    
+    async def _handle_thread_reply(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread reply events.
+        
+        Args:
+            event: The thread reply event to process
+            
+        Returns:
+            Optional[EventResponse]: The response to the event
+        """
+        content = self._prepare_thread_event_content(event)
+        if content is None:
+            return None
+        
+        try:
+            # Populate quoted_text if quoted_message_id is provided
+            if 'quoted_message_id' in content and content['quoted_message_id']:
+                content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
+            
+            inner_message = ReplyMessage(**content)
+            self._add_to_history(inner_message)
+            await self._process_reply_message(inner_message)
+            
+            return EventResponse(
+                success=True,
+                message=f"Thread reply event {event.event_name} processed successfully",
+                data={"event_name": event.event_name, "event_id": event.event_id}
+            )
+        except Exception as e:
+            logger.error(f"Error processing thread reply event: {e}")
+            return None
+    
+    async def _handle_thread_file_upload(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread file upload events.
+        
+        Args:
+            event: The thread file upload event to process
+            
+        Returns:
+            Optional[EventResponse]: The response to the event
+        """
+        content = self._prepare_thread_event_content(event)
+        if content is None:
+            return None
+        
+        try:
+            inner_message = FileUploadMessage(**content)
+            self._add_to_history(inner_message)
+            await self._process_file_upload(inner_message)
+            
+            return EventResponse(
+                success=True,
+                message=f"Thread file upload event {event.event_name} processed successfully",
+                data={"event_name": event.event_name, "event_id": event.event_id}
+            )
+        except Exception as e:
+            logger.error(f"Error processing thread file upload event: {e}")
+            return None
+    
+    async def _handle_thread_file_operation(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread file operation events.
+        
+        Args:
+            event: The thread file operation event to process
+            
+        Returns:
+            Optional[EventResponse]: The response to the event
+        """
+        content = self._prepare_thread_event_content(event)
+        if content is None:
+            return None
+        
+        try:
+            inner_message = FileOperationMessage(**content)
+            inner_message.event_name = event.event_name
+            self._add_to_history(inner_message)
+            await self._process_file_operation(inner_message)
+            
+            return EventResponse(
+                success=True,
+                message=f"Thread file operation event {event.event_name} processed successfully",
+                data={"event_name": event.event_name, "event_id": event.event_id}
+            )
+        except Exception as e:
+            logger.error(f"Error processing thread file operation event: {e}")
+            return None
+    
+    async def _handle_thread_channels(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread channel info events.
+        
+        Args:
+            event: The thread channel info event to process
+            
+        Returns:
+            Optional[EventResponse]: The response to the event
+        """
+        content = self._prepare_thread_event_content(event)
+        if content is None:
+            return None
+        
+        try:
+            inner_message = ChannelInfoMessage(**content)
+            inner_message.event_name = event.event_name
+            self._add_to_history(inner_message)
+            await self._process_channel_info_request(inner_message)
+            
+            return EventResponse(
+                success=True,
+                message=f"Thread channel info event {event.event_name} processed successfully",
+                data={"event_name": event.event_name, "event_id": event.event_id}
+            )
+        except Exception as e:
+            logger.error(f"Error processing thread channel info event: {e}")
+            return None
+    
+    async def _handle_thread_message_retrieval(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread message retrieval events.
+        
+        Args:
+            event: The thread message retrieval event to process
+            
+        Returns:
+            Optional[EventResponse]: The response to the event
+        """
+        content = self._prepare_thread_event_content(event)
+        if content is None:
+            return None
+        
+        try:
+            inner_message = MessageRetrievalMessage(**content)
+            inner_message.event_name = event.event_name
+            self._add_to_history(inner_message)
+            await self._process_message_retrieval_request(inner_message)
+            
+            return EventResponse(
+                success=True,
+                message=f"Thread message retrieval event {event.event_name} processed successfully",
+                data={"event_name": event.event_name, "event_id": event.event_id}
+            )
+        except Exception as e:
+            logger.error(f"Error processing thread message retrieval event: {e}")
+            return None
+    
+    async def _handle_thread_reactions(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread reaction events.
+        
+        Args:
+            event: The thread reaction event to process
+            
+        Returns:
+            Optional[EventResponse]: The response to the event
+        """
+        content = self._prepare_thread_event_content(event)
+        if content is None:
+            return None
+        
+        try:
+            inner_message = ReactionMessage(**content)
+            inner_message.event_name = event.event_name
+            self._add_to_history(inner_message)
+            await self._process_reaction_message(inner_message)
+            
+            return EventResponse(
+                success=True,
+                message=f"Thread reaction event {event.event_name} processed successfully",
+                data={"event_name": event.event_name, "event_id": event.event_id}
+            )
+        except Exception as e:
+            logger.error(f"Error processing thread reaction event: {e}")
+            return None
+    
+    async def _handle_thread_direct_message(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread direct message events.
+        
+        Args:
+            event: The thread direct message event to process
+            
+        Returns:
+            Optional[EventResponse]: The response to the event
+        """
+        content = self._prepare_thread_event_content(event)
+        if content is None:
+            return None
+        
+        try:
+            # Populate quoted_text if quoted_message_id is provided
+            if 'quoted_message_id' in content and content['quoted_message_id']:
+                content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
+            
+            inner_message = Event(event_name=event.event_name, **content)
+            self._add_to_history(inner_message)
+            await self._process_direct_message(inner_message)
+            
+            return EventResponse(
+                success=True,
+                message=f"Thread direct message event {event.event_name} processed successfully",
+                data={"event_name": event.event_name, "event_id": event.event_id}
+            )
+        except Exception as e:
+            logger.error(f"Error processing thread direct message event: {e}")
+            return None
+    
+    async def _handle_thread_channel_message(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread channel message events.
+        
+        Args:
+            event: The thread channel message event to process
+            
+        Returns:
+            Optional[EventResponse]: The response to the event
+        """
+        content = self._prepare_thread_event_content(event)
+        if content is None:
+            return None
+        
+        try:
+            # Populate quoted_text if quoted_message_id is provided
+            if 'quoted_message_id' in content and content['quoted_message_id']:
+                content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
+            
+            inner_message = ChannelMessage(**content)
+            self._add_to_history(inner_message)
+            await self._process_channel_message(inner_message)
+            
+            return EventResponse(
+                success=True,
+                message=f"Thread channel message event {event.event_name} processed successfully",
+                data={"event_name": event.event_name, "event_id": event.event_id}
+            )
+        except Exception as e:
+            logger.error(f"Error processing thread channel message event: {e}")
+            return None
+    
+    async def _handle_thread_generic_message(self, event: Event) -> Optional[EventResponse]:
+        """Handle generic thread.message events by examining message_type in payload.
+        
+        Args:
+            event: The generic thread message event to process
+            
+        Returns:
+            Optional[EventResponse]: The response to the event
+        """
+        content = self._prepare_thread_event_content(event)
+        if content is None:
+            return None
+        
+        try:
+            # Convert protobuf fields to dict if needed BEFORE extracting message_type
+            if isinstance(content, dict) and 'payload' in content and hasattr(content['payload'], 'fields'):
+                logger.debug(f"Converting protobuf payload to dict for thread.message")
+                payload = content['payload']
+                content_dict = {}
+                for field_name, field_value in payload.fields.items():
+                    # Handle specific fields that should be nested structs
+                    if field_name == 'content' and hasattr(field_value, 'struct_value'):
+                        # Handle nested struct (like content.text)
+                        nested_dict = {}
+                        for nested_name, nested_value in field_value.struct_value.fields.items():
+                            if hasattr(nested_value, 'string_value'):
+                                nested_dict[nested_name] = nested_value.string_value
+                        content_dict[field_name] = nested_dict
+                    elif hasattr(field_value, 'string_value'):
+                        content_dict[field_name] = field_value.string_value
+                    elif hasattr(field_value, 'number_value'):
+                        content_dict[field_name] = field_value.number_value
+                    elif hasattr(field_value, 'bool_value'):
+                        content_dict[field_name] = field_value.bool_value
+                    elif hasattr(field_value, 'null_value'):
+                        content_dict[field_name] = None
+                    else:
+                        # Use WhichOneof to get the actual field type
+                        field_type = field_value.WhichOneof('kind') if hasattr(field_value, 'WhichOneof') else None
+                        if field_type:
+                            content_dict[field_name] = getattr(field_value, field_type)
+                        else:
+                            content_dict[field_name] = str(field_value)
+                content = content_dict
+                logger.debug(f"Converted protobuf payload to dict: {content}")
+            
+            message_type = content.get("message_type") if isinstance(content, dict) else None
+            logger.debug(f"Processing generic thread.message with message_type: {message_type}")
+            
+            if message_type == "reply_message":
+                # Populate quoted_text if quoted_message_id is provided
+                if 'quoted_message_id' in content and content['quoted_message_id']:
+                    content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
+                inner_message = ReplyMessage(**content)
+                inner_message.event_name = event.event_name
+                self._add_to_history(inner_message)
+                await self._process_reply_message(inner_message)
+            elif message_type == "channel_message":
+                # Populate quoted_text if quoted_message_id is provided
+                if 'quoted_message_id' in content and content['quoted_message_id']:
+                    content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
+                inner_message = ChannelMessage(**content)
+                inner_message.event_name = event.event_name
+                self._add_to_history(inner_message)
+                await self._process_channel_message(inner_message)
+            elif message_type == "direct_message":
+                # Populate quoted_text if quoted_message_id is provided
+                if 'quoted_message_id' in content and content['quoted_message_id']:
+                    content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
+                inner_message = Event(event_name=event.event_name, **content)
+                self._add_to_history(inner_message)
+                await self._process_direct_message(inner_message)
+            elif message_type == "file_upload":
+                inner_message = FileUploadMessage(**content)
+                inner_message.event_name = event.event_name
+                self._add_to_history(inner_message)
+                await self._process_file_upload(inner_message)
+            elif message_type == "file_operation":
+                inner_message = FileOperationMessage(**content)
+                inner_message.event_name = event.event_name
+                self._add_to_history(inner_message)
+                await self._process_file_operation(inner_message)
+            elif message_type == "channel_info":
+                inner_message = ChannelInfoMessage(**content)
+                inner_message.event_name = event.event_name
+                await self._process_channel_info_request(inner_message)
+            elif message_type == "message_retrieval":
+                inner_message = MessageRetrievalMessage(**content)
+                inner_message.event_name = event.event_name
+                await self._process_message_retrieval_request(inner_message)
+            elif message_type == "reaction_message":
+                inner_message = ReactionMessage(**content)
+                inner_message.event_name = event.event_name
+                self._add_to_history(inner_message)
+                await self._process_reaction_message(inner_message)
+            elif (not message_type or message_type is None) and event.event_name == "thread.message":
+                # Fallback: Assume it's a channel message if message_type is None or empty
+                inner_message = ChannelMessage(**content)
+                inner_message.event_name = event.event_name
+                self._add_to_history(inner_message)
+                await self._process_channel_message(inner_message)
+            else:
+                logger.warning(f"Unknown message_type in thread.message: {message_type}")
+                return None
+            
+            return EventResponse(
+                success=True,
+                message=f"Generic thread message event processed successfully (type: {message_type})",
+                data={"event_name": event.event_name, "event_id": event.event_id, "message_type": message_type}
+            )
+        except Exception as e:
+            logger.error(f"Error processing generic thread message event: {e}")
+            return None
+    
+    
+    async def _process_broadcast_event(self, event: Event) -> Optional[EventResponse]:
+        """Process a broadcast message event.
+        
+        Args:
+            event: The broadcast message event to process
+            
+        Returns:
+            Optional[EventResponse]: The response to the event, or None if the event is not processed
+        """
+        logger.debug(f"Thread messaging mod processing broadcast message from {event.source_id}")
         
         # Add to history for thread messaging
-        self._add_to_history(message)
+        self._add_to_history(event)
         
         # Check if this is a channel message that should be handled by thread messaging
-        if hasattr(message, 'target_channel') and message.target_channel:
+        if hasattr(event, 'target_channel') and event.target_channel:
             # This is a channel broadcast - thread messaging should handle it
-            logger.debug(f"Thread messaging capturing channel broadcast to {message.target_channel}")
+            logger.debug(f"Thread messaging capturing channel broadcast to {event.target_channel}")
             
             # Convert to ChannelMessage and process it
             # Extract reply_to_id from payload if present
             reply_to_id = None
-            if isinstance(message.payload, dict):
-                reply_to_id = message.payload.get('reply_to_id')
+            if isinstance(event.payload, dict):
+                reply_to_id = event.payload.get('reply_to_id')
             
             channel_message = ChannelMessage(
-                sender_id=message.source_id,
-                channel=message.target_channel,
-                content=message.payload,
-                timestamp=message.timestamp,
-                message_id=message.event_id,
-                reply_to_id=reply_to_id  # Fix: Pass reply_to_id to ChannelMessage
+                sender_id=event.source_id,
+                channel=event.target_channel,
+                content=event.payload,
+                timestamp=event.timestamp,
+                message_id=event.event_id,
+                reply_to_id=reply_to_id
             )
             
             await self._process_channel_message(channel_message)
             
-            # Return None to stop further processing - thread messaging handled this
-            return None
+            # Return response to stop further processing - thread messaging handled this
+            return EventResponse(
+                success=True,
+                message=f"Channel message processed and distributed to channel {event.target_channel}",
+                data={"channel": event.target_channel, "message_id": event.event_id}
+            )
+        
+        # Check if this is a channel message based on payload
+        if hasattr(event, 'payload') and event.payload:
+            channel_name = event.payload.get('channel')
+            if channel_name:
+                logger.debug(f"Processing channel message for channel: {channel_name}")
+                
+                # Ensure channel exists
+                if channel_name not in self.channels:
+                    self._create_channel(channel_name)
+                
+                # Add message to channel history
+                if channel_name not in self.channels:
+                    self.channels[channel_name] = {'messages': []}
+                if 'messages' not in self.channels[channel_name]:
+                    self.channels[channel_name]['messages'] = []
+                
+                self.channels[channel_name]['messages'].append(event)
+                
+                # Limit channel history size
+                if len(self.channels[channel_name]['messages']) > self.max_history_size:
+                    self.channels[channel_name]['messages'] = self.channels[channel_name]['messages'][-self.max_history_size:]
+                
+                # Send notifications to channel members
+                await self._send_channel_message_notifications(event, channel_name)
+                
+                # Intercept the message since we've handled channel distribution
+                return EventResponse(
+                    success=True,
+                    message=f"Channel message processed and distributed to channel {channel_name}",
+                    data={"channel": channel_name, "message_id": event.event_id}
+                )
         
         # Not a channel message, let other mods process it
-        return message
+        return None
     
-    async def process_system_message(self, message: Event) -> Optional[Event]:
-        """Process a system message in the mod pipeline.
-        
-        Args:
-            message: The system message to process
-        
-        Returns:
-            Optional[Event]: The processed message, or None if the message was handled
-        """
-        
-        # Prevent infinite loops - don't process messages we generated
-        if message.source_id == self.network.network_id and message.relevant_mod == "openagents.mods.communication.thread_messaging":
-            logger.debug("Skipping thread messaging response message to prevent infinite loop")
-            return message
-        
-        # Check if this is a message type that thread messaging should handle
-        event_name = message.event_name
-        
-        # Debug logging for thread.message events
-        if event_name == "thread.message":
-            logger.warning(f"🔧 THREAD MOD ENTRY: Received thread.message event from {message.source_id}")
-            logger.warning(f"🔧 THREAD MOD ENTRY: Event payload type: {type(message.payload)}")
-            logger.warning(f"🔧 THREAD MOD ENTRY: Event payload: {message.payload}")
-        
-        # Handle thread messaging specific events based on event_name
-        if event_name.startswith("thread."):
-            logger.debug(f"Thread messaging processing system message: {event_name}")
-            
-            # Extract the inner message from the Event content
-            try:
-                content = message.payload if hasattr(message, 'payload') else message.content
-                
-                # Fix: Map sender_id to source_id for all message types that extend Event
-                # This is needed because the Event class expects source_id but message content uses sender_id
-                if isinstance(content, dict) and 'sender_id' in content and 'source_id' not in content:
-                    content = content.copy()  # Don't modify the original
-                    content['source_id'] = content['sender_id']
-                
-                # Convert protobuf content to dict if needed
-                if event_name == "thread.message":
-                    logger.warning(f"🔧 THREAD.MESSAGE DEBUG: content type={type(content)}, has_fields={hasattr(content, 'fields')}")
-                    logger.warning(f"🔧 THREAD.MESSAGE DEBUG: content keys={list(content.keys()) if hasattr(content, 'keys') else 'No keys'}")
-                    logger.warning(f"🔧 THREAD.MESSAGE DEBUG: content={content}")
-                if hasattr(content, 'fields'):
-                    logger.warning(f"🔧 PROTOBUF CONVERSION: Converting protobuf fields")
-                    # This is a protobuf Struct, convert to dict
-                    content_dict = {}
-                    for field_name, field_value in content.fields.items():
-                        if hasattr(field_value, 'string_value'):
-                            content_dict[field_name] = field_value.string_value
-                        elif hasattr(field_value, 'struct_value'):
-                            # Handle nested struct (like content.text)
-                            nested_dict = {}
-                            for nested_name, nested_value in field_value.struct_value.fields.items():
-                                if hasattr(nested_value, 'string_value'):
-                                    nested_dict[nested_name] = nested_value.string_value
-                            content_dict[field_name] = nested_dict
-                        elif hasattr(field_value, 'number_value'):
-                            content_dict[field_name] = field_value.number_value
-                        elif hasattr(field_value, 'bool_value'):
-                            content_dict[field_name] = field_value.bool_value
-                        elif hasattr(field_value, 'null_value'):
-                            content_dict[field_name] = None
-                        else:
-                            logger.warning(f"🔧 PROTOBUF FIELD UNKNOWN TYPE: {field_name} has unhandled field type: {type(field_value)}")
-                            # Try to get the value anyway - protobuf fields have a WhichOneof method
-                            if hasattr(field_value, 'WhichOneof'):
-                                which = field_value.WhichOneof('kind')
-                                if which:
-                                    content_dict[field_name] = getattr(field_value, which)
-                                    logger.warning(f"🔧 PROTOBUF FIELD EXTRACTED: {field_name} = {content_dict[field_name]} (from {which})")
-                                else:
-                                    content_dict[field_name] = str(field_value)
-                                    logger.warning(f"🔧 PROTOBUF FIELD FALLBACK: {field_name} = {content_dict[field_name]} (str conversion)")
-                            else:
-                                content_dict[field_name] = str(field_value)
-                    content = content_dict
-                    logger.debug(f"Converted protobuf content to dict: {content}")
-                
-                logger.debug(f"Processing thread system message: {event_name}")
-                logger.debug(f"Message content keys: {list(content.keys()) if hasattr(content, 'keys') else 'No keys'}")
-                
-                # Route based on event_name instead of message_type in payload
-                if event_name == "thread.reply.sent" or event_name == "thread.reply.post":
-                    # Populate quoted_text if quoted_message_id is provided
-                    if 'quoted_message_id' in content and content['quoted_message_id']:
-                        content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
-                    inner_message = ReplyMessage(**content)
-                    self._add_to_history(inner_message)
-                    await self._process_reply_message(inner_message)
-                elif event_name == "thread.file.upload" or event_name == "thread.file.upload_requested":
-                    inner_message = FileUploadMessage(**content)
-                    self._add_to_history(inner_message)
-                    await self._process_file_upload(inner_message)
-                elif event_name == "thread.file.download" or event_name == "thread.file.operation":
-                    inner_message = FileOperationMessage(**content)
-                    # Pass the original event_name for action determination
-                    inner_message.event_name = event_name
-                    self._add_to_history(inner_message)
-                    await self._process_file_operation(inner_message)
-                elif event_name == "thread.channels.info" or event_name == "thread.channels.list":
-                    inner_message = ChannelInfoMessage(**content)
-                    # Pass the original event_name for action determination
-                    inner_message.event_name = event_name
-                    self._add_to_history(inner_message)
-                    await self._process_channel_info_request(inner_message)
-                elif event_name == "thread.messages.retrieve" or event_name == "thread.channel_messages.retrieve" or event_name == "thread.direct_messages.retrieve":
-                    inner_message = MessageRetrievalMessage(**content)
-                    # Pass the original event_name for action determination
-                    inner_message.event_name = event_name
-                    self._add_to_history(inner_message)
-                    await self._process_message_retrieval_request(inner_message)
-                elif event_name == "thread.reaction.add" or event_name == "thread.reaction.remove" or event_name == "thread.reaction.toggle":
-                    inner_message = ReactionMessage(**content)
-                    # Pass the original event_name for action determination
-                    inner_message.event_name = event_name
-                    self._add_to_history(inner_message)
-                    await self._process_reaction_message(inner_message)
-                elif event_name == "thread.direct_message.sent" or event_name == "thread.direct_message.post":
-                    # Populate quoted_text if quoted_message_id is provided
-                    if 'quoted_message_id' in content and content['quoted_message_id']:
-                        content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
-                    inner_message = Event(event_name=event_name, **content)
-                    self._add_to_history(inner_message)
-                    await self._process_direct_message(inner_message)
-                elif event_name == "thread.channel_message.sent" or event_name == "thread.channel_message.post":
-                    # Populate quoted_text if quoted_message_id is provided
-                    if 'quoted_message_id' in content and content['quoted_message_id']:
-                        content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
-                    inner_message = ChannelMessage(**content)
-                    self._add_to_history(inner_message)
-                    await self._process_channel_message(inner_message)
-                elif event_name == "thread.message":
-                    # Handle generic thread.message by examining message_type in payload
-                    
-                    # Convert protobuf fields to dict if needed BEFORE extracting message_type
-                    if isinstance(content, dict) and 'payload' in content and hasattr(content['payload'], 'fields'):
-                        logger.warning(f"🔧 THREAD.MESSAGE FIX: Converting protobuf payload to dict")
-                        payload = content['payload']
-                        content_dict = {}
-                        for field_name, field_value in payload.fields.items():
-                            logger.warning(f"🔧 PROTOBUF FIELD DEBUG: {field_name} = {field_value} (type: {type(field_value)})")
-                            logger.warning(f"🔧 PROTOBUF FIELD DEBUG: {field_name} has string_value: {hasattr(field_value, 'string_value')}")
-                            logger.warning(f"🔧 PROTOBUF FIELD DEBUG: {field_name} has struct_value: {hasattr(field_value, 'struct_value')}")
-                            # Handle specific fields that should be nested structs
-                            if field_name == 'content' and hasattr(field_value, 'struct_value'):
-                                # Handle nested struct (like content.text)
-                                logger.warning(f"🔧 NESTED STRUCT DEBUG: Processing {field_name} struct")
-                                nested_dict = {}
-                                for nested_name, nested_value in field_value.struct_value.fields.items():
-                                    if hasattr(nested_value, 'string_value'):
-                                        nested_dict[nested_name] = nested_value.string_value
-                                        logger.warning(f"🔧 NESTED STRUCT DEBUG: {field_name}.{nested_name} = {nested_value.string_value}")
-                                content_dict[field_name] = nested_dict
-                                logger.warning(f"🔧 NESTED STRUCT DEBUG: Final {field_name} = {nested_dict}")
-                            elif hasattr(field_value, 'string_value'):
-                                content_dict[field_name] = field_value.string_value
-                            elif hasattr(field_value, 'number_value'):
-                                content_dict[field_name] = field_value.number_value
-                            elif hasattr(field_value, 'bool_value'):
-                                content_dict[field_name] = field_value.bool_value
-                            elif hasattr(field_value, 'null_value'):
-                                content_dict[field_name] = None
-                            else:
-                                # Use WhichOneof to get the actual field type
-                                field_type = field_value.WhichOneof('kind') if hasattr(field_value, 'WhichOneof') else None
-                                if field_type:
-                                    content_dict[field_name] = getattr(field_value, field_type)
-                                    logger.warning(f"🔧 PROTOBUF DEBUG: Handled {field_name} via WhichOneof: {field_type}")
-                                else:
-                                    logger.warning(f"🔧 PROTOBUF DEBUG: Unknown field type for {field_name}: {type(field_value)}")
-                                    content_dict[field_name] = str(field_value)
-                        content = content_dict
-                        logger.warning(f"🔧 THREAD.MESSAGE FIX: Converted to: {content}")
-                    
-                    message_type = content.get("message_type") if isinstance(content, dict) else None
-                    logger.warning(f"🔧 THREAD MOD DEBUG: Processing thread.message with message_type: {message_type}")
-                    logger.warning(f"🔧 THREAD MOD DEBUG: Content keys: {list(content.keys()) if isinstance(content, dict) else 'Not a dict'}")
-                    logger.warning(f"🔧 THREAD MOD DEBUG: Full content structure: {content}")
-                    logger.debug(f"Processing generic thread.message with message_type: {message_type}")
-                    
-                    if message_type == "reply_message":
-                        # Populate quoted_text if quoted_message_id is provided
-                        if 'quoted_message_id' in content and content['quoted_message_id']:
-                            content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
-                        inner_message = ReplyMessage(**content)
-                        inner_message.event_name = event_name
-                        self._add_to_history(inner_message)
-                        await self._process_reply_message(inner_message)
-                    elif message_type == "channel_message":
-                        # Populate quoted_text if quoted_message_id is provided
-                        if 'quoted_message_id' in content and content['quoted_message_id']:
-                            content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
-                        
-                        inner_message = ChannelMessage(**content)
-                        inner_message.event_name = event_name
-                        
-                        self._add_to_history(inner_message)
-                        await self._process_channel_message(inner_message)
-                    elif message_type == "direct_message":
-                        # Populate quoted_text if quoted_message_id is provided
-                        if 'quoted_message_id' in content and content['quoted_message_id']:
-                            content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
-                        
-                        inner_message = Event(event_name=event_name, **content)
-                        self._add_to_history(inner_message)
-                        await self._process_direct_message(inner_message)
-                    elif message_type == "file_upload":
-                        inner_message = FileUploadMessage(**content)
-                        inner_message.event_name = event_name
-                        self._add_to_history(inner_message)
-                        await self._process_file_upload(inner_message)
-                    elif message_type == "file_operation":
-                        inner_message = FileOperationMessage(**content)
-                        inner_message.event_name = event_name
-                        self._add_to_history(inner_message)
-                        await self._process_file_operation(inner_message)
-                    elif message_type == "channel_info":
-                        inner_message = ChannelInfoMessage(**content)
-                        inner_message.event_name = event_name
-                        await self._process_channel_info_request(inner_message)
-                    elif message_type == "message_retrieval":
-                        inner_message = MessageRetrievalMessage(**content)
-                        inner_message.event_name = event_name
-                        await self._process_message_retrieval_request(inner_message)
-                    elif message_type == "reaction_message":
-                        inner_message = ReactionMessage(**content)
-                        inner_message.event_name = event_name
-                        self._add_to_history(inner_message)
-                        await self._process_reaction_message(inner_message)
-                    elif (not message_type or message_type is None) and event_name == "thread.message":
-                        # Fallback: Assume it's a channel message if message_type is None or empty
-                        # This handles transport issues where message_type is lost
-                        inner_message = ChannelMessage(**content)
-                        inner_message.event_name = event_name
-                        self._add_to_history(inner_message)
-                        await self._process_channel_message(inner_message)
-                    else:
-                        logger.warning(f"Unknown message_type in thread.message: {message_type} (type: {type(message_type)})")
-                else:
-                    logger.warning(f"Unknown thread event name: {event_name}")
-                    return message  # Let other mods handle unknown event types
-                
-                # Thread messaging handled this message, stop further processing
-                return None
-                
-            except Exception as e:
-                logger.error(f"Error processing thread system message: {e}")
-                import traceback
-                traceback.print_exc()
-                return message  # Let other mods handle if there's an error
-        
-        # Not a thread messaging event, let other mods process it
-        return message
     
     async def _process_channel_message(self, message: ChannelMessage) -> None:
         """Process a channel message.

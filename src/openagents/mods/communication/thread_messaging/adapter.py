@@ -210,7 +210,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             payload["quoted_text"] = quoted_text
         
         # Create direct message 
-        direct_msg = Event(event_name="agent.direct_message.sent", source_id=self.agent_id, destination_id=target_agent_id, payload=payload)
+        direct_msg = Event(event_name="agent.message", source_id=self.agent_id, destination_id=target_agent_id, payload=payload)
         
         # Wrap in Event for proper transport
         wrapper_payload = direct_msg.model_dump()
