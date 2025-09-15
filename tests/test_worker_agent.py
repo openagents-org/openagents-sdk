@@ -33,7 +33,7 @@ class MockWorkerAgent(WorkerAgent):
         # Use workspace for sending messages (mocked in tests)
         try:
             ws = self.workspace()
-            await ws.agent(msg.source_id).send_direct_message(f"Got: {msg.text}")
+            await ws.agent(msg.source_id).send_message(f"Got: {msg.text}")
         except AttributeError:
             # In tests, workspace might not be available
             pass

@@ -107,7 +107,7 @@ async def run_simple_event_test():
             await channel.post("Hello from test runner!")
             
             echo_conn = ws.agent("echo-agent")
-            await echo_conn.send_direct_message("Test message for echo")
+            await echo_conn.send_message("Test message for echo")
             
             # Read events using the exact interface requested
             print("\n🎧 Listening for events...")
