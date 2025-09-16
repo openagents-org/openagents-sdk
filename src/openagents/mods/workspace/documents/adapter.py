@@ -16,6 +16,7 @@ from datetime import datetime
 
 from openagents.core.base_mod_adapter import BaseModAdapter
 from openagents.models.messages import Event
+from openagents.models.event import Event, EventVisibility
 from openagents.models.tool import AgentAdapterTool
 from .document_messages import (
     CreateDocumentMessage,
@@ -416,20 +417,15 @@ class SharedDocumentAgentAdapter(BaseModAdapter):
             if access_permissions is None:
                 access_permissions = {}
             
-            message = CreateDocumentMessage(
-                document_name=document_name,
-                initial_content=initial_content,
-                access_permissions=access_permissions,
-                sender_id=self.agent_id
-            )
-            
-            # Send message to network
-            await self._send_message(message)
-            
-            return {
-                "status": "success",
-                "message": f"Document creation request sent for '{document_name}'"
+            payload = {
+                "document_name": document_name,
+                "initial_content": initial_content,
+                "access_permissions": access_permissions,
+                "sender_id": self.agent_id
             }
+            
+            # Send event to network
+            return await self._send_event("document.create", payload)
             
         except Exception as e:
             logger.error(f"Failed to create document: {e}")
@@ -448,18 +444,13 @@ class SharedDocumentAgentAdapter(BaseModAdapter):
             Dict containing operation result
         """
         try:
-            message = OpenDocumentMessage(
-                document_id=document_id,
-                sender_id=self.agent_id
-            )
-            
-            # Send message to network
-            await self._send_message(message)
-            
-            return {
-                "status": "success",
-                "message": f"Document open request sent for {document_id}"
+            payload = {
+                "document_id": document_id,
+                "sender_id": self.agent_id
             }
+            
+            # Send event to network
+            return await self._send_event("document.open", payload)
             
         except Exception as e:
             logger.error(f"Failed to open document: {e}")
@@ -478,25 +469,23 @@ class SharedDocumentAgentAdapter(BaseModAdapter):
             Dict containing operation result
         """
         try:
-            message = CloseDocumentMessage(
-                document_id=document_id,
-                sender_id=self.agent_id
-            )
-            
-            # Send message to network
-            await self._send_message(message)
-            
-            # Remove from local tracking
-            if document_id in self.open_documents:
-                del self.open_documents[document_id]
-            
-            if document_id in self.agent_cursors:
-                del self.agent_cursors[document_id]
-            
-            return {
-                "status": "success",
-                "message": f"Document close request sent for {document_id}"
+            payload = {
+                "document_id": document_id,
+                "sender_id": self.agent_id
             }
+            
+            # Send event to network
+            result = await self._send_event("document.close", payload)
+            
+            # Remove from local tracking if successful
+            if result.get("status") == "success":
+                if document_id in self.open_documents:
+                    del self.open_documents[document_id]
+                
+                if document_id in self.agent_cursors:
+                    del self.agent_cursors[document_id]
+            
+            return result
             
         except Exception as e:
             logger.error(f"Failed to close document: {e}")
@@ -517,20 +506,15 @@ class SharedDocumentAgentAdapter(BaseModAdapter):
             Dict containing operation result
         """
         try:
-            message = InsertLinesMessage(
-                document_id=document_id,
-                line_number=line_number,
-                content=content,
-                sender_id=self.agent_id
-            )
-            
-            # Send message to network
-            await self._send_message(message)
-            
-            return {
-                "status": "success",
-                "message": f"Insert operation sent for {len(content)} lines at line {line_number}"
+            payload = {
+                "document_id": document_id,
+                "line_number": line_number,
+                "content": content,
+                "sender_id": self.agent_id
             }
+            
+            # Send event to network
+            return await self._send_event("document.insert_lines", payload)
             
         except Exception as e:
             logger.error(f"Failed to insert lines: {e}")
@@ -551,20 +535,15 @@ class SharedDocumentAgentAdapter(BaseModAdapter):
             Dict containing operation result
         """
         try:
-            message = RemoveLinesMessage(
-                document_id=document_id,
-                start_line=start_line,
-                end_line=end_line,
-                sender_id=self.agent_id
-            )
-            
-            # Send message to network
-            await self._send_message(message)
-            
-            return {
-                "status": "success",
-                "message": f"Remove operation sent for lines {start_line}-{end_line}"
+            payload = {
+                "document_id": document_id,
+                "start_line": start_line,
+                "end_line": end_line,
+                "sender_id": self.agent_id
             }
+            
+            # Send event to network
+            return await self._send_event("document.remove_lines", payload)
             
         except Exception as e:
             logger.error(f"Failed to remove lines: {e}")
@@ -586,21 +565,16 @@ class SharedDocumentAgentAdapter(BaseModAdapter):
             Dict containing operation result
         """
         try:
-            message = ReplaceLinesMessage(
-                document_id=document_id,
-                start_line=start_line,
-                end_line=end_line,
-                content=content,
-                sender_id=self.agent_id
-            )
-            
-            # Send message to network
-            await self._send_message(message)
-            
-            return {
-                "status": "success",
-                "message": f"Replace operation sent for lines {start_line}-{end_line} with {len(content)} new lines"
+            payload = {
+                "document_id": document_id,
+                "start_line": start_line,
+                "end_line": end_line,
+                "content": content,
+                "sender_id": self.agent_id
             }
+            
+            # Send event to network
+            return await self._send_event("document.replace_lines", payload)
             
         except Exception as e:
             logger.error(f"Failed to replace lines: {e}")
@@ -621,20 +595,15 @@ class SharedDocumentAgentAdapter(BaseModAdapter):
             Dict containing operation result
         """
         try:
-            message = AddCommentMessage(
-                document_id=document_id,
-                line_number=line_number,
-                comment_text=comment_text,
-                sender_id=self.agent_id
-            )
-            
-            # Send message to network
-            await self._send_message(message)
-            
-            return {
-                "status": "success",
-                "message": f"Comment added to line {line_number}"
+            payload = {
+                "document_id": document_id,
+                "line_number": line_number,
+                "comment_text": comment_text,
+                "sender_id": self.agent_id
             }
+            
+            # Send event to network
+            return await self._send_event("document.add_comment", payload)
             
         except Exception as e:
             logger.error(f"Failed to add comment: {e}")
@@ -654,19 +623,14 @@ class SharedDocumentAgentAdapter(BaseModAdapter):
             Dict containing operation result
         """
         try:
-            message = RemoveCommentMessage(
-                document_id=document_id,
-                comment_id=comment_id,
-                sender_id=self.agent_id
-            )
-            
-            # Send message to network
-            await self._send_message(message)
-            
-            return {
-                "status": "success",
-                "message": f"Comment removal request sent for {comment_id}"
+            payload = {
+                "document_id": document_id,
+                "comment_id": comment_id,
+                "sender_id": self.agent_id
             }
+            
+            # Send event to network
+            return await self._send_event("document.remove_comment", payload)
             
         except Exception as e:
             logger.error(f"Failed to remove comment: {e}")
@@ -692,22 +656,20 @@ class SharedDocumentAgentAdapter(BaseModAdapter):
                 column_number=column_number
             )
             
-            message = UpdateCursorPositionMessage(
-                document_id=document_id,
-                cursor_position=cursor_position,
-                sender_id=self.agent_id
-            )
+            payload = {
+                "document_id": document_id,
+                "cursor_position": {
+                    "line_number": line_number,
+                    "column_number": column_number
+                },
+                "sender_id": self.agent_id
+            }
             
             # Update local tracking
             self.agent_cursors[document_id] = cursor_position
             
-            # Send message to network
-            await self._send_message(message)
-            
-            return {
-                "status": "success",
-                "message": f"Cursor position updated to line {line_number}, column {column_number}"
-            }
+            # Send event to network
+            return await self._send_event("document.update_cursor", payload)
             
         except Exception as e:
             logger.error(f"Failed to update cursor position: {e}")
@@ -728,20 +690,15 @@ class SharedDocumentAgentAdapter(BaseModAdapter):
             Dict containing operation result
         """
         try:
-            message = GetDocumentContentMessage(
-                document_id=document_id,
-                include_comments=include_comments,
-                include_presence=include_presence,
-                sender_id=self.agent_id
-            )
-            
-            # Send message to network
-            await self._send_message(message)
-            
-            return {
-                "status": "success",
-                "message": f"Document content request sent for {document_id}"
+            payload = {
+                "document_id": document_id,
+                "include_comments": include_comments,
+                "include_presence": include_presence,
+                "sender_id": self.agent_id
             }
+            
+            # Send event to network
+            return await self._send_event("document.get_content", payload)
             
         except Exception as e:
             logger.error(f"Failed to get document content: {e}")
@@ -762,20 +719,15 @@ class SharedDocumentAgentAdapter(BaseModAdapter):
             Dict containing operation result
         """
         try:
-            message = GetDocumentHistoryMessage(
-                document_id=document_id,
-                limit=limit,
-                offset=offset,
-                sender_id=self.agent_id
-            )
-            
-            # Send message to network
-            await self._send_message(message)
-            
-            return {
-                "status": "success",
-                "message": f"Document history request sent for {document_id}"
+            payload = {
+                "document_id": document_id,
+                "limit": limit,
+                "offset": offset,
+                "sender_id": self.agent_id
             }
+            
+            # Send event to network
+            return await self._send_event("document.get_history", payload)
             
         except Exception as e:
             logger.error(f"Failed to get document history: {e}")
@@ -794,18 +746,13 @@ class SharedDocumentAgentAdapter(BaseModAdapter):
             Dict containing operation result
         """
         try:
-            message = ListDocumentsMessage(
-                include_closed=include_closed,
-                sender_id=self.agent_id
-            )
-            
-            # Send message to network
-            await self._send_message(message)
-            
-            return {
-                "status": "success",
-                "message": "Document list request sent"
+            payload = {
+                "include_closed": include_closed,
+                "sender_id": self.agent_id
             }
+            
+            # Send event to network
+            return await self._send_event("document.list", payload)
             
         except Exception as e:
             logger.error(f"Failed to list documents: {e}")
@@ -824,18 +771,13 @@ class SharedDocumentAgentAdapter(BaseModAdapter):
             Dict containing operation result
         """
         try:
-            message = GetAgentPresenceMessage(
-                document_id=document_id,
-                sender_id=self.agent_id
-            )
-            
-            # Send message to network
-            await self._send_message(message)
-            
-            return {
-                "status": "success",
-                "message": f"Agent presence request sent for {document_id}"
+            payload = {
+                "document_id": document_id,
+                "sender_id": self.agent_id
             }
+            
+            # Send event to network
+            return await self._send_event("document.get_presence", payload)
             
         except Exception as e:
             logger.error(f"Failed to get agent presence: {e}")
@@ -1065,23 +1007,46 @@ class SharedDocumentAgentAdapter(BaseModAdapter):
         except Exception as e:
             logger.error(f"Error handling presence broadcast: {e}")
     
-    async def _send_message(self, message: Any) -> None:
-        """Send a message to the network.
+    async def _send_event(self, event_name: str, payload: Dict[str, Any], destination_id: str = None) -> Dict[str, Any]:
+        """Send an event to the network using the new event system.
         
         Args:
-            message: The message to send
+            event_name: Name of the event
+            payload: Event payload
+            destination_id: Destination for the event (defaults to mod destination)
+            
+        Returns:
+            Dict containing the response from the network
         """
         try:
-            mod_message = Event(
-                event_name="agent.mod_message.sent",
-                source_id=self.agent_id,
-                relevant_mod="documents",
-                payload=message.model_dump(),
-                destination_id=self.agent_id
+            if destination_id is None:
+                destination_id = f"mod:openagents.mods.workspace.documents"
+            
+            event = Event(
+                event_name=event_name,
+                source_id=f"agent:{self.agent_id}",
+                destination_id=destination_id,
+                payload=payload,
+                visibility=EventVisibility.NETWORK
             )
             
-            await self.network_interface.send_mod_message(mod_message)
+            response = await self.connector.send_event(event)
+            
+            if response and response.success:
+                return {
+                    "status": "success",
+                    "data": response.data,
+                    "message": response.message
+                }
+            else:
+                return {
+                    "status": "error", 
+                    "message": response.message if response else "No response received"
+                }
             
         except Exception as e:
-            logger.error(f"Failed to send message: {e}")
-            raise
+            logger.error(f"Failed to send event {event_name}: {e}")
+            return {
+                "status": "error",
+                "message": str(e)
+            }

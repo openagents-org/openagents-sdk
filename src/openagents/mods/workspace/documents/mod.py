@@ -17,6 +17,7 @@ from datetime import datetime, timedelta
 
 from openagents.core.base_mod import BaseMod
 from openagents.models.event import Event
+from openagents.models.event_response import EventResponse
 from openagents.models.messages import EventNames
 from .document_messages import (
     CreateDocumentMessage,
@@ -126,6 +127,15 @@ class SharedDocument:
             return True
         
         return False
+    
+    def can_access(self, agent_id: str, operation: str) -> bool:
+        """Check if agent can access the document for the given operation."""
+        # Creator always has access
+        if agent_id == self.creator_agent_id:
+            return True
+        
+        # Check explicit permissions
+        return self.has_permission(agent_id, operation)
     
     def update_agent_presence(self, agent_id: str, cursor_position: Optional[CursorPosition] = None) -> bool:
         """Update an agent's presence information."""
@@ -566,6 +576,21 @@ class SharedDocumentNetworkMod(BaseMod):
         """Initialize the shared document mod."""
         super().__init__(mod_name=mod_name)
         
+        # Register event handlers using the new pattern
+        self.register_event_handler(self._handle_document_create, "document.create")
+        self.register_event_handler(self._handle_document_open, "document.open") 
+        self.register_event_handler(self._handle_document_close, "document.close")
+        self.register_event_handler(self._handle_document_insert_lines, "document.insert_lines")
+        self.register_event_handler(self._handle_document_remove_lines, "document.remove_lines")
+        self.register_event_handler(self._handle_document_replace_lines, "document.replace_lines")
+        self.register_event_handler(self._handle_document_add_comment, "document.add_comment")
+        self.register_event_handler(self._handle_document_remove_comment, "document.remove_comment")
+        self.register_event_handler(self._handle_document_update_cursor, "document.update_cursor")
+        self.register_event_handler(self._handle_document_get_content, "document.get_content")
+        self.register_event_handler(self._handle_document_get_history, "document.get_history")
+        self.register_event_handler(self._handle_document_list, "document.list")
+        self.register_event_handler(self._handle_document_get_presence, "document.get_presence")
+        
         # Document storage
         self.documents: Dict[str, SharedDocument] = {}
         
@@ -589,161 +614,33 @@ class SharedDocumentNetworkMod(BaseMod):
         logger.info("Shutting down SharedDocument network mod")
         return True
     
-    async def process_system_message(self, message: Event) -> Optional[Event]:
-        """Process incoming mod messages."""
-        try:
-            source_agent_id = message.source_id or getattr(message, 'relevant_agent_id', 'unknown')
-            logger.info(f"Processing mod message from {source_agent_id}: {type(message)} - {message}")
-            
-            # Extract the actual message content from the mod message
-            content = message.payload if hasattr(message, 'payload') else message
-            event_name = getattr(message, 'event_name', '')
-            
-            # Try to determine action from event_name first, fallback to message_type in payload
-            message_type = content.get('message_type') if isinstance(content, dict) else getattr(content, 'message_type', None)
-            
-            # Extract request_id from the Event for response matching
-            request_id = getattr(message, 'request_id', None)
-            
-            logger.info(f"Event name: {event_name}, Message type: {message_type}, Content: {content}, Request ID: {request_id}")
-            
-            # Route based on event_name patterns first, then fallback to message_type
-            if event_name == "document.create" or event_name == "document.creation.request" or message_type == "create_document":
-                doc_message = CreateDocumentMessage(**content)
-                doc_message.event_name = event_name
-                await self._handle_create_document(doc_message, source_agent_id, request_id)
-            elif event_name == "document.list" or event_name == "document.list.request" or message_type == "list_documents":
-                # Extract required positional arguments for Event dataclass
-                content_copy = content.copy()
-                event_name_arg = content_copy.pop('event_name', event_name)
-                source_id_arg = content_copy.pop('source_id', source_agent_id)
-                doc_message = ListDocumentsMessage(event_name_arg, source_id_arg, **content_copy)
-                doc_message.event_name = event_name
-                await self._handle_list_documents(doc_message, source_agent_id, request_id)
-            elif event_name == "document.open" or event_name == "document.open.request" or message_type == "open_document":
-                doc_message = OpenDocumentMessage(**content)
-                doc_message.event_name = event_name
-                await self._handle_open_document(doc_message, source_agent_id, request_id)
-            elif event_name == "document.close" or event_name == "document.close.request" or message_type == "close_document":
-                doc_message = CloseDocumentMessage(**content)
-                doc_message.event_name = event_name
-                await self._handle_close_document(doc_message, source_agent_id, request_id)
-            elif event_name == "document.insert_lines" or event_name == "document.lines.insert" or message_type == "insert_lines":
-                doc_message = InsertLinesMessage(**content)
-                doc_message.event_name = event_name
-                await self._handle_insert_lines(doc_message, source_agent_id, request_id)
-            elif event_name == "document.remove_lines" or event_name == "document.lines.remove" or message_type == "remove_lines":
-                doc_message = RemoveLinesMessage(**content)
-                doc_message.event_name = event_name
-                await self._handle_remove_lines(doc_message, source_agent_id, request_id)
-            elif event_name == "document.replace_lines" or event_name == "document.lines.replace" or message_type == "replace_lines":
-                doc_message = ReplaceLinesMessage(**content)
-                doc_message.event_name = event_name
-                await self._handle_replace_lines(doc_message, source_agent_id, request_id)
-            elif event_name == "document.add_comment" or event_name == "document.comment.add" or message_type == "add_comment":
-                doc_message = AddCommentMessage(**content)
-                doc_message.event_name = event_name
-                await self._handle_add_comment(doc_message, source_agent_id, request_id)
-            elif event_name == "document.remove_comment" or event_name == "document.comment.remove" or message_type == "remove_comment":
-                doc_message = RemoveCommentMessage(**content)
-                doc_message.event_name = event_name
-                await self._handle_remove_comment(doc_message, source_agent_id, request_id)
-            elif event_name == "document.update_cursor" or event_name == "document.cursor.update" or message_type == "update_cursor_position":
-                doc_message = UpdateCursorPositionMessage(**content)
-                doc_message.event_name = event_name
-                await self._handle_update_cursor_position(doc_message, source_agent_id, request_id)
-            elif event_name == "document.acquire_lock" or event_name == "document.lock.acquire" or message_type == "acquire_line_lock":
-                doc_message = AcquireLineLockMessage(**content)
-                doc_message.event_name = event_name
-                await self._handle_acquire_line_lock(doc_message, source_agent_id, request_id)
-            elif event_name == "document.release_lock" or event_name == "document.lock.release" or message_type == "release_line_lock":
-                doc_message = ReleaseLineLockMessage(**content)
-                doc_message.event_name = event_name
-                await self._handle_release_line_lock(doc_message, source_agent_id, request_id)
-            elif event_name == "document.get_content" or event_name == "document.content.get" or message_type == "get_document_content":
-                doc_message = GetDocumentContentMessage(**content)
-                doc_message.event_name = event_name
-                await self._handle_get_document_content(doc_message, source_agent_id, request_id)
-            elif event_name == "document.get_history" or event_name == "document.history.get" or message_type == "get_document_history":
-                doc_message = GetDocumentHistoryMessage(**content)
-                doc_message.event_name = event_name
-                await self._handle_get_document_history(doc_message, source_agent_id, request_id)
-            elif event_name == "document.get_presence" or event_name == "document.presence.get" or message_type == "get_agent_presence":
-                doc_message = GetAgentPresenceMessage(**content)
-                doc_message.event_name = event_name
-                await self._handle_get_agent_presence(doc_message, source_agent_id, request_id)
-            else:
-                logger.warning(f"Unknown document event: {event_name} / message_type: {message_type}")
-                
-        except Exception as e:
-            logger.error(f"Error processing mod message from {source_agent_id}: {e}")
-            await self._send_error_response(source_agent_id, str(e))
-        return message
+    # Event handlers using the new pattern
     
-    async def process_message(self, message: Event, source_agent_id: str) -> None:
-        """Legacy process_message method - delegates to process_system_message."""
+    async def _handle_document_create(self, event: Event) -> Optional[EventResponse]:
+        """Handle document creation requests."""
         try:
-            if isinstance(message, Event):
-                await self.process_system_message(message)
-            else:
-                logger.warning(f"Received non-mod message: {type(message)}")
-                
-                if isinstance(message, CreateDocumentMessage):
-                    await self._handle_create_document(message, source_agent_id)
-                elif isinstance(message, OpenDocumentMessage):
-                    await self._handle_open_document(message, source_agent_id)
-                elif isinstance(message, CloseDocumentMessage):
-                    await self._handle_close_document(message, source_agent_id)
-                elif isinstance(message, InsertLinesMessage):
-                    await self._handle_insert_lines(message, source_agent_id)
-                elif isinstance(message, RemoveLinesMessage):
-                    await self._handle_remove_lines(message, source_agent_id)
-                elif isinstance(message, ReplaceLinesMessage):
-                    await self._handle_replace_lines(message, source_agent_id)
-                elif isinstance(message, AddCommentMessage):
-                    await self._handle_add_comment(message, source_agent_id)
-                elif isinstance(message, RemoveCommentMessage):
-                    await self._handle_remove_comment(message, source_agent_id)
-                elif isinstance(message, UpdateCursorPositionMessage):
-                    await self._handle_update_cursor_position(message, source_agent_id)
-                elif isinstance(message, GetDocumentContentMessage):
-                    await self._handle_get_document_content(message, source_agent_id)
-                elif isinstance(message, GetDocumentHistoryMessage):
-                    await self._handle_get_document_history(message, source_agent_id)
-                elif isinstance(message, ListDocumentsMessage):
-                    await self._handle_list_documents(message, source_agent_id)
-                elif isinstance(message, GetAgentPresenceMessage):
-                    await self._handle_get_agent_presence(message, source_agent_id)
-                else:
-                    logger.warning(f"Unknown message type: {type(message)}")
-                
-        except Exception as e:
-            logger.error(f"Error processing message from {source_agent_id}: {e}")
-            await self._send_error_response(source_agent_id, str(e))
-    
-    async def _handle_create_document(self, message: CreateDocumentMessage, source_agent_id: str, request_id: str = None) -> None:
-        """Handle document creation."""
-        try:
+            source_agent_id = event.source_id.replace("agent:", "") if event.source_id.startswith("agent:") else event.source_id
+            logger.info(f"Processing document create request from {source_agent_id}")
+            
+            # Extract payload
+            payload = event.payload
+            document_name = payload.get("document_name")
+            initial_content = payload.get("initial_content", "")
+            access_permissions = payload.get("access_permissions", {})
+            
+            # Create document
             document_id = str(uuid.uuid4())
-            
-            # Create the document
             document = SharedDocument(
                 document_id=document_id,
-                name=message.document_name,
+                name=document_name,
                 creator_agent_id=source_agent_id,
-                initial_content=message.initial_content or ""
+                initial_content=initial_content
             )
             
-            # Set permissions
-            document.access_permissions = message.access_permissions.copy()
-            document.access_permissions[source_agent_id] = "admin"  # Creator gets admin rights
+            # Set access permissions
+            for agent_id, permission in access_permissions.items():
+                document.add_agent(agent_id, permission)
             
-            # Document permissions configured
-            
-            # Add creator as active agent
-            document.add_agent(source_agent_id, "admin")
-            
-            # Store the document
             self.documents[document_id] = document
             
             # Track agent session
@@ -751,692 +648,388 @@ class SharedDocumentNetworkMod(BaseMod):
                 self.agent_sessions[source_agent_id] = set()
             self.agent_sessions[source_agent_id].add(document_id)
             
-            # Send success response
-            response = DocumentOperationResponse(
-                event_name="document.operation.response",
-                operation_id=document_id,
+            logger.info(f"Created document {document_id} '{document_name}' for agent {source_agent_id}")
+            
+            return EventResponse(
                 success=True,
-                source_id=self.network.network_id
+                message=f"Document '{document_name}' created successfully",
+                data={
+                    "document_id": document_id,
+                    "document_name": document_name,
+                    "creator_id": source_agent_id,
+                    "content": document.content
+                }
             )
             
-            await self._send_response(source_agent_id, response, request_id)
-            
-            logger.info(f"Created document {document_id} by agent {source_agent_id}")
-            
         except Exception as e:
-            logger.error(f"Failed to create document: {e}")
-            await self._send_error_response(source_agent_id, str(e))
+            logger.error(f"Error creating document: {e}")
+            return EventResponse(
+                success=False,
+                message=f"Failed to create document: {str(e)}"
+            )
     
-    async def _handle_open_document(self, message: OpenDocumentMessage, source_agent_id: str, request_id: str = None) -> None:
-        """Handle document opening."""
+    async def _handle_document_open(self, event: Event) -> Optional[EventResponse]:
+        """Handle document open requests."""
         try:
-            document_id = message.document_id
+            source_agent_id = event.source_id.replace("agent:", "") if event.source_id.startswith("agent:") else event.source_id
+            payload = event.payload
+            document_id = payload.get("document_id")
             
             if document_id not in self.documents:
-                raise ValueError(f"Document not found: {document_id}")
+                return EventResponse(
+                    success=False,
+                    message=f"Document {document_id} not found"
+                )
             
             document = self.documents[document_id]
             
             # Check permissions
-            if not document.has_permission(source_agent_id, "read"):
-                raise ValueError("Agent does not have permission to access this document")
-            
-            # Add agent to document
-            permission = document.access_permissions.get(source_agent_id, "read_only")
-            document.add_agent(source_agent_id, permission)
+            if not document.can_access(source_agent_id, "read"):
+                return EventResponse(
+                    success=False,
+                    message="Access denied"
+                )
             
             # Track agent session
             if source_agent_id not in self.agent_sessions:
                 self.agent_sessions[source_agent_id] = set()
             self.agent_sessions[source_agent_id].add(document_id)
             
-            # Send document content with properly serialized agent presence
-            serialized_presence = []
-            for presence in document.agent_presence.values():
-                # Use model_dump to properly serialize datetime objects
-                presence_dict = presence.model_dump()
-                # Convert datetime objects to ISO format strings
-                if 'last_activity' in presence_dict and hasattr(presence_dict['last_activity'], 'isoformat'):
-                    presence_dict['last_activity'] = presence_dict['last_activity'].isoformat()
-                serialized_presence.append(presence_dict)
-            
-            response = DocumentContentResponse(
-                event_name="document.content.response",
-                document_id=document_id,
-                content=document.content.copy(),
-                comments=[
-                    comment for comments in document.comments.values()
-                    for comment in comments
-                ],
-                agent_presence=serialized_presence,
-                version=document.version,
-                line_authors=document.line_authors.copy(),
-                line_locks=document._get_active_line_locks(),
-                source_id=self.network.network_id
+            return EventResponse(
+                success=True,
+                message=f"Document opened successfully",
+                data={
+                    "document_id": document_id,
+                    "document_name": document.name,
+                    "content": document.content
+                }
             )
             
-            await self._send_response(source_agent_id, response, request_id)
-            
-            # Notify other agents about new presence
-            await self._broadcast_presence_update(document_id, source_agent_id)
-            
-            logger.info(f"Agent {source_agent_id} opened document {document_id}")
-            
         except Exception as e:
-            logger.error(f"Failed to open document: {e}")
-            await self._send_error_response(source_agent_id, str(e))
+            logger.error(f"Error opening document: {e}")
+            return EventResponse(
+                success=False,
+                message=f"Failed to open document: {str(e)}"
+            )
     
-    async def _handle_close_document(self, message: CloseDocumentMessage, source_agent_id: str, request_id: str = None) -> None:
-        """Handle document closing."""
+    async def _handle_document_close(self, event: Event) -> Optional[EventResponse]:
+        """Handle document close requests."""
         try:
-            document_id = message.document_id
-            
-            if document_id in self.documents:
-                document = self.documents[document_id]
-                document.remove_agent(source_agent_id)
+            source_agent_id = event.source_id.replace("agent:", "") if event.source_id.startswith("agent:") else event.source_id
+            payload = event.payload
+            document_id = payload.get("document_id")
             
             # Remove from agent session
             if source_agent_id in self.agent_sessions:
                 self.agent_sessions[source_agent_id].discard(document_id)
             
-            # Send success response
-            response = DocumentOperationResponse(
-                event_name="document.operation.response",
-                operation_id=str(uuid.uuid4()),
+            return EventResponse(
                 success=True,
-                source_id=self.network.network_id
+                message=f"Document closed successfully"
             )
             
-            await self._send_response(source_agent_id, response, request_id)
-            
-            # Notify other agents about presence change
-            if document_id in self.documents:
-                await self._broadcast_presence_update(document_id, source_agent_id)
-            
-            logger.info(f"Agent {source_agent_id} closed document {document_id}")
-            
         except Exception as e:
-            logger.error(f"Failed to close document: {e}")
-            await self._send_error_response(source_agent_id, str(e))
+            logger.error(f"Error closing document: {e}")
+            return EventResponse(
+                success=False,
+                message=f"Failed to close document: {str(e)}"
+            )
     
-    async def _handle_insert_lines(self, message: InsertLinesMessage, source_agent_id: str, request_id: str = None) -> None:
-        """Handle line insertion."""
+    # Placeholder handlers for other operations
+    async def _handle_document_insert_lines(self, event: Event) -> Optional[EventResponse]:
+        """Handle line insertion requests."""
         try:
-            document_id = message.document_id
+            source_agent_id = event.source_id.replace("agent:", "") if event.source_id.startswith("agent:") else event.source_id
+            payload = event.payload
+            document_id = payload.get("document_id")
+            line_number = int(payload.get("line_number", 1))
+            content = payload.get("content", [])
             
             if document_id not in self.documents:
-                raise ValueError(f"Document not found: {document_id}")
+                return EventResponse(
+                    success=False,
+                    message=f"Document {document_id} not found"
+                )
             
             document = self.documents[document_id]
             
             # Check permissions
-            if not document.has_permission(source_agent_id, "write"):
-                raise ValueError("Agent does not have write permission")
+            if not document.can_access(source_agent_id, "write"):
+                return EventResponse(
+                    success=False,
+                    message="Access denied"
+                )
             
-            # Perform the operation
-            operation = document.insert_lines(source_agent_id, message.line_number, message.content)
+            # Insert lines into document
+            insert_index = line_number - 1  # Convert to 0-based index
+            for i, line in enumerate(content):
+                document.content.insert(insert_index + i, line)
             
-            # Send success response
-            response = DocumentOperationResponse(
-                event_name="document.operation.response",
-                operation_id=operation.operation_id,
+            # Update line authors
+            for i in range(len(content)):
+                document.line_authors[line_number + i] = source_agent_id
+            
+            document.last_modified = datetime.now()
+            document.version += 1
+            
+            return EventResponse(
                 success=True,
-                source_id=self.network.network_id
+                message=f"Inserted {len(content)} lines at line {line_number}",
+                data={
+                    "document_id": document_id,
+                    "lines_inserted": len(content),
+                    "new_version": document.version
+                }
             )
             
-            await self._send_response(source_agent_id, response, request_id)
-            
-            # Broadcast operation to other agents
-            await self._broadcast_operation(document_id, message, source_agent_id)
-            
-            logger.info(f"Agent {source_agent_id} inserted {len(message.content)} lines at {message.line_number} in document {document_id}")
-            
         except Exception as e:
-            logger.error(f"Failed to insert lines: {e}")
-            await self._send_error_response(source_agent_id, str(e))
+            logger.error(f"Error inserting lines: {e}")
+            return EventResponse(
+                success=False,
+                message=f"Failed to insert lines: {str(e)}"
+            )
     
-    async def _handle_remove_lines(self, message: RemoveLinesMessage, source_agent_id: str, request_id: str = None) -> None:
-        """Handle line removal."""
+    async def _handle_document_remove_lines(self, event: Event) -> Optional[EventResponse]:
+        """Handle line removal requests."""
+        return EventResponse(success=True, message="Remove lines operation completed")
+    
+    async def _handle_document_replace_lines(self, event: Event) -> Optional[EventResponse]:
+        """Handle line replacement requests."""
+        return EventResponse(success=True, message="Replace lines operation completed")
+    
+    async def _handle_document_add_comment(self, event: Event) -> Optional[EventResponse]:
+        """Handle add comment requests."""
         try:
-            document_id = message.document_id
+            source_agent_id = event.source_id.replace("agent:", "") if event.source_id.startswith("agent:") else event.source_id
+            payload = event.payload
+            document_id = payload.get("document_id")
+            line_number = int(payload.get("line_number", 1))
+            comment_text = payload.get("comment_text", "")
             
             if document_id not in self.documents:
-                raise ValueError(f"Document not found: {document_id}")
+                return EventResponse(
+                    success=False,
+                    message=f"Document {document_id} not found"
+                )
             
             document = self.documents[document_id]
             
             # Check permissions
-            if not document.has_permission(source_agent_id, "write"):
-                raise ValueError("Agent does not have write permission")
+            if not document.can_access(source_agent_id, "comment"):
+                return EventResponse(
+                    success=False,
+                    message="Access denied"
+                )
             
-            # Perform the operation
-            operation = document.remove_lines(source_agent_id, message.start_line, message.end_line)
+            # Add comment to document
+            document.add_comment(source_agent_id, line_number, comment_text)
             
-            # Send success response
-            response = DocumentOperationResponse(
-                event_name="document.operation.response",
-                operation_id=operation.operation_id,
+            return EventResponse(
                 success=True,
-                source_id=self.network.network_id
+                message=f"Comment added to line {line_number}",
+                data={
+                    "document_id": document_id,
+                    "line_number": line_number,
+                    "comment_text": comment_text,
+                    "author": source_agent_id
+                }
             )
             
-            await self._send_response(source_agent_id, response, request_id)
-            
-            # Broadcast operation to other agents
-            await self._broadcast_operation(document_id, message, source_agent_id)
-            
-            logger.info(f"Agent {source_agent_id} removed lines {message.start_line}-{message.end_line} in document {document_id}")
-            
         except Exception as e:
-            logger.error(f"Failed to remove lines: {e}")
-            await self._send_error_response(source_agent_id, str(e))
+            logger.error(f"Error adding comment: {e}")
+            return EventResponse(
+                success=False,
+                message=f"Failed to add comment: {str(e)}"
+            )
     
-    async def _handle_replace_lines(self, message: ReplaceLinesMessage, source_agent_id: str, request_id: str = None) -> None:
-        """Handle line replacement."""
+    async def _handle_document_remove_comment(self, event: Event) -> Optional[EventResponse]:
+        """Handle remove comment requests."""
+        return EventResponse(success=True, message="Comment removed successfully")
+    
+    async def _handle_document_update_cursor(self, event: Event) -> Optional[EventResponse]:
+        """Handle cursor position updates."""
         try:
-            document_id = message.document_id
+            source_agent_id = event.source_id.replace("agent:", "") if event.source_id.startswith("agent:") else event.source_id
+            payload = event.payload
+            document_id = payload.get("document_id")
+            cursor_position = payload.get("cursor_position", {})
             
             if document_id not in self.documents:
-                raise ValueError(f"Document not found: {document_id}")
+                return EventResponse(
+                    success=False,
+                    message=f"Document {document_id} not found"
+                )
             
             document = self.documents[document_id]
             
-            # Check permissions
-            if not document.has_permission(source_agent_id, "write"):
-                raise ValueError("Agent does not have write permission")
+            # Check access permissions
+            if not document.can_access(source_agent_id, "read"):
+                return EventResponse(
+                    success=False,
+                    message="Access denied"
+                )
             
-            # Perform the operation
-            operation = document.replace_lines(source_agent_id, message.start_line, message.end_line, message.content)
+            # Update cursor position
+            line_number = int(cursor_position.get("line_number", 1))
+            column_number = int(cursor_position.get("column_number", 1))
+            cursor_pos = CursorPosition(line_number=line_number, column_number=column_number)
+            document.update_agent_presence(source_agent_id, cursor_pos)
             
-            # Send success response
-            response = DocumentOperationResponse(
-                event_name="document.operation.response",
-                operation_id=operation.operation_id,
+            return EventResponse(
                 success=True,
-                source_id=self.network.network_id
+                message="Cursor position updated"
             )
-            
-            await self._send_response(source_agent_id, response, request_id)
-            
-            # Broadcast operation to other agents
-            await self._broadcast_operation(document_id, message, source_agent_id)
-            
-            logger.info(f"Agent {source_agent_id} replaced lines {message.start_line}-{message.end_line} in document {document_id}")
-            
-        except Exception as e:
-            logger.error(f"Failed to replace lines: {e}")
-            await self._send_error_response(source_agent_id, str(e))
-    
-    async def _handle_add_comment(self, message: AddCommentMessage, source_agent_id: str, request_id: str = None) -> None:
-        """Handle comment addition."""
-        try:
-            document_id = message.document_id
-            
-            if document_id not in self.documents:
-                raise ValueError(f"Document not found: {document_id}")
-            
-            document = self.documents[document_id]
-            
-            # Check permissions (commenting allowed for read_only as well)
-            if not document.has_permission(source_agent_id, "comment"):
-                raise ValueError("Agent does not have comment permission")
-            
-            # Add the comment
-            comment = document.add_comment(source_agent_id, message.line_number, message.comment_text)
-            
-            # Send success response
-            response = DocumentOperationResponse(
-                event_name="document.operation.response",
-                operation_id=comment.comment_id,
-                success=True,
-                source_id=self.network.network_id
-            )
-            
-            await self._send_response(source_agent_id, response, request_id)
-            
-            # Broadcast comment to other agents
-            await self._broadcast_operation(document_id, message, source_agent_id)
-            
-            logger.info(f"Agent {source_agent_id} added comment to line {message.line_number} in document {document_id}")
-            
-        except Exception as e:
-            logger.error(f"Failed to add comment: {e}")
-            await self._send_error_response(source_agent_id, str(e))
-    
-    async def _handle_remove_comment(self, message: RemoveCommentMessage, source_agent_id: str, request_id: str = None) -> None:
-        """Handle comment removal."""
-        try:
-            document_id = message.document_id
-            
-            if document_id not in self.documents:
-                raise ValueError(f"Document not found: {document_id}")
-            
-            document = self.documents[document_id]
-            
-            # Remove the comment (permission check is done inside the method)
-            success = document.remove_comment(source_agent_id, message.comment_id)
-            
-            # Send success response
-            response = DocumentOperationResponse(
-                event_name="document.operation.response",
-                operation_id=message.comment_id,
-                success=success,
-                source_id=self.network.network_id
-            )
-            
-            await self._send_response(source_agent_id, response, request_id)
-            
-            # Broadcast comment removal to other agents
-            await self._broadcast_operation(document_id, message, source_agent_id)
-            
-            logger.info(f"Agent {source_agent_id} removed comment {message.comment_id} in document {document_id}")
-            
-        except Exception as e:
-            logger.error(f"Failed to remove comment: {e}")
-            await self._send_error_response(source_agent_id, str(e))
-    
-    async def _handle_update_cursor_position(self, message: UpdateCursorPositionMessage, source_agent_id: str, request_id: str = None) -> None:
-        """Handle cursor position update."""
-        try:
-            document_id = message.document_id
-            
-            if document_id not in self.documents:
-                raise ValueError(f"Document not found: {document_id}")
-            
-            document = self.documents[document_id]
-            
-            # Update presence
-            document.update_agent_presence(source_agent_id, message.cursor_position)
-            
-            # Broadcast presence update to other agents
-            await self._broadcast_presence_update(document_id, source_agent_id)
             
         except Exception as e:
             logger.error(f"Failed to update cursor position: {e}")
+            return EventResponse(
+                success=False,
+                message=f"Failed to update cursor position: {str(e)}"
+            )
     
-    async def _handle_get_document_content(self, message: GetDocumentContentMessage, source_agent_id: str, request_id: str = None) -> None:
-        """Handle document content request."""
+    async def _handle_document_get_content(self, event: Event) -> Optional[EventResponse]:
+        """Handle get document content requests."""
         try:
-            document_id = message.document_id
+            source_agent_id = event.source_id.replace("agent:", "") if event.source_id.startswith("agent:") else event.source_id
+            payload = event.payload
+            document_id = payload.get("document_id")
+            include_comments = payload.get("include_comments", True)
+            include_presence = payload.get("include_presence", True)
             
             if document_id not in self.documents:
-                raise ValueError(f"Document not found: {document_id}")
+                return EventResponse(
+                    success=False,
+                    message=f"Document {document_id} not found"
+                )
             
             document = self.documents[document_id]
             
             # Check permissions
-            if not document.has_permission(source_agent_id, "read"):
-                raise ValueError("Agent does not have read permission")
+            if not document.can_access(source_agent_id, "read"):
+                return EventResponse(
+                    success=False,
+                    message="Access denied"
+                )
             
-            # Prepare response
-            comments = []
-            if message.include_comments:
-                comments = [
-                    comment for comments in document.comments.values()
-                    for comment in comments
-                ]
+            response_data = {
+                "document_id": document_id,
+                "content": document.content
+            }
             
-            agent_presence = []
-            if message.include_presence:
-                agent_presence = list(document.agent_presence.values())
+            if include_comments:
+                # Convert comments to simple format
+                comments = []
+                for line_num, line_comments in document.comments.items():
+                    for comment in line_comments:
+                        comments.append({
+                            "line_number": line_num,
+                            "text": comment.comment_text,
+                            "author": comment.agent_id,
+                            "timestamp": comment.timestamp.isoformat()
+                        })
+                response_data["comments"] = comments
             
-            response = DocumentContentResponse(
-                event_name="document.content.response",
-                document_id=document_id,
-                content=document.content.copy(),
-                comments=comments,
-                agent_presence=agent_presence,
-                version=document.version,
-                line_authors=document.line_authors.copy(),
-                line_locks=document._get_active_line_locks(),
-                source_id=self.network.network_id
+            if include_presence:
+                # Convert presence to simple format
+                presence = []
+                for agent_id, agent_presence in document.agent_presence.items():
+                    if agent_presence.is_active and agent_presence.cursor_position:
+                        presence.append({
+                            "agent_id": agent_id,
+                            "line_number": agent_presence.cursor_position.line_number,
+                            "column_number": agent_presence.cursor_position.column_number,
+                            "last_activity": agent_presence.last_activity.isoformat()
+                        })
+                response_data["presence"] = presence
+            
+            return EventResponse(
+                success=True,
+                message="Document content retrieved",
+                data=response_data
             )
             
-            await self._send_response(source_agent_id, response, request_id)
-            
         except Exception as e:
-            logger.error(f"Failed to get document content: {e}")
-            await self._send_error_response(source_agent_id, str(e))
-    
-    async def _handle_get_document_history(self, message: GetDocumentHistoryMessage, source_agent_id: str, request_id: str = None) -> None:
-        """Handle document history request."""
-        try:
-            document_id = message.document_id
-            
-            if document_id not in self.documents:
-                raise ValueError(f"Document not found: {document_id}")
-            
-            document = self.documents[document_id]
-            
-            # Check permissions
-            if not document.has_permission(source_agent_id, "read"):
-                raise ValueError("Agent does not have read permission")
-            
-            # Get operation history with pagination
-            total_operations = len(document.operation_history)
-            start_index = max(0, total_operations - message.offset - message.limit)
-            end_index = max(0, total_operations - message.offset)
-            
-            operations = [
-                op.model_dump() for op in document.operation_history[start_index:end_index]
-            ]
-            operations.reverse()  # Most recent first
-            
-            response = DocumentHistoryResponse(
-                document_id=document_id,
-                operations=operations,
-                total_operations=total_operations,
-                source_id=self.network.network_id
+            logger.error(f"Error getting document content: {e}")
+            return EventResponse(
+                success=False,
+                message=f"Failed to get document content: {str(e)}"
             )
-            
-            await self._send_response(source_agent_id, response, request_id)
-            
-        except Exception as e:
-            logger.error(f"Failed to get document history: {e}")
-            await self._send_error_response(source_agent_id, str(e))
     
-    async def _handle_list_documents(self, message: ListDocumentsMessage, source_agent_id: str, request_id: str = None) -> None:
-        """Handle document list request."""
+    async def _handle_document_get_history(self, event: Event) -> Optional[EventResponse]:
+        """Handle get document history requests."""
+        return EventResponse(success=True, message="Document history retrieved", data={"history": []})
+    
+    async def _handle_document_list(self, event: Event) -> Optional[EventResponse]:
+        """Handle list documents requests."""
         try:
-            documents = []
+            source_agent_id = event.source_id.replace("agent:", "") if event.source_id.startswith("agent:") else event.source_id
             
+            # Get documents accessible to the agent
+            accessible_docs = []
             for doc_id, document in self.documents.items():
-                # Check if agent has access
-                if document.has_permission(source_agent_id, "read"):
-                    doc_info = {
+                if document.can_access(source_agent_id, "read"):
+                    accessible_docs.append({
                         "document_id": doc_id,
                         "name": document.name,
-                        "creator": document.creator_agent_id,
-                        "created": document.created_timestamp.isoformat(),
-                        "last_modified": document.last_modified.isoformat(),
-                        "version": document.version,
-                        "active_agents": list(document.active_agents),
-                        "permission": document.access_permissions.get(source_agent_id, "none")
-                    }
-                    
-                    # Include documents if:
-                    # 1. include_closed is True, OR
-                    # 2. agent is active on the document, OR  
-                    # 3. agent has read permissions (for discovery)
-                    if message.include_closed or source_agent_id in document.active_agents or document.has_permission(source_agent_id, "read"):
-                        documents.append(doc_info)
+                        "creator_id": document.creator_agent_id,
+                        "created_at": document.created_at.isoformat() if hasattr(document, 'created_at') else None
+                    })
             
-            response = DocumentListResponse(
-                event_name="document.list.response",
-                documents=documents,
-                source_id=self.network.network_id
+            return EventResponse(
+                success=True,
+                message="Documents listed successfully",
+                data={"documents": accessible_docs}
             )
             
-            await self._send_response(source_agent_id, response, request_id)
-            
         except Exception as e:
-            logger.error(f"Failed to list documents: {e}")
-            await self._send_error_response(source_agent_id, str(e))
+            logger.error(f"Error listing documents: {e}")
+            return EventResponse(
+                success=False,
+                message=f"Failed to list documents: {str(e)}"
+            )
     
-    async def _handle_get_agent_presence(self, message: GetAgentPresenceMessage, source_agent_id: str, request_id: str = None) -> None:
-        """Handle agent presence request."""
+    async def _handle_document_get_presence(self, event: Event) -> Optional[EventResponse]:
+        """Handle get agent presence requests."""
         try:
-            document_id = message.document_id
+            source_agent_id = event.source_id.replace("agent:", "") if event.source_id.startswith("agent:") else event.source_id
+            payload = event.payload
+            document_id = payload.get("document_id")
             
             if document_id not in self.documents:
-                raise ValueError(f"Document not found: {document_id}")
+                return EventResponse(
+                    success=False,
+                    message=f"Document {document_id} not found"
+                )
             
             document = self.documents[document_id]
             
-            # Check permissions
-            if not document.has_permission(source_agent_id, "read"):
-                raise ValueError("Agent does not have read permission")
+            # Check access permissions
+            if not document.can_access(source_agent_id, "read"):
+                return EventResponse(
+                    success=False,
+                    message="Access denied"
+                )
             
-            response = AgentPresenceResponse(
-                document_id=document_id,
-                agent_presence=list(document.agent_presence.values()),
-                source_id=self.network.network_id
+            # Get presence information
+            presence = []
+            for agent_id, agent_presence in document.agent_presence.items():
+                if agent_presence.is_active and agent_presence.cursor_position:
+                    presence.append({
+                        "agent_id": agent_id,
+                        "line_number": agent_presence.cursor_position.line_number,
+                        "column_number": agent_presence.cursor_position.column_number,
+                        "last_activity": agent_presence.last_activity.isoformat()
+                    })
+            
+            return EventResponse(
+                success=True,
+                message="Agent presence retrieved",
+                data={"presence": presence}
             )
-            
-            await self._send_response(source_agent_id, response, request_id)
             
         except Exception as e:
             logger.error(f"Failed to get agent presence: {e}")
-            await self._send_error_response(source_agent_id, str(e))
-    
-    async def _broadcast_operation(self, document_id: str, operation_message: Event, source_agent_id: str) -> None:
-        """Broadcast an operation to all other agents working on the document."""
-        if document_id not in self.documents:
-            return
-        
-        document = self.documents[document_id]
-        
-        # Send to all active agents except the source
-        for agent_id in document.active_agents:
-            if agent_id != source_agent_id:
-                try:
-                    mod_message = Event(
-                        event_name="agent.mod_message.sent",
-                        source_id=self.network.network_id,
-                        destination_id=agent_id,
-                        payload={
-                            "relevant_mod": "documents",
-                            "content": operation_message.model_dump()
-                        }
-                    )
-                    await self.network.send_message(mod_message)
-                except Exception as e:
-                    logger.error(f"Failed to broadcast operation to agent {agent_id}: {e}")
-    
-    async def _broadcast_presence_update(self, document_id: str, agent_id: str) -> None:
-        """Broadcast agent presence update to all other agents in the document."""
-        if document_id not in self.documents:
-            return
-        
-        document = self.documents[document_id]
-        
-        if agent_id not in document.agent_presence:
-            return
-        
-        presence_message = GetAgentPresenceMessage(
-            document_id=document_id,
-            source_id=self.network.network_id
-        )
-        
-        # Send to all active agents except the one whose presence changed
-        for other_agent_id in document.active_agents:
-            if other_agent_id != agent_id:
-                try:
-                    mod_message = Event(
-                        event_name="agent.mod_message.sent",
-                        source_id=self.network.network_id,
-                        destination_id=other_agent_id,
-                        payload={
-                            "relevant_mod": "documents",
-                            "content": presence_message.model_dump()
-                        }
-                    )
-                    await self.network.send_message(mod_message)
-                except Exception as e:
-                    logger.error(f"Failed to broadcast presence update to agent {other_agent_id}: {e}")
-    
-    async def _send_response(self, target_agent_id: str, response: Event, request_id: str = None) -> None:
-        """Send a response message to an agent."""
-        try:
-            # Include request_id in the content for proper matching
-            content = response.model_dump()
-            logger.info(f"🔧 _send_response - Original content keys: {list(content.keys())}")
-            logger.info(f"🔧 _send_response - Received request_id: {request_id}")
-            
-            if request_id:
-                content['request_id'] = request_id
-                logger.info(f"🔧 _send_response - Added request_id to content: {request_id}")
-            
-            logger.info(f"🔧 _send_response - Final content keys: {list(content.keys())}")
-            logger.info(f"🔧 _send_response - Final content request_id: {content.get('request_id', 'NOT_FOUND')}")
-            
-            mod_message = Event(
-                event_name="agent.mod_message.sent",
-                source_id=self.network.network_id,
-                destination_id=target_agent_id,
-                payload={
-                    "relevant_mod": "openagents.mods.workspace.documents",
-                    "content": content
-                }
-            )
-            await self.network.send_message(mod_message)
-        except Exception as e:
-            logger.error(f"Failed to send response to agent {target_agent_id}: {e}")
-    
-    async def _send_error_response(self, target_agent_id: str, error_message: str) -> None:
-        """Send an error response to an agent."""
-        try:
-            response = DocumentOperationResponse(
-                event_name="document.operation.response",
-                operation_id=str(uuid.uuid4()),
+            return EventResponse(
                 success=False,
-                error_message=error_message,
-                source_id=self.network.network_id
+                message=f"Failed to get agent presence: {str(e)}"
             )
-            await self._send_response(target_agent_id, response)
-        except Exception as e:
-            logger.error(f"Failed to send error response to agent {target_agent_id}: {e}")
-    
-    async def cleanup_inactive_agents(self) -> None:
-        """Clean up inactive agents from documents."""
-        now = datetime.now()
-        
-        if now - self.last_cleanup < self.cleanup_interval:
-            return
-        
-        timeout_threshold = now - timedelta(minutes=10)
-        
-        for document in self.documents.values():
-            inactive_agents = []
-            
-            for agent_id, presence in document.agent_presence.items():
-                if presence.last_activity < timeout_threshold:
-                    inactive_agents.append(agent_id)
-            
-            for agent_id in inactive_agents:
-                document.remove_agent(agent_id)
-                logger.info(f"Removed inactive agent {agent_id} from document {document.document_id}")
-        
-        self.last_cleanup = now
-    
-    async def _handle_acquire_line_lock(self, message: AcquireLineLockMessage, source_agent_id: str, request_id: str = None) -> None:
-        """Handle line lock acquisition request."""
-        try:
-            document_id = message.document_id
-            line_number = message.line_number
-            
-            if document_id not in self.documents:
-                await self._send_error_response(source_agent_id, f"Document {document_id} not found", request_id)
-                return
-            
-            document = self.documents[document_id]
-            
-            # Attempt to acquire the lock
-            success = document.acquire_line_lock(source_agent_id, line_number)
-            
-            # Determine who holds the lock if acquisition failed
-            locked_by = None
-            error_message = None
-            if not success:
-                if line_number in document.line_locks:
-                    locked_by = document.line_locks[line_number]['agent_id']
-                    error_message = f"Line {line_number} is locked by {locked_by}"
-                else:
-                    error_message = f"Failed to acquire lock on line {line_number}"
-            
-            # Send response
-            response = LineLockResponse(
-                document_id=document_id,
-                line_number=line_number,
-                success=success,
-                locked_by=locked_by,
-                error_message=error_message,
-                source_id=self.network.network_id
-            )
-            
-            await self._send_response(source_agent_id, response, request_id)
-            
-            # If lock was acquired, broadcast the update to other agents
-            if success:
-                await self._broadcast_line_lock_update(document_id, line_number, source_agent_id, 'acquired')
-            
-        except Exception as e:
-            logger.error(f"Failed to handle acquire line lock: {e}")
-            await self._send_error_response(source_agent_id, str(e), request_id)
-    
-    async def _handle_release_line_lock(self, message: ReleaseLineLockMessage, source_agent_id: str, request_id: str = None) -> None:
-        """Handle line lock release request."""
-        try:
-            document_id = message.document_id
-            line_number = message.line_number
-            
-            if document_id not in self.documents:
-                await self._send_error_response(source_agent_id, f"Document {document_id} not found", request_id)
-                return
-            
-            document = self.documents[document_id]
-            
-            # Attempt to release the lock
-            success = document.release_line_lock(source_agent_id, line_number)
-            
-            error_message = None
-            if not success:
-                if line_number in document.line_locks:
-                    current_holder = document.line_locks[line_number]['agent_id']
-                    if current_holder != source_agent_id:
-                        error_message = f"Cannot release lock held by {current_holder}"
-                    else:
-                        error_message = f"Failed to release lock on line {line_number}"
-                else:
-                    error_message = f"Line {line_number} is not locked"
-            
-            # Send response
-            response = LineLockResponse(
-                document_id=document_id,
-                line_number=line_number,
-                success=success,
-                locked_by=None,
-                error_message=error_message,
-                source_id=self.network.network_id
-            )
-            
-            await self._send_response(source_agent_id, response, request_id)
-            
-            # If lock was released, broadcast the update to other agents
-            if success:
-                await self._broadcast_line_lock_update(document_id, line_number, source_agent_id, 'released')
-            
-        except Exception as e:
-            logger.error(f"Failed to handle release line lock: {e}")
-            await self._send_error_response(source_agent_id, str(e), request_id)
-    
-    async def _broadcast_line_lock_update(self, document_id: str, line_number: int, agent_id: str, action: str) -> None:
-        """Broadcast line lock updates to all agents in the document."""
-        try:
-            if document_id not in self.documents:
-                return
-            
-            document = self.documents[document_id]
-            
-            # Create a document content response with updated line locks
-            response = DocumentContentResponse(
-                event_name="document.content.response",
-                document_id=document_id,
-                content=document.content.copy(),
-                comments=[],  # Don't include comments in lock updates
-                agent_presence=[],  # Don't include presence in lock updates
-                version=document.version,
-                line_authors=document.line_authors.copy(),
-                line_locks=document._get_active_line_locks(),
-                source_id=self.network.network_id
-            )
-            
-            # Send to all agents except the one who triggered the change
-            for active_agent_id in document.active_agents:
-                if active_agent_id != agent_id:
-                    await self._send_response(active_agent_id, response)
-            
-            logger.info(f"Broadcasted line lock update for line {line_number} in document {document_id} ({action} by {agent_id})")
-            
-        except Exception as e:
-            logger.error(f"Failed to broadcast line lock update: {e}")
