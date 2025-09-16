@@ -210,6 +210,82 @@ async def test_direct_messaging_with_agent_message_event(alice_client, bob_clien
 
 
 @pytest.mark.asyncio
+async def test_direct_messaging_with_thread_direct_message_send(alice_client, bob_client):
+    """Test direct messaging between agents using the new thread.direct_message.send event."""
+    
+    print("🔍 Testing direct messaging with thread.direct_message.send event...")
+    
+    # Track received messages for Bob
+    bob_messages = []
+    
+    # Set up message handler for Bob to catch thread messaging notifications
+    async def bob_message_handler(event):
+        print(f"📨 Bob received event: {event.event_name} from {event.source_id}")
+        print(f"   Payload: {event.payload}")
+        bob_messages.append(event)
+    
+    # Register handler for thread direct message notifications
+    bob_client.register_event_handler(bob_message_handler, ["thread.direct_message.notification"])
+    
+    # Alice sends direct message to Bob using thread.direct_message.send event
+    direct_message = Event(
+        event_name="thread.direct_message.send",
+        source_id="alice",
+        destination_id="bob",  # This is crucial for thread messaging mod to process correctly
+        payload={
+            "text": "Hello Bob! This is a direct message using thread.direct_message.send event.",
+            "message_type": "direct_message",
+            "test_id": "thread_direct_msg_test",
+            "target_agent_id": "bob",  # Also include in payload for compatibility
+            "sender_id": "alice"  # Include sender_id in payload
+        },
+        relevant_mod="openagents.mods.communication.thread_messaging",
+        event_id="thread-direct-msg-001"
+    )
+    
+    print("📤 Alice sending thread direct message to Bob...")
+    success = await alice_client.send_event(direct_message)
+    assert success, "Alice should be able to send thread direct message"
+    
+    # Wait for message processing and notification
+    print("⏳ Waiting for thread direct message processing...")
+    await asyncio.sleep(2.0)
+    
+    # Check if Bob received the notification
+    for attempt in range(5):  # Try up to 5 times with delays
+        direct_notifications = [
+            msg for msg in bob_messages 
+            if (msg.event_name == "thread.direct_message.notification" and 
+                msg.payload.get("sender_id") == "alice")
+        ]
+        if direct_notifications:
+            break
+        await asyncio.sleep(0.5)
+    
+    # Verify Bob received the direct message notification
+    direct_notifications = [
+        msg for msg in bob_messages 
+        if (msg.event_name == "thread.direct_message.notification" and 
+            msg.payload.get("sender_id") == "alice")
+    ]
+    
+    assert len(direct_notifications) >= 1, f"Bob should have received thread direct message notification. Got {len(bob_messages)} total messages"
+    
+    received_notification = direct_notifications[0]
+    assert received_notification.event_name == "thread.direct_message.notification"
+    
+    # Extract the actual message from the notification payload
+    message_data = received_notification.payload.get("message", {})
+    message_payload = message_data.get("payload", {})
+    assert "text" in message_payload, "Notification should contain message text in payload"
+    assert message_payload["text"] == "Hello Bob! This is a direct message using thread.direct_message.send event."
+    
+    print("✅ Direct messaging with thread.direct_message.send event test PASSED")
+    print(f"   Alice successfully sent thread direct message to Bob")
+    print(f"   Message content: {message_payload['text']}")
+
+
+@pytest.mark.asyncio
 async def test_broadcast_messaging_with_agent_broadcast_destination(alice_client, bob_client, charlie_client):
     """Test broadcast messaging using agent.message with agent:broadcast destination."""
     
