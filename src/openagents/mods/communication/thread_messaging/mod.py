@@ -642,7 +642,27 @@ class ThreadMessagingNetworkMod(BaseMod):
             if 'quoted_message_id' in content and content['quoted_message_id']:
                 content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
             
-            inner_message = Event(event_name=event.event_name, **content)
+            # Extract Event-specific fields from content
+            event_fields = {}
+            payload_fields = {}
+            
+            # Define which fields belong to the Event model vs payload
+            event_field_names = {'event_name', 'source_id', 'destination_id', 'event_id', 'timestamp', 
+                                'source_type', 'relevant_mod', 'requires_response', 'response_to', 
+                                'metadata', 'text_representation', 'visibility', 'allowed_agents'}
+            
+            for key, value in content.items():
+                if key in event_field_names:
+                    event_fields[key] = value
+                else:
+                    payload_fields[key] = value
+            
+            # Create the Event with proper field separation
+            inner_message = Event(
+                event_name=event.event_name,
+                payload=payload_fields,
+                **event_fields
+            )
             self._add_to_history(inner_message)
             await self._process_direct_message(inner_message)
             
@@ -856,11 +876,10 @@ class ThreadMessagingNetworkMod(BaseMod):
         Args:
             message: The direct message to process
         """
-        logger.debug(f"Processing direct message from {message.source_id} to {message.destination_id}")
         
         # Get target agent ID from the message
         target_agent_id = None
-        if hasattr(message, 'target_agent_id') and message.destination_id:
+        if message.destination_id:
             target_agent_id = message.destination_id
         else:
             # Try to extract from nested content
