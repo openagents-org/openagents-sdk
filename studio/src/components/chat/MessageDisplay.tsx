@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ThreadMessage } from '../../types/events';
-import MarkdownContent from './MarkdownContent';
-import AttachmentDisplay from './AttachmentDisplay';
+import React, { useState, useRef, useEffect } from "react";
+import { ThreadMessage } from "../../types/events";
+import MarkdownContent from "./MarkdownContent";
+import AttachmentDisplay from "./AttachmentDisplay";
 
 interface MessageDisplayProps {
   messages: ThreadMessage[];
@@ -9,7 +9,7 @@ interface MessageDisplayProps {
   onReply: (messageId: string, text: string, author: string) => void;
   onQuote: (messageId: string, text: string, author: string) => void;
   onReaction: (messageId: string, reactionType: string) => void;
-  currentTheme: 'light' | 'dark';
+  currentTheme: "light" | "dark";
 }
 
 interface ThreadStructure {
@@ -21,26 +21,26 @@ interface ThreadStructure {
 }
 
 const REACTION_EMOJIS = {
-  '+1': '👍',
-  '-1': '👎', 
-  'like': '❤️',
-  'heart': '💗',
-  'laugh': '😂',
-  'wow': '😮',
-  'sad': '😢',
-  'angry': '😠',
-  'thumbs_up': '👍',
-  'thumbs_down': '👎',
-  'smile': '😊',
-  'ok': '👌',
-  'done': '✅',
-  'fire': '🔥',
-  'party': '🎉',
-  'clap': '👏',
-  'check': '✅',
-  'cross': '❌',
-  'eyes': '👀',
-  'thinking': '🤔'
+  "+1": "👍",
+  "-1": "👎",
+  like: "❤️",
+  heart: "💗",
+  laugh: "😂",
+  wow: "😮",
+  sad: "😢",
+  angry: "😠",
+  thumbs_up: "👍",
+  thumbs_down: "👎",
+  smile: "😊",
+  ok: "👌",
+  done: "✅",
+  fire: "🔥",
+  party: "🎉",
+  clap: "👏",
+  check: "✅",
+  cross: "❌",
+  eyes: "👀",
+  thinking: "🤔",
 };
 
 const styles = `
@@ -404,15 +404,19 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
   onReply,
   onQuote,
   onReaction,
-  currentTheme
+  currentTheme,
 }) => {
-  const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
+  const [showReactionPicker, setShowReactionPicker] = useState<string | null>(
+    null
+  );
   const [hoveredMessage, setHoveredMessage] = useState<string | null>(null);
-  const [collapsedThreads, setCollapsedThreads] = useState<Set<string>>(new Set());
+  const [collapsedThreads, setCollapsedThreads] = useState<Set<string>>(
+    new Set()
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   // Build thread structure
@@ -421,20 +425,23 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
     const rootMessages: string[] = [];
 
     // First pass: organize messages and identify roots
-    messages.forEach(message => {
+    messages.forEach((message) => {
       structure[message.message_id] = {
         message,
         children: [],
-        level: message.thread_level || 0
+        level: message.thread_level || 0,
       };
 
+      // Only messages with reply_to_id are considered replies (not quotes)
+      // Messages with only quoted_message_id are independent messages that quote others
       if (!message.reply_to_id) {
         rootMessages.push(message.message_id);
       }
     });
 
     // Second pass: build parent-child relationships
-    messages.forEach(message => {
+    // Only for actual replies, not quotes
+    messages.forEach((message) => {
       if (message.reply_to_id && structure[message.reply_to_id]) {
         structure[message.reply_to_id].children.push(message.message_id);
       }
@@ -443,26 +450,72 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
     return structure;
   };
 
-  const formatTimestamp = (timestamp: string): string => {
-    // Convert timestamp to milliseconds if it's in seconds (Unix timestamp)
-    const timestampNum = parseInt(timestamp);
-    const timestampMs = timestampNum < 1e10 ? timestampNum * 1000 : timestampNum;
-    const date = new Date(timestampMs);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const formatTimestamp = (timestamp: string | number): string => {
+    try {
+      let date: Date;
+      timestamp = String(timestamp);
 
-    if (diffMins < 1) return 'just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    
-    return date.toLocaleDateString();
+      // Handle different timestamp formats
+      if (timestamp.includes("T") || timestamp.includes("-")) {
+        // ISO string format (e.g., "2025-01-01T12:00:00.000Z")
+        date = new Date(timestamp);
+      } else {
+        // Unix timestamp (seconds or milliseconds)
+        const timestampNum = parseInt(timestamp);
+        if (isNaN(timestampNum)) {
+          console.warn("Invalid timestamp:", timestamp);
+          return "Invalid time";
+        }
+
+        // Convert to milliseconds if it's in seconds (Unix timestamp < 1e10)
+        const timestampMs =
+          timestampNum < 1e10 ? timestampNum * 1000 : timestampNum;
+        date = new Date(timestampMs);
+      }
+
+      // Validate the date
+      if (isNaN(date.getTime())) {
+        console.warn("Invalid date created from timestamp:", timestamp);
+        return "Invalid time";
+      }
+
+      // Check if date is too old (before 2020) which might indicate wrong format
+      if (date.getFullYear() < 2020) {
+        console.warn(
+          "Date seems too old, might be wrong format:",
+          timestamp,
+          date
+        );
+        // Try treating as milliseconds if it was treated as seconds
+        const timestampNum = parseInt(timestamp);
+        if (!isNaN(timestampNum) && timestampNum > 1e10) {
+          date = new Date(timestampNum);
+        }
+      }
+
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffMins < 1) return "just now";
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+
+      return date.toLocaleDateString();
+    } catch (error) {
+      console.error("Error formatting timestamp:", timestamp, error);
+      return "Invalid time";
+    }
   };
 
-  const handleReaction = (messageId: string, reactionType: string, event?: React.MouseEvent) => {
+  const handleReaction = (
+    messageId: string,
+    reactionType: string,
+    event?: React.MouseEvent
+  ) => {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -481,7 +534,11 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
     setCollapsedThreads(newCollapsed);
   };
 
-  const renderMessage = (messageId: string, structure: ThreadStructure, level = 0): React.ReactNode => {
+  const renderMessage = (
+    messageId: string,
+    structure: ThreadStructure,
+    level = 0
+  ): React.ReactNode => {
     const item = structure[messageId];
     if (!item) return null;
 
@@ -492,14 +549,49 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
 
     return (
       <div key={messageId} className="message-item">
-        <div 
-          className={`message-bubble ${currentTheme} ${isOwnMessage ? 'own-message' : ''}`}
+        <div
+          className={`message-bubble ${currentTheme} ${
+            isOwnMessage ? "own-message" : ""
+          }`}
           onMouseEnter={() => setHoveredMessage(messageId)}
           onMouseLeave={() => setHoveredMessage(null)}
         >
           <div className="message-header">
             <span className={`message-author ${currentTheme}`}>
-              {isOwnMessage ? 'You' : message.sender_id}
+              {(() => {
+                if (isOwnMessage) {
+                  return "You";
+                }
+
+                // Extract a more readable name from sender_id
+                const senderId = message.sender_id;
+
+                // If sender_id contains '@', take the part before it
+                if (senderId.includes("@")) {
+                  const namePart = senderId.split("@")[0];
+                  // If it looks like a test name (contains 'test' or 'work'), try to make it more readable
+                  if (namePart.includes("_")) {
+                    return namePart
+                      .split("_")
+                      .map(
+                        (part) => part.charAt(0).toUpperCase() + part.slice(1)
+                      )
+                      .join(" ");
+                  }
+                  return namePart;
+                }
+
+                // If sender_id contains underscores, format it nicely
+                if (senderId.includes("_")) {
+                  return senderId
+                    .split("_")
+                    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+                    .join(" ");
+                }
+
+                // Otherwise just capitalize first letter
+                return senderId.charAt(0).toUpperCase() + senderId.slice(1);
+              })()}
             </span>
             <span className={`message-timestamp ${currentTheme}`}>
               {formatTimestamp(message.timestamp)}
@@ -511,8 +603,11 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
             <div className={`quoted-message ${currentTheme}`}>
               {(() => {
                 // Parse "Author: message text" format
-                const colonIndex = message.quoted_text.indexOf(': ');
-                if (colonIndex > 0 && colonIndex < message.quoted_text.length - 2) {
+                const colonIndex = message.quoted_text.indexOf(": ");
+                if (
+                  colonIndex > 0 &&
+                  colonIndex < message.quoted_text.length - 2
+                ) {
                   const author = message.quoted_text.substring(0, colonIndex);
                   const text = message.quoted_text.substring(colonIndex + 2);
                   return (
@@ -530,11 +625,17 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
           )}
 
           <div className={`message-content ${currentTheme}`}>
-            <MarkdownContent 
-              content={message.content.text} 
-              currentTheme={currentTheme} 
-            />
-            
+            {message.content?.text ? (
+              <MarkdownContent
+                content={message.content.text}
+                currentTheme={currentTheme}
+              />
+            ) : (
+              <div className="text-gray-500 italic">
+                {message.content ? "Empty message" : "No content"}
+              </div>
+            )}
+
             {/* Attachment display */}
             <AttachmentDisplay
               attachment_file_id={message.attachment_file_id}
@@ -548,24 +649,38 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
             <div className="reactions">
               {Object.entries(message.reactions).map(([type, count]) => {
                 const numCount = Number(count);
-                return numCount > 0 && (
-                  <div
-                    key={type}
-                    className={`reaction-item ${currentTheme}`}
-                    onClick={(event) => handleReaction(messageId, type, event)}
-                  >
-                    <span>{REACTION_EMOJIS[type as keyof typeof REACTION_EMOJIS] || type}</span>
-                    <span>{numCount}</span>
-                  </div>
+                return (
+                  numCount > 0 && (
+                    <div
+                      key={type}
+                      className={`reaction-item ${currentTheme}`}
+                      onClick={(event) =>
+                        handleReaction(messageId, type, event)
+                      }
+                    >
+                      <span>
+                        {REACTION_EMOJIS[
+                          type as keyof typeof REACTION_EMOJIS
+                        ] || type}
+                      </span>
+                      <span>{numCount}</span>
+                    </div>
+                  )
                 );
               })}
             </div>
           )}
 
-          <div className={`message-actions ${currentTheme} ${hoveredMessage === messageId ? 'visible' : ''}`}>
+          <div
+            className={`message-actions ${currentTheme} ${
+              hoveredMessage === messageId ? "visible" : ""
+            }`}
+          >
             <button
               className={`action-button ${currentTheme}`}
-              onClick={() => onReply(messageId, message.content.text, message.sender_id)}
+              onClick={() =>
+                onReply(messageId, message.content.text, message.sender_id)
+              }
               title="Reply"
             >
               ↩️
@@ -585,7 +700,9 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
             </button>
             <button
               className={`action-button ${currentTheme}`}
-              onClick={() => onQuote(messageId, message.content.text, message.sender_id)}
+              onClick={() =>
+                onQuote(messageId, message.content.text, message.sender_id)
+              }
               title="Quote message"
             >
               💬
@@ -594,15 +711,17 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
 
           {showReactionPicker === messageId && (
             <div className={`reaction-picker ${currentTheme}`}>
-              {Object.entries(REACTION_EMOJIS).slice(0, 8).map(([type, emoji]) => (
-                <div
-                  key={type}
-                  className={`reaction-emoji ${currentTheme}`}
-                  onClick={(event) => handleReaction(messageId, type, event)}
-                >
-                  {emoji}
-                </div>
-              ))}
+              {Object.entries(REACTION_EMOJIS)
+                .slice(0, 8)
+                .map(([type, emoji]) => (
+                  <div
+                    key={type}
+                    className={`reaction-emoji ${currentTheme}`}
+                    onClick={(event) => handleReaction(messageId, type, event)}
+                  >
+                    {emoji}
+                  </div>
+                ))}
             </div>
           )}
 
@@ -611,13 +730,16 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
               className={`thread-toggle ${currentTheme}`}
               onClick={() => toggleThread(messageId)}
             >
-              {isCollapsed ? `▶ Show ${item.children.length} replies` : `▼ Hide replies`}
+              {isCollapsed
+                ? `▶ Show ${item.children.length} replies`
+                : `▼ Hide replies`}
             </button>
           )}
 
           {hasChildren && !isCollapsed && (
             <div className={`thread-summary ${currentTheme}`}>
-              {item.children.length} {item.children.length === 1 ? 'reply' : 'replies'}
+              {item.children.length}{" "}
+              {item.children.length === 1 ? "reply" : "replies"}
             </div>
           )}
         </div>
@@ -625,13 +747,11 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
         {/* Render child messages */}
         {hasChildren && !isCollapsed && level < 4 && (
           <div className={`message-thread ${currentTheme} level-${level + 1}`}>
-            {item.children.map(childId => 
+            {item.children.map((childId) =>
               renderMessage(childId, structure, level + 1)
             )}
           </div>
         )}
-
-
       </div>
     );
   };
@@ -643,7 +763,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
         <div className={`empty-state ${currentTheme}`}>
           <div>
             <div>No messages yet</div>
-            <div style={{ fontSize: '14px', marginTop: '8px' }}>
+            <div style={{ fontSize: "14px", marginTop: "8px" }}>
               Start a conversation!
             </div>
           </div>
@@ -654,26 +774,30 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
 
   const threadStructure = buildThreadStructure();
   const rootMessages = messages
-    .filter(m => !m.reply_to_id)
+    .filter((m) => !m.reply_to_id)
     .sort((a, b) => {
-      const aTime = parseInt(a.timestamp) < 1e10 ? parseInt(a.timestamp) * 1000 : parseInt(a.timestamp);
-      const bTime = parseInt(b.timestamp) < 1e10 ? parseInt(b.timestamp) * 1000 : parseInt(b.timestamp);
+      const aTime =
+        parseInt(a.timestamp) < 1e10
+          ? parseInt(a.timestamp) * 1000
+          : parseInt(a.timestamp);
+      const bTime =
+        parseInt(b.timestamp) < 1e10
+          ? parseInt(b.timestamp) * 1000
+          : parseInt(b.timestamp);
       return aTime - bTime;
     });
 
   return (
     <div className={`message-display ${currentTheme}`}>
       <style>{styles}</style>
-      
-      {rootMessages.map(message => 
+
+      {rootMessages.map((message) =>
         renderMessage(message.message_id, threadStructure)
       )}
-      
+
       <div ref={messagesEndRef} />
     </div>
   );
 };
-
-
 
 export default MessageDisplay;

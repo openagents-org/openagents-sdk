@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from "react";
 
 interface AgentInfo {
   agent_id: string;
@@ -7,12 +7,17 @@ interface AgentInfo {
 }
 
 interface ThreadMessageInputProps {
-  onSendMessage: (text: string, replyTo?: string, quotedMessageId?: string, attachmentData?: {
-    file_id: string;
-    filename: string;
-    size: number;
-  }) => void;
-  currentTheme: 'light' | 'dark';
+  onSendMessage: (
+    text: string,
+    replyTo?: string,
+    quotedMessageId?: string,
+    attachmentData?: {
+      file_id: string;
+      filename: string;
+      size: number;
+    }
+  ) => void;
+  currentTheme: "light" | "dark";
   placeholder?: string;
   disabled?: boolean;
   agents?: AgentInfo[];
@@ -236,6 +241,69 @@ const styles = `
     background: #4b5563;
     color: #f3f4f6;
   }
+
+  .emoji-picker {
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    width: 280px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .emoji-picker.dark {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  }
+
+  .emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 8px;
+  }
+
+  .emoji-item {
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    font-size: 20px;
+    transition: background 0.15s ease;
+    border: none;
+    background: none;
+  }
+
+  .emoji-item:hover {
+    background: #f1f5f9;
+  }
+
+  .emoji-item.dark:hover {
+    background: #334155;
+  }
+
+  .emoji-category {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin: 12px 0 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .emoji-category.dark {
+    color: #94a3b8;
+  }
+
+  .emoji-category:first-child {
+    margin-top: 0;
+  }
   
   .action-button:disabled {
     opacity: 0.5;
@@ -456,7 +524,7 @@ const MAX_MESSAGE_LENGTH = 2000;
 const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
   onSendMessage,
   currentTheme,
-  placeholder = 'Type a message...',
+  placeholder = "Type a message...",
   disabled = false,
   agents = [],
   replyingTo,
@@ -464,19 +532,136 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
   onCancelReply,
   currentChannel,
   currentAgentId,
-  onCancelQuote
+  onCancelQuote,
 }) => {
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [pendingAttachment, setPendingAttachment] = useState<{
     file_id: string;
     filename: string;
     size: number;
   } | null>(null);
   const [showMentions, setShowMentions] = useState(false);
-  const [mentionFilter, setMentionFilter] = useState('');
+  const [mentionFilter, setMentionFilter] = useState("");
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Common emojis organized by category
+  const emojiCategories = {
+    Smileys: [
+      "😀",
+      "😃",
+      "😄",
+      "😁",
+      "😆",
+      "😅",
+      "😂",
+      "🤣",
+      "😊",
+      "😇",
+      "🙂",
+      "🙃",
+      "😉",
+      "😌",
+      "😍",
+      "🥰",
+    ],
+    Gestures: [
+      "👍",
+      "👎",
+      "👌",
+      "✌️",
+      "🤞",
+      "🤟",
+      "🤘",
+      "🤙",
+      "👈",
+      "👉",
+      "👆",
+      "👇",
+      "☝️",
+      "✋",
+      "🤚",
+      "🖐️",
+    ],
+    Hearts: [
+      "❤️",
+      "🧡",
+      "💛",
+      "💚",
+      "💙",
+      "💜",
+      "🖤",
+      "🤍",
+      "🤎",
+      "💔",
+      "❣️",
+      "💕",
+      "💞",
+      "💓",
+      "💗",
+      "💖",
+    ],
+    Objects: [
+      "🎉",
+      "🎊",
+      "🎈",
+      "🎁",
+      "🏆",
+      "🥇",
+      "🥈",
+      "🥉",
+      "⭐",
+      "🌟",
+      "💫",
+      "✨",
+      "🔥",
+      "💯",
+      "✅",
+      "❌",
+    ],
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newMessage = message.slice(0, start) + emoji + message.slice(end);
+      setMessage(newMessage);
+
+      // Set cursor position after emoji
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.setSelectionRange(
+            start + emoji.length,
+            start + emoji.length
+          );
+        }
+      }, 0);
+    }
+    setShowEmojiPicker(false);
+  };
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showEmojiPicker &&
+        textareaRef.current &&
+        !textareaRef.current
+          .closest(".thread-input-container")
+          ?.contains(event.target as Node)
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showEmojiPicker]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -487,7 +672,7 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
         quotingMessage?.messageId,
         pendingAttachment || undefined
       );
-      setMessage('');
+      setMessage("");
       setPendingAttachment(null);
       adjustTextareaHeight();
     }
@@ -496,36 +681,36 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     // Handle mention navigation
     if (showMentions && filteredAgents.length > 0) {
-      if (e.key === 'ArrowDown') {
+      if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelectedMentionIndex(prev => 
+        setSelectedMentionIndex((prev) =>
           prev < filteredAgents.length - 1 ? prev + 1 : 0
         );
         return;
-      } else if (e.key === 'ArrowUp') {
+      } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setSelectedMentionIndex(prev => 
+        setSelectedMentionIndex((prev) =>
           prev > 0 ? prev - 1 : filteredAgents.length - 1
         );
         return;
-      } else if (e.key === 'Enter' || e.key === 'Tab') {
+      } else if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
         if (filteredAgents[selectedMentionIndex]) {
           insertMention(filteredAgents[selectedMentionIndex]);
         }
         return;
-      } else if (e.key === 'Escape') {
+      } else if (e.key === "Escape") {
         e.preventDefault();
         setShowMentions(false);
-        setMentionFilter('');
+        setMentionFilter("");
         return;
       }
     }
 
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       if (quotingMessage && onCancelQuote) {
         onCancelQuote();
       } else if (replyingTo && onCancelReply) {
@@ -537,7 +722,7 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
     if (textarea) {
-      textarea.style.height = 'auto';
+      textarea.style.height = "auto";
       textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
     }
   };
@@ -547,27 +732,29 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
     if (newValue.length <= MAX_MESSAGE_LENGTH) {
       setMessage(newValue);
       adjustTextareaHeight();
-      
+
       // Check for mentions
-      const lastWord = newValue.split(' ').pop() || '';
-      if (lastWord.startsWith('@')) {
+      const lastWord = newValue.split(" ").pop() || "";
+      if (lastWord.startsWith("@")) {
         const filter = lastWord.substring(1); // Remove the @ symbol
         setMentionFilter(filter);
         setShowMentions(true);
         setSelectedMentionIndex(0);
       } else {
         setShowMentions(false);
-        setMentionFilter('');
+        setMentionFilter("");
       }
     }
   };
 
   // Filter agents based on mention input
-  const filteredAgents = agents.filter(agent => {
+  const filteredAgents = agents.filter((agent) => {
     if (!mentionFilter) return true;
     const displayName = agent.display_name || agent.agent_id;
-    return displayName.toLowerCase().includes(mentionFilter.toLowerCase()) ||
-           agent.agent_id.toLowerCase().includes(mentionFilter.toLowerCase());
+    return (
+      displayName.toLowerCase().includes(mentionFilter.toLowerCase()) ||
+      agent.agent_id.toLowerCase().includes(mentionFilter.toLowerCase())
+    );
   });
 
   const handleFileUpload = () => {
@@ -576,13 +763,13 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
 
   const insertMention = (agent: AgentInfo) => {
     const displayName = agent.display_name || agent.agent_id;
-    const words = message.split(' ');
+    const words = message.split(" ");
     words[words.length - 1] = `@${displayName} `;
-    const newMessage = words.join(' ');
+    const newMessage = words.join(" ");
     setMessage(newMessage);
     setShowMentions(false);
-    setMentionFilter('');
-    
+    setMentionFilter("");
+
     // Focus back on textarea
     setTimeout(() => {
       textareaRef.current?.focus();
@@ -596,24 +783,27 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     if (!currentChannel || !currentAgentId) {
-      console.error('Missing channel or agent ID for file upload');
+      console.error("Missing channel or agent ID for file upload");
       return;
     }
 
     try {
       // Upload file using HTTP API
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('agent_id', currentAgentId);
-      formData.append('channel', currentChannel);
-      formData.append('message', message || `Uploading file: ${file.name}`);
+      formData.append("file", file);
+      formData.append("agent_id", currentAgentId);
+      formData.append("channel", currentChannel);
+      formData.append("message", message || `Uploading file: ${file.name}`);
 
-      const response = await fetch('http://cur2.acenta.ai:9572/api/workspace/upload', {
-        method: 'POST',
-        body: formData
-      });
+      const response = await fetch(
+        "http://cur2.acenta.ai:9572/api/workspace/upload",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
       if (response.ok) {
         const result = await response.json();
@@ -622,42 +812,42 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
           const attachmentData = {
             file_id: result.file_id,
             filename: result.filename,
-            size: result.size
+            size: result.size,
           };
-          
+
           setPendingAttachment(attachmentData);
-          
+
           // Show a visual indicator in the message input
           if (!message.trim()) {
             setMessage(`📎 ${result.filename} - `);
           }
         } else {
-          console.error('File upload failed:', result);
+          console.error("File upload failed:", result);
         }
       } else {
-        console.error('HTTP error during file upload:', response.status);
+        console.error("HTTP error during file upload:", response.status);
       }
     } catch (error) {
-      console.error('Error uploading file:', error);
+      console.error("Error uploading file:", error);
     }
-    
+
     // Reset file input
     if (e.target) {
-      e.target.value = '';
+      e.target.value = "";
     }
   };
 
   const getCharacterCountClass = () => {
     const length = message.length;
-    if (length > MAX_MESSAGE_LENGTH * 0.9) return 'error';
-    if (length > MAX_MESSAGE_LENGTH * 0.8) return 'warning';
-    return '';
+    if (length > MAX_MESSAGE_LENGTH * 0.9) return "error";
+    if (length > MAX_MESSAGE_LENGTH * 0.8) return "warning";
+    return "";
   };
 
   return (
     <div className={`thread-input-container ${currentTheme}`}>
       <style>{styles}</style>
-      
+
       {replyingTo && (
         <div className={`reply-preview ${currentTheme}`}>
           <div className="reply-header">
@@ -675,14 +865,13 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
             )}
           </div>
           <div className={`reply-text ${currentTheme}`}>
-            {replyingTo.text.length > 100 
-              ? `${replyingTo.text.substring(0, 100)}...` 
-              : replyingTo.text
-            }
+            {replyingTo.text.length > 100
+              ? `${replyingTo.text.substring(0, 100)}...`
+              : replyingTo.text}
           </div>
         </div>
       )}
-      
+
       {quotingMessage && (
         <div className={`quote-preview ${currentTheme}`}>
           <div className="quote-header">
@@ -700,20 +889,21 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
             )}
           </div>
           <div className={`reply-text ${currentTheme}`}>
-            {quotingMessage.text.length > 100 
-              ? `${quotingMessage.text.substring(0, 100)}...` 
-              : quotingMessage.text
-            }
+            {quotingMessage.text.length > 100
+              ? `${quotingMessage.text.substring(0, 100)}...`
+              : quotingMessage.text}
           </div>
         </div>
       )}
-      
+
       {/* Pending attachment indicator */}
       {pendingAttachment && (
         <div className={`pending-attachment ${currentTheme}`}>
           <div className="attachment-info">
             <span className="attachment-icon">📎</span>
-            <span className="attachment-name">{pendingAttachment.filename}</span>
+            <span className="attachment-name">
+              {pendingAttachment.filename}
+            </span>
             <button
               type="button"
               onClick={() => setPendingAttachment(null)}
@@ -725,7 +915,7 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
           </div>
         </div>
       )}
-      
+
       <form onSubmit={handleSubmit}>
         <div className="input-area">
           {showMentions && filteredAgents.length > 0 && (
@@ -734,21 +924,27 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
                 const displayName = agent.display_name || agent.agent_id;
                 const avatar = displayName.charAt(0).toUpperCase();
                 const isSelected = index === selectedMentionIndex;
-                
+
                 return (
-                  <div 
+                  <div
                     key={agent.agent_id}
-                    className={`mention-item ${currentTheme} ${isSelected ? 'selected' : ''}`}
+                    className={`mention-item ${currentTheme} ${
+                      isSelected ? "selected" : ""
+                    }`}
                     onClick={() => handleMentionClick(agent)}
                   >
-                    <div className={`mention-avatar ${currentTheme}`}>{avatar}</div>
-                    <div className={`mention-name ${currentTheme}`}>{displayName}</div>
+                    <div className={`mention-avatar ${currentTheme}`}>
+                      {avatar}
+                    </div>
+                    <div className={`mention-name ${currentTheme}`}>
+                      {displayName}
+                    </div>
                   </div>
                 );
               })}
             </div>
           )}
-          
+
           <textarea
             ref={textareaRef}
             value={message}
@@ -759,7 +955,7 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
             className={`message-textarea ${currentTheme}`}
             rows={1}
           />
-          
+
           <div className="input-actions">
             <button
               type="button"
@@ -770,16 +966,17 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
             >
               📎
             </button>
-            
+
             <button
               type="button"
               className={`action-button ${currentTheme}`}
               disabled={disabled}
               title="Add emoji"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
             >
               😊
             </button>
-            
+
             <button
               type="submit"
               className="send-button"
@@ -789,8 +986,34 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
               ↗
             </button>
           </div>
+
+          {/* Emoji Picker */}
+          {showEmojiPicker && (
+            <div className={`emoji-picker ${currentTheme}`}>
+              {Object.entries(emojiCategories).map(([category, emojis]) => (
+                <div key={category}>
+                  <div className={`emoji-category ${currentTheme}`}>
+                    {category}
+                  </div>
+                  <div className="emoji-grid">
+                    {emojis.map((emoji, index) => (
+                      <button
+                        key={`${category}-${index}`}
+                        type="button"
+                        className={`emoji-item ${currentTheme}`}
+                        onClick={() => handleEmojiSelect(emoji)}
+                        title={emoji}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        
+
         <input
           ref={fileInputRef}
           type="file"
@@ -799,7 +1022,7 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
           accept="*/*"
         />
       </form>
-      
+
       <div className={`input-hint ${currentTheme}`}>
         <div className="hint-shortcuts">
           <div className="shortcut">
@@ -817,7 +1040,7 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
             </div>
           )}
         </div>
-        
+
         <div className={`character-count ${getCharacterCountClass()}`}>
           {message.length}/{MAX_MESSAGE_LENGTH}
         </div>
@@ -827,7 +1050,3 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
 };
 
 export default ThreadMessageInput;
-
-
-
-
