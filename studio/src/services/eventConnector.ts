@@ -277,7 +277,7 @@ export class HttpEventConnector {
     return this.sendEvent({
       event_name: EventNames.THREAD_CHANNELS_LIST,
       source_id: this.agentId,
-      destination_id: 'mod:openagents.mods.communication.thread_messaging',
+      destination_id: 'mod:openagents.mods.workspace.messaging',
       payload: {}
     });
   }
@@ -286,7 +286,7 @@ export class HttpEventConnector {
     return this.sendEvent({
       event_name: EventNames.THREAD_CHANNEL_MESSAGES_RETRIEVE,
       source_id: this.agentId,
-      destination_id: 'mod:openagents.mods.communication.thread_messaging',
+      destination_id: 'mod:openagents.mods.workspace.messaging',
       payload: {
         channel: channel,
         limit: limit,
@@ -299,7 +299,7 @@ export class HttpEventConnector {
     return this.sendEvent({
       event_name: EventNames.THREAD_DIRECT_MESSAGES_RETRIEVE,
       source_id: this.agentId,
-      destination_id: 'mod:openagents.mods.communication.thread_messaging',
+      destination_id: 'mod:openagents.mods.workspace.messaging',
       payload: {
         target_agent_id: targetAgentId,
         limit: limit,

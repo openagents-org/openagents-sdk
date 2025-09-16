@@ -16,7 +16,7 @@ from openagents.core.client import AgentClient
 from openagents.models.event import Event
 from openagents.models.event_response import EventResponse
 from openagents.models.messages import EventNames
-from openagents.config.globals import THREAD_MESSAGING_MOD_NAME, DEFAULT_CHANNELS
+from openagents.config.globals import WORKSPACE_MESSAGING_MOD_NAME, DEFAULT_CHANNELS
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ class AgentConnection:
                 source_id=self._client.agent_id,
                 destination_id=self.agent_id,
                 payload=message_content,
-                relevant_mod=THREAD_MESSAGING_MOD_NAME,
+                relevant_mod=WORKSPACE_MESSAGING_MOD_NAME,
                 **kwargs
             )
             
@@ -225,7 +225,7 @@ class ChannelConnection:
             mod_message = Event(
                 event_name="thread.channel_message.post",
                 source_id=self._client.agent_id,
-                relevant_mod=THREAD_MESSAGING_MOD_NAME,
+                relevant_mod=WORKSPACE_MESSAGING_MOD_NAME,
                 destination_id=f"channel:{self.name.lstrip('#')}",  # Proper channel destination
                 payload={
                     "action": "channel_message",
@@ -273,7 +273,7 @@ class ChannelConnection:
             mod_message = Event(
                 event_name="thread.channel_message",
                 source_id=self._client.agent_id,
-                relevant_mod=THREAD_MESSAGING_MOD_NAME,
+                relevant_mod=WORKSPACE_MESSAGING_MOD_NAME,
                 destination_id=self._client.agent_id,
                 payload={
                     "message_type": "channel_message",
@@ -311,7 +311,7 @@ class ChannelConnection:
             mod_message = Event(
                 event_name="thread.channel_messages.retrieve",
                 source_id=self._client.agent_id,
-                relevant_mod=THREAD_MESSAGING_MOD_NAME,
+                relevant_mod=WORKSPACE_MESSAGING_MOD_NAME,
                 destination_id=f"channel:{self.name.lstrip('#')}",
                 payload={
                     "action": "retrieve_channel_messages",
@@ -365,7 +365,7 @@ class ChannelConnection:
             mod_message = Event(
                 event_name="thread.reply_message",
                 source_id=self._client.agent_id,
-                relevant_mod=THREAD_MESSAGING_MOD_NAME,
+                relevant_mod=WORKSPACE_MESSAGING_MOD_NAME,
                 destination_id=self._client.agent_id,
                 payload={
                     "message_type": "reply_message",
@@ -408,7 +408,7 @@ class ChannelConnection:
             mod_message = Event(
                 event_name="thread.file_upload",
                 source_id=self._client.agent_id,
-                relevant_mod=THREAD_MESSAGING_MOD_NAME,
+                relevant_mod=WORKSPACE_MESSAGING_MOD_NAME,
                 destination_id=self._client.agent_id,
                 payload={
                     "message_type": "file_upload",
@@ -454,7 +454,7 @@ class ChannelConnection:
             mod_message = Event(
                 event_name="thread.reaction",
                 source_id=self._client.agent_id,
-                relevant_mod=THREAD_MESSAGING_MOD_NAME,
+                relevant_mod=WORKSPACE_MESSAGING_MOD_NAME,
                 destination_id=self._client.agent_id,
                 payload={
                     "message_type": "reaction",
@@ -918,7 +918,7 @@ class Workspace:
             mod_message = Event(
                 event_name="thread.channel_info",
                 source_id=self._client.agent_id,
-                relevant_mod=THREAD_MESSAGING_MOD_NAME,
+                relevant_mod=WORKSPACE_MESSAGING_MOD_NAME,
                 destination_id=self._client.agent_id,
                 payload={
                     "message_type": "channel_info",

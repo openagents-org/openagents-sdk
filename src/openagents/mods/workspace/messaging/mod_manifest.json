@@ -1,5 +1,5 @@
 {
-    "mod_name": "thread_messaging",
+    "mod_name": "messaging",
     "version": "2.0.0",
     "description": "A standalone Reddit-like thread messaging mod for OpenAgents with 5-level nested threading, direct messaging, channel communication, and file sharing",
     "authors": ["OpenAgents Team"],

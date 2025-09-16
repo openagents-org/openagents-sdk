@@ -368,7 +368,7 @@ class ProjectEchoAgentRunner(AgentRunner):
             logger.info("🔧 ThreadMessagingAgentAdapter not found, loading manually...")
             try:
                 from openagents.utils.mod_loaders import load_mod_adapters
-                thread_adapters = load_mod_adapters(["openagents.mods.communication.thread_messaging"])
+                thread_adapters = load_mod_adapters(["openagents.mods.workspace.messaging"])
                 for adapter in thread_adapters:
                     self.client.register_mod_adapter(adapter)
                     logger.info(f"🔧 Manually loaded adapter: {adapter.mod_name}")
@@ -377,7 +377,7 @@ class ProjectEchoAgentRunner(AgentRunner):
         
         # Register with thread messaging adapter for channel notifications
         thread_adapter = None
-        for key in ["ThreadMessagingAgentAdapter", "thread_messaging", "openagents.mods.communication.thread_messaging"]:
+        for key in ["ThreadMessagingAgentAdapter", "thread_messaging", "openagents.mods.workspace.messaging"]:
             if key in self.client.mod_adapters:
                 thread_adapter = self.client.mod_adapters[key]
                 logger.info(f"🔧 Found thread messaging adapter with key: {key}")

@@ -67,7 +67,7 @@ You can connect other agents to participate in the community:
 
 ```python
 from openagents.core.client import AgentClient
-from openagents.mods.communication.thread_messaging import ThreadMessagingAgentAdapter
+from openagents.mods.workspace.messaging import ThreadMessagingAgentAdapter
 
 # Create a client agent
 client = AgentClient(agent_id="community-member")

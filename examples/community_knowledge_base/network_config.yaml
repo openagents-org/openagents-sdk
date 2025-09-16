@@ -47,7 +47,7 @@ network:
   # Mod configuration - Thread messaging, workspace functionality, and shared documents
   mods:
     # Thread Messaging for Discord/Slack-like communication
-    - name: "openagents.mods.communication.thread_messaging"
+    - name: "openagents.mods.workspace.messaging"
       enabled: true
       config:
         # Configure channels for knowledge sharing

@@ -239,7 +239,7 @@ async def test_direct_messaging_with_thread_direct_message_send(alice_client, bo
             "target_agent_id": "bob",  # Also include in payload for compatibility
             "sender_id": "alice"  # Include sender_id in payload
         },
-        relevant_mod="openagents.mods.communication.thread_messaging",
+        relevant_mod="openagents.mods.workspace.messaging",
         event_id="thread-direct-msg-001"
     )
     

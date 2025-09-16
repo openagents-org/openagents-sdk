@@ -56,7 +56,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
     def __init__(self):
         """Initialize the thread messaging protocol for an agent."""
         super().__init__(
-            mod_name="thread_messaging"
+            mod_name="messaging"
         )
         
         # Initialize protocol state
@@ -218,7 +218,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             event_name="thread.direct_message.send", 
             source_id=self.agent_id, 
             payload=wrapper_payload,
-            relevant_mod="openagents.mods.communication.thread_messaging",
+            relevant_mod="openagents.mods.workspace.messaging",
             visibility=EventVisibility.MOD_ONLY
         )
         
@@ -282,7 +282,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             source_id=self.agent_id, 
             destination_id=f"channel:{normalized_channel}",  # This is the key fix!
             payload=wrapper_payload,
-            relevant_mod="openagents.mods.communication.thread_messaging",
+            relevant_mod="openagents.mods.workspace.messaging",
             visibility=EventVisibility.MOD_ONLY
         )
         logger.info(f"🔧 ADAPTER: Created Event with visibility={message.visibility}, relevant_mod={message.relevant_mod}")
@@ -409,7 +409,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
                 event_name="thread.file.upload", 
                 source_id=self.agent_id, 
                 payload=wrapper_payload,
-                relevant_mod="openagents.mods.communication.thread_messaging",
+                relevant_mod="openagents.mods.workspace.messaging",
                 visibility=EventVisibility.MOD_ONLY
             )
             
@@ -491,7 +491,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         message = Event(
             event_name="thread.reply.sent", 
             source_id=self.agent_id, 
-            relevant_mod="openagents.mods.communication.thread_messaging",
+            relevant_mod="openagents.mods.workspace.messaging",
             visibility=EventVisibility.MOD_ONLY,
             relevant_agent_id=self.agent_id,
             payload=reply_msg.model_dump()
@@ -536,7 +536,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         message = Event(
             event_name="thread.reply.sent", 
             source_id=self.agent_id, 
-            relevant_mod="openagents.mods.communication.thread_messaging",
+            relevant_mod="openagents.mods.workspace.messaging",
             visibility=EventVisibility.MOD_ONLY,
             relevant_agent_id=self.agent_id,
             payload=reply_msg.model_dump()
@@ -576,7 +576,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         message = Event(
             event_name="thread.channel_messages.retrieve", 
             source_id=self.agent_id, 
-            relevant_mod="openagents.mods.communication.thread_messaging",
+            relevant_mod="openagents.mods.workspace.messaging",
             visibility=EventVisibility.MOD_ONLY,
             relevant_agent_id=self.agent_id,
             payload=retrieval_msg.model_dump()
@@ -626,7 +626,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         message = Event(
             event_name="thread.direct_messages.retrieve", 
             source_id=self.agent_id, 
-            relevant_mod="openagents.mods.communication.thread_messaging",
+            relevant_mod="openagents.mods.workspace.messaging",
             visibility=EventVisibility.MOD_ONLY,
             relevant_agent_id=self.agent_id,
             payload=retrieval_msg.model_dump()
@@ -674,7 +674,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         message = Event(
             event_name="thread.channels.list", 
             source_id=self.agent_id, 
-            relevant_mod="openagents.mods.communication.thread_messaging",
+            relevant_mod="openagents.mods.workspace.messaging",
             visibility=EventVisibility.MOD_ONLY,
             relevant_agent_id=self.agent_id,
             payload=channel_info_msg.model_dump()
@@ -739,7 +739,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         message = Event(
             event_name=event_name, 
             source_id=self.agent_id, 
-            relevant_mod="openagents.mods.communication.thread_messaging",
+            relevant_mod="openagents.mods.workspace.messaging",
             visibility=EventVisibility.MOD_ONLY,
             relevant_agent_id=self.agent_id,
             payload=reaction_msg.model_dump()

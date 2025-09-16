@@ -27,7 +27,7 @@ network:
   # Network-level mod configuration
   mods:
     # Thread Messaging 
-    - name: "openagents.mods.communication.thread_messaging"
+    - name: "openagents.mods.workspace.messaging"
       enabled: true
       config:
         default_channels:

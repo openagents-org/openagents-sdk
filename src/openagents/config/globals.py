@@ -12,7 +12,7 @@ including mod names, default values, and other system-wide configuration.
 WORKSPACE_DEFAULT_MOD_NAME = "openagents.mods.workspace.default"
 
 # Communication mods
-THREAD_MESSAGING_MOD_NAME = "openagents.mods.communication.thread_messaging"
+WORKSPACE_MESSAGING_MOD_NAME = "openagents.mods.workspace.messaging"
 SIMPLE_MESSAGING_MOD_NAME = "openagents.mods.communication.simple_messaging"
 
 # Discovery mods

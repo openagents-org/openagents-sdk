@@ -107,7 +107,7 @@ class ThreadMessagingNetworkMod(BaseMod):
     - Message quoting
     """
     
-    def __init__(self, mod_name: str = "thread_messaging"):
+    def __init__(self, mod_name: str = "messaging"):
         """Initialize the thread messaging mod for a network."""
         super().__init__(mod_name=mod_name)
         
@@ -375,7 +375,7 @@ class ThreadMessagingNetworkMod(BaseMod):
         """
         # Prevent infinite loops - don't process messages we generated
         if (self.network and event.source_id == self.network.network_id and 
-            event.relevant_mod == "openagents.mods.communication.thread_messaging"):
+            event.relevant_mod == "openagents.mods.workspace.messaging"):
             logger.debug("Skipping thread messaging response message to prevent infinite loop")
             return None
         

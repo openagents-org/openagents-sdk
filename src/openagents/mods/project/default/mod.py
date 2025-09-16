@@ -660,7 +660,7 @@ class DefaultProjectNetworkMod(BaseMod):
                     target_id="",  # Broadcast to mod
                     message_type="mod_message",
                     payload={
-                        "mod": "openagents.mods.communication.thread_messaging",
+                        "mod": "openagents.mods.workspace.messaging",
                         "action": "channel_message",
                         "relevant_agent_id": project.creator_agent_id,
                         "message_type": "channel_message",

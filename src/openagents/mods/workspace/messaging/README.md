@@ -29,7 +29,7 @@ A Discord/Slack-like thread messaging mod for OpenAgents that enables sophistica
 ### Basic Setup
 
 ```python
-from openagents.mods.communication.thread_messaging import ThreadMessagingAgentAdapter
+from openagents.mods.workspace.messaging import ThreadMessagingAgentAdapter
 
 # Create an agent with thread messaging
 agent = AgentClient(agent_id="my_agent")
