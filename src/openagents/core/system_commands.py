@@ -751,14 +751,3 @@ class SystemCommandProcessor:
                 "channels": channels
             }
         )
-        
-# Command constants
-REGISTER_AGENT = "register_agent"
-LIST_AGENTS = "list_agents"
-LIST_MODS = "list_mods"
-GET_MOD_MANIFEST = "get_mod_manifest"
-PING_AGENT = "ping_agent"
-CLAIM_AGENT_ID = "claim_agent_id"
-VALIDATE_CERTIFICATE = "validate_certificate"
-GET_NETWORK_INFO = "get_network_info"
-POLL_MESSAGES = "poll_messages"

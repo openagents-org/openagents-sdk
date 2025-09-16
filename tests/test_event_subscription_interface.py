@@ -3,9 +3,9 @@ Test for the network-level event subscription interface.
 
 This test focuses on the new network-level event interface:
 network = AgentNetwork.load(config)
-sub = network.events.subscribe(agent_id="test-agent", event_patterns=["channel.*", "agent.*"])
-queue = network.events.create_agent_event_queue("test-agent")
-event = await queue.get()
+sub = network.events.subscribe("test-agent", ["channel.*", "agent.*"])
+network.events.register_agent("test-agent")
+events = await network.events.poll_events("test-agent")
 """
 
 import asyncio
@@ -113,15 +113,15 @@ class TestEventSubscriptionInterface:
         
         # Subscribe to events using network events
         sub = self.network.events.subscribe(
-            agent_id="test-interface-agent",
-            event_patterns=[
+            "test-interface-agent",
+            [
                 "agent.direct_message.*", 
                 "channel.message.*"
             ]
         )
         
         # Create event queue for polling
-        event_queue = self.network.events.create_agent_event_queue("test-interface-agent")
+        self.network.events.register_agent("test-interface-agent")
         
         # Generate some events
         channel = ws.channel("#general")

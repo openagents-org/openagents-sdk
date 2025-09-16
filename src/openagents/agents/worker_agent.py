@@ -919,11 +919,11 @@ class WorkerAgent(AgentRunner):
             network = getattr(self._workspace_client, '_network', None)
             if network and hasattr(network, 'events'):
                 self._project_event_subscription = network.events.subscribe(
-                    agent_id=self.client.agent_id,
-                    event_patterns=["project.*"]  # Use pattern matching for all project events
+                    self.client.agent_id,
+                    ["project.*"]  # Use pattern matching for all project events
                 )
                 # Also create an event queue for polling
-                self._project_event_queue = network.events.create_agent_event_queue(self.client.agent_id)
+                network.events.register_agent(self.client.agent_id)
                 logger.info("Network event subscription and queue created for project events")
             else:
                 logger.warning("Network events not available - project events disabled")
@@ -1027,8 +1027,7 @@ class WorkerAgent(AgentRunner):
                 network = getattr(self._workspace_client, '_network', None)
                 if network and hasattr(network, 'events'):
                     network.events.unsubscribe(self._project_event_subscription.subscription_id)
-                    if hasattr(self, '_project_event_queue'):
-                        network.events.remove_agent_event_queue(self.client.agent_id)
+                    network.events.remove_agent_event_queue(self.client.agent_id)
                     logger.info("Project event subscription and queue cleaned up")
                 else:
                     logger.warning("Network events not available for cleanup")

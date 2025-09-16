@@ -177,12 +177,12 @@ class TestProjectGRPC:
         
         # Set up event subscription to capture project events using network events
         self.event_subscription = self.network.events.subscribe(
-            agent_id="test-workspace-client",
-            event_patterns=["project.created", "project.run.completed"]
+            "test-workspace-client",
+            ["project.created", "project.run.completed"]
         )
         
         # Create event queue for polling events
-        self.event_queue = self.network.events.create_agent_event_queue("test-workspace-client")
+        self.network.events.register_agent("test-workspace-client")
         
         logger.info("Workspace set up with event subscriptions")
         return self.workspace

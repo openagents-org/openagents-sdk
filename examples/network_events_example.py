@@ -34,28 +34,28 @@ async def main():
         # Subscribe to all project events using pattern matching
         print("🔔 Subscribing to project events...")
         project_subscription = network.events.subscribe(
-            agent_id="event-demo-agent",
-            event_patterns=["project.*"]
+            "event-demo-agent",
+            ["project.*"]
         )
         
         # Subscribe to channel messages in specific channel
         print("🔔 Subscribing to channel messages...")
         channel_subscription = network.events.subscribe(
-            agent_id="event-demo-agent", 
-            event_patterns=["channel.message.*"],
-            channel_filter="#general"
+            "event-demo-agent", 
+            ["channel.message.*"],
+            channels=["general"]
         )
         
         # Subscribe to direct messages
         print("🔔 Subscribing to direct messages...")
         direct_subscription = network.events.subscribe(
-            agent_id="event-demo-agent",
-            event_patterns=["agent.direct_message.*"]
+            "event-demo-agent",
+            ["agent.direct_message.*"]
         )
         
         # Create event queue for polling approach
         print("🔔 Creating event queue for polling...")
-        event_queue = network.events.create_agent_event_queue("event-demo-agent")
+        network.events.register_agent("event-demo-agent")
         
         print(f"✅ Set up {len(network.events.get_agent_subscriptions('event-demo-agent'))} subscriptions")
         
@@ -107,17 +107,13 @@ async def main():
         
         # Check event queue
         print("\n📥 Checking event queue...")
-        event_count = 0
-        while not event_queue.empty():
-            try:
-                event = event_queue.get_nowait()
-                event_count += 1
-                print(f"📨 Received event: {event.event_name}")
-                print(f"   Source: {event.source_agent_id}")
-                print(f"   Payload: {event.payload}")
-                print()
-            except:
-                break
+        events = await network.events.poll_events("event-demo-agent")
+        event_count = len(events)
+        for event in events:
+            print(f"📨 Received event: {event.event_name}")
+            print(f"   Source: {event.source_id}")
+            print(f"   Payload: {event.payload}")
+            print()
         
         print(f"✅ Processed {event_count} events from queue")
         
@@ -132,16 +128,14 @@ async def main():
         
         # Subscribe only to events from specific agent
         filtered_subscription = network.events.subscribe(
-            agent_id="event-demo-agent",
-            event_patterns=["*"],  # All events
-            agent_filter={"event-demo-agent"}  # Only from this agent
+            "event-demo-agent",
+            ["*"]  # All events
         )
         
         # Subscribe only to specific mod events
         mod_subscription = network.events.subscribe(
-            agent_id="event-demo-agent",
-            event_patterns=["project.*"],
-            mod_filter="project.default"
+            "event-demo-agent",
+            ["project.*"]
         )
         
         print("✅ Set up filtered subscriptions")
