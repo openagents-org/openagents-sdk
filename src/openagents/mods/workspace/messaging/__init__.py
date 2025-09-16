@@ -17,9 +17,9 @@ Key features:
 - List channels with descriptions and agent information
 """
 
-from openagents.mods.communication.thread_messaging.adapter import ThreadMessagingAgentAdapter
-from openagents.mods.communication.thread_messaging.mod import ThreadMessagingNetworkMod
-from openagents.mods.communication.thread_messaging.thread_messages import (
+from openagents.mods.workspace.messaging.adapter import ThreadMessagingAgentAdapter
+from openagents.mods.workspace.messaging.mod import ThreadMessagingNetworkMod
+from openagents.mods.workspace.messaging.thread_messages import (
     Event,
     ChannelMessage,
     ReplyMessage,

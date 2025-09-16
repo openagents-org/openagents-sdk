@@ -136,7 +136,7 @@ Projects are designed to support long-running tasks:
 
 ## Dependencies
 
-- `openagents.mods.communication.thread_messaging`: For channel creation and messaging
+- `openagents.mods.workspace.messaging`: For channel creation and messaging
 - `openagents.mods.workspace.default`: For workspace integration
 
 ## Tools Provided

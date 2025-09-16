@@ -52,7 +52,7 @@ network:
   # Mod configuration - Both thread messaging and shared documents
   mods:
     # Thread Messaging for organized conversations
-    - name: "openagents.mods.communication.thread_messaging"
+    - name: "openagents.mods.workspace.messaging"
       enabled: true
       config:
         max_message_size: 52428800  # 50MB for rich content
@@ -103,7 +103,7 @@ service_agents:
   # Collaboration Coordinator
   - name: "CollabCoordinator"
     mods:
-      - name: "openagents.mods.communication.thread_messaging"
+      - name: "openagents.mods.workspace.messaging"
         enabled: true
         config:
           routing_enabled: true
@@ -171,7 +171,7 @@ service_agents:
   # Collaboration Monitor
   - name: "CollabMonitor"
     mods:
-      - name: "openagents.mods.communication.thread_messaging"
+      - name: "openagents.mods.workspace.messaging"
         enabled: true
       - name: "openagents.mods.work.shared_document"
         enabled: true

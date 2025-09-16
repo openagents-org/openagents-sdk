@@ -45,8 +45,8 @@ class MockWorkerAgent(WorkerAgent):
         # Initialize basic attributes without calling super().__init__ immediately
         self._agent_id = agent_id
         self._preset_mod_names = kwargs.get('mod_names', [])
-        if 'openagents.mods.communication.thread_messaging' not in self._preset_mod_names:
-            self._preset_mod_names.append('openagents.mods.communication.thread_messaging')
+        if 'openagents.mods.workspace.messaging' not in self._preset_mod_names:
+            self._preset_mod_names.append('openagents.mods.workspace.messaging')
         kwargs['mod_names'] = self._preset_mod_names
         
         # Initialize without calling update_tools

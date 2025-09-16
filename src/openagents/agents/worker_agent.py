@@ -20,7 +20,7 @@ from openagents.models.event import Event
 from openagents.models.event_response import EventResponse
 from openagents.models.messages import EventNames
 from openagents.config.globals import DEFAULT_TRANSPORT_ADDRESS
-from openagents.mods.communication.thread_messaging.thread_messages import (
+from openagents.mods.workspace.messaging.thread_messages import (
     Event as ThreadEvent,
     ChannelMessage,
     ReplyMessage,
@@ -300,8 +300,8 @@ class WorkerAgent(AgentRunner):
         
         # Always include thread messaging in mod_names
         mod_names = kwargs.get('mod_names', [])
-        if 'openagents.mods.communication.thread_messaging' not in mod_names:
-            mod_names.append('openagents.mods.communication.thread_messaging')
+        if 'openagents.mods.workspace.messaging' not in mod_names:
+            mod_names.append('openagents.mods.workspace.messaging')
         kwargs['mod_names'] = mod_names
         
         super().__init__(agent_id=agent_id, **kwargs)
@@ -360,7 +360,7 @@ class WorkerAgent(AgentRunner):
         
         # Find thread messaging adapter using multiple possible keys
         thread_adapter = None
-        for key in ["ThreadMessagingAgentAdapter", "thread_messaging", "openagents.mods.communication.thread_messaging"]:
+        for key in ["ThreadMessagingAgentAdapter", "thread_messaging", "openagents.mods.workspace.messaging"]:
             thread_adapter = self.get_mod_adapter(key)
             if thread_adapter:
                 logger.info(f"Found thread messaging adapter with key: {key}")

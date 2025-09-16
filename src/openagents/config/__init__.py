@@ -8,5 +8,5 @@ from openagents.config.globals import *
 
 __all__ = [
     "WORKSPACE_DEFAULT_MOD_NAME",
-    "THREAD_MESSAGING_MOD_NAME",
+    "WORKSPACE_MESSAGING_MOD_NAME",
 ]

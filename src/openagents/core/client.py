@@ -297,8 +297,8 @@ class AgentClient:
         if module_path and module_path not in self.mod_adapters:
             self.mod_adapters[module_path] = mod_adapter
             
-            # Also store under parent module (e.g., "openagents.mods.communication.thread_messaging" 
-            # for "openagents.mods.communication.thread_messaging.adapter")
+            # Also store under parent module (e.g., "openagents.mods.workspace.messaging" 
+            # for "openagents.mods.workspace.messaging.adapter")
             if '.' in module_path:
                 parent_module = '.'.join(module_path.split('.')[:-1])
                 if parent_module and parent_module not in self.mod_adapters:

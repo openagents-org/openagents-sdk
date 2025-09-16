@@ -30,7 +30,7 @@ async def main():
     print("🤖 Starting service agents...")
     echo_agent = ProjectEchoAgentRunner(
         "echo-agent", 
-        protocol_names=["openagents.mods.communication.thread_messaging"],
+        protocol_names=["openagents.mods.workspace.messaging"],
         echo_prefix="ProjectWorker"
     )
     
