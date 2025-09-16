@@ -13,9 +13,9 @@ from typing import Dict, Any, List, Optional, Union, TYPE_CHECKING
 from datetime import datetime
 
 from openagents.core.client import AgentClient
-
-# Removed WorkspaceEvents import - events are now handled by the client
-from openagents.models.messages import Event, EventNames
+from openagents.models.event import Event
+from openagents.models.event_response import EventResponse
+from openagents.models.messages import EventNames
 from openagents.config.globals import THREAD_MESSAGING_MOD_NAME, DEFAULT_CHANNELS
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ class AgentConnection:
         self.workspace = workspace
         self._client = workspace._client
         
-    async def send_message(self, content: Union[str, Dict[str, Any]], **kwargs) -> bool:
+    async def send_message(self, content: Union[str, Dict[str, Any]], **kwargs) -> EventResponse:
         """Send a direct message to this agent.
         
         Args:
@@ -47,24 +47,21 @@ class AgentConnection:
             **kwargs: Additional message parameters
             
         Returns:
-            bool: True if message sent successfully
+            EventResponse: Response from the event system
         """
         # Ensure we're connected to the client
         if not await self.workspace._ensure_connected():
             logger.error("Could not establish client connection")
-            return False
+            return EventResponse(success=False, message="Could not establish client connection")
             
         try:
-            # Import here to avoid circular imports
-            from openagents.models.messages import Event
-            
             # Prepare message content
             if isinstance(content, str):
                 message_content = {"text": content}
             else:
                 message_content = content.copy()
             
-            # Create direct message
+            # Create direct message event
             direct_message = Event(
                 event_name="agent.direct_message.sent",
                 source_id=self._client.agent_id,
@@ -73,16 +70,13 @@ class AgentConnection:
                 **kwargs
             )
             
-            # Send through client
-            success = await self._client.send_direct_message(direct_message)
-            
-            # Events are now emitted automatically by the client
-            
-            return success
+            # Send through client and get immediate response
+            response = await self._client.send_event(direct_message)
+            return response
             
         except Exception as e:
             logger.error(f"Failed to send direct message to agent {self.agent_id}: {e}")
-            return False
+            return EventResponse(success=False, message=f"Failed to send message: {str(e)}")
     
     async def get_agent_info(self) -> Optional[Dict[str, Any]]:
         """Get information about this agent.
@@ -204,7 +198,7 @@ class ChannelConnection:
         self.workspace = workspace
         self._client = workspace._client
         
-    async def post(self, content: Union[str, Dict[str, Any]], **kwargs) -> bool:
+    async def post(self, content: Union[str, Dict[str, Any]], **kwargs) -> EventResponse:
         """Send a message to this channel.
         
         Args:
@@ -212,12 +206,12 @@ class ChannelConnection:
             **kwargs: Additional message parameters
             
         Returns:
-            bool: True if message sent successfully
+            EventResponse: Response from the event system
         """
         # Ensure we're connected to the client
         if not await self.workspace._ensure_connected():
             logger.error("Could not establish client connection")
-            return False
+            return EventResponse(success=False, message="Could not establish client connection")
             
         try:
             # Prepare message content
@@ -231,29 +225,25 @@ class ChannelConnection:
                 event_name="thread.message",
                 source_id=self._client.agent_id,
                 relevant_mod=THREAD_MESSAGING_MOD_NAME,
-                destination_id=self._client.agent_id,
+                destination_id=f"channel:{self.name.lstrip('#')}",  # Proper channel destination
                 payload={
                     "action": "channel_message",
                     "message_type": "channel_message", 
                     "sender_id": self._client.agent_id,
                     "channel": self.name.lstrip('#') if self.name else self.name,  # Normalize channel name
                     "content": {"text": message_content.get("text", str(message_content))},
-                    # Ensure channel is also passed as a direct field for ChannelMessage constructor
                     "source_id": self._client.agent_id,
                     **kwargs
                 }
             )
             
-            # Send through workspace
-            success = await self.workspace._send_mod_message(mod_message)
-            
-            # Events are now emitted automatically by the client
-            
-            return success
+            # Send through workspace and get immediate response
+            response = await self.workspace._send_mod_message(mod_message)
+            return response
             
         except Exception as e:
             logger.error(f"Failed to send message to channel {self.name}: {e}")
-            return False
+            return EventResponse(success=False, message=f"Failed to send message: {str(e)}")
     
     async def post_with_mention(self, content: Union[str, Dict[str, Any]], mention_agent_id: str, **kwargs) -> bool:
         """Send a message to this channel with an explicit agent mention.
@@ -305,91 +295,44 @@ class ChannelConnection:
             logger.error(f"Failed to send message with mention to channel {self.name}: {e}")
             return False
     
-    async def get_messages(self, limit: int = 50, offset: int = 0, timeout: float = 10.0) -> List[Dict[str, Any]]:
-        """Retrieve messages from this channel.
+    def get_messages(self, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+        """Retrieve messages from this channel synchronously.
         
         Args:
             limit: Maximum number of messages to retrieve
             offset: Number of messages to skip
-            timeout: Timeout for waiting for response (seconds)
             
         Returns:
             List of message dictionaries
         """
-        # Ensure we're connected to the client
-        if not await self.workspace._ensure_connected():
-            logger.error("Could not establish client connection")
-            return []
-            
         try:
-            # Generate unique request ID for correlation
-            request_id = str(uuid.uuid4())
-            
-            # Create mod message to retrieve channel messages
+            # Create mod message to retrieve channel messages using the correct event name
             mod_message = Event(
-                event_name="thread.message_retrieval",
+                event_name="thread.channel_messages.retrieve",
                 source_id=self._client.agent_id,
                 relevant_mod=THREAD_MESSAGING_MOD_NAME,
-                destination_id=self._client.agent_id,
+                destination_id=f"channel:{self.name.lstrip('#')}",
                 payload={
-                    "message_type": "message_retrieval",
-                    "sender_id": self._client.agent_id,
                     "action": "retrieve_channel_messages",
-                    "channel": self.name,
+                    "channel": self.name.lstrip('#'),
                     "limit": limit,
-                    "offset": offset,
-                    "request_id": request_id
+                    "offset": offset
                 }
             )
             
-            # Define condition to match the response
-            def response_condition(msg):
-                """Check if this is the response to our request."""
-                try:
-                    content = msg.payload
-                    return (
-                        content.get("action") == "retrieve_channel_messages_response" and
-                        content.get("request_id") == request_id and
-                        content.get("channel") == self.name
-                    )
-                except (AttributeError, KeyError):
-                    return False
+            # Send request synchronously and get immediate response
+            response = self.workspace._send_mod_message_sync(mod_message)
             
-            # Start waiting for response before sending request
-            wait_task = asyncio.create_task(
-                self._client.wait_mod_message(
-                    condition=response_condition,
-                    timeout=timeout
-                )
-            )
-            
-            # Give the wait task a moment to start
-            await asyncio.sleep(0.01)
-            
-            # Send request
-            success = await self.workspace._send_mod_message(mod_message)
-            if not success:
-                wait_task.cancel()
-                logger.error(f"Failed to send get_messages request for channel {self.name}")
+            if not response.success:
+                logger.error(f"Failed to retrieve messages for channel {self.name}: {response.message}")
                 return []
             
-            # Wait for response
-            response = await wait_task
-            
-            if response is None:
-                logger.warning(f"Timeout waiting for messages from channel {self.name} (timeout: {timeout}s)")
-                return []
-            
-            # Extract messages from response
-            response_content = response.payload
-            messages = response_content.get("messages", [])
+            # Extract messages from response data
+            messages = response.data.get("messages", []) if response.data else []
             
             logger.debug(f"Retrieved {len(messages)} messages from channel {self.name}")
             return messages
             
-        except asyncio.CancelledError:
-            logger.debug(f"get_messages request cancelled for channel {self.name}")
-            return []
         except Exception as e:
             logger.error(f"Failed to retrieve messages from channel {self.name}: {e}")
             return []
@@ -434,7 +377,7 @@ class ChannelConnection:
             )
             
             # Send through client
-            return await self._client.send_mod_message(mod_message)
+            return await self._client.send_event(mod_message)
             
         except Exception as e:
             logger.error(f"Failed to reply to message {message_id} in channel {self.name}: {e}")
@@ -522,7 +465,7 @@ class ChannelConnection:
             )
             
             # Send through client
-            return await self._client.send_mod_message(mod_message)
+            return await self._client.send_event(mod_message)
             
         except Exception as e:
             logger.error(f"Failed to react to message {message_id} in channel {self.name}: {e}")
@@ -732,19 +675,60 @@ class Workspace:
         self._pending_responses: Dict[str, asyncio.Future] = {}
         self._handlers_setup: bool = False
     
-    async def _send_mod_message(self, mod_message) -> bool:
+    async def _send_mod_message(self, mod_message) -> EventResponse:
         """Send a mod message through connector.
         
         Args:
             mod_message: Event to send
             
         Returns:
-            bool: True if message was sent successfully
+            EventResponse: Response from the event system
         """
         logger.info(f"🔧 WORKSPACE: Sending message through connector")
-        success = await self._client.connector.send_message(mod_message)
-        logger.info(f"🔧 WORKSPACE: Connector send result: {success}")
-        return success
+        response = await self._client.connector.send_event(mod_message)
+        logger.info(f"🔧 WORKSPACE: Connector send result: {response}")
+        return response
+
+    def _send_mod_message_sync(self, mod_message) -> EventResponse:
+        """Send a mod message through client synchronously.
+        
+        The client.send_event is async but returns synchronous EventResponse.
+        We use asyncio.run to call it synchronously for workspace operations.
+        
+        Args:
+            mod_message: Event to send
+            
+        Returns:
+            EventResponse: Response from the event system with data
+        """
+        logger.info(f"🔧 WORKSPACE: Sending sync message through client")
+        
+        try:
+            # Use asyncio.run to call the async method synchronously
+            # This is appropriate for workspace operations which can be blocking
+            import asyncio
+            
+            # Check if we're already in an event loop
+            try:
+                loop = asyncio.get_running_loop()
+                # If we're in a loop, we need to use a different approach
+                # This shouldn't happen in normal workspace usage, but handle it gracefully
+                logger.warning("Already in event loop, using await instead of asyncio.run")
+                # Create a task and get the result synchronously (this is a fallback)
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(asyncio.run, self._client.send_event(mod_message))
+                    response = future.result()
+            except RuntimeError:
+                # No event loop running, safe to use asyncio.run
+                response = asyncio.run(self._client.send_event(mod_message))
+            
+            logger.info(f"🔧 WORKSPACE: Sync client send result: {response}")
+            return response
+            
+        except Exception as e:
+            logger.error(f"Failed to send sync mod message: {e}")
+            return EventResponse(success=False, message=f"Sync send failed: {str(e)}")
     
     def _setup_message_handlers(self) -> None:
         """Set up message handlers for workspace responses."""
@@ -860,13 +844,21 @@ class Workspace:
         Returns:
             bool: True if connected successfully, False otherwise
         """
-        if self._is_connected and self._client and self._client.connector:
+        # Check if client is already connected
+        if self._client and self._client.connector and hasattr(self._client.connector, 'connected') and self._client.connector.connected:
+            self._is_connected = True
+            return True
+        
+        # Check if client has an active connector (alternative check)
+        if self._client and self._client.connector:
+            self._is_connected = True
             return True
         
         if not self._client:
             logger.error("No client available for workspace connection")
             return False
         
+        # If we have auto-connect config, try to connect
         if self._auto_connect_config:
             try:
                 host = self._auto_connect_config['host']
@@ -887,7 +879,12 @@ class Workspace:
                 logger.error(f"Error during auto-connection: {e}")
                 return False
         else:
-            logger.warning("No auto-connect configuration available")
+            # No auto-connect config, but client might already be connected
+            # This is typical in test scenarios where the client is connected externally
+            logger.debug("No auto-connect configuration available, assuming client is connected")
+            if self._client:
+                self._is_connected = True
+                return True
             return False
         
     async def channels(self, refresh: bool = False, timeout: float = 5.0) -> List[str]:
