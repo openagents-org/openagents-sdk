@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ThreadMessage } from '../../services/grpcService';
+import { ThreadMessage } from '../../types/events';
 import MarkdownContent from './MarkdownContent';
 import AttachmentDisplay from './AttachmentDisplay';
 
@@ -57,7 +57,7 @@ const styles = `
   }
   
   .message-item {
-    margin-bottom: 16px;
+    margin-bottom: 4px;
     position: relative;
   }
   

@@ -36,55 +36,62 @@ export interface NetworkListResponse {
   items: Network[];
 }
 
-// Check if a local OpenAgents network is running on localhost:8571
+// Check if a local OpenAgents network is running on localhost:8700 (HTTP port)
 export const detectLocalNetwork = async (): Promise<NetworkConnection | null> => {
-  try {
-    // Test local gRPC network via HTTP adapter health endpoint (port 9571)
-    const response = await fetch('http://localhost:9571/api/health', {
-      method: 'GET',
-      signal: AbortSignal.timeout(3000) // 3 second timeout
-    });
+  // Try common HTTP ports for OpenAgents networks
+  const commonPorts = [8700, 8571, 8570]; // Try default HTTP port first
+  
+  for (const httpPort of commonPorts) {
+    try {
+      const response = await fetch(`http://localhost:${httpPort}/api/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(3000) // 3 second timeout
+      });
 
-    if (response.ok) {
-      console.log('Local OpenAgents network detected on port 8571');
-      return {
-        host: 'localhost',
-        port: 8571,
-        status: 'connected',
-        latency: 0,
-      };
-    } else {
-      console.log('No local OpenAgents network detected on port 8571');
-      return null;
+      if (response.ok) {
+        console.log(`Local OpenAgents network detected on HTTP port ${httpPort}`);
+        return {
+          host: 'localhost',
+          port: httpPort,
+          status: 'connected',
+          latency: 0,
+        };
+      }
+    } catch (error) {
+      // Continue to next port
     }
-  } catch (error) {
-    console.log('No local OpenAgents network detected on port 8571');
-    return null;
   }
   
-  console.log('No local OpenAgents network detected on common ports');
+  console.log('No local OpenAgents network detected on common HTTP ports');
   return null;
 };
 
-// Test connection to a specific network
+// Test connection to a specific network using HTTP port directly
 export const testNetworkConnection = async (host: string, port: number): Promise<NetworkConnection> => {
   const startTime = Date.now();
   
   try {
-    // Test gRPC network via HTTP adapter health endpoint (port + 1000)
-    const httpPort = port + 1000;
+    // Connect directly to the HTTP port
     const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
-    const testUrl = `${protocol}://${host}:${httpPort}/api/health`;
+    const testUrl = `${protocol}://${host}:${port}/api/health`;
     
-    // Use health check endpoint to test connectivity without creating agents
+    console.log(`Testing connection to HTTP endpoint: ${testUrl}`);
+    
+    // Use health check endpoint to test connectivity
     const response = await fetch(testUrl, {
       method: 'GET',
+      mode: 'cors', // Enable CORS
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
       signal: AbortSignal.timeout(5000) // 5 second timeout
     });
 
     const latency = Date.now() - startTime;
 
     if (response.ok) {
+      console.log(`Successfully connected to ${host}:${port}`);
       return {
         host,
         port,
@@ -92,6 +99,7 @@ export const testNetworkConnection = async (host: string, port: number): Promise
         latency,
       };
     } else {
+      console.error(`HTTP error ${response.status} when connecting to ${host}:${port}`);
       return {
         host,
         port,

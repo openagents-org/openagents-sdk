@@ -1,11 +1,11 @@
 import React from 'react';
 import { SidebarProps, DocumentInfo } from '../types';
-import { ThreadMessagingChannel, AgentInfo } from '../services/grpcService';
+import { ThreadChannel, AgentInfo } from '../types/events';
 import OpenAgentsLogo from './icons/OpenAgentsLogo';
 
 interface ExtendedSidebarProps extends Omit<SidebarProps, 'isCollapsed' | 'toggleSidebar' | 'onSettingsClick' | 'onProfileClick'> {
   // Thread messaging data
-  channels?: ThreadMessagingChannel[];
+  channels?: ThreadChannel[];
   agents?: AgentInfo[];
   currentChannel?: string | null;
   currentDirectMessage?: string | null;
