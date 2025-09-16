@@ -16,7 +16,7 @@ def parse_message_dict(message_dict: Dict[str, Any]) -> Event:
     
     # Map legacy message_type to proper event_name
     event_name_map = {
-        "direct_message": "agent.direct_message.sent",
+        "direct_message": "agent.message",
         "broadcast_message": "agent.broadcast_message.sent", 
         "mod_message": "mod.generic.message_received",
         "channel_message": "channel.message.posted"

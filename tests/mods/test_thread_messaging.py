@@ -345,7 +345,7 @@ async def test_channel_messaging_and_threads(alice_client, bob_client, charlie_c
     
     # Alice sends a channel message to the "general" channel
     channel_message = Event(
-        event_name="thread.channel_message.sent",
+        event_name="thread.channel_message.post",
         source_id="alice",
         payload={
             "channel": "general",
@@ -586,7 +586,7 @@ async def test_channel_info_and_message_retrieval(alice_client, bob_client):
     
     # Send a message to general channel first
     channel_message = Event(
-        event_name="thread.channel_message.sent",
+        event_name="thread.channel_message.post",
         source_id="alice",
         payload={
             "channel": "general",
@@ -676,7 +676,7 @@ async def test_reaction_system(alice_client, bob_client):
     # First, Alice sends a message that Bob can react to
     target_message_id = "reaction-target-001"
     channel_message = Event(
-        event_name="thread.channel_message.sent",
+        event_name="thread.channel_message.post",
         source_id="alice",
         payload={
             "channel": "general",

@@ -62,7 +62,7 @@ class SimpleEchoAgentRunner(AgentRunner):
             # Create echo response
             echo_text = f"{self.echo_prefix}: {text}"
             echo_message = Event(
-                event_name="agent.direct_message.sent",
+                event_name="agent.message",
                 source_id=self.client.agent_id,
                 destination_id=sender_id,
                 payload={
@@ -90,7 +90,7 @@ class SimpleEchoAgentRunner(AgentRunner):
             if "hello" in text.lower() and sender_id != self.client.agent_id:
                 greeting_text = f"Hello {sender_id}! I'm an echo agent. Send me a direct message and I'll echo it back!"
                 greeting_message = Event(
-                    event_name="agent.direct_message.sent",
+                    event_name="agent.message",
                     source_id=self.client.agent_id,
                     destination_id=sender_id,
                     payload={

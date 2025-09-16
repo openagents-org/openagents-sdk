@@ -35,7 +35,7 @@ class TestEvent:
         """Test automatic visibility setting based on targeting."""
         # Direct message
         direct_event = Event(
-            event_name="agent.direct_message.sent",
+            event_name="agent.message",
             source_id="agent1",
             destination_id="agent2"
         )
@@ -84,7 +84,7 @@ class TestEvent:
         
         # Direct event - only visible to target
         direct_event = Event(
-            event_name="agent.direct_message.sent",
+            event_name="agent.message",
             source_id="agent1",
             destination_id="agent2",
             visibility=EventVisibility.DIRECT

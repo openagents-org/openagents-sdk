@@ -275,7 +275,7 @@ class TestEventSubscriptionInterface:
         
         # Create multiple subscriptions
         channel_sub = ws.events.subscribe(["channel.post.created"])
-        agent_sub = ws.events.subscribe(["agent.direct_message.sent"])
+        agent_sub = ws.events.subscribe(["agent.message"])
         
         # Generate events
         channel = ws.channel("#general")

@@ -96,7 +96,7 @@ class EventGateway:
         self.network = network
         self.processed_event_ids: Set[str] = set()
         self.agent_subscriptions: Dict[str, List[EventSubscription]] = {}
-        self.channel_members: Dict[str, Set[str]] = {}
+        self.channel_members: Dict[str, List[str]] = {}
         self.agent_event_queues: Dict[str, asyncio.Queue] = {}
         self.system_command_processor = SystemCommandProcessor(network)
         self.mod_event_processor = ModEventProcessor(network.mods)
@@ -321,6 +321,62 @@ class EventGateway:
         """
         if agent_id in self.agent_event_queues:
             del self.agent_event_queues[agent_id]
+    
+    def create_channel(self, channel_id: str):
+        """
+        Create a channel.
+        """
+        if channel_id not in self.channel_members:
+            self.channel_members[channel_id] = []
+            logger.debug(f"Created channel: {channel_id}")
+        else:
+            logger.debug(f"Channel {channel_id} already exists")
+    
+    def add_channel_member(self, channel_id: str, agent_id: str):
+        """
+        Add a member to a channel. Creates the channel if it doesn't exist.
+        """
+        if channel_id not in self.channel_members:
+            self.create_channel(channel_id)
+            logger.debug(f"Auto-created channel {channel_id} when adding member {agent_id}")
+        
+        if agent_id not in self.channel_members[channel_id]:
+            self.channel_members[channel_id].append(agent_id)
+            logger.debug(f"Added member {agent_id} to channel {channel_id}")
+        else:
+            logger.debug(f"Member {agent_id} already in channel {channel_id}")
+    
+    def remove_channel_member(self, channel_id: str, agent_id: str):
+        """
+        Remove a member from a channel.
+        """
+        if channel_id in self.channel_members:
+            self.channel_members[channel_id].remove(agent_id)
+            logger.debug(f"Removed member {agent_id} from channel {channel_id}")
+        else:
+            logger.debug(f"Channel {channel_id} does not exist")
+    
+    def get_channel_members(self, channel_id: str) -> List[str]:
+        """
+        Get the members of a channel.
+        """
+        return self.channel_members.get(channel_id, [])
+    
+    def list_channels(self) -> List[str]:
+        """
+        List all channels.
+        """
+        return list(self.channel_members.keys())
+    
+    def remove_channel(self, channel_id: str):
+        """
+        Remove a channel.
+        """
+        if channel_id in self.channel_members:
+            del self.channel_members[channel_id]
+            logger.debug(f"Removed channel: {channel_id}")
+        else:
+            logger.debug(f"Channel {channel_id} does not exist")
     
     async def cleanup_agent(self, agent_id: str):
         """

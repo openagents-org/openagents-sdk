@@ -172,7 +172,7 @@ class TestAgentNetwork:
         # With the unified Event system, messages are handled through events
         # and local delivery logic rather than direct topology routing
         message = Event(
-            event_name="agent.direct_message.sent",
+            event_name="agent.message",
             source_id="agent1",
             destination_id="agent2",
             payload={"text": "Hello, agent2!"}

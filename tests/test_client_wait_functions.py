@@ -114,7 +114,7 @@ class TestClientWaitFunctions:
         await asyncio.sleep(3.0)
         
         # Send message after agents are ready
-        msg = Event(event_name="agent.direct_message.sent", source_id="test-client", destination_id="echo-agent", payload={"text": "Hello Echo!", "message_type": "direct_message"})
+        msg = Event(event_name="agent.message", source_id="test-client", destination_id="echo-agent", payload={"text": "Hello Echo!", "message_type": "direct_message"})
         await client.send_direct_message(msg)
         
         # Small delay to ensure message is queued
@@ -144,7 +144,7 @@ class TestClientWaitFunctions:
         await asyncio.sleep(0.5)
         
         # Send a message
-        msg = Event(event_name="agent.direct_message.sent", source_id="test-client", destination_id="echo-agent", payload={"text": "Test condition filtering", "message_type": "direct_message"}
+        msg = Event(event_name="agent.message", source_id="test-client", destination_id="echo-agent", payload={"text": "Test condition filtering", "message_type": "direct_message"}
         )
         await client.send_direct_message(msg)
         
@@ -277,9 +277,9 @@ class TestClientWaitFunctions:
         await asyncio.sleep(0.1)
         
         # Send messages to trigger responses
-        msg1 = Event(event_name="agent.direct_message.sent", source_id="client-1", destination_id="echo-agent", payload={"text": "Message for client-1", "message_type": "direct_message"}
+        msg1 = Event(event_name="agent.message", source_id="client-1", destination_id="echo-agent", payload={"text": "Message for client-1", "message_type": "direct_message"}
         )
-        msg2 = Event(event_name="agent.direct_message.sent", source_id="client-2", destination_id="echo-agent", payload={"text": "Message for client-2", "message_type": "direct_message"}
+        msg2 = Event(event_name="agent.message", source_id="client-2", destination_id="echo-agent", payload={"text": "Message for client-2", "message_type": "direct_message"}
         )
         
         await client1.send_direct_message(msg1)

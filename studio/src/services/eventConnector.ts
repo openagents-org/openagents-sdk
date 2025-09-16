@@ -216,7 +216,7 @@ export class HttpEventConnector {
    */
   async sendDirectMessage(targetAgentId: string, content: string): Promise<EventResponse> {
     return this.sendEvent({
-      event_name: EventNames.THREAD_DIRECT_MESSAGE_SENT,
+      event_name: EventNames.THREAD_DIRECT_MESSAGE_SEND,
       source_id: this.agentId,
       destination_id: `agent:${targetAgentId}`,
       payload: {
@@ -240,7 +240,7 @@ export class HttpEventConnector {
     }
 
     return this.sendEvent({
-      event_name: replyToId ? EventNames.THREAD_REPLY_SENT : EventNames.THREAD_CHANNEL_MESSAGE_SENT,
+      event_name: replyToId ? EventNames.THREAD_REPLY_SENT : EventNames.THREAD_CHANNEL_MESSAGE_POST,
       source_id: this.agentId,
       destination_id: `channel:${channel}`,
       payload

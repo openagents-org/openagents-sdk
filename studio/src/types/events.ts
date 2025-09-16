@@ -25,8 +25,8 @@ export enum EventNames {
   AGENT_MESSAGE = 'agent.message',
   
   // Thread messaging events
-  THREAD_DIRECT_MESSAGE_SENT = 'thread.direct_message.sent',
-  THREAD_CHANNEL_MESSAGE_SENT = 'thread.channel_message.sent',
+  THREAD_DIRECT_MESSAGE_SEND = 'thread.direct_message.send',
+  THREAD_CHANNEL_MESSAGE_POST = 'thread.channel_message.post',
   THREAD_REPLY_SENT = 'thread.reply.sent',
   THREAD_REACTION_ADD = 'thread.reaction.add',
   THREAD_REACTION_REMOVE = 'thread.reaction.remove',

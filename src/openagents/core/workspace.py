@@ -61,12 +61,13 @@ class AgentConnection:
             else:
                 message_content = content.copy()
             
-            # Create direct message event
+            # Create direct message event for thread messaging
             direct_message = Event(
-                event_name="agent.direct_message.sent",
+                event_name="thread.direct_message.send",
                 source_id=self._client.agent_id,
                 destination_id=self.agent_id,
                 payload=message_content,
+                relevant_mod=THREAD_MESSAGING_MOD_NAME,
                 **kwargs
             )
             
@@ -222,7 +223,7 @@ class ChannelConnection:
             
             # Create mod message for thread messaging
             mod_message = Event(
-                event_name="thread.message",
+                event_name="thread.channel_message.post",
                 source_id=self._client.agent_id,
                 relevant_mod=THREAD_MESSAGING_MOD_NAME,
                 destination_id=f"channel:{self.name.lstrip('#')}",  # Proper channel destination

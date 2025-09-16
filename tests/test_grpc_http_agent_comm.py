@@ -184,9 +184,10 @@ class HTTPAgentClient:
         direct_messages = []
         
         for msg in self.received_messages:
-            # Handle direct thread.message format
-            if (msg.get('event_name') == 'thread.message' 
-                and msg.get('payload', {}).get('message_type') == 'direct_message'):
+            # Handle direct thread.direct_message.send format
+            if (msg.get('event_name') == 'thread.direct_message.send' 
+                or (msg.get('event_name') == 'thread.direct_message.notification'
+                    and msg.get('payload', {}).get('message_type') == 'direct_message')):
                 direct_messages.append(msg)
             
             # Handle notification format where direct messages might be incorrectly wrapped
@@ -209,9 +210,10 @@ class HTTPAgentClient:
         channel_msgs = []
         
         for msg in self.received_messages:
-            # Handle direct thread.message format
-            if (msg.get('event_name') == 'thread.message' 
-                and msg.get('payload', {}).get('message_type') == 'channel_message'):
+            # Handle direct thread.channel_message.post format
+            if (msg.get('event_name') == 'thread.channel_message.post' 
+                or (msg.get('event_name') == 'thread.channel_message.notification'
+                    and msg.get('payload', {}).get('message_type') == 'channel_message')):
                 channel_msgs.append(msg)
             
             # Handle notification format where channel messages might be wrapped

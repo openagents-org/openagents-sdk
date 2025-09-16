@@ -413,7 +413,7 @@ class WorkerAgent(AgentRunner):
         event_name = incoming_message.event_name
         
         if event_name == "agent.message":
-            await self._handle_direct_message(incoming_message)
+            await self._handle_raw_direct_message(incoming_message)
         elif event_name.startswith("thread.direct_message."):
             await self._handle_thread_direct_message(incoming_message)
         elif event_name.startswith("thread.channel_message."):
@@ -429,7 +429,8 @@ class WorkerAgent(AgentRunner):
         else:
             logger.debug(f"Unhandled event type: {event_name}")
 
-    async def _handle_direct_message(self, message: Event):
+
+    async def _handle_raw_direct_message(self, message: Event):
         """Handle direct messages."""
         context = EventContext(
             message_id=message.event_id,

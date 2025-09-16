@@ -29,7 +29,7 @@ service AgentService {
 // Unified event structure for all message and system command types
 message Event {
   string event_id = 1;           // Unique event identifier
-  string event_name = 2;         // Event type (e.g., "thread.message", "system.poll_messages")
+  string event_name = 2;         // Event type (e.g., "thread.channel_message.post", "thread.direct_message.send", "system.poll_messages")
   string source_id = 3;          // Source agent ID
   string target_agent_id = 4;    // Target agent ID (optional for broadcasts)
   google.protobuf.Any payload = 5;  // Event-specific data

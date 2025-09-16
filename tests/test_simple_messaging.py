@@ -143,7 +143,7 @@ class TestSimpleMessaging:
         
         # Create a test message
         test_message = Event(
-            event_name="agent.direct_message.sent",
+            event_name="agent.message",
             source_id=agent1_id,
             destination_id=agent2_id,
             payload={"text": "Hello from TestAgent1!"},
@@ -225,7 +225,7 @@ class TestSimpleMessaging:
             original_content = f.read()
         
         # Create a file transfer message
-        file_message = Event(event_name="agent.direct_message.sent", source_id=agent1_id, destination_id=agent2_id, payload={
+        file_message = Event(event_name="agent.message", source_id=agent1_id, destination_id=agent2_id, payload={
                 "file_data": original_content.decode('utf-8'),
                 "filename": "test_file.txt",
                 "file_size": len(original_content)
@@ -264,7 +264,7 @@ class TestSimpleMessaging:
             # Create a simple file transfer message
             test_content = "This is a test file content"
             file_message = Event(
-                event_name="agent.direct_message.sent",
+                event_name="agent.message",
                 source_id=agent1_id,
                 destination_id=agent2_id,
                 payload={

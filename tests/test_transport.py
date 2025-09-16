@@ -32,7 +32,7 @@ class TestEvent:
         
         assert message.source_id == "agent1"
         assert message.destination_id == "agent2"
-        assert message.event_name == "agent.direct_message.sent"
+        assert message.event_name == "agent.message"
         assert message.payload["content"] == "Hello!"
         assert message.event_id is not None
         assert message.timestamp > 0

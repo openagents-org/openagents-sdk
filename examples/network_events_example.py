@@ -99,7 +99,7 @@ async def main():
             }
         )
         await network.emit_to_event_bus(direct_event)
-        print("📤 Emitted agent.direct_message.sent event")
+        print("📤 Emitted agent.message event")
         
         # Wait for events to be processed
         print("\n⏳ Waiting for events to be processed...")
