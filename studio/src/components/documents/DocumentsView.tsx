@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { DocumentsViewProps, DocumentInfo } from '../../types';
-import { OpenAgentsGRPCConnection } from '../../services/grpcService';
-import { useNetwork } from '../../context/NetworkContext';
+// TODO: Implement documents with new HTTP event system
 import DocumentList from './DocumentList';
 import DocumentViewer from './DocumentViewer';
 import CreateDocumentModal from './CreateDocumentModal';
@@ -15,8 +14,9 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   onDocumentSelect: sharedOnDocumentSelect,
   onDocumentsChange: sharedOnDocumentsChange
 }) => {
-  const { currentNetwork } = useNetwork();
-  const [connection, setConnection] = useState<OpenAgentsGRPCConnection | null>(null);
+  // TODO: Connect to HTTP event system for documents
+  const currentNetwork = null;
+  const [connection, setConnection] = useState<any | null>(null);
   const [documents, setDocuments] = useState<DocumentInfo[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,18 +32,16 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   useEffect(() => {
 
     let isMounted = true;
-    let currentConnection: OpenAgentsGRPCConnection | null = null;
+    let currentConnection: any = null;
 
     const initConnection = async () => {
       if (!currentNetwork || !isMounted) return;
 
       try {
-        // Use a consistent agent ID based on network to avoid multiple connections
-        const agentId = `studio_documents_${currentNetwork.port}`;
-        const conn = new OpenAgentsGRPCConnection(agentId, currentNetwork);
+        // TODO: Initialize HTTP event connector for documents
+        const conn = null;
         currentConnection = conn;
-        
-        const connected = await conn.connect();
+        const connected = false;
         if (connected && isMounted) {
           setConnection(conn);
           setError(null);
@@ -74,7 +72,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
     };
   }, [currentNetwork]);
 
-  // Handle documents received from gRPC service
+  // Handle documents received from HTTP event service
   const handleDocumentsReceived = useCallback((docs: DocumentInfo[]) => {
     console.log('📋 Documents received via event:', docs);
     

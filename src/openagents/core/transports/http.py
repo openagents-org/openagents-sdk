@@ -11,6 +11,7 @@ from typing import Dict, Any, Optional
 
 from openagents.config.globals import SYSTEM_EVENT_REGISTER_AGENT, SYSTEM_EVENT_HEALTH_CHECK, SYSTEM_EVENT_POLL_MESSAGES, SYSTEM_EVENT_UNREGISTER_AGENT
 from aiohttp import web
+# No need for external CORS library, implement manually
 
 from .base import Transport
 from openagents.models.transport import TransportType, ConnectionState, ConnectionInfo
@@ -29,7 +30,7 @@ class HttpTransport(Transport):
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         super().__init__(TransportType.HTTP, config, is_notifiable=False)
-        self.app = web.Application()
+        self.app = web.Application(middlewares=[self.cors_middleware])
         self.site = None
         self.network_instance = None  # Reference to network instance
         self.setup_routes()
@@ -42,6 +43,23 @@ class HttpTransport(Transport):
         self.app.router.add_post('/api/unregister', self.unregister_agent)
         self.app.router.add_get('/api/poll', self.poll_messages)
         self.app.router.add_post('/api/send_event', self.send_message)
+        
+    @web.middleware
+    async def cors_middleware(self, request, handler):
+        """CORS middleware for browser compatibility."""
+        # Handle preflight OPTIONS requests
+        if request.method == 'OPTIONS':
+            response = web.Response()
+        else:
+            response = await handler(request)
+        
+        # Add CORS headers
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+        response.headers['Access-Control-Max-Age'] = '86400'  # 24 hours
+        
+        return response
     
     async def initialize(self) -> bool:
         """Initialize HTTP transport."""

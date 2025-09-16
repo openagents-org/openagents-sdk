@@ -2,8 +2,15 @@ import React, { ReactNode, useEffect } from 'react';
 import Sidebar from '../Sidebar';
 import ModSidebar from './ModSidebar';
 import { NetworkConnection } from '../../services/networkService';
-import { ThreadState } from '../chat/ThreadMessagingView';
 import { DocumentInfo } from '../../types';
+
+// Legacy ThreadState type - TODO: Remove when MainLayout is deprecated
+interface ThreadState {
+  channels?: any[];
+  agents?: any[];
+  currentChannel?: string | null;
+  currentDirectMessage?: string | null;
+}
 
 interface MainLayoutProps {
   children: ReactNode;
