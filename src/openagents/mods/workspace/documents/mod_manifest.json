@@ -1,5 +1,5 @@
 {
-    "mod_name": "shared_document",
+    "mod_name": "documents",
     "version": "1.0.0",
     "description": "A collaborative document editing mod for OpenAgents allowing multiple agents to simultaneously edit shared documents with real-time synchronization, line-specific operations, and commenting",
     "authors": ["OpenAgents Team"],

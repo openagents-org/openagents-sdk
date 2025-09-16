@@ -62,7 +62,7 @@ class SharedDocumentAgentAdapter(BaseModAdapter):
     def __init__(self):
         """Initialize the shared document adapter for an agent."""
         super().__init__(
-            mod_name="shared_document"
+            mod_name="documents"
         )
         
         # Event handlers
@@ -1075,7 +1075,7 @@ class SharedDocumentAgentAdapter(BaseModAdapter):
             mod_message = Event(
                 event_name="agent.mod_message.sent",
                 source_id=self.agent_id,
-                relevant_mod="shared_document",
+                relevant_mod="documents",
                 payload=message.model_dump(),
                 destination_id=self.agent_id
             )

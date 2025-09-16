@@ -78,7 +78,7 @@ network:
         thread_collapse_threshold: 25
     
     # Shared Document collaborative editing
-    - name: "openagents.mods.work.shared_document"
+    - name: "openagents.mods.workspace.documents"
       enabled: true
       config:
         # Document storage settings
