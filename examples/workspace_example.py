@@ -188,15 +188,15 @@ async def main():
             # Subscribe to various events using network-level event system
             print("📡 Subscribing to network events...")
             event_sub = network.events.subscribe(
-                agent_id="workspace-demo-agent",
-                event_patterns=[
+                "workspace-demo-agent",
+                [
                     "channel.message.*",
                     "agent.direct_message.*"
                 ]
             )
             
             # Create event queue for polling
-            event_queue = network.events.create_agent_event_queue("workspace-demo-agent")
+            network.events.register_agent("workspace-demo-agent")
             
             print("✅ Network event subscription created!")
             

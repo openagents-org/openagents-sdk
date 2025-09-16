@@ -12,7 +12,6 @@ from typing import Dict, Any, Optional, List
 
 from openagents.core.client import AgentClient
 from openagents.models.messages import Event, EventNames
-from openagents.core.system_commands import LIST_AGENTS, LIST_MODS, GET_MOD_MANIFEST
 from openagents.utils.verbose import verbose_print
 
 logger = logging.getLogger(__name__)

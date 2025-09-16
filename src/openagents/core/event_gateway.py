@@ -306,6 +306,12 @@ class EventGateway:
                 self.unsubscribe(subscription.subscription_id)
         return None
     
+    def get_agent_subscriptions(self, agent_id: str) -> List[EventSubscription]:
+        """
+        Get all subscriptions for a specific agent.
+        """
+        return self.agent_subscriptions.get(agent_id, [])
+    
     def get_stats(self) -> Dict[str, Any]:
         """
         Get the statistics of the event gateway.
