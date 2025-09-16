@@ -44,7 +44,7 @@ class SimpleAgent(AgentRunner):
             print(f"📨 Sending echo response to {sender_id}")
             # Echo direct messages back
             echo_message = Event(
-                event_name="agent.direct_message.sent",
+                event_name="agent.message",
                 source_id=self.client.agent_id,
                 destination_id=sender_id,
                 relevant_mod="openagents.mods.communication.simple_messaging",
@@ -61,7 +61,7 @@ class SimpleAgent(AgentRunner):
             # Respond to greetings in broadcast messages
             if "hello" in text.lower() and sender_id != self.client.agent_id:
                 greeting_message = Event(
-                    event_name="agent.direct_message.sent",
+                    event_name="agent.message",
                     source_id=self.client.agent_id,
                     destination_id=sender_id,
                     relevant_mod="openagents.mods.communication.simple_messaging",

@@ -215,7 +215,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         wrapper_payload = direct_msg.model_dump()
         wrapper_payload["relevant_agent_id"] = target_agent_id
         message = Event(
-            event_name="thread.direct_message.sent", 
+            event_name="thread.direct_message.send", 
             source_id=self.agent_id, 
             payload=wrapper_payload,
             relevant_mod="openagents.mods.communication.thread_messaging",
@@ -278,7 +278,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         # CRITICAL FIX: Set destination_id on Event for proper message routing
         # The network's message classification depends on this field
         message = Event(
-            event_name="thread.channel_message.sent", 
+            event_name="thread.channel_message.post", 
             source_id=self.agent_id, 
             destination_id=f"channel:{normalized_channel}",  # This is the key fix!
             payload=wrapper_payload,
@@ -332,7 +332,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
                 
                 # Create a direct message event that the agent can handle
                 direct_message_event = Event(
-                    event_name="thread.direct_message.received",
+                    event_name="thread.direct_message.send",
                     source_id=sender_id,
                     destination_id=message.destination_id,
                     payload={

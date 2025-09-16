@@ -121,8 +121,8 @@ class ThreadMessagingNetworkMod(BaseMod):
         self.register_event_handler(self._handle_thread_channels, ["thread.channels.info", "thread.channels.list"])
         self.register_event_handler(self._handle_thread_message_retrieval, ["thread.messages.retrieve", "thread.channel_messages.retrieve", "thread.direct_messages.retrieve"])
         self.register_event_handler(self._handle_thread_reactions, ["thread.reaction.add", "thread.reaction.remove", "thread.reaction.toggle"])
-        self.register_event_handler(self._handle_thread_direct_message, ["thread.direct_message.sent", "thread.direct_message.post", "thread.direct_message.received"])
-        self.register_event_handler(self._handle_thread_channel_message, ["thread.channel_message.sent", "thread.channel_message.post"])
+        self.register_event_handler(self._handle_thread_direct_message, ["thread.direct_message.send"])
+        self.register_event_handler(self._handle_thread_channel_message, ["thread.channel_message.post"])
         
         # Initialize mod state
         self.active_agents: Set[str] = set()
@@ -132,16 +132,13 @@ class ThreadMessagingNetworkMod(BaseMod):
         self.reactions: Dict[str, Dict[str, Set[str]]] = {}  # message_id -> {reaction_type -> set of agent_ids}
         self.max_history_size = 2000  # Number of messages to keep in history
         
-        # Channel management
-        self.channels: Dict[str, Dict[str, Any]] = {}  # channel_name -> channel_info
-        self.channel_agents: Dict[str, Set[str]] = {}  # channel_name -> {agent_ids}
-        self.agent_channels: Dict[str, Set[str]] = {}  # agent_id -> {channel_names}
+        # Channel management - use EventGateway as single source of truth
+        self.channels: Dict[str, Dict[str, Any]] = {}  # channel_name -> channel_info (metadata only)
         
         # File management
         self.files: Dict[str, Dict[str, Any]] = {}  # file_id -> file_info
         
-        # Initialize default channels
-        self._initialize_default_channels()
+        # Initialize default channels (will be created after network binding)
         
         # Create a temporary directory for file storage
         self.temp_dir = tempfile.TemporaryDirectory(prefix="openagents_threads_")
@@ -194,6 +191,7 @@ class ThreadMessagingNetworkMod(BaseMod):
                 channel_name = channel_config["name"]
                 description = channel_config.get("description", f"Channel {channel_name}")
             
+            # Store channel metadata locally
             self.channels[channel_name] = {
                 'name': channel_name,
                 'description': description,
@@ -201,7 +199,10 @@ class ThreadMessagingNetworkMod(BaseMod):
                 'message_count': 0,
                 'thread_count': 0
             }
-            self.channel_agents[channel_name] = set()
+            
+            # Create channel in EventGateway (single source of truth for membership)
+            self.network.event_gateway.create_channel(channel_name)
+            logger.debug(f"Created channel {channel_name} in EventGateway during initialization")
         
         logger.info(f"Initialized channels: {list(self.channels.keys())}")
     
@@ -213,6 +214,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             description: Optional description for the channel
         """
         if channel_name not in self.channels:
+            # Store channel metadata locally
             self.channels[channel_name] = {
                 'name': channel_name,
                 'description': description,
@@ -220,8 +222,16 @@ class ThreadMessagingNetworkMod(BaseMod):
                 'message_count': 0,
                 'thread_count': 0
             }
-            self.channel_agents[channel_name] = set()
+            
+            # Create channel in EventGateway (single source of truth for membership)
+            self.network.event_gateway.create_channel(channel_name)
             logger.info(f"Created channel: {channel_name}")
+    
+    def bind_network(self, network):
+        """Bind the mod to a network and initialize channels."""
+        super().bind_network(network)
+        # Now that network is available, initialize default channels
+        self._initialize_default_channels()
     
     def initialize(self) -> bool:
         """Initialize the mod.
@@ -230,6 +240,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             bool: True if initialization was successful, False otherwise
         """
         return True
+    
     
     def shutdown(self) -> bool:
         """Shutdown the mod gracefully.
@@ -243,10 +254,13 @@ class ThreadMessagingNetworkMod(BaseMod):
         self.threads.clear()
         self.message_to_thread.clear()
         self.reactions.clear()
-        self.channels.clear()
-        self.channel_agents.clear()
-        self.agent_channels.clear()
         self.files.clear()
+        
+        # Remove all channels from EventGateway
+        for channel_name in list(self.channels.keys()):
+            self.network.event_gateway.remove_channel(channel_name)
+        
+        self.channels.clear()
         
         # Clean up the temporary directory
         try:
@@ -269,24 +283,18 @@ class ThreadMessagingNetworkMod(BaseMod):
         
         self.active_agents.add(agent_id)
         
-        # CRITICAL FIX: Add agent to all channels by default
+        # Add agent to all existing channels by default
         # This ensures Studio UI and all agents receive channel messages
-        if agent_id not in self.agent_channels:
-            self.agent_channels[agent_id] = set()
-        
-        # Force add to all existing channels
         channels_before = len(self.channels)
         for channel_name in self.channels.keys():
-            if channel_name not in self.channel_agents:
-                self.channel_agents[channel_name] = set()
-            
-            # Add agent to channel
-            was_in_channel = agent_id in self.channel_agents[channel_name]
-            self.channel_agents[channel_name].add(agent_id)
-            self.agent_channels[agent_id].add(channel_name)
+            # Check if agent is already in channel using EventGateway
+            channel_members = self.network.event_gateway.get_channel_members(channel_name)
+            was_in_channel = agent_id in channel_members
             
             if not was_in_channel:
-                logger.info(f"✅ AUTO-ADDED agent {agent_id} to channel '{channel_name}' (total agents: {len(self.channel_agents[channel_name])})")
+                # Add agent to channel in EventGateway (single source of truth)
+                self.network.event_gateway.add_channel_member(channel_name, agent_id)
+                logger.info(f"✅ AUTO-ADDED agent {agent_id} to channel '{channel_name}' (total agents: {len(self.network.event_gateway.get_channel_members(channel_name))})")
             else:
                 logger.info(f"ℹ️  Agent {agent_id} already in channel '{channel_name}'")
         
@@ -294,8 +302,7 @@ class ThreadMessagingNetworkMod(BaseMod):
         if channels_before == 0:
             logger.info(f"🏗️  Creating default 'general' channel for first agent {agent_id}")
             self._create_channel("general", "General discussion channel")
-            self.channel_agents["general"].add(agent_id)
-            self.agent_channels[agent_id].add("general")
+            self.network.event_gateway.add_channel_member("general", agent_id)
         
         # Create agent-specific file storage directory
         agent_storage_path = self.file_storage_path / agent_id
@@ -304,11 +311,14 @@ class ThreadMessagingNetworkMod(BaseMod):
         logger.info(f"🎉 THREAD MESSAGING MOD: Successfully registered agent {agent_id}")
         logger.info(f"📊 Total active agents: {len(self.active_agents)} -> {self.active_agents}")
         
-        # Log detailed channel membership for debugging
-        for ch_name, ch_agents in self.channel_agents.items():
-            logger.info(f"📺 Channel '{ch_name}': {len(ch_agents)} agents -> {list(ch_agents)}")
+        # Log detailed channel membership for debugging using EventGateway
+        for ch_name in self.channels.keys():
+            ch_members = self.network.event_gateway.get_channel_members(ch_name)
+            logger.info(f"📺 Channel '{ch_name}': {len(ch_members)} agents -> {ch_members}")
         
-        logger.info(f"🔗 Agent {agent_id} channels: {list(self.agent_channels[agent_id])}")
+        # Get agent's channels from EventGateway
+        agent_channels = [ch for ch in self.channels.keys() if agent_id in self.network.event_gateway.get_channel_members(ch)]
+        logger.info(f"🔗 Agent {agent_id} channels: {agent_channels}")
         
         return None  # Don't intercept the registration event
     
@@ -321,12 +331,11 @@ class ThreadMessagingNetworkMod(BaseMod):
         if agent_id in self.active_agents:
             self.active_agents.remove(agent_id)
             
-            # Remove from channels
-            if agent_id in self.agent_channels:
-                for channel_name in self.agent_channels[agent_id]:
-                    if channel_name in self.channel_agents:
-                        self.channel_agents[channel_name].discard(agent_id)
-                del self.agent_channels[agent_id]
+            # Remove from all channels in EventGateway
+            for channel_name in self.channels.keys():
+                channel_members = self.network.event_gateway.get_channel_members(channel_name)
+                if agent_id in channel_members:
+                    self.network.event_gateway.remove_channel_member(channel_name, agent_id)
             
             logger.info(f"Unregistered agent {agent_id} from Thread Messaging protocol")
         
@@ -782,10 +791,9 @@ class ThreadMessagingNetworkMod(BaseMod):
             logger.info(f"Auto-creating channel {channel} and adding all active agents")
             self._create_channel(channel, f"Auto-created channel {channel}")
             
-            # Add all active agents to the new channel
+            # Add all active agents to the new channel in EventGateway
             for agent_id in self.active_agents:
-                self.channel_agents[channel].add(agent_id)
-                self.agent_channels[agent_id].add(channel)
+                self.network.event_gateway.add_channel_member(channel, agent_id)
                 logger.info(f"Added agent {agent_id} to auto-created channel {channel}")
         
         logger.debug(f"Processing channel message from {message.source_id} in {channel}")
@@ -801,8 +809,9 @@ class ThreadMessagingNetworkMod(BaseMod):
         """
         channel = message.channel
         
-        # Get all agents in the channel
-        channel_agents = self.channel_agents.get(channel, set())
+        # Get all agents in the channel from EventGateway
+        channel_members = self.network.event_gateway.get_channel_members(channel)
+        channel_agents = set(channel_members)
         
         # Remove the sender from the notification list (they already know about their message)
         notify_agents = channel_agents - {message.source_id}
@@ -1089,7 +1098,7 @@ class ThreadMessagingNetworkMod(BaseMod):
         if action == "list_channels":
             channels_data = []
             for channel_name, channel_info in self.channels.items():
-                agents_in_channel = list(self.channel_agents.get(channel_name, set()))
+                agents_in_channel = self.network.event_gateway.get_channel_members(channel_name)
                 channels_data.append({
                     'name': channel_name,
                     'description': channel_info['description'],
@@ -1454,11 +1463,13 @@ class ThreadMessagingNetworkMod(BaseMod):
             notify_agents.add(target_message.destination_id)
         elif isinstance(target_message, ChannelMessage):
             # Notify agents in the channel
-            notify_agents.update(self.channel_agents.get(target_message.channel, set()))
+            channel_members = self.network.event_gateway.get_channel_members(target_message.channel)
+            notify_agents.update(channel_members)
         elif isinstance(target_message, ReplyMessage):
             # Notify based on whether it's a channel or direct reply
             if target_message.channel:
-                notify_agents.update(self.channel_agents.get(target_message.channel, set()))
+                channel_members = self.network.event_gateway.get_channel_members(target_message.channel)
+                notify_agents.update(channel_members)
             elif target_message.target_agent_id:
                 notify_agents.add(target_message.source_id)
                 notify_agents.add(target_message.target_agent_id)

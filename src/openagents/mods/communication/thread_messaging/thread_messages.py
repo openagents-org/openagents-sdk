@@ -13,7 +13,7 @@ class ThreadMessageEvent(Event):
     quoted_message_id: Optional[str] = field(default=None)
     quoted_text: Optional[str] = field(default=None)
     
-    def __init__(self, event_name: str = "thread.direct_message.sent", source_id: str = "", **kwargs):
+    def __init__(self, event_name: str = "thread.direct_message.send", source_id: str = "", **kwargs):
         """Initialize ThreadMessageEvent with proper event name."""
         # Map old field names to modern API
         if 'sender_id' in kwargs:
@@ -56,7 +56,7 @@ class ChannelMessage(Event):
     attachment_filename: Optional[str] = field(default=None)
     attachment_size: Optional[int] = field(default=None)
     
-    def __init__(self, event_name: str = "thread.channel_message.posted", source_id: str = "", **kwargs):
+    def __init__(self, event_name: str = "thread.channel_message.post", source_id: str = "", **kwargs):
         """Initialize ChannelMessage with proper event name."""
         # Map old field names to modern API
         if 'sender_id' in kwargs:

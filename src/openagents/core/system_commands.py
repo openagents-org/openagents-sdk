@@ -22,7 +22,12 @@ from openagents.config.globals import (
     SYSTEM_EVENT_UNSUBSCRIBE_EVENTS,
     SYSTEM_EVENT_HEALTH_CHECK,
     SYSTEM_EVENT_HEARTBEAT,
-    SYSTEM_EVENT_PING_AGENT
+    SYSTEM_EVENT_PING_AGENT,
+    SYSTEM_EVENT_ADD_CHANNEL_MEMBER,
+    SYSTEM_EVENT_REMOVE_CHANNEL_MEMBER,
+    SYSTEM_EVENT_GET_CHANNEL_MEMBERS,
+    SYSTEM_EVENT_REMOVE_CHANNEL,
+    SYSTEM_EVENT_LIST_CHANNELS
 )
 from openagents.models.event import Event
 from openagents.models.event_response import EventResponse
@@ -58,6 +63,11 @@ class SystemCommandProcessor:
             SYSTEM_EVENT_UNSUBSCRIBE_EVENTS: self.handle_unsubscribe_events,
             SYSTEM_EVENT_HEALTH_CHECK: self.handle_health_check,  # Health check uses same logic as ping
             SYSTEM_EVENT_HEARTBEAT: self.handle_heartbeat,  # Heartbeat uses same logic as ping
+            SYSTEM_EVENT_ADD_CHANNEL_MEMBER: self.handle_add_channel_member,
+            SYSTEM_EVENT_REMOVE_CHANNEL_MEMBER: self.handle_remove_channel_member,
+            SYSTEM_EVENT_GET_CHANNEL_MEMBERS: self.handle_get_channel_members,
+            SYSTEM_EVENT_REMOVE_CHANNEL: self.handle_remove_channel,
+            SYSTEM_EVENT_LIST_CHANNELS: self.handle_list_channels,
         }
 
     async def process_command(self, system_event: Event) -> Optional[EventResponse]:
@@ -648,8 +658,100 @@ class SystemCommandProcessor:
                 message=f"Successfully unsubscribed from all events",
                 data=response_data
             )
+    
+    async def handle_add_channel_member(self, event: Event) -> EventResponse:
+        """Handle the add_channel_member command."""
+        channel_id = event.payload.get("channel_id")
+        agent_id = event.payload.get("agent_id")
+        
+        self.logger.info(f"🔧 ADD_CHANNEL_MEMBER: Request from agent_id: {agent_id}")
+        
+        self.network.event_gateway.add_channel_member(channel_id, agent_id)
+        
+        return EventResponse(
+            success=True,
+            message=f"Successfully added {agent_id} to channel {channel_id}",
+            data={
+                "type": "system_response",
+                "command": "add_channel_member",
+                "channel_id": channel_id,
+                "agent_id": agent_id
+            }
+        )
 
+    async def handle_remove_channel_member(self, event: Event) -> EventResponse:
+        """Handle the remove_channel_member command."""
+        channel_id = event.payload.get("channel_id")
+        agent_id = event.payload.get("agent_id")
+        
+        self.logger.info(f"🔧 REMOVE_CHANNEL_MEMBER: Request from agent_id: {agent_id}")
+        
+        self.network.event_gateway.remove_channel_member(channel_id, agent_id)
+        
+        return EventResponse(
+            success=True,
+            message=f"Successfully removed {agent_id} from channel {channel_id}",
+            data={
+                "type": "system_response",
+                "command": "remove_channel_member",
+                "channel_id": channel_id,
+                "agent_id": agent_id
+            }
+        )
+    
+    async def handle_get_channel_members(self, event: Event) -> EventResponse:
+        """Handle the get_channel_members command."""
+        channel_id = event.payload.get("channel_id")
+        
+        self.logger.info(f"🔧 GET_CHANNEL_MEMBERS: Request from agent_id: {channel_id}")
+        
+        members = self.network.event_gateway.get_channel_members(channel_id)
+        
+        return EventResponse(
+            success=True,
+            message=f"Successfully retrieved members of channel {channel_id}",
+            data={
+                "type": "system_response",
+                "command": "get_channel_members",
+                "channel_id": channel_id,
+                "members": members
+            }
+        )
 
+    async def handle_remove_channel(self, event: Event) -> EventResponse:
+        """Handle the remove_channel command."""
+        channel_id = event.payload.get("channel_id")
+        
+        self.logger.info(f"🔧 REMOVE_CHANNEL: Request from agent_id: {channel_id}")
+        
+        self.network.event_gateway.remove_channel(channel_id)
+        
+        return EventResponse(
+            success=True,
+            message=f"Successfully removed channel {channel_id}",
+            data={
+                "type": "system_response",
+                "command": "remove_channel",
+                "channel_id": channel_id
+            }
+        )
+
+    async def handle_list_channels(self, event: Event) -> EventResponse:
+        """Handle the list_channels command."""
+        self.logger.info(f"🔧 LIST_CHANNELS: Request from agent_id: {event.source_id}")
+        
+        channels = self.network.event_gateway.list_channels()
+        
+        return EventResponse(
+            success=True,
+            message=f"Successfully retrieved list of channels",
+            data={
+                "type": "system_response",
+                "command": "list_channels",
+                "channels": channels
+            }
+        )
+        
 # Command constants
 REGISTER_AGENT = "register_agent"
 LIST_AGENTS = "list_agents"

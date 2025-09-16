@@ -232,7 +232,7 @@ class SimpleMessagingAgentAdapter(BaseModAdapter):
             
         # Create and send the message
         message = Event(
-            event_name="agent.direct_message.sent",
+            event_name="agent.message",
             source_id=self.agent_id,
             destination_id=target_agent_id,
             payload=content,

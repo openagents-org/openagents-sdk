@@ -55,7 +55,7 @@ class TestNewMessageTypes:
     def test_direct_message_creation(self):
         """Test creating direct messages."""
         message = Event(
-            event_name="agent.direct_message.sent",
+            event_name="agent.message",
             source_id="alice",
             destination_id="bob",
             payload={"text": "Hello Bob!"},
@@ -70,7 +70,7 @@ class TestNewMessageTypes:
     def test_direct_message_with_quote(self):
         """Test direct message with quote."""
         message = Event(
-            event_name="agent.direct_message.sent",
+            event_name="agent.message",
             source_id="alice",
             destination_id="bob",
             payload={"text": "I agree!"},
@@ -341,7 +341,7 @@ class TestThreadMessagingNetworkModRedesigned:
     async def test_direct_message_handling(self):
         """Test handling direct messages."""
         inner_message = Event(
-            event_name="agent.direct_message.sent",
+            event_name="agent.message",
             source_id="alice",
             destination_id="bob",
             payload={"text": "Hello Bob!"},
@@ -535,7 +535,7 @@ class TestThreadMessagingNetworkModRedesigned:
         """Test retrieving direct messages between agents."""
                 # Create conversation between alice and bob
         inner_dm1 = Event(
-            event_name="agent.direct_message.sent",
+            event_name="agent.message",
             source_id="alice",
             destination_id="bob",
             payload={"text": "Hello Bob"},
@@ -544,7 +544,7 @@ class TestThreadMessagingNetworkModRedesigned:
         await self.mod.process_direct_message(inner_dm1)
         
         inner_dm2 = Event(
-            event_name="agent.direct_message.sent",
+            event_name="agent.message",
             source_id="bob",
             destination_id="alice",
             payload={"text": "Hi Alice"},

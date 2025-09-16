@@ -129,7 +129,7 @@ class TestSimpleCentralizedNetwork:
         
         # Create a direct message
         direct_msg = Event(
-            event_name="agent.direct_message.sent",
+            event_name="agent.message",
             source_id="agent-1",
             destination_id="agent-2",
             payload={"text": "Hello Agent 2!"},
@@ -187,7 +187,7 @@ class TestSimpleCentralizedNetwork:
         
         # Create and attempt to send a message (even if routing doesn't work)
         message = Event(
-            event_name="agent.direct_message.sent",
+            event_name="agent.message",
             source_id="agent-1",
             destination_id="agent-2", 
             payload={"text": "Integration test message"},

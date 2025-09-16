@@ -23,9 +23,9 @@ def Message(source_id: str, target_id: str = None, message_type: str = "direct",
     """Backward compatibility factory for creating Events with old Message constructor."""
     # Map old field names to new Event structure
     event_name_map = {
-        "direct": "agent.direct_message.sent",
+        "direct": "agent.message",
         "broadcast": "network.broadcast.sent",
-        "direct_message": "agent.direct_message.sent"
+        "direct_message": "agent.message"
     }
     
     event_name = event_name_map.get(message_type, f"agent.{message_type}")

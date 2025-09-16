@@ -75,7 +75,7 @@ async def test_event_message_type_classification():
     """Test that events are properly classified by message type."""
     # Direct message
     direct_event = Event(
-        event_name="agent.direct_message.sent",
+        event_name="agent.message",
         source_id="agent1",
         destination_id="agent2"
     )
@@ -115,7 +115,7 @@ async def test_direct_message_pipeline(message_processor, mock_network):
     
     # Create direct message
     message = Event(
-        event_name="agent.direct_message.sent",
+        event_name="agent.message",
         source_id="agent1",
         destination_id="agent2",
         payload={"text": "Hello"}
@@ -231,7 +231,7 @@ async def test_mod_stops_processing(message_processor, mock_network):
     
     # Create direct message
     message = Event(
-        event_name="agent.direct_message.sent",
+        event_name="agent.message",
         source_id="agent1",
         destination_id="agent2",
         payload={"text": "Hello"}

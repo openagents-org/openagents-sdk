@@ -109,7 +109,7 @@ class ProjectEchoAgentRunner(AgentRunner):
         # Create echo response
         echo_text = f"{self.echo_prefix}: {text}"
         echo_message = Event(
-            event_name="agent.direct_message.sent",
+            event_name="agent.message",
             source_id=self.client.agent_id,
             destination_id=sender_id,
             payload={"text": echo_text},

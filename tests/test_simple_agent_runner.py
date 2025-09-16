@@ -88,7 +88,7 @@ def create_testing_simple_agent(agent_id: str = None):
             if incoming_message.destination_id:
                 logger.info(f"Processing direct message from {sender_id} to {incoming_message.destination_id}")
                 echo_message = Event(
-                    event_name="agent.direct_message.sent",
+                    event_name="agent.message",
                     source_id=self.client.agent_id,
                     destination_id=sender_id,
                     relevant_mod="openagents.mods.communication.simple_messaging",
@@ -104,7 +104,7 @@ def create_testing_simple_agent(agent_id: str = None):
                 logger.info(f"Processing broadcast message from {sender_id}")
                 if "hello" in text.lower() and sender_id != self.client.agent_id:
                     greeting_message = Event(
-                        event_name="agent.direct_message.sent",
+                        event_name="agent.message",
                         source_id=self.client.agent_id,
                         destination_id=sender_id,
                         relevant_mod="openagents.mods.communication.simple_messaging",
@@ -281,7 +281,7 @@ class TestSimpleAgentRunner:
         test_text = "Hello SimpleAgent, please echo this message!"
         
         direct_message = Event(
-            event_name="agent.direct_message.sent",
+                        event_name="agent.message",
             source_id=self.test_agent.client.agent_id,
             destination_id=self.simple_agent.client.agent_id,
             relevant_mod="openagents.mods.communication.simple_messaging",
@@ -482,7 +482,7 @@ class TestSimpleAgentRunner:
             test_messages.append(test_text)
             
             direct_message = Event(
-                event_name="agent.direct_message.sent",
+                        event_name="agent.message",
                 source_id=self.test_agent.client.agent_id,
                 destination_id=self.simple_agent.client.agent_id,
                 relevant_mod="openagents.mods.communication.simple_messaging",
