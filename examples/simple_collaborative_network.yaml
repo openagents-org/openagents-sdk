@@ -19,7 +19,7 @@ communication:
   
 # Shared documents for collaborative editing
 work:
-  mod_name: "shared_document"
+  mod_name: "documents"
 
 # Simple transport configuration
 transport:

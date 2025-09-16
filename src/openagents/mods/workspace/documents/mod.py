@@ -562,7 +562,7 @@ class SharedDocumentNetworkMod(BaseMod):
     - Agent presence tracking
     """
     
-    def __init__(self, mod_name: str = "shared_document"):
+    def __init__(self, mod_name: str = "documents"):
         """Initialize the shared document mod."""
         super().__init__(mod_name=mod_name)
         
@@ -1215,7 +1215,7 @@ class SharedDocumentNetworkMod(BaseMod):
                         source_id=self.network.network_id,
                         destination_id=agent_id,
                         payload={
-                            "relevant_mod": "shared_document",
+                            "relevant_mod": "documents",
                             "content": operation_message.model_dump()
                         }
                     )
@@ -1247,7 +1247,7 @@ class SharedDocumentNetworkMod(BaseMod):
                         source_id=self.network.network_id,
                         destination_id=other_agent_id,
                         payload={
-                            "relevant_mod": "shared_document",
+                            "relevant_mod": "documents",
                             "content": presence_message.model_dump()
                         }
                     )
@@ -1275,7 +1275,7 @@ class SharedDocumentNetworkMod(BaseMod):
                 source_id=self.network.network_id,
                 destination_id=target_agent_id,
                 payload={
-                    "relevant_mod": "openagents.mods.work.shared_document",
+                    "relevant_mod": "openagents.mods.workspace.documents",
                     "content": content
                 }
             )
