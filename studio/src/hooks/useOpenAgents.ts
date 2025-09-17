@@ -11,7 +11,7 @@ import {
   ThreadMessage,
   ThreadChannel,
   AgentInfo,
-} from "../services/openAgentsService";
+} from "@/services/openAgentsService";
 import { ConnectionStatus, ConnectionStatusEnum } from "@/types/connection";
 
 export interface UseOpenAgentsOptions {
@@ -213,10 +213,11 @@ export const useOpenAgents = (
     return () => {
       if (serviceRef.current) {
         console.log("🔌 Cleaning up OpenAgents service on unmount");
-        serviceRef.current.disconnect().catch((error) => {
+        const service = serviceRef.current;
+        serviceRef.current = null; // 先清空引用
+        service.disconnect().catch((error) => {
           console.warn("Error during service cleanup:", error);
         });
-        serviceRef.current = null;
       }
     };
   }, []);
