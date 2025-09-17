@@ -151,7 +151,7 @@ const AppContent: React.FC = () => {
 
   // Step Two Page - Show agent name picker if network is selected but no agent name
   if (selectedNetwork && !agentName) {
-    return <AgentNamePicker currentTheme={theme} />;
+    return <AgentNamePicker />;
   }
 
   // Step Three Page - Show loading if we have network and agent name but not yet connected
