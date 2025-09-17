@@ -14,9 +14,9 @@ interface ThreadState {
 
 interface MainLayoutProps {
   children: ReactNode;
-  activeView: "chat" | "settings" | "profile" | "mcp" | "documents";
+  activeView: "chat" | "settings" | "profile" | "mcp" | "documents" | "forum";
   setActiveView: (
-    view: "chat" | "settings" | "profile" | "mcp" | "documents"
+    view: "chat" | "settings" | "profile" | "mcp" | "documents" | "forum"
   ) => void;
   activeConversationId: string;
   conversations: Array<{
@@ -31,7 +31,12 @@ interface MainLayoutProps {
   toggleTheme: () => void;
   hasSharedDocuments?: boolean;
   hasThreadMessaging?: boolean;
+  hasForum?: boolean;
   agentName?: string | null;
+  // Forum props
+  popularTopics?: any[];
+  isLoadingPopularTopics?: boolean;
+  onForumTopicSelect?: (topicId: string) => void;
   threadState?: ThreadState | null;
   onChannelSelect?: (channel: string) => void;
   onDirectMessageSelect?: (agentId: string) => void;
@@ -54,7 +59,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   toggleTheme,
   hasSharedDocuments = false,
   hasThreadMessaging = false,
+  hasForum = false,
   agentName = null,
+  // Forum props
+  popularTopics = [],
+  isLoadingPopularTopics = false,
+  onForumTopicSelect,
   threadState = null,
   onChannelSelect,
   onDirectMessageSelect,
@@ -78,6 +88,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         currentTheme={currentTheme}
         hasSharedDocuments={hasSharedDocuments}
         hasThreadMessaging={hasThreadMessaging}
+        hasForum={hasForum}
       />
 
       {/* Main sidebar - always show, with thread messaging data when available */}
@@ -107,6 +118,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         documents={documents}
         onDocumentSelect={onDocumentSelect}
         selectedDocumentId={selectedDocumentId}
+        // Forum props
+        hasForum={hasForum}
+        popularTopics={popularTopics}
+        isLoadingPopularTopics={isLoadingPopularTopics}
+        onForumTopicSelect={onForumTopicSelect}
       />
 
       <main

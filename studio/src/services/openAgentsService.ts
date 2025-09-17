@@ -206,6 +206,24 @@ export class OpenAgentsService {
     return await this.eventService.getConnectedAgents();
   }
 
+  async getNetworkHealth(): Promise<any> {
+    // Access the underlying connector to get network health
+    const connector = (this.eventService as any).connector;
+    if (connector && connector.getNetworkHealth) {
+      return await connector.getNetworkHealth();
+    }
+    return {};
+  }
+
+  async sendEvent(event: any): Promise<any> {
+    // Access the underlying connector to send raw events
+    const connector = (this.eventService as any).connector;
+    if (connector && connector.sendEvent) {
+      return await connector.sendEvent(event);
+    }
+    throw new Error('Event sending not available');
+  }
+
   /**
    * Agent and Network Info
    */

@@ -4,7 +4,7 @@ import ChatView from "./components/chat/ChatView";
 import NetworkSelectionView from "./components/network/NetworkSelectionView";
 import AgentNamePicker from "./components/network/AgentNamePicker";
 import McpView from "./components/mcp/McpView";
-import { DocumentsView } from "./components";
+import { DocumentsView, ForumView } from "./components";
 import useConversation from "./hooks/useConversation";
 import useTheme from "./hooks/useTheme";
 import { ToastProvider } from "./context/ToastContext";
@@ -19,6 +19,7 @@ import ThreadMessagingViewEventBased from "./components/chat/ThreadMessagingView
 import ConnectionLoadingPage from "@/pages/connection/ConnectionLoadingPage";
 import { useNetworkStore } from "@/stores/networkStore";
 import { clearAllOpenAgentsData } from "@/utils/cookies";
+import { getForumModStatus } from "./services/forumService";
 
 // Thread state for compatibility with existing UI
 export interface ThreadState {
@@ -34,7 +35,7 @@ const AppContent: React.FC = () => {
     useNetworkStore();
 
   const [activeView, setActiveView] = useState<
-    "chat" | "settings" | "profile" | "mcp" | "documents"
+    "chat" | "settings" | "profile" | "mcp" | "documents" | "forum"
   >("chat");
 
   const [threadState, setThreadState] = useState<ThreadState | null>(null);
@@ -62,6 +63,67 @@ const AppContent: React.FC = () => {
   // Determine if we have thread messaging (always true with new system)
   const hasThreadMessaging = true;
   const hasSharedDocuments = true; // Assume documents are available
+  
+  // Check for forum mod availability
+  const [hasForum, setHasForum] = useState(false);
+  const [popularTopics, setPopularTopics] = useState<any[]>([]);
+  const [isLoadingPopularTopics, setIsLoadingPopularTopics] = useState(false);
+  
+  useEffect(() => {
+    const checkForumMod = async () => {
+      if (openAgentsHook.service) {
+        try {
+          const healthResponse = await openAgentsHook.service.getNetworkHealth();
+          // The health data might be nested under 'data' property
+          const healthData = healthResponse.data || healthResponse;
+          const forumStatus = getForumModStatus(healthData);
+          setHasForum(forumStatus.available);
+          console.log('Forum mod detection:', { healthData, forumStatus });
+        } catch (error) {
+          console.error('Failed to check forum mod status:', error);
+          setHasForum(false);
+        }
+      }
+    };
+
+    if (isConnected) {
+      checkForumMod();
+    }
+  }, [isConnected, openAgentsHook.service]);
+
+  // Load popular topics when forum is available
+  useEffect(() => {
+    const loadPopularTopics = async () => {
+      if (hasForum && openAgentsHook.service) {
+        try {
+          setIsLoadingPopularTopics(true);
+          const response = await openAgentsHook.service.sendEvent({
+            event_name: 'forum.popular.topics',
+            source_id: openAgentsHook.service.getAgentId(),
+            destination_id: 'mod:openagents.mods.workspace.forum',
+            payload: {
+              query_type: 'popular_topics',
+              limit: 5,
+              offset: 0,
+              sort_by: 'recent'
+            }
+          });
+
+          if (response.success && response.data) {
+            setPopularTopics(response.data.topics || []);
+          }
+          setIsLoadingPopularTopics(false);
+        } catch (error) {
+          console.error('Failed to load popular topics:', error);
+          setIsLoadingPopularTopics(false);
+        }
+      }
+    };
+
+    if (hasForum) {
+      loadPopularTopics();
+    }
+  }, [hasForum, openAgentsHook.service]);
 
   const threadMessagingRef = useRef<{
     getState: () => ThreadState;
@@ -140,6 +202,12 @@ const AppContent: React.FC = () => {
     }
   }, []);
 
+  // Forum topic selection handler
+  const handleForumTopicSelect = useCallback((topicId: string) => {
+    setActiveView("forum");
+    // TODO: Navigate to specific topic in forum view
+  }, []);
+
   // Step One Page - Show network selection if no network is selected
   if (!selectedNetwork) {
     return <NetworkSelectionView />;
@@ -171,7 +239,12 @@ const AppContent: React.FC = () => {
           toggleTheme={toggleTheme}
           hasSharedDocuments={hasSharedDocuments}
           hasThreadMessaging={hasThreadMessaging}
+          hasForum={hasForum}
           agentName={agentName}
+          // Forum props
+          popularTopics={popularTopics}
+          isLoadingPopularTopics={isLoadingPopularTopics}
+          onForumTopicSelect={handleForumTopicSelect}
           threadState={getCurrentThreadState()}
           onChannelSelect={handleChannelSelect}
           onDirectMessageSelect={handleDirectMessageSelect}
@@ -226,6 +299,12 @@ const AppContent: React.FC = () => {
             </div>
           ) : activeView === "mcp" ? (
             <McpView onBackClick={() => setActiveView("chat")} />
+          ) : activeView === "forum" ? (
+            <ForumView 
+              onBackClick={() => setActiveView("chat")} 
+              currentTheme={theme}
+              connection={openAgentsHook.service}
+            />
           ) : null}
         </MainLayout>
       </ConfirmProvider>

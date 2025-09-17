@@ -55,7 +55,7 @@ export interface SidebarProps {
   onProfileClick: () => void;
   onMcpClick: () => void;
   onDocumentsClick?: () => void;
-  activeView: "chat" | "settings" | "profile" | "mcp" | "documents";
+  activeView: "chat" | "settings" | "profile" | "mcp" | "documents" | "forum";
   onConversationChange: (conversationId: string) => void;
   activeConversationId: string;
   conversations: Conversation[];
