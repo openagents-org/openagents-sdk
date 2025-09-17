@@ -10,14 +10,15 @@ import useTheme from "./hooks/useTheme";
 import { ToastProvider } from "./context/ToastContext";
 import { ConfirmProvider } from "./context/ConfirmContext";
 import { DocumentInfo } from "./types";
-import { clearAllOpenAgentsData } from "./utils/cookies";
 
 // Updated Thread Messaging with new event system
 import { useOpenAgents } from "./hooks/useOpenAgents";
 import { ThreadChannel, AgentInfo } from "./types/events";
 import ThreadMessagingViewEventBased from "./components/chat/ThreadMessagingViewEventBased";
+
 import ConnectionLoadingPage from "@/pages/connection/ConnectionLoadingPage";
-import { useNetworkStore } from "./stores/networkStore";
+import { useNetworkStore } from "@/stores/networkStore";
+import { clearAllOpenAgentsData } from "@/utils/cookies";
 
 // Thread state for compatibility with existing UI
 export interface ThreadState {
@@ -29,11 +30,13 @@ export interface ThreadState {
 
 // App main component
 const AppContent: React.FC = () => {
+  const { selectedNetwork, agentName, clearAgentName, clearNetwork } =
+    useNetworkStore();
+
   const [activeView, setActiveView] = useState<
     "chat" | "settings" | "profile" | "mcp" | "documents"
   >("chat");
-  const { selectedNetwork, clearNetwork } = useNetworkStore();
-  const [agentName, setAgentName] = useState<string | null>(null);
+
   const [threadState, setThreadState] = useState<ThreadState | null>(null);
 
   // Documents state
@@ -44,10 +47,7 @@ const AppContent: React.FC = () => {
 
   // Debug agent name and network values
   console.log(
-    "🔍 App Debug - agentName:",
-    agentName,
-    "selectedNetwork:",
-    selectedNetwork
+    `🔍 App Debug - agentName: ${agentName}, selectedNetwork: ${selectedNetwork}`
   );
 
   // Use the new event system when we have network connection
@@ -91,11 +91,13 @@ const AppContent: React.FC = () => {
 
   // Add debug function to window for troubleshooting
   useEffect(() => {
+    clearNetwork();
+    clearAgentName();
     (window as any).clearOpenAgentsData = clearAllOpenAgentsData;
     console.log(
       "🔧 Debug: Run clearOpenAgentsData() in console to clear all saved data"
     );
-  }, []);
+  }, [clearNetwork, clearAgentName]);
 
   // Enhanced createNewConversation function that always shows chat view
   const createNewConversationAndShowChat = useCallback(() => {
@@ -142,40 +144,19 @@ const AppContent: React.FC = () => {
     }
   }, []);
 
-  const handleAgentNameSelected = useCallback((name: string) => {
-    setAgentName(name);
-  }, []);
-
-  const handleBackToNetworkSelection = useCallback(() => {
-    clearNetwork();
-    setAgentName(null);
-  }, [clearNetwork]);
-
-  // Show network selection if no network is selected
+  // Step One Page - Show network selection if no network is selected
   if (!selectedNetwork) {
     return <NetworkSelectionView />;
   }
 
-  // Show agent name picker if network is selected but no agent name
+  // Step Two Page - Show agent name picker if network is selected but no agent name
   if (selectedNetwork && !agentName) {
-    return (
-      <AgentNamePicker
-        networkConnection={selectedNetwork}
-        onAgentNameSelected={handleAgentNameSelected}
-        onBack={handleBackToNetworkSelection}
-        currentTheme={theme}
-      />
-    );
+    return <AgentNamePicker currentTheme={theme} />;
   }
 
-  // Show loading if we have network and agent name but not yet connected
+  // Step Three Page - Show loading if we have network and agent name but not yet connected
   if (!isConnected) {
-    return (
-      <ConnectionLoadingPage
-        agentName={agentName}
-        connectionStatus={connectionStatus}
-      />
-    );
+    return <ConnectionLoadingPage connectionStatus={connectionStatus} />;
   }
 
   // Show the original UI with thread messaging
