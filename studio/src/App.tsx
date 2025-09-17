@@ -45,11 +45,6 @@ const AppContent: React.FC = () => {
     null
   );
 
-  // Debug agent name and network values
-  console.log(
-    `🔍 App Debug - agentName: ${agentName}, selectedNetwork: ${selectedNetwork}`
-  );
-
   // Use the new event system when we have network connection
   // Only initialize when we have real values, not fallbacks
   const openAgentsHook = useOpenAgents({
@@ -93,6 +88,7 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     clearNetwork();
     clearAgentName();
+
     (window as any).clearOpenAgentsData = clearAllOpenAgentsData;
     console.log(
       "🔧 Debug: Run clearOpenAgentsData() in console to clear all saved data"
