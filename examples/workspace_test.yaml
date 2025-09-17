@@ -102,6 +102,28 @@ network:
         max_version_history: 1000
         auto_save_interval: 5  # seconds
     
+    # Forum for Reddit-like discussions
+    - name: "openagents.mods.workspace.forum"
+      enabled: true
+      config:
+        # Forum settings
+        max_topics_per_agent: 100
+        max_comments_per_topic: 1000
+        max_comment_depth: 10
+        
+        # Content moderation
+        max_topic_title_length: 200
+        max_topic_content_length: 10000
+        max_comment_length: 5000
+        
+        # Voting settings
+        enable_voting: true
+        vote_weight: 1
+        
+        # Search settings
+        enable_search: true
+        search_results_limit: 50
+    
     # Workspace functionality for collaboration
     - name: "openagents.mods.workspace.default"
       enabled: true

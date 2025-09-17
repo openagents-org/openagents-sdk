@@ -3,6 +3,17 @@ import { SidebarProps, DocumentInfo } from '../types';
 import { ThreadChannel, AgentInfo } from '../types/events';
 import OpenAgentsLogo from './icons/OpenAgentsLogo';
 
+interface ForumTopic {
+  topic_id: string;
+  title: string;
+  content: string;
+  owner_id: string;
+  timestamp: number;
+  upvotes: number;
+  downvotes: number;
+  comment_count: number;
+}
+
 interface ExtendedSidebarProps extends Omit<SidebarProps, 'isCollapsed' | 'toggleSidebar' | 'onSettingsClick' | 'onProfileClick'> {
   // Thread messaging data
   channels?: ThreadChannel[];
@@ -19,6 +30,12 @@ interface ExtendedSidebarProps extends Omit<SidebarProps, 'isCollapsed' | 'toggl
   documents?: DocumentInfo[];
   onDocumentSelect?: (documentId: string | null) => void;
   selectedDocumentId?: string | null;
+  
+  // Forum data
+  hasForum?: boolean;
+  popularTopics?: ForumTopic[];
+  isLoadingPopularTopics?: boolean;
+  onForumTopicSelect?: (topicId: string) => void;
 }
 
 const Sidebar: React.FC<ExtendedSidebarProps> = ({
@@ -46,7 +63,12 @@ const Sidebar: React.FC<ExtendedSidebarProps> = ({
   // Documents props
   documents = [],
   onDocumentSelect,
-  selectedDocumentId = null
+  selectedDocumentId = null,
+  // Forum props
+  hasForum = false,
+  popularTopics = [],
+  isLoadingPopularTopics = false,
+  onForumTopicSelect
 }) => {
   // Helper function to format dates
   const formatDate = (dateString: string) => {
@@ -266,6 +288,99 @@ const Sidebar: React.FC<ExtendedSidebarProps> = ({
           </>
         ) : null}
       </div>
+
+      {/* Popular Topics Button - Show at top if forum mod is available */}
+      {hasForum && (
+        <div className="px-4 pt-2">
+          <button
+            onClick={() => {/* Navigate to forum */}}
+            className={`relative group flex items-center w-full rounded-lg px-4 py-3.5 text-sm transition-all overflow-hidden
+              ${activeView === 'forum'
+                ? 'bg-gradient-to-r from-orange-600 to-red-600 text-white font-medium shadow-md'
+                : 'bg-gradient-to-r from-orange-100 to-red-100 dark:from-orange-900/30 dark:to-red-900/30 text-orange-700 dark:text-orange-300 font-medium border border-orange-200 dark:border-orange-800/50 hover:shadow-md hover:from-orange-200 hover:to-red-200 dark:hover:from-orange-800/40 dark:hover:to-red-800/40'}
+            `}
+            style={{
+              backgroundImage: activeView !== 'forum' ? `
+                radial-gradient(circle at 20% 80%, rgba(249, 115, 22, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(239, 68, 68, 0.1) 0%, transparent 50%),
+                linear-gradient(135deg, rgba(249, 115, 22, 0.05) 0%, rgba(239, 68, 68, 0.05) 100%)
+              ` : undefined
+            }}
+          >
+            <div className="flex items-center">
+              <div className="mr-3 p-1.5 rounded-md bg-white/20">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                        d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                </svg>
+              </div>
+              <div className="flex flex-col items-start">
+                <span className="font-medium">Popular Topics</span>
+                <span className="text-xs opacity-75">Trending discussions</span>
+              </div>
+            </div>
+            <div className="ml-auto">
+              <svg className="w-4 h-4 opacity-50 group-hover:opacity-75 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </button>
+
+          {/* Popular Topics List */}
+          {activeView === 'forum' && (
+            <div className="mt-3 px-2">
+              <div className="text-xs font-bold text-gray-400 tracking-wide select-none mb-3">POPULAR TOPICS</div>
+              
+              {isLoadingPopularTopics ? (
+                <div className="space-y-2">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className={`p-2 rounded-lg animate-pulse ${currentTheme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                      <div className={`h-3 rounded mb-1 ${currentTheme === 'dark' ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
+                      <div className={`h-2 rounded w-3/4 ${currentTheme === 'dark' ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
+                    </div>
+                  ))}
+                </div>
+              ) : popularTopics && popularTopics.length > 0 ? (
+                <div className="space-y-1">
+                  {popularTopics.slice(0, 5).map((topic) => (
+                    <button
+                      key={topic.topic_id}
+                      onClick={() => onForumTopicSelect?.(topic.topic_id)}
+                      className={`w-full text-left p-2 rounded-lg transition-colors ${
+                        currentTheme === 'dark'
+                          ? 'hover:bg-gray-700 text-gray-300'
+                          : 'hover:bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      <div className="text-xs font-medium mb-1 truncate">
+                        {topic.title}
+                      </div>
+                      <div className={`flex items-center justify-between text-xs ${
+                        currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
+                        <span className="truncate">by {topic.owner_id}</span>
+                        <div className="flex items-center space-x-2 ml-2">
+                          <div className="flex items-center space-x-1">
+                            <svg className="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                            </svg>
+                            <span>{topic.upvotes - topic.downvotes}</span>
+                          </div>
+                          <span>{topic.comment_count}</span>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className={`text-xs text-center py-4 ${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                  No popular topics yet
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Documents Button - Show if shared document mod is available */}
       {hasSharedDocuments && onDocumentsClick && (
