@@ -267,6 +267,12 @@ export const clearAllSavedAgentNames = (): void => {
 export const clearAllOpenAgentsData = (): void => {
   clearSavedManualConnection();
   clearAllSavedAgentNames();
-  deleteCookie("openagents_theme");
-  console.log("Cleared all OpenAgents data from cookies");
+
+  try {
+    localStorage.removeItem("openagents_theme");
+  } catch (error) {
+    console.warn("Failed to clear theme from localStorage:", error);
+  }
+
+  console.log("Cleared all OpenAgents data from cookies and localStorage");
 };
