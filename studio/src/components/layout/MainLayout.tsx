@@ -1,8 +1,8 @@
-import React, { ReactNode, useEffect } from 'react';
-import Sidebar from '../Sidebar';
-import ModSidebar from './ModSidebar';
-import { NetworkConnection } from '../../services/networkService';
-import { DocumentInfo } from '../../types';
+import React, { ReactNode, useEffect } from "react";
+import Sidebar from "../Sidebar";
+import ModSidebar from "./ModSidebar";
+import { NetworkConnection } from "@/types/connection";
+import { DocumentInfo } from "../../types";
 
 // Legacy ThreadState type - TODO: Remove when MainLayout is deprecated
 interface ThreadState {
@@ -14,8 +14,10 @@ interface ThreadState {
 
 interface MainLayoutProps {
   children: ReactNode;
-  activeView: 'chat' | 'settings' | 'profile' | 'mcp' | 'documents';
-  setActiveView: (view: 'chat' | 'settings' | 'profile' | 'mcp' | 'documents') => void;
+  activeView: "chat" | "settings" | "profile" | "mcp" | "documents";
+  setActiveView: (
+    view: "chat" | "settings" | "profile" | "mcp" | "documents"
+  ) => void;
   activeConversationId: string;
   conversations: Array<{
     id: string;
@@ -25,7 +27,7 @@ interface MainLayoutProps {
   onConversationChange: (id: string) => void;
   createNewConversation: () => void;
   currentNetwork: NetworkConnection | null;
-  currentTheme: 'light' | 'dark';
+  currentTheme: "light" | "dark";
   toggleTheme: () => void;
   hasSharedDocuments?: boolean;
   hasThreadMessaging?: boolean;
@@ -59,7 +61,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   // Documents props
   documents = [],
   onDocumentSelect,
-  selectedDocumentId = null
+  selectedDocumentId = null,
 }) => {
   // Use passed thread state instead of hook
 
@@ -80,8 +82,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({
 
       {/* Main sidebar - always show, with thread messaging data when available */}
       <Sidebar
-        onMcpClick={() => setActiveView('mcp')}
-        onDocumentsClick={() => setActiveView('documents')}
+        onMcpClick={() => setActiveView("mcp")}
+        onDocumentsClick={() => setActiveView("documents")}
         activeView={activeView}
         hasSharedDocuments={hasSharedDocuments}
         onConversationChange={onConversationChange}
@@ -92,8 +94,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         currentTheme={currentTheme}
         currentNetwork={currentNetwork}
         // Thread messaging props
-        showThreadMessaging={hasThreadMessaging && activeView === 'chat'}
-
+        showThreadMessaging={hasThreadMessaging && activeView === "chat"}
         channels={threadState?.channels || []}
         agents={threadState?.agents || []}
         currentChannel={threadState?.currentChannel || null}
@@ -108,12 +109,17 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         selectedDocumentId={selectedDocumentId}
       />
 
-      <main className={`flex-1 flex flex-col overflow-hidden m-1 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 dark:bg-gray-800 ${currentTheme === 'light' ? 'bg-gradient-to-br from-white via-blue-50 to-purple-50' : ''
-        }`}>
+      <main
+        className={`flex-1 flex flex-col overflow-hidden m-1 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 dark:bg-gray-800 ${
+          currentTheme === "light"
+            ? "bg-gradient-to-br from-white via-blue-50 to-purple-50"
+            : ""
+        }`}
+      >
         {children}
       </main>
     </div>
   );
 };
 
-export default MainLayout; 
+export default MainLayout;

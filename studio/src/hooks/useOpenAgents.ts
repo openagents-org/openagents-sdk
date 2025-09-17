@@ -7,12 +7,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   OpenAgentsService,
-  ConnectionStatus,
   MessageSendResult,
   ThreadMessage,
   ThreadChannel,
   AgentInfo,
 } from "../services/openAgentsService";
+import { ConnectionStatus, ConnectionStatusEnum } from "@/types/connection";
 
 export interface UseOpenAgentsOptions {
   agentId: string;
@@ -82,7 +82,7 @@ export const useOpenAgents = (
 ): UseOpenAgentsReturn => {
   const [service, setService] = useState<OpenAgentsService | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
-    status: "disconnected",
+    status: ConnectionStatusEnum.DISCONNECTED,
   });
   const [channels, setChannels] = useState<ThreadChannel[]>([]);
   const [messages, setMessages] = useState<ThreadMessage[]>([]);

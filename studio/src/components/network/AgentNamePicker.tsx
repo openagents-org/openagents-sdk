@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { NetworkConnection } from '../../services/networkService';
-import { getSavedAgentNameForNetwork, saveAgentNameForNetwork } from '../../utils/cookies';
+import React, { useState, useEffect } from "react";
+import { NetworkConnection } from "@/types/connection";
+import {
+  getSavedAgentNameForNetwork,
+  saveAgentNameForNetwork,
+} from "../../utils/cookies";
 
 interface AgentNamePickerProps {
   networkConnection: NetworkConnection;
   onAgentNameSelected: (agentName: string) => void;
   onBack: () => void;
-  currentTheme: 'light' | 'dark';
+  currentTheme: "light" | "dark";
 }
 
 const styles = `
@@ -319,29 +322,54 @@ const styles = `
 `;
 
 const generateRandomAgentName = (): string => {
-  const adjectives = ['Swift', 'Bright', 'Quick', 'Smart', 'Clever', 'Sharp', 'Keen', 'Wise', 'Fast', 'Bold'];
-  const nouns = ['Agent', 'Bot', 'Assistant', 'Helper', 'Worker', 'Studio', 'Mind', 'Core', 'Node', 'Unit'];
+  const adjectives = [
+    "Swift",
+    "Bright",
+    "Quick",
+    "Smart",
+    "Clever",
+    "Sharp",
+    "Keen",
+    "Wise",
+    "Fast",
+    "Bold",
+  ];
+  const nouns = [
+    "Agent",
+    "Bot",
+    "Assistant",
+    "Helper",
+    "Worker",
+    "Studio",
+    "Mind",
+    "Core",
+    "Node",
+    "Unit",
+  ];
   const randomNum = Math.floor(Math.random() * 9999) + 1;
-  
+
   const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
   const noun = nouns[Math.floor(Math.random() * nouns.length)];
-  
-  return `${adjective}${noun}${randomNum.toString().padStart(4, '0')}`;
+
+  return `${adjective}${noun}${randomNum.toString().padStart(4, "0")}`;
 };
 
 const AgentNamePicker: React.FC<AgentNamePickerProps> = ({
   networkConnection,
   onAgentNameSelected,
   onBack,
-  currentTheme
+  currentTheme,
 }) => {
-  const [agentName, setAgentName] = useState('');
+  const [agentName, setAgentName] = useState("");
   const [savedAgentName, setSavedAgentName] = useState<string | null>(null);
 
   useEffect(() => {
     // Check for saved agent name for this network
-    const savedName = getSavedAgentNameForNetwork(networkConnection.host, networkConnection.port);
-    
+    const savedName = getSavedAgentNameForNetwork(
+      networkConnection.host,
+      networkConnection.port
+    );
+
     if (savedName) {
       setSavedAgentName(savedName);
       setAgentName(savedName);
@@ -359,40 +387,47 @@ const AgentNamePicker: React.FC<AgentNamePickerProps> = ({
     e.preventDefault();
     if (agentName.trim()) {
       // Save the agent name for this network
-      saveAgentNameForNetwork(networkConnection.host, networkConnection.port, agentName.trim());
+      saveAgentNameForNetwork(
+        networkConnection.host,
+        networkConnection.port,
+        agentName.trim()
+      );
       onAgentNameSelected(agentName.trim());
     }
   };
 
   const getAvatarInitials = (name: string): string => {
     return name
-      .replace(/[0-9]/g, '')
+      .replace(/[0-9]/g, "")
       .split(/(?=[A-Z])/)
       .slice(0, 2)
-      .map(part => part.charAt(0))
-      .join('')
+      .map((part) => part.charAt(0))
+      .join("")
       .toUpperCase();
   };
 
   const isValidName = (name: string): boolean => {
-    return name.trim().length >= 3 && name.trim().length <= 32 && /^[a-zA-Z0-9_-]+$/.test(name.trim());
+    return (
+      name.trim().length >= 3 &&
+      name.trim().length <= 32 &&
+      /^[a-zA-Z0-9_-]+$/.test(name.trim())
+    );
   };
 
   return (
     <div className={`agent-name-picker ${currentTheme}`}>
       <style>{styles}</style>
-      
+
       <div className={`picker-card ${currentTheme}`}>
         <div className="picker-header">
-          <div className="avatar-preview">
-            {getAvatarInitials(agentName)}
-          </div>
-          
+          <div className="avatar-preview">{getAvatarInitials(agentName)}</div>
+
           <h1 className={`picker-title ${currentTheme}`}>
             Join OpenAgents Network
           </h1>
           <p className={`picker-subtitle ${currentTheme}`}>
-            Choose your agent name to connect to the network and start collaborating with other agents.
+            Choose your agent name to connect to the network and start
+            collaborating with other agents.
           </p>
         </div>
 
@@ -404,14 +439,29 @@ const AgentNamePicker: React.FC<AgentNamePickerProps> = ({
         </div>
 
         {savedAgentName && (
-          <div className={`network-info ${currentTheme}`} style={{ background: '#f0f9ff', borderColor: '#0ea5e9' }}>
-            <div className={`network-label ${currentTheme}`} style={{ color: '#0369a1' }}>
+          <div
+            className={`network-info ${currentTheme}`}
+            style={{ background: "#f0f9ff", borderColor: "#0ea5e9" }}
+          >
+            <div
+              className={`network-label ${currentTheme}`}
+              style={{ color: "#0369a1" }}
+            >
               Previously used name
             </div>
-            <div className={`network-value ${currentTheme}`} style={{ color: '#0c4a6e' }}>
+            <div
+              className={`network-value ${currentTheme}`}
+              style={{ color: "#0c4a6e" }}
+            >
               {savedAgentName}
             </div>
-            <p style={{ fontSize: '12px', color: '#0369a1', margin: '4px 0 0 0' }}>
+            <p
+              style={{
+                fontSize: "12px",
+                color: "#0369a1",
+                margin: "4px 0 0 0",
+              }}
+            >
               You can use your previous name or create a new one
             </p>
           </div>
@@ -452,7 +502,7 @@ const AgentNamePicker: React.FC<AgentNamePickerProps> = ({
               maxLength={32}
               autoComplete="off"
             />
-            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+            <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
               <button
                 type="button"
                 onClick={handleRandomize}
@@ -465,14 +515,19 @@ const AgentNamePicker: React.FC<AgentNamePickerProps> = ({
                   type="button"
                   onClick={() => setAgentName(savedAgentName)}
                   className={`randomize-button ${currentTheme}`}
-                  style={{ background: '#3b82f6', color: 'white', border: 'none' }}
+                  style={{
+                    background: "#3b82f6",
+                    color: "white",
+                    border: "none",
+                  }}
                 >
                   ↶ Use Previous: {savedAgentName}
                 </button>
               )}
             </div>
             <div className={`form-hint ${currentTheme}`}>
-              Agent names must be 3-32 characters and contain only letters, numbers, underscores, and hyphens.
+              Agent names must be 3-32 characters and contain only letters,
+              numbers, underscores, and hyphens.
               {savedAgentName && (
                 <>
                   <br />
@@ -495,7 +550,7 @@ const AgentNamePicker: React.FC<AgentNamePickerProps> = ({
               disabled={!isValidName(agentName)}
               className={`connect-button ${currentTheme}`}
             >
-              Connect as {agentName || 'Agent'} →
+              Connect as {agentName || "Agent"} →
             </button>
           </div>
         </form>
