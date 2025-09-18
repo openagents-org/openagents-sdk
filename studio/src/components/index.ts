@@ -19,3 +19,9 @@ export { default as CreateDocumentModal } from './documents/CreateDocumentModal'
 
 // Forum components
 export { default as ForumView } from './forum/ForumView';
+
+// Wiki components
+export { default as WikiView } from './wiki/WikiView';
+
+// Common components
+export { default as MarkdownRenderer } from './common/MarkdownRenderer';

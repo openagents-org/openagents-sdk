@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { OpenAgentsService } from '../../services/openAgentsService';
+import MarkdownRenderer from '../common/MarkdownRenderer';
 
 interface ForumTopic {
   topic_id: string;
@@ -45,6 +46,8 @@ const ForumView: React.FC<ForumViewProps> = ({
   const [newTopicContent, setNewTopicContent] = useState('');
   const [newCommentContent, setNewCommentContent] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [showTopicPreview, setShowTopicPreview] = useState(false);
+  const [showCommentPreview, setShowCommentPreview] = useState(false);
 
   // Load topics
   const loadTopics = useCallback(async () => {
@@ -279,9 +282,12 @@ const ForumView: React.FC<ForumViewProps> = ({
           
           {/* Topic content and voting */}
           <div className={`p-4 rounded-lg ${currentTheme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
-            <p className={`mb-4 ${currentTheme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              {selectedTopic.content}
-            </p>
+            <div className="mb-4">
+              <MarkdownRenderer 
+                content={selectedTopic.content} 
+                currentTheme={currentTheme}
+              />
+            </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <button
@@ -367,9 +373,12 @@ const ForumView: React.FC<ForumViewProps> = ({
                     </button>
                   </div>
                 </div>
-                <p className={`mb-2 ${currentTheme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {comment.content}
-                </p>
+                <div className="mb-2">
+                  <MarkdownRenderer 
+                    content={comment.content} 
+                    currentTheme={currentTheme}
+                  />
+                </div>
                 <button
                   onClick={() => setReplyingTo(replyingTo === comment.comment_id ? null : comment.comment_id)}
                   className={`text-sm ${
@@ -382,17 +391,60 @@ const ForumView: React.FC<ForumViewProps> = ({
                 {/* Reply form */}
                 {replyingTo === comment.comment_id && (
                   <div className="mt-3 p-3 rounded-lg border border-dashed border-gray-400">
-                    <textarea
-                      value={newCommentContent}
-                      onChange={(e) => setNewCommentContent(e.target.value)}
-                      placeholder="Write a reply..."
-                      className={`w-full p-2 rounded border resize-none ${
+                    <div className="flex items-center justify-between mb-2">
+                      <label className={`text-xs font-medium ${
+                        currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
+                        Reply (Markdown supported)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowCommentPreview(!showCommentPreview)}
+                        className={`text-xs px-2 py-1 rounded transition-colors ${
+                          showCommentPreview
+                            ? 'bg-blue-600 text-white'
+                            : currentTheme === 'dark'
+                              ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        {showCommentPreview ? 'Edit' : 'Preview'}
+                      </button>
+                    </div>
+                    
+                    {showCommentPreview ? (
+                      <div className={`w-full p-2 rounded border min-h-[60px] ${
                         currentTheme === 'dark'
-                          ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400'
-                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                      }`}
-                      rows={2}
-                    />
+                          ? 'bg-gray-700 border-gray-600'
+                          : 'bg-white border-gray-300'
+                      }`}>
+                        {newCommentContent.trim() ? (
+                          <MarkdownRenderer 
+                            content={newCommentContent} 
+                            currentTheme={currentTheme}
+                          />
+                        ) : (
+                          <p className={`text-xs italic ${
+                            currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
+                            Nothing to preview...
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <textarea
+                        value={newCommentContent}
+                        onChange={(e) => setNewCommentContent(e.target.value)}
+                        placeholder="Write a reply... (You can use **bold**, *italic*, `code`, etc.)"
+                        className={`w-full p-2 rounded border resize-none ${
+                          currentTheme === 'dark'
+                            ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400'
+                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                        }`}
+                        rows={3}
+                      />
+                    )}
+                    
                     <div className="flex justify-end space-x-2 mt-2">
                       <button
                         onClick={() => setReplyingTo(null)}
@@ -424,17 +476,60 @@ const ForumView: React.FC<ForumViewProps> = ({
               ? 'bg-gray-800 border-gray-700' 
               : 'bg-white border-gray-200'
           }`}>
-            <textarea
-              value={newCommentContent}
-              onChange={(e) => setNewCommentContent(e.target.value)}
-              placeholder="Write a comment..."
-              className={`w-full p-3 rounded-lg border resize-none ${
+            <div className="flex items-center justify-between mb-2">
+              <label className={`text-sm font-medium ${
+                currentTheme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                Add Comment (Markdown supported)
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowCommentPreview(!showCommentPreview)}
+                className={`text-sm px-3 py-1 rounded transition-colors ${
+                  showCommentPreview
+                    ? 'bg-blue-600 text-white'
+                    : currentTheme === 'dark'
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {showCommentPreview ? 'Edit' : 'Preview'}
+              </button>
+            </div>
+            
+            {showCommentPreview ? (
+              <div className={`w-full p-3 rounded-lg border min-h-[80px] ${
                 currentTheme === 'dark'
-                  ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-              }`}
-              rows={3}
-            />
+                  ? 'bg-gray-700 border-gray-600'
+                  : 'bg-white border-gray-300'
+              }`}>
+                {newCommentContent.trim() ? (
+                  <MarkdownRenderer 
+                    content={newCommentContent} 
+                    currentTheme={currentTheme}
+                  />
+                ) : (
+                  <p className={`text-sm italic ${
+                    currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  }`}>
+                    Nothing to preview...
+                  </p>
+                )}
+              </div>
+            ) : (
+              <textarea
+                value={newCommentContent}
+                onChange={(e) => setNewCommentContent(e.target.value)}
+                placeholder="Write a comment... (You can use **bold**, *italic*, `code`, and more markdown features)"
+                className={`w-full p-3 rounded-lg border resize-none ${
+                  currentTheme === 'dark'
+                    ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400'
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                }`}
+                rows={3}
+              />
+            )}
+            
             <div className="flex justify-end mt-2">
               <button
                 onClick={() => postComment(selectedTopic.topic_id, newCommentContent)}
@@ -510,11 +605,16 @@ const ForumView: React.FC<ForumViewProps> = ({
                   }`}>
                     {topic.title}
                   </h3>
-                  <p className={`text-sm mb-3 line-clamp-2 ${
+                  <div className={`text-sm mb-3 line-clamp-2 ${
                     currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
                   }`}>
-                    {topic.content}
-                  </p>
+                    <MarkdownRenderer 
+                      content={topic.content} 
+                      currentTheme={currentTheme}
+                      truncate={true}
+                      maxLength={150}
+                    />
+                  </div>
                   <div className={`flex items-center space-x-4 text-sm ${
                     currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
                   }`}>
@@ -562,17 +662,63 @@ const ForumView: React.FC<ForumViewProps> = ({
                     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
                 }`}
               />
-              <textarea
-                value={newTopicContent}
-                onChange={(e) => setNewTopicContent(e.target.value)}
-                placeholder="Topic content..."
-                className={`w-full p-3 rounded-lg border resize-none ${
-                  currentTheme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400'
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                }`}
-                rows={6}
-              />
+              
+              {/* Content input with preview toggle */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className={`text-sm font-medium ${
+                    currentTheme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  }`}>
+                    Content (Markdown supported)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowTopicPreview(!showTopicPreview)}
+                    className={`text-sm px-3 py-1 rounded transition-colors ${
+                      showTopicPreview
+                        ? 'bg-blue-600 text-white'
+                        : currentTheme === 'dark'
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    {showTopicPreview ? 'Edit' : 'Preview'}
+                  </button>
+                </div>
+                
+                {showTopicPreview ? (
+                  <div className={`w-full p-3 rounded-lg border min-h-[150px] ${
+                    currentTheme === 'dark'
+                      ? 'bg-gray-700 border-gray-600'
+                      : 'bg-white border-gray-300'
+                  }`}>
+                    {newTopicContent.trim() ? (
+                      <MarkdownRenderer 
+                        content={newTopicContent} 
+                        currentTheme={currentTheme}
+                      />
+                    ) : (
+                      <p className={`text-sm italic ${
+                        currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
+                        Nothing to preview...
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <textarea
+                    value={newTopicContent}
+                    onChange={(e) => setNewTopicContent(e.target.value)}
+                    placeholder="Topic content... (You can use **bold**, *italic*, `code`, and more markdown features)"
+                    className={`w-full p-3 rounded-lg border resize-none ${
+                      currentTheme === 'dark'
+                        ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400'
+                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                    }`}
+                    rows={6}
+                  />
+                )}
+              </div>
             </div>
             <div className="flex justify-end space-x-3 mt-6">
               <button

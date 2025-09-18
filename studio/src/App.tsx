@@ -4,7 +4,7 @@ import ChatView from "./components/chat/ChatView";
 import NetworkSelectionView from "./components/network/NetworkSelectionView";
 import AgentNamePicker from "./components/network/AgentNamePicker";
 import McpView from "./components/mcp/McpView";
-import { DocumentsView, ForumView } from "./components";
+import { DocumentsView, ForumView, WikiView } from "./components";
 import useConversation from "./hooks/useConversation";
 import useTheme from "./hooks/useTheme";
 import { ToastProvider } from "./context/ToastContext";
@@ -20,6 +20,7 @@ import ConnectionLoadingPage from "@/pages/connection/ConnectionLoadingPage";
 import { useNetworkStore } from "@/stores/networkStore";
 import { clearAllOpenAgentsData } from "@/utils/cookies";
 import { getForumModStatus } from "./services/forumService";
+import { getWikiModStatus } from "./services/wikiService";
 
 // Thread state for compatibility with existing UI
 export interface ThreadState {
@@ -35,7 +36,7 @@ const AppContent: React.FC = () => {
     useNetworkStore();
 
   const [activeView, setActiveView] = useState<
-    "chat" | "settings" | "profile" | "mcp" | "documents" | "forum"
+    "chat" | "settings" | "profile" | "mcp" | "documents" | "forum" | "wiki"
   >("chat");
 
   const [threadState, setThreadState] = useState<ThreadState | null>(null);
@@ -69,25 +70,34 @@ const AppContent: React.FC = () => {
   const [popularTopics, setPopularTopics] = useState<any[]>([]);
   const [isLoadingPopularTopics, setIsLoadingPopularTopics] = useState(false);
   
+  // Check for wiki mod availability
+  const [hasWiki, setHasWiki] = useState(false);
+  
   useEffect(() => {
-    const checkForumMod = async () => {
+    const checkMods = async () => {
       if (openAgentsHook.service) {
         try {
           const healthResponse = await openAgentsHook.service.getNetworkHealth();
           // The health data might be nested under 'data' property
           const healthData = healthResponse.data || healthResponse;
+          
           const forumStatus = getForumModStatus(healthData);
           setHasForum(forumStatus.available);
-          console.log('Forum mod detection:', { healthData, forumStatus });
+          
+          const wikiStatus = getWikiModStatus(healthData);
+          setHasWiki(wikiStatus.available);
+          
+          console.log('Mod detection:', { healthData, forumStatus, wikiStatus });
         } catch (error) {
-          console.error('Failed to check forum mod status:', error);
+          console.error('Failed to check mod status:', error);
           setHasForum(false);
+          setHasWiki(false);
         }
       }
     };
 
     if (isConnected) {
-      checkForumMod();
+      checkMods();
     }
   }, [isConnected, openAgentsHook.service]);
 
@@ -240,6 +250,7 @@ const AppContent: React.FC = () => {
           hasSharedDocuments={hasSharedDocuments}
           hasThreadMessaging={hasThreadMessaging}
           hasForum={hasForum}
+          hasWiki={hasWiki}
           agentName={agentName}
           // Forum props
           popularTopics={popularTopics}
@@ -301,6 +312,12 @@ const AppContent: React.FC = () => {
             <McpView onBackClick={() => setActiveView("chat")} />
           ) : activeView === "forum" ? (
             <ForumView 
+              onBackClick={() => setActiveView("chat")} 
+              currentTheme={theme}
+              connection={openAgentsHook.service}
+            />
+          ) : activeView === "wiki" ? (
+            <WikiView 
               onBackClick={() => setActiveView("chat")} 
               currentTheme={theme}
               connection={openAgentsHook.service}

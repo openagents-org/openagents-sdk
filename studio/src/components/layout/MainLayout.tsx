@@ -14,9 +14,9 @@ interface ThreadState {
 
 interface MainLayoutProps {
   children: ReactNode;
-  activeView: "chat" | "settings" | "profile" | "mcp" | "documents" | "forum";
+  activeView: "chat" | "settings" | "profile" | "mcp" | "documents" | "forum" | "wiki";
   setActiveView: (
-    view: "chat" | "settings" | "profile" | "mcp" | "documents" | "forum"
+    view: "chat" | "settings" | "profile" | "mcp" | "documents" | "forum" | "wiki"
   ) => void;
   activeConversationId: string;
   conversations: Array<{
@@ -32,6 +32,7 @@ interface MainLayoutProps {
   hasSharedDocuments?: boolean;
   hasThreadMessaging?: boolean;
   hasForum?: boolean;
+  hasWiki?: boolean;
   agentName?: string | null;
   // Forum props
   popularTopics?: any[];
@@ -60,6 +61,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   hasSharedDocuments = false,
   hasThreadMessaging = false,
   hasForum = false,
+  hasWiki = false,
   agentName = null,
   // Forum props
   popularTopics = [],
@@ -89,6 +91,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         hasSharedDocuments={hasSharedDocuments}
         hasThreadMessaging={hasThreadMessaging}
         hasForum={hasForum}
+        hasWiki={hasWiki}
       />
 
       {/* Main sidebar - always show, with thread messaging data when available */}
