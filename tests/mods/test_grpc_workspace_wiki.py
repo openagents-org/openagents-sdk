@@ -553,10 +553,10 @@ class TestWikiNetworkMod:
         assert response.data is not None, "Response should contain data"
         
         # Extract page data from immediate response
-        page_data = response.data["page_data"]
+        page_data = response.data
         assert page_data["page_path"] == "development/python", "Retrieved page should have correct path"
         assert page_data["title"] == "Python Development Guide", "Retrieved page should have correct title"
-        assert "Python development best practices" in page_data["content"], "Retrieved page should have correct content"
+        assert "Python development best practices" in page_data["wiki_content"], "Retrieved page should have correct content"
         assert page_data["created_by"] == "alice", "Retrieved page should show correct creator"
         assert page_data["version"] == 1, "Retrieved page should be version 1"
         
