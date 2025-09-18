@@ -7,7 +7,11 @@
 
 import { EventNetworkService } from "./eventNetworkService";
 import { ThreadMessage, ThreadChannel, AgentInfo } from "../types/events";
-import { ConnectionStatusEnum, NetworkConnection } from "@/types/connection";
+import {
+  ConnectionStatusEnum,
+  ConnectionStatus,
+  NetworkConnection,
+} from "@/types/connection";
 
 export interface OpenAgentsServiceOptions {
   agentId: string;
@@ -22,16 +26,11 @@ export interface MessageSendResult {
   messageId?: string;
 }
 
-export interface ConnectionStatus {
-  status: "connected" | "connecting" | "disconnected" | "error";
-  agentId?: string;
-  isUsingModifiedId?: boolean;
-  latency?: number;
-}
-
 export class OpenAgentsService {
   private eventService: EventNetworkService;
-  private connectionStatus: ConnectionStatus = { status: "disconnected" };
+  private connectionStatus: ConnectionStatus = {
+    status: ConnectionStatusEnum.DISCONNECTED,
+  };
   private eventHandlers: Map<string, Set<Function>> = new Map();
   private agentId: string;
 
@@ -59,20 +58,20 @@ export class OpenAgentsService {
   async connect(): Promise<boolean> {
     console.log("🔌 Connecting to OpenAgents network via pure event system...");
 
-    this.connectionStatus.status = "connecting";
+    this.connectionStatus.status = ConnectionStatusEnum.CONNECTING;
     this.emit("connectionStatusChanged", this.connectionStatus);
 
     const success = await this.eventService.connect();
 
     if (success) {
       this.connectionStatus = {
-        status: "connected",
+        status: ConnectionStatusEnum.CONNECTED,
         agentId: this.eventService.getAgentId(),
         isUsingModifiedId: this.eventService.isUsingModifiedId(),
       };
       console.log(`✅ Connected as ${this.connectionStatus.agentId}`);
     } else {
-      this.connectionStatus.status = "error";
+      this.connectionStatus.status = ConnectionStatusEnum.ERROR;
     }
 
     this.emit("connectionStatusChanged", this.connectionStatus);
@@ -82,7 +81,7 @@ export class OpenAgentsService {
   async disconnect(): Promise<void> {
     console.log("🔌 Disconnecting from OpenAgents network...");
     await this.eventService.disconnect();
-    this.connectionStatus.status = "disconnected";
+    this.connectionStatus.status = ConnectionStatusEnum.DISCONNECTED;
     this.emit("connectionStatusChanged", this.connectionStatus);
   }
 
@@ -267,7 +266,7 @@ export class OpenAgentsService {
     // Connection events
     this.eventService.on("connected", (data: any) => {
       this.connectionStatus = {
-        status: "connected",
+        status: ConnectionStatusEnum.CONNECTED,
         agentId: data.agentId,
         isUsingModifiedId: this.eventService.isUsingModifiedId(),
       };
@@ -276,25 +275,25 @@ export class OpenAgentsService {
     });
 
     this.eventService.on("disconnected", (data: any) => {
-      this.connectionStatus.status = "disconnected";
+      this.connectionStatus.status = ConnectionStatusEnum.DISCONNECTED;
       this.emit("disconnected", data);
       this.emit("connectionStatusChanged", this.connectionStatus);
     });
 
     this.eventService.on("connectionError", (data: any) => {
-      this.connectionStatus.status = "error";
+      this.connectionStatus.status = ConnectionStatusEnum.ERROR;
       this.emit("connectionError", data);
       this.emit("connectionStatusChanged", this.connectionStatus);
     });
 
     this.eventService.on("reconnecting", (data: any) => {
-      this.connectionStatus.status = "connecting";
+      this.connectionStatus.status = ConnectionStatusEnum.CONNECTING;
       this.emit("reconnecting", data);
       this.emit("connectionStatusChanged", this.connectionStatus);
     });
 
     this.eventService.on("reconnected", (data: any) => {
-      this.connectionStatus.status = "connected";
+      this.connectionStatus.status = ConnectionStatusEnum.CONNECTED;
       this.emit("reconnected", data);
       this.emit("connectionStatusChanged", this.connectionStatus);
     });
