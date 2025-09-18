@@ -15,6 +15,7 @@ import uuid
 from typing import Dict, Any, List, Optional, Set
 from collections import defaultdict
 
+from openagents.config.globals import BROADCAST_AGENT_ID
 from openagents.core.base_mod import BaseMod
 from openagents.models.event import Event
 from openagents.models.event_response import EventResponse
@@ -1101,11 +1102,29 @@ class ForumNetworkMod(BaseMod):
         """Send topic-related notifications."""
         # For now, we'll just log the notification
         # In a full implementation, this would send events to interested agents
+        notification = Event(
+            event_name=event_name,
+            destination_id=BROADCAST_AGENT_ID,
+            source_id=source_id,
+            payload={
+                "topic": topic.to_dict()
+            }
+        )
+        await self.send_event(notification)
         logger.info(f"Topic notification: {event_name} for topic {topic.topic_id}")
     
     async def _send_comment_notification(self, event_name: str, comment: ForumComment, topic: ForumTopic, source_id: str):
         """Send comment-related notifications."""
         # For now, we'll just log the notification
         # In a full implementation, this would send events to topic owners and parent comment authors
+        notification = Event(
+            event_name=event_name,
+            destination_id=BROADCAST_AGENT_ID,
+            source_id=source_id,
+            payload={
+                "comment": comment.to_dict()
+            }
+        )
+        await self.send_event(notification)
         logger.info(f"Comment notification: {event_name} for comment {comment.comment_id} on topic {topic.topic_id}")
 

@@ -171,7 +171,8 @@ class WikiNetworkMod(BaseMod):
     async def _handle_wiki_page_create(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki page creation."""
         try:
-            content = event.payload
+            content = event.payload.copy()
+            content["source_id"] = event.source_id  # Add source_id from Event
             message = WikiPageCreateMessage(**content)
             
             # Check if page already exists
@@ -249,7 +250,8 @@ class WikiNetworkMod(BaseMod):
     async def _handle_wiki_page_edit(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki page editing (owner only)."""
         try:
-            content = event.payload
+            content = event.payload.copy()
+            content["source_id"] = event.source_id  # Add source_id from Event
             message = WikiPageEditMessage(**content)
             
             # Check if page exists
@@ -325,7 +327,8 @@ class WikiNetworkMod(BaseMod):
     async def _handle_wiki_page_get(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki page retrieval."""
         try:
-            content = event.payload
+            content = event.payload.copy()
+            content["source_id"] = event.source_id  # Add source_id from Event
             message = WikiPageGetMessage(**content)
             
             # Check if page exists
@@ -364,11 +367,13 @@ class WikiNetworkMod(BaseMod):
                 page_data = {
                     "page_path": page.page_path,
                     "title": page.title,
-                    "content": target_version.content,
+                    "wiki_content": target_version.content,  # Use wiki_content to match frontend
                     "category": page.category,
+                    "creator_id": page.created_by,  # Use creator_id to match frontend
                     "created_by": page.created_by,
                     "created_timestamp": page.created_timestamp,
                     "version": target_version.version_number,
+                    "last_modified": target_version.edit_timestamp,  # Add last_modified for frontend
                     "edited_by": target_version.edited_by,
                     "edit_timestamp": target_version.edit_timestamp,
                     "is_locked": page.is_locked,
@@ -380,11 +385,13 @@ class WikiNetworkMod(BaseMod):
                 page_data = {
                     "page_path": page.page_path,
                     "title": page.title,
-                    "content": page.content,
+                    "wiki_content": page.content,  # Use wiki_content to match frontend
                     "category": page.category,
+                    "creator_id": page.created_by,  # Use creator_id to match frontend
                     "created_by": page.created_by,
                     "created_timestamp": page.created_timestamp,
                     "version": page.current_version,
+                    "last_modified": page.created_timestamp,  # Add last_modified for frontend
                     "is_locked": page.is_locked,
                     "protection_level": page.protection_level,
                     "tags": page.tags
@@ -393,10 +400,7 @@ class WikiNetworkMod(BaseMod):
             return EventResponse(
                 success=True,
                 message=f"Wiki page retrieved successfully: {message.page_path}",
-                data={
-                    "page_data": page_data,
-                    "request_id": self._get_request_id(message)
-                }
+                data=page_data  # Return page data directly, not nested
             )
             
         except Exception as e:
@@ -413,7 +417,8 @@ class WikiNetworkMod(BaseMod):
     async def _handle_wiki_pages_search(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki pages search."""
         try:
-            content = event.payload
+            content = event.payload.copy()
+            content["source_id"] = event.source_id  # Add source_id from Event
             message = WikiPageSearchMessage(**content)
             
             # Simple search implementation
@@ -468,7 +473,8 @@ class WikiNetworkMod(BaseMod):
     async def _handle_wiki_pages_list(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki pages listing."""
         try:
-            content = event.payload
+            content = event.payload.copy()
+            content["source_id"] = event.source_id  # Add source_id from Event
             message = WikiPageListMessage(**content)
             
             # Filter pages by category if specified
@@ -479,10 +485,14 @@ class WikiNetworkMod(BaseMod):
                         "page_path": page.page_path,
                         "title": page.title,
                         "category": page.category,
+                        "creator_id": page.created_by,  # Use creator_id to match frontend expectation
                         "created_by": page.created_by,
                         "created_timestamp": page.created_timestamp,
                         "current_version": page.current_version,
-                        "tags": page.tags
+                        "version": page.current_version,  # Add version field for frontend
+                        "last_modified": page.created_timestamp,  # Use created_timestamp as fallback for last_modified
+                        "tags": page.tags,
+                        "wiki_content": page.content[:200] if page.content else ""  # Add content preview (use 'content' field)
                     }
                     pages_list.append(page_summary)
             
@@ -515,7 +525,8 @@ class WikiNetworkMod(BaseMod):
     async def _handle_wiki_page_proposal_create(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki page edit proposal creation."""
         try:
-            content = event.payload
+            content = event.payload.copy()
+            content["source_id"] = event.source_id  # Add source_id from Event
             message = WikiPageEditProposalMessage(**content)
             
             # Check if page exists
@@ -575,7 +586,8 @@ class WikiNetworkMod(BaseMod):
     async def _handle_wiki_proposals_list(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki edit proposals listing."""
         try:
-            content = event.payload
+            content = event.payload.copy()
+            content["source_id"] = event.source_id  # Add source_id from Event
             message = WikiEditProposalListMessage(**content)
             
             # Filter proposals
@@ -632,7 +644,8 @@ class WikiNetworkMod(BaseMod):
     async def _handle_wiki_proposal_resolve(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki edit proposal resolution."""
         try:
-            content = event.payload
+            content = event.payload.copy()
+            content["source_id"] = event.source_id  # Add source_id from Event
             message = WikiEditProposalResolveMessage(**content)
             
             # Check if proposal exists
@@ -745,7 +758,8 @@ class WikiNetworkMod(BaseMod):
     async def _handle_wiki_page_history(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki page history retrieval."""
         try:
-            content = event.payload
+            content = event.payload.copy()
+            content["source_id"] = event.source_id  # Add source_id from Event
             message = WikiPageHistoryMessage(**content)
             
             # Check if page exists
@@ -805,7 +819,8 @@ class WikiNetworkMod(BaseMod):
     async def _handle_wiki_page_revert(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki page reversion."""
         try:
-            content = event.payload
+            content = event.payload.copy()
+            content["source_id"] = event.source_id  # Add source_id from Event
             message = WikiPageRevertMessage(**content)
             
             # Check if page exists
