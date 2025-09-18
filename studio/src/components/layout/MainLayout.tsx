@@ -1,8 +1,8 @@
 import React, { ReactNode, useEffect } from "react";
 import Sidebar from "../Sidebar";
 import ModSidebar from "./ModSidebar";
-import { NetworkConnection } from "@/types/connection";
-import { DocumentInfo } from "../../types";
+import { DocumentInfo } from "@/types";
+import { useThemeStore } from "@/stores/themeStore";
 
 // Legacy ThreadState type - TODO: Remove when MainLayout is deprecated
 interface ThreadState {
@@ -14,10 +14,6 @@ interface ThreadState {
 
 interface MainLayoutProps {
   children: ReactNode;
-  activeView: "chat" | "settings" | "profile" | "mcp" | "documents";
-  setActiveView: (
-    view: "chat" | "settings" | "profile" | "mcp" | "documents"
-  ) => void;
   activeConversationId: string;
   conversations: Array<{
     id: string;
@@ -26,12 +22,8 @@ interface MainLayoutProps {
   }>;
   onConversationChange: (id: string) => void;
   createNewConversation: () => void;
-  currentNetwork: NetworkConnection | null;
-  currentTheme: "light" | "dark";
-  toggleTheme: () => void;
   hasSharedDocuments?: boolean;
   hasThreadMessaging?: boolean;
-  agentName?: string | null;
   threadState?: ThreadState | null;
   onChannelSelect?: (channel: string) => void;
   onDirectMessageSelect?: (agentId: string) => void;
@@ -43,18 +35,12 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({
   children,
-  activeView,
-  setActiveView,
   activeConversationId,
   conversations,
   onConversationChange,
   createNewConversation,
-  currentNetwork,
-  currentTheme,
-  toggleTheme,
   hasSharedDocuments = false,
   hasThreadMessaging = false,
-  agentName = null,
   threadState = null,
   onChannelSelect,
   onDirectMessageSelect,
@@ -63,6 +49,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   onDocumentSelect,
   selectedDocumentId = null,
 }) => {
+  const { theme: currentTheme, toggleTheme } = useThemeStore();
   // Use passed thread state instead of hook
 
   useEffect(() => {
@@ -73,18 +60,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({
     <div className="h-screen w-screen flex overflow-hidden bg-slate-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* Left-most mod sidebar (Slack-style) */}
       <ModSidebar
-        activeView={activeView}
-        setActiveView={setActiveView}
-        currentTheme={currentTheme}
         hasSharedDocuments={hasSharedDocuments}
         hasThreadMessaging={hasThreadMessaging}
       />
 
       {/* Main sidebar - always show, with thread messaging data when available */}
       <Sidebar
-        onMcpClick={() => setActiveView("mcp")}
-        onDocumentsClick={() => setActiveView("documents")}
-        activeView={activeView}
         hasSharedDocuments={hasSharedDocuments}
         onConversationChange={onConversationChange}
         activeConversationId={activeConversationId}
@@ -92,9 +73,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         createNewConversation={createNewConversation}
         toggleTheme={toggleTheme}
         currentTheme={currentTheme}
-        currentNetwork={currentNetwork}
         // Thread messaging props
-        showThreadMessaging={hasThreadMessaging && activeView === "chat"}
+        showThreadMessaging={hasThreadMessaging}
         channels={threadState?.channels || []}
         agents={threadState?.agents || []}
         currentChannel={threadState?.currentChannel || null}
@@ -102,7 +82,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         unreadCounts={{}} // TODO: implement unread counts
         onChannelSelect={onChannelSelect}
         onDirectMessageSelect={onDirectMessageSelect}
-        agentName={agentName}
         // Documents props
         documents={documents}
         onDocumentSelect={onDocumentSelect}

@@ -45,7 +45,6 @@ export interface ChatViewProps {
   conversationId: string;
   onMessagesUpdate?: (messages: ConversationMessages) => void;
   onDeleteConversation?: () => void;
-  currentTheme: "light" | "dark";
 }
 
 export interface SidebarProps {
@@ -53,16 +52,12 @@ export interface SidebarProps {
   toggleSidebar: () => void;
   onSettingsClick: () => void;
   onProfileClick: () => void;
-  onMcpClick: () => void;
-  onDocumentsClick?: () => void;
-  activeView: "chat" | "settings" | "profile" | "mcp" | "documents";
   onConversationChange: (conversationId: string) => void;
   activeConversationId: string;
   conversations: Conversation[];
   createNewConversation: () => void;
   toggleTheme: () => void;
   currentTheme: "light" | "dark";
-  currentNetwork: NetworkConnection | null;
   hasSharedDocuments?: boolean;
 }
 
@@ -135,7 +130,6 @@ export interface DocumentContent {
 
 export interface DocumentsViewProps {
   onBackClick: () => void;
-  currentTheme: "light" | "dark";
   // Optional props for shared state management
   documents?: DocumentInfo[];
   selectedDocumentId?: string | null;
