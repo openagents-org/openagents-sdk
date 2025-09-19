@@ -11,7 +11,12 @@ export default function useConnectedStatus() {
     agentId: agentName || "studio_user",
     host: selectedNetwork?.host,
     port: selectedNetwork?.port,
-    autoConnect: !!selectedNetwork && !!agentName,
+    // 确保有完整的配置信息才自动连接
+    autoConnect: !!(
+      selectedNetwork?.host &&
+      selectedNetwork?.port &&
+      agentName
+    ),
   });
 
   const { connectionStatus, channels } = openAgentsHook;

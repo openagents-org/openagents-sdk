@@ -1,14 +1,10 @@
 import React, { useCallback, useMemo } from "react";
-import { ConnectionStatus, ConnectionStatusEnum } from "@/types/connection";
+import { ConnectionStatusEnum } from "@/types/connection";
 import { useNetworkStore } from "@/stores/networkStore";
+import useConnectedStatus from "@/hooks/useConnectedStatus";
 
-interface ConnectionLoadingPageProps {
-  connectionStatus: ConnectionStatus;
-}
-
-const ConnectionLoadingPage: React.FC<ConnectionLoadingPageProps> = ({
-  connectionStatus = { status: ConnectionStatusEnum.CONNECTING },
-}) => {
+const ConnectionLoadingPage: React.FC = () => {
+  const { connectionStatus } = useConnectedStatus();
   const { agentName } = useNetworkStore();
   const currentStatus = useMemo(
     () => connectionStatus.status,

@@ -16,7 +16,7 @@ import React, {
 } from "react";
 import { AgentInfo, ThreadMessage } from "../../types/events";
 import { UseOpenAgentsReturn } from "../../hooks/useOpenAgents";
-import { ThreadState } from "../../App";
+import { ThreadState } from "@/types/thread";
 import { MessageSendResult } from "../../services/openAgentsService";
 import MessageDisplay from "./MessageDisplay";
 import ThreadMessageInput from "./ThreadMessageInput";

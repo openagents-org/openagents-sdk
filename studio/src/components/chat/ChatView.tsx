@@ -11,133 +11,7 @@ import {
   ToolSection,
 } from "../../types";
 import { useThemeStore } from "@/stores/themeStore";
-// Remove Firebase import
-
-// 现代化简洁设计的CSS样式
-const styles = `
-  .chat-view-container {
-    position: relative;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    background: #fafafa;
-  }
-  
-  .chat-view-container.dark {
-    background: #1a1a1a;
-  }
-  
-  .messages-container {
-    flex: 1;
-    height: 100%;
-    overflow-y: auto;
-    scroll-behavior: smooth;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
-  }
-  
-  .messages-container::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
-  }
-  
-  .scroll-button {
-    position: absolute;
-    bottom: 90px;
-    right: 16px;
-    width: 40px;
-    height: 40px;
-    background: #ffffff;
-    color: #6366f1;
-    border-radius: 20px;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10;
-  }
-  
-  .scroll-button:hover {
-    background: #f8fafc;
-    transform: translateY(-1px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  }
-  
-  .dark .scroll-button {
-    background: #374151;
-    color: #a855f7;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  }
-  
-  .dark .scroll-button:hover {
-    background: #4b5563;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  }
-  
-  .loading-indicator {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 24px;
-    color: #6b7280;
-    font-size: 14px;
-    font-weight: 500;
-  }
-  
-  .dark .loading-indicator {
-    color: #9ca3af;
-  }
-  
-  .error-message {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    color: #dc2626;
-    padding: 16px;
-    margin: 16px;
-    border-radius: 12px;
-    font-size: 14px;
-    line-height: 1.5;
-  }
-  
-  .dark .error-message {
-    background: #1f2937;
-    border: 1px solid #374151;
-    color: #f87171;
-  }
-
-  .chat-input-area {
-    background: #ffffff;
-    border-top: 1px solid #e5e7eb;
-    padding: 16px;
-    margin: 0;
-  }
-  
-  .dark .chat-input-area {
-    background: #1f2937;
-    border-top: 1px solid #374151;
-  }
-  
-  .loading-spinner {
-    animation: spin 1s linear infinite;
-  }
-  
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-  
-  .fade-in {
-    animation: fadeIn 0.3s ease-in-out;
-  }
-  
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-`;
+import "../../styles/ChatView.css";
 
 const ChatView: React.FC<ChatViewProps> = ({
   conversationId,
@@ -968,11 +842,9 @@ const ChatView: React.FC<ChatViewProps> = ({
 
   // 简化的界面，不使用动画效果
   return (
-    <div className={`chat-view-container ${currentTheme} h-full flex flex-col`}>
-      <style>{styles}</style>
-
+    <div className="relative flex-1 flex flex-col h-full bg-gray-50 dark:bg-gray-900">
       {isSessionLoading && (
-        <div className="loading-indicator fade-in">
+        <div className="flex justify-center items-center p-6 text-gray-500 dark:text-gray-400 text-sm font-medium fade-in">
           <svg
             className="loading-spinner h-5 w-5 mr-3"
             xmlns="http://www.w3.org/2000/svg"
@@ -998,7 +870,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       )}
 
       {sessionError && (
-        <div className="error-message fade-in">
+        <div className="bg-red-50 dark:bg-gray-800 border border-red-200 dark:border-gray-600 text-red-600 dark:text-red-400 p-4 m-4 rounded-xl text-sm leading-relaxed fade-in">
           <div className="flex items-start">
             <svg
               className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0"
@@ -1041,7 +913,7 @@ const ChatView: React.FC<ChatViewProps> = ({
 
         {showScrollButton && (
           <button
-            className="scroll-button fade-in"
+            className="absolute bottom-20 right-4 w-10 h-10 bg-white dark:bg-gray-600 text-indigo-500 dark:text-purple-400 rounded-full cursor-pointer shadow-lg hover:shadow-xl border-0 flex items-center justify-center z-10 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-500 hover:-translate-y-0.5 fade-in"
             onClick={() => {
               isAutoScrollingRef.current = true;
               scrollToBottom(true);
@@ -1067,7 +939,7 @@ const ChatView: React.FC<ChatViewProps> = ({
         )}
       </div>
 
-      <div className="chat-input-area flex-shrink-0">
+      <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-600 p-4 m-0 flex-shrink-0">
         <MessageInput
           value={currentMessage}
           onChange={(e) => setCurrentMessage(e.target.value)}
