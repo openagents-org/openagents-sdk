@@ -68,36 +68,83 @@ export const parseDate = (dateString: string): Date => {
 };
 
 /**
- * 格式化日期为相对时间显示
- * @param dateString - 日期字符串
+ * 格式化时间戳为相对时间显示（支持多种时间戳格式）
+ * @param timestamp - 时间戳（可以是字符串或数字，支持Unix时间戳、毫秒时间戳、ISO字符串等）
  * @returns 格式化后的相对时间字符串
  */
-export const formatRelativeDate = (dateString: string): string => {
-  const date = parseDate(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
+export const formatRelativeTimestamp = (timestamp: string | number): string => {
+  try {
+    let date: Date;
+    const timestampStr = String(timestamp);
 
-  // 如果是未来时间，显示具体日期
-  if (diffMs < 0) {
+    // Handle different timestamp formats
+    if (timestampStr.includes("T") || timestampStr.includes("-")) {
+      // ISO string format (e.g., "2025-01-01T12:00:00.000Z")
+      date = new Date(timestampStr);
+    } else {
+      // Unix timestamp (seconds or milliseconds)
+      const timestampNum = parseInt(timestampStr);
+      if (isNaN(timestampNum)) {
+        console.warn("Invalid timestamp:", timestamp);
+        return "Invalid time";
+      }
+
+      // Convert to milliseconds if it's in seconds (Unix timestamp < 1e10)
+      const timestampMs =
+        timestampNum < 1e10 ? timestampNum * 1000 : timestampNum;
+      date = new Date(timestampMs);
+    }
+
+    // Validate the date
+    if (isNaN(date.getTime())) {
+      console.warn("Invalid date created from timestamp:", timestamp);
+      return "Invalid time";
+    }
+
+    // Check if date is too old (before 2020) which might indicate wrong format
+    if (date.getFullYear() < 2020) {
+      console.warn(
+        "Date seems too old, might be wrong format:",
+        timestamp,
+        date
+      );
+      // Try treating as milliseconds if it was treated as seconds
+      const timestampNum = parseInt(timestampStr);
+      if (!isNaN(timestampNum) && timestampNum > 1e10) {
+        date = new Date(timestampNum);
+      }
+    }
+
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+
+    // If it's future time, show specific date
+    if (diffMs < 0) {
+      return date.toLocaleDateString();
+    }
+
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 1) return "just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+
     return date.toLocaleDateString();
+  } catch (error) {
+    console.error("Error formatting timestamp:", timestamp, error);
+    return "Invalid time";
   }
+};
 
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  // const diffWeeks = Math.floor(diffDays / 7);
-  // const diffMonths = Math.floor(diffDays / 30);
-  // const diffYears = Math.floor(diffDays / 365);
-
-  // 根据时间差返回不同格式
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  // if (diffWeeks < 4) return `${diffWeeks}w ago`;
-  // if (diffMonths < 12) return `${diffMonths}mo ago`;
-  // if (diffYears < 2) return `${diffYears}y ago`;
-
-  // 超过2年显示具体日期
-  return date.toLocaleDateString();
+/**
+ * 格式化日期为相对时间显示（简化版本，用于日期字符串）
+ * @param dateString - 日期字符串
+ * @returns 格式化后的相对时间字符串
+ * @deprecated 推荐使用 formatRelativeTimestamp，功能更强大
+ */
+export const formatRelativeDate = (dateString: string): string => {
+  return formatRelativeTimestamp(dateString);
 };
