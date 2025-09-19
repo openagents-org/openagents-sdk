@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useNetworkStore } from "../stores/networkStore";
 import useConnectedStatus from "../hooks/useConnectedStatus";
@@ -40,18 +40,6 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   const requiredRoute = getRequiredRoute();
   const currentPath = location.pathname;
 
-  // Debug 信息
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🛡️ RouteGuard check:', {
-      currentPath,
-      selectedNetwork: !!selectedNetwork,
-      agentName: !!agentName,
-      isConnected,
-      requiredRoute,
-      shouldRedirect: requiredRoute && currentPath !== requiredRoute
-    });
-  }
-
   // 如果需要重定向且当前路径不匹配，则进行重定向
   if (requiredRoute && currentPath !== requiredRoute) {
     console.log(`🔄 Redirecting from ${currentPath} to ${requiredRoute}`);
@@ -59,7 +47,12 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   }
 
   // 如果用户试图访问他们不应该访问的页面，重定向到正确页面
-  if (!requiredRoute && (currentPath === "/network-selection" || currentPath === "/agent-setup" || currentPath === "/connection-loading")) {
+  if (
+    !requiredRoute &&
+    (currentPath === "/network-selection" ||
+      currentPath === "/agent-setup" ||
+      currentPath === "/connection-loading")
+  ) {
     console.log(`🔄 User completed setup, redirecting to /chat`);
     return <Navigate to="/chat" replace />;
   }

@@ -56,9 +56,6 @@ export interface SidebarProps {
   activeConversationId: string;
   conversations: Conversation[];
   createNewConversation: () => void;
-  toggleTheme: () => void;
-  currentTheme: "light" | "dark";
-  hasSharedDocuments?: boolean;
 }
 
 export interface SettingsViewProps {
