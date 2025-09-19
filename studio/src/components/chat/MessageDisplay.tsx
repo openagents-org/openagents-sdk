@@ -10,7 +10,6 @@ interface MessageDisplayProps {
   onReply: (messageId: string, text: string, author: string) => void;
   onQuote: (messageId: string, text: string, author: string) => void;
   onReaction: (messageId: string, reactionType: string) => void;
-  currentTheme: "light" | "dark";
 }
 
 interface ThreadStructure {
@@ -70,7 +69,6 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
   onReply,
   onQuote,
   onReaction,
-  currentTheme,
 }) => {
   const [showReactionPicker, setShowReactionPicker] = useState<string | null>(
     null
@@ -237,10 +235,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
 
           <div className="message-content leading-6 break-words">
             {message.content?.text ? (
-              <MarkdownContent
-                content={message.content.text}
-                currentTheme={currentTheme}
-              />
+              <MarkdownContent content={message.content.text} />
             ) : (
               <div className="text-gray-500 italic">
                 {message.content ? "Empty message" : "No content"}

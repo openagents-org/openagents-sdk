@@ -2,9 +2,10 @@ import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ToastProvider } from "@/context/ToastContext";
 import { ConfirmProvider } from "@/context/ConfirmContext";
+import RouteGuard from "./RouteGuard";
+import RootLayout from "@/components/layout/RootLayout";
 
 import { routes, specialRoutes } from "./routeConfig";
-import ProtectedRoute from "./ProtectedRoute";
 
 const AppRouter: React.FC = () => {
   return (
@@ -13,11 +14,21 @@ const AppRouter: React.FC = () => {
         <ConfirmProvider>
           <Routes>
             {/* 配置化的受保护路由 */}
-            {routes.map(({ path, element: Component, title }) => (
+            {routes.map(({ path, element: Component, title, requiresLayout }) => (
               <Route
                 key={path}
                 path={path}
-                element={<ProtectedRoute component={Component} />}
+                element={
+                  <RouteGuard>
+                    {requiresLayout ? (
+                      <RootLayout>
+                        <Component />
+                      </RootLayout>
+                    ) : (
+                      <Component />
+                    )}
+                  </RouteGuard>
+                }
               />
             ))}
 
