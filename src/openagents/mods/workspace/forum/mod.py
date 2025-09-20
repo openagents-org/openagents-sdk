@@ -16,7 +16,7 @@ from typing import Dict, Any, List, Optional, Set
 from collections import defaultdict
 
 from openagents.config.globals import BROADCAST_AGENT_ID
-from openagents.core.base_mod import BaseMod
+from openagents.core.base_mod import BaseMod, mod_event_handler
 from openagents.models.event import Event
 from openagents.models.event_response import EventResponse
 from .forum_messages import (
@@ -136,25 +136,6 @@ class ForumNetworkMod(BaseMod):
         """Initialize the forum mod for a network."""
         super().__init__(mod_name=mod_name)
         
-        # Register event handlers
-        self.register_event_handler(self._handle_topic_operations, [
-            "forum.topic.create", "forum.topic.edit", "forum.topic.delete"
-        ])
-        
-        self.register_event_handler(self._handle_comment_operations, [
-            "forum.comment.post", "forum.comment.reply", "forum.comment.edit", 
-            "forum.comment.delete"
-        ])
-        
-        self.register_event_handler(self._handle_voting, [
-            "forum.vote.cast", "forum.vote.remove"
-        ])
-        
-        self.register_event_handler(self._handle_queries, [
-            "forum.topics.list", "forum.topics.search", "forum.topic.get",
-            "forum.popular.topics", "forum.recent.topics",
-            "forum.user.topics", "forum.user.comments"
-        ])
         
         # Initialize forum state
         self.active_agents: Set[str] = set()
@@ -181,6 +162,9 @@ class ForumNetworkMod(BaseMod):
         logger.info(f"Unregistered agent {agent_id} from forum mod")
         return None
     
+    @mod_event_handler("forum.topic.create")
+    @mod_event_handler("forum.topic.edit")
+    @mod_event_handler("forum.topic.delete")
     async def _handle_topic_operations(self, event: Event) -> Optional[EventResponse]:
         """Handle topic creation, editing, and deletion."""
         try:
@@ -349,6 +333,10 @@ class ForumNetworkMod(BaseMod):
             data={'topic_id': topic_id}
         )
     
+    @mod_event_handler("forum.comment.post")
+    @mod_event_handler("forum.comment.reply")
+    @mod_event_handler("forum.comment.edit")
+    @mod_event_handler("forum.comment.delete")
     async def _handle_comment_operations(self, event: Event) -> Optional[EventResponse]:
         """Handle comment posting, editing, and deletion."""
         try:
@@ -626,6 +614,8 @@ class ForumNetworkMod(BaseMod):
             data={'comment_id': comment_id, 'topic_id': topic_id}
         )
     
+    @mod_event_handler("forum.vote.cast")
+    @mod_event_handler("forum.vote.remove")
     async def _handle_voting(self, event: Event) -> Optional[EventResponse]:
         """Handle voting operations."""
         try:
@@ -798,6 +788,13 @@ class ForumNetworkMod(BaseMod):
             }
         )
     
+    @mod_event_handler("forum.topics.list")
+    @mod_event_handler("forum.topics.search")
+    @mod_event_handler("forum.topic.get")
+    @mod_event_handler("forum.popular.topics")
+    @mod_event_handler("forum.recent.topics")
+    @mod_event_handler("forum.user.topics")
+    @mod_event_handler("forum.user.comments")
     async def _handle_queries(self, event: Event) -> Optional[EventResponse]:
         """Handle query operations."""
         try:

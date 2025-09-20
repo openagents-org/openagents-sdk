@@ -1,6 +1,8 @@
 from typing import Awaitable, Callable, Dict, Any, Optional, List, Set, TYPE_CHECKING, Union
 from abc import ABC, abstractmethod
 import logging
+import asyncio
+import inspect
 from warnings import deprecated
 
 from pydantic import BaseModel, Field
@@ -12,6 +14,51 @@ from openagents.models.event_response import EventResponse
 from openagents.models.messages import Event, EventNames
 
 logger = logging.getLogger(__name__)
+
+def mod_event_handler(pattern: str):
+    """
+    Decorator for defining event handlers in BaseMod subclasses.
+    
+    This decorator allows you to define custom event handlers that will be called
+    when events matching the specified pattern are received.
+    
+    Args:
+        pattern: Event name pattern to match. Supports wildcards with '*'.
+                Examples: "thread.channel_message.*", "system.notification.*"
+    
+    Example:
+        class MyMod(BaseMod):
+            @mod_event_handler("thread.channel_message.*")
+            async def handle_channel_message(self, event: Event) -> Optional[EventResponse]:
+                # Handle the event
+                return None
+    
+    Note:
+        - The decorated function must be async
+        - The function should accept (self, event: Event) as parameters
+        - The function should return Optional[EventResponse]
+        - Multiple handlers can be defined for different patterns
+        - Handlers are collected automatically during mod initialization
+    """
+    def decorator(func: Callable):
+        # Validate that the function is async
+        if not asyncio.iscoroutinefunction(func):
+            raise ValueError(f"@mod_event_handler decorated function '{func.__name__}' must be async")
+        
+        # Validate function signature
+        sig = inspect.signature(func)
+        params = list(sig.parameters.keys())
+        if len(params) < 2 or params[0] != 'self':
+            raise ValueError(f"@mod_event_handler decorated function '{func.__name__}' must have signature (self, event: Event)")
+        
+        # Store the event pattern on the function for later collection
+        # Support multiple decorators by maintaining a list of patterns
+        if not hasattr(func, '_mod_event_patterns'):
+            func._mod_event_patterns = []
+        func._mod_event_patterns.append(pattern)
+        return func
+    
+    return decorator
 
 class EventHandlerEntry(BaseModel):
     
@@ -38,6 +85,7 @@ class BaseMod(ABC):
         self._event_handlers: List[EventHandlerEntry] = []
         
         self._register_default_event_handlers()
+        self._collect_mod_event_handlers()
 
         logger.info(f"Initializing network mod {self.mod_name}")
     
@@ -55,6 +103,30 @@ class BaseMod(ABC):
             handle_unregister_agent,
             "system.notification.unregister_agent"
         )
+    
+    def _collect_mod_event_handlers(self) -> None:
+        """
+        Collect all @mod_event_handler decorated methods from this class and its parent classes.
+        
+        This method scans the class hierarchy for methods with the _mod_event_pattern
+        attribute (set by the @mod_event_handler decorator) and registers them as event handlers.
+        """
+        # Get all methods from this class and parent classes
+        for cls in self.__class__.__mro__:
+            for method_name in dir(cls):
+                # Skip special methods but allow regular private methods with decorators
+                if method_name.startswith('__'):
+                    continue
+                    
+                method = getattr(self, method_name, None)
+                if method is None or not callable(method):
+                    continue
+                
+                # Check if this method has the _mod_event_patterns attribute (set by @mod_event_handler decorator)
+                if hasattr(method, '_mod_event_patterns'):
+                    patterns = method._mod_event_patterns
+                    self.register_event_handler(method, patterns)
+                    logger.debug(f"Collected mod event handler for patterns '{patterns}': {method_name}")
     
     def initialize(self) -> bool:
         """Initialize the mod.
