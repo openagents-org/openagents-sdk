@@ -61,7 +61,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-def on(pattern: str):
+def on_event(pattern: str):
     """
     Decorator for defining event handlers in WorkerAgent subclasses.
     
@@ -74,11 +74,11 @@ def on(pattern: str):
     
     Example:
         class MyAgent(WorkerAgent):
-            @on("myplugin.message.received")
+            @on_event("myplugin.message.received")
             async def handle_plugin_message(self, context: EventContext):
                 print(f"Got plugin message: {context.payload}")
             
-            @on("project.*")
+            @on_event("project.*")
             async def handle_any_project_event(self, context: EventContext):
                 print(f"Project event: {context.incoming_event.event_name}")
     
@@ -91,13 +91,13 @@ def on(pattern: str):
     def decorator(func: Callable):
         # Validate that the function is async
         if not asyncio.iscoroutinefunction(func):
-            raise ValueError(f"@on decorated function '{func.__name__}' must be async")
+            raise ValueError(f"@on_event decorated function '{func.__name__}' must be async")
         
         # Validate function signature
         sig = inspect.signature(func)
         params = list(sig.parameters.keys())
         if len(params) < 2 or params[0] != 'self':
-            raise ValueError(f"@on decorated function '{func.__name__}' must have signature (self, context: EventContext)")
+            raise ValueError(f"@on_event decorated function '{func.__name__}' must have signature (self, context: EventContext)")
         
         # Store the event pattern on the function for later collection
         func._event_pattern = pattern
@@ -213,7 +213,7 @@ class WorkerAgent(AgentRunner):
         Collect all @on decorated methods from this class and its parent classes.
         
         This method scans the class hierarchy for methods with the _event_pattern
-        attribute (set by the @on decorator) and stores them for later event routing.
+        attribute (set by the @on_event decorator) and stores them for later event routing.
         """
         self._event_handlers.clear()
         
@@ -950,29 +950,50 @@ class WorkerAgent(AgentRunner):
                     logger.warning("Network events not available for cleanup")
             except Exception as e:
                 logger.error(f"Error cleaning up project subscription: {e}")
+    
+    def agent(
+        self,
+        context: EventContext,
+        instruction: Optional[str] = None,
+    ):
+        """
+        Let the agent respond to the context and decide it's action automatically.
 
-    # Abstract handler methods that users should override
-    async def on_direct(self, msg: EventContext):
+        Args:
+            context: The event context containing incoming event, threads, and thread ID
+            instruction: The instruction for the agent to respond to the context
+        """
+
+        pass
+
+    async def on_direct(self, context: EventContext):
         """Handle direct messages. Override this method."""
         pass
 
-    async def on_channel_post(self, msg: ChannelMessageContext):
+        pass
+    
+    # Abstract handler methods that users should override
+    async def on_direct(self, context: EventContext):
+        """Handle direct messages. Override this method."""
+        pass
+
+    async def on_channel_post(self, context: ChannelMessageContext):
         """Handle new channel posts. Override this method."""
         pass
 
-    async def on_channel_reply(self, msg: ReplyMessageContext):
+    async def on_channel_reply(self, context: ReplyMessageContext):
         """Handle replies in channels. Override this method."""
         pass
 
-    async def on_channel_mention(self, msg: ChannelMessageContext):
+    async def on_channel_mention(self, context: ChannelMessageContext):
         """Handle when agent is mentioned in channels. Override this method."""
         pass
 
-    async def on_reaction(self, msg: ReactionContext):
+    async def on_reaction(self, context: ReactionContext):
         """Handle reactions to messages. Override this method."""
         pass
 
-    async def on_file_received(self, msg: FileContext):
+    async def on_file_received(self, context: FileContext):
         """Handle file uploads. Override this method."""
         pass
 
@@ -985,43 +1006,43 @@ class WorkerAgent(AgentRunner):
         pass
 
     # Project handler methods (only called when project mod is enabled)
-    async def on_project_created(self, event: ProjectEventContext):
+    async def on_project_created(self, context: ProjectEventContext):
         """Handle project creation events. Override this method."""
         pass
 
-    async def on_project_started(self, event: ProjectEventContext):
+    async def on_project_started(self, context: ProjectEventContext):
         """Handle project start events. Override this method."""
         pass
 
-    async def on_project_completed(self, event: ProjectCompletedContext):
+    async def on_project_completed(self, context: ProjectCompletedContext):
         """Handle project completion events. Override this method."""
         pass
 
-    async def on_project_failed(self, event: ProjectFailedContext):
+    async def on_project_failed(self, context: ProjectFailedContext):
         """Handle project failure events. Override this method."""
         pass
 
-    async def on_project_stopped(self, event: ProjectEventContext):
+    async def on_project_stopped(self, context: ProjectEventContext):
         """Handle project stop events. Override this method."""
         pass
 
-    async def on_project_message(self, event: ProjectMessageContext):
+    async def on_project_message(self, context: ProjectMessageContext):
         """Handle project channel messages. Override this method."""
         pass
 
-    async def on_project_input_required(self, event: ProjectInputContext):
+    async def on_project_input_required(self, context: ProjectInputContext):
         """Handle project input requirements. Override this method."""
         pass
 
-    async def on_project_notification(self, event: ProjectNotificationContext):
+    async def on_project_notification(self, context: ProjectNotificationContext):
         """Handle project notifications. Override this method."""
         pass
 
-    async def on_project_joined(self, event: ProjectAgentContext):
+    async def on_project_joined(self, context: ProjectAgentContext):
         """Handle project agent join events. Override this method."""
         pass
 
-    async def on_project_left(self, event: ProjectAgentContext):
+    async def on_project_left(self, context: ProjectAgentContext):
         """Handle project agent leave events. Override this method."""
         pass
 

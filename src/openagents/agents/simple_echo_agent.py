@@ -6,6 +6,7 @@ from openagents.agents.runner import AgentRunner
 from openagents.models.event_thread import EventThread
 from openagents.models.messages import Event, EventNames
 from openagents.models.event import Event
+from openagents.models.event_context import EventContext
 
 logger = logging.getLogger(__name__)
 
@@ -30,14 +31,13 @@ class SimpleEchoAgentRunner(AgentRunner):
         self.echo_prefix = echo_prefix or "Echo"
         self.message_count = 0
 
-    async def react(self, event_threads: Dict[str, EventThread], incoming_thread_id: str, incoming_message: Event):
+    async def react(self, context: EventContext):
         """React to incoming messages by echoing them back.
         
         Args:
-            event_threads: Dictionary of all message threads available to the agent
-            incoming_thread_id: ID of the thread containing the incoming message
-            incoming_message: The incoming message to react to
+            context: The event context containing incoming event, threads, and thread ID
         """
+        incoming_message = context.incoming_event
         print(f"🎯 ECHO AGENT: react method called with message from {incoming_message.source_id}")
         print(f"   Message type: {type(incoming_message).__name__}")
         print(f"   Content: {incoming_message.payload}")

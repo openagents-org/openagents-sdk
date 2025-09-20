@@ -7,6 +7,7 @@ from openagents.agents.runner import AgentRunner
 from openagents.models.event_thread import EventThread
 from openagents.models.messages import Event, EventNames
 from openagents.models.event import Event
+from openagents.models.event_context import EventContext
 from openagents.workspace.project_messages import ProjectNotificationMessage
 
 logger = logging.getLogger(__name__)
@@ -66,8 +67,12 @@ class ProjectEchoAgentRunner(AgentRunner):
             }
         ]
 
-    async def react(self, event_threads: Dict[str, EventThread], incoming_thread_id: str, incoming_message: Event):
+    async def react(self, context: EventContext):
         """React to incoming messages and handle project participation."""
+        incoming_message = context.incoming_event
+        incoming_thread_id = context.incoming_thread_id
+        event_threads = context.event_threads
+        
         self.message_count += 1
         sender_id = incoming_message.source_id
         content = incoming_message.payload

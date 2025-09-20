@@ -355,24 +355,42 @@ class TestForumMod:
     @pytest.mark.asyncio
     async def test_topic_search(self, forum_agents):
         """Test searching forum topics."""
+        import asyncio
+        
         agent1 = forum_agents['agent1']
         forum1 = forum_agents['forum1']
         
-        # Create topics with different content
-        await forum1.create_forum_topic(
+        # Create topics with different content and store their IDs
+        topic_ids = []
+        
+        topic_id1 = await forum1.create_forum_topic(
             title="Python Programming",
             content="Discussion about Python programming language"
         )
+        assert topic_id1 is not None, "Failed to create first topic"
+        topic_ids.append(topic_id1)
         
-        await forum1.create_forum_topic(
+        topic_id2 = await forum1.create_forum_topic(
             title="JavaScript Frameworks",
             content="Comparing different JavaScript frameworks"
         )
+        assert topic_id2 is not None, "Failed to create second topic"
+        topic_ids.append(topic_id2)
         
-        await forum1.create_forum_topic(
+        topic_id3 = await forum1.create_forum_topic(
             title="Machine Learning with Python",
             content="Using Python for machine learning projects"
         )
+        assert topic_id3 is not None, "Failed to create third topic"
+        topic_ids.append(topic_id3)
+        
+        # Wait for all topics to be properly indexed and events processed
+        await asyncio.sleep(0.1)
+        
+        # Verify all topics exist before searching
+        for topic_id in topic_ids:
+            topic_data = await forum1.get_forum_topic(topic_id)
+            assert topic_data is not None, f"Topic {topic_id} not found after creation"
         
         # Search for Python topics
         search_results = await forum1.search_forum_topics("Python")
