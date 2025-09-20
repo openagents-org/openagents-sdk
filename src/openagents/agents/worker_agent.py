@@ -9,6 +9,7 @@ routing and provides intuitive handler methods.
 import logging
 import re
 import asyncio
+import inspect
 from abc import abstractmethod
 from typing import Dict, List, Optional, Any, Callable, Union
 from dataclasses import dataclass
@@ -45,6 +46,51 @@ except ImportError:
     PROJECT_IMPORTS_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
+
+
+def on(pattern: str):
+    """
+    Decorator for defining event handlers in WorkerAgent subclasses.
+    
+    This decorator allows you to define custom event handlers that will be called
+    when events matching the specified pattern are received.
+    
+    Args:
+        pattern: Event name pattern to match. Supports wildcards with '*'.
+                Examples: "myplugin.message.received", "project.*", "thread.channel_message.*"
+    
+    Example:
+        class MyAgent(WorkerAgent):
+            @on("myplugin.message.received")
+            async def handle_plugin_message(self, event: Event):
+                print(f"Got plugin message: {event.payload}")
+            
+            @on("project.*")
+            async def handle_any_project_event(self, event: Event):
+                print(f"Project event: {event.event_name}")
+    
+    Note:
+        - The decorated function must be async
+        - The function should accept (self, event: Event) as parameters
+        - Multiple handlers can be defined for the same pattern
+        - Handlers are executed before built-in WorkerAgent handlers
+    """
+    def decorator(func: Callable):
+        # Validate that the function is async
+        if not asyncio.iscoroutinefunction(func):
+            raise ValueError(f"@on decorated function '{func.__name__}' must be async")
+        
+        # Validate function signature
+        sig = inspect.signature(func)
+        params = list(sig.parameters.keys())
+        if len(params) < 2 or params[0] != 'self':
+            raise ValueError(f"@on decorated function '{func.__name__}' must have signature (self, event: Event)")
+        
+        # Store the event pattern on the function for later collection
+        func._event_pattern = pattern
+        return func
+    
+    return decorator
 
 
 @dataclass
@@ -312,6 +358,9 @@ class WorkerAgent(AgentRunner):
         self._message_history_cache: Dict[str, List[Dict[str, Any]]] = {}
         self._pending_history_requests: Dict[str, asyncio.Future] = {}
         
+        # Event handler storage for @on decorated methods
+        self._event_handlers: List[tuple[str, Callable]] = []  # List of (pattern, handler) tuples
+        
         # Project-related state (only used when project mod is available)
         self._active_projects: Dict[str, Dict[str, Any]] = {}
         self._project_channels: Dict[str, str] = {}  # project_id -> channel_name
@@ -319,6 +368,9 @@ class WorkerAgent(AgentRunner):
         self._project_event_queue = None
         self._workspace_client = None
         self._project_mod_available = False
+        
+        # Collect @on decorated event handlers
+        self._collect_event_handlers()
         
         logger.info(f"Initialized WorkerAgent '{self.default_agent_id}' with ID: {agent_id}")
     
@@ -351,6 +403,64 @@ class WorkerAgent(AgentRunner):
                 }
         
         return self._workspace_client
+
+    def _collect_event_handlers(self):
+        """
+        Collect all @on decorated methods from this class and its parent classes.
+        
+        This method scans the class hierarchy for methods with the _event_pattern
+        attribute (set by the @on decorator) and stores them for later event routing.
+        """
+        self._event_handlers.clear()
+        
+        # Get all methods from this class and parent classes
+        for cls in self.__class__.__mro__:
+            for method_name in dir(cls):
+                if method_name.startswith('_'):
+                    continue
+                    
+                method = getattr(self, method_name, None)
+                if method is None or not callable(method):
+                    continue
+                
+                # Check if this method has the _event_pattern attribute (set by @on decorator)
+                if hasattr(method, '_event_pattern'):
+                    pattern = method._event_pattern
+                    self._event_handlers.append((pattern, method))
+                    logger.debug(f"Collected event handler for pattern '{pattern}': {method_name}")
+        
+        if self._event_handlers:
+            patterns = [pattern for pattern, _ in self._event_handlers]
+            logger.info(f"WorkerAgent '{self.default_agent_id}' collected {len(self._event_handlers)} event handlers for patterns: {patterns}")
+
+    async def _execute_custom_event_handlers(self, event: Event) -> bool:
+        """
+        Execute custom @on decorated event handlers that match the given event.
+        
+        Args:
+            event: The event to handle
+            
+        Returns:
+            True if at least one custom handler was executed, False otherwise
+        """
+        handlers_executed = 0
+        
+        for pattern, handler in self._event_handlers:
+            try:
+                # Use the Event's matches_pattern method to check if pattern matches
+                if event.matches_pattern(pattern):
+                    logger.debug(f"Executing custom handler for pattern '{pattern}': {handler.__name__}")
+                    await handler(event)
+                    handlers_executed += 1
+                    
+            except Exception as e:
+                logger.error(f"Error executing custom event handler {handler.__name__} for pattern '{pattern}': {e}")
+                # Continue executing other handlers even if one fails
+        
+        if handlers_executed > 0:
+            logger.debug(f"Executed {handlers_executed} custom event handlers for event '{event.event_name}'")
+        
+        return handlers_executed > 0
 
     async def setup(self):
         """Setup the WorkerAgent with thread messaging."""
@@ -408,6 +518,10 @@ class WorkerAgent(AgentRunner):
             return
         
         logger.debug(f"WorkerAgent '{self.default_agent_id}' processing event: {incoming_message.event_name} from {incoming_message.source_id}")
+        
+        # First, execute custom @on decorated event handlers
+        await self._execute_custom_event_handlers(incoming_message)
+
         
         # Handle different event types based on event names
         event_name = incoming_message.event_name
