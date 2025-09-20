@@ -22,8 +22,8 @@ from openagents.models.messages import Event
 from openagents.models.event import EventVisibility, EventNames
 from openagents.models.tool import AgentAdapterTool
 from openagents.utils.message_util import (
-    get_direct_message_thread_id,
-    get_broadcast_message_thread_id
+    get_direct_event_thread_id,
+    get_broadcast_event_thread_id
 )
 from .thread_messages import (
     Event,
@@ -112,8 +112,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         logger.debug(f"Received direct message from {message.source_id}")
         
         # Add message to the appropriate conversation thread
-        thread_id = get_direct_message_thread_id(message.source_id)
-        self.add_message_to_thread(thread_id, message, text_representation=message.payload.get("text", ""))
+        message.thread_name = get_direct_event_thread_id(message.source_id)
         
         # Call registered message handlers
         for handler in self.message_handlers.values():
@@ -132,8 +131,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             logger.debug(f"Received channel message from {message.source_id} in {message.channel}")
             
             # Add message to the channel thread
-            thread_id = f"channel_{message.channel}"
-            self.add_message_to_thread(thread_id, message, text_representation=message.payload.get("text", ""))
+            message.thread_name = f"channel_{message.channel}"
             
             # Call registered message handlers
             for handler in self.message_handlers.values():
@@ -194,7 +192,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         if quote:
             quoted_message_id = quote
             # Try to get quoted text from message history
-            if quote in self.message_threads:
+            if quote in self.event_threads:
                 # This is simplified - in practice you'd search through thread messages
                 quoted_text = f"[Quoted message {quote}]"
         

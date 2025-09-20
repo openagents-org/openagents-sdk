@@ -20,9 +20,9 @@ from openagents.models.messages import (
 )
 from openagents.models.tool import AgentAdapterTool
 from openagents.utils.message_util import (
-    get_direct_message_thread_id,
-    get_broadcast_message_thread_id,
-    get_mod_message_thread_id
+    get_direct_event_thread_id,
+    get_broadcast_event_thread_id,
+    get_mod_event_thread_id
 )
 
 logger = logging.getLogger(__name__)
@@ -100,8 +100,7 @@ class SimpleMessagingAgentAdapter(BaseModAdapter):
         logger.debug(f"Received direct message from {message.source_id}")
         
         # Add message to the appropriate conversation thread
-        thread_id = get_direct_message_thread_id(message.source_id)
-        self.add_message_to_thread(thread_id, message, text_representation=message.payload.get("text", ""))
+        message.thread_name = get_direct_event_thread_id(message.source_id)
         
         # Check if the message contains file references
         if "files" in message.payload and message.payload["files"]:
@@ -124,8 +123,7 @@ class SimpleMessagingAgentAdapter(BaseModAdapter):
         logger.debug(f"Received broadcast message from {message.source_id}")
         
         # Add message to the broadcast conversation thread
-        thread_id = get_broadcast_message_thread_id()
-        self.add_message_to_thread(thread_id, message, text_representation=message.payload.get("text", ""))
+        message.thread_name = get_broadcast_event_thread_id()
         
         # Check if the message contains file references
         if "files" in message.payload and message.payload["files"]:
@@ -263,8 +261,7 @@ class SimpleMessagingAgentAdapter(BaseModAdapter):
         )
         
         # Add message to the broadcast conversation thread
-        thread_id = get_broadcast_message_thread_id()
-        self.add_message_to_thread(thread_id, message, requires_response=False, text_representation=message.payload.get("text", ""))
+        message.thread_name = get_broadcast_event_thread_id()
         
         await self.connector.send_broadcast_message(message)
         logger.debug("Sent broadcast message")

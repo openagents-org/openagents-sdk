@@ -95,3 +95,6 @@ AGENT_EVENT_MESSAGE = "agent.message"
 
 SYSTEM_AGENT_ID = "system:system"
 BROADCAST_AGENT_ID = "agent:broadcast"
+
+# ===== THREAD IDS =====
+THREAD_ID_UNCATEGORIZED = "uncategorized"

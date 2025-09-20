@@ -103,6 +103,9 @@ class Event(BaseModel):
     relevant_mod: Optional[str] = None  # Restrict processing to specific mod; Deprecated
     requires_response: bool = False     # Whether this event expects a response
     response_to: Optional[str] = None   # If this is a response, the original event_id
+
+    # Event thread
+    thread_name: Optional[str] = None  # The name of the thread for the event, used for organizing events into threads in the client
     
     # Event data
     payload: Dict[str, Any] = Field(default_factory=dict)
@@ -399,6 +402,8 @@ class EventSubscription(BaseModel):
 # Predefined event name constants for common events
 class EventNames:
     """Common event names to ensure consistency across the system."""
+
+    # TODO: merge the constants in the globals into this class
     
     # Agent events
     AGENT_CONNECTED = "agent.connected"

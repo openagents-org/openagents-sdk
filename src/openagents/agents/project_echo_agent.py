@@ -4,7 +4,7 @@ import random
 from typing import Dict, List, Optional
 
 from openagents.agents.runner import AgentRunner
-from openagents.models.message_thread import MessageThread
+from openagents.models.event_thread import EventThread
 from openagents.models.messages import Event, EventNames
 from openagents.models.event import Event
 from openagents.workspace.project_messages import ProjectNotificationMessage
@@ -66,7 +66,7 @@ class ProjectEchoAgentRunner(AgentRunner):
             }
         ]
 
-    async def react(self, message_threads: Dict[str, MessageThread], incoming_thread_id: str, incoming_message: Event):
+    async def react(self, event_threads: Dict[str, EventThread], incoming_thread_id: str, incoming_message: Event):
         """React to incoming messages and handle project participation."""
         self.message_count += 1
         sender_id = incoming_message.source_id

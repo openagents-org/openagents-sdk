@@ -29,7 +29,7 @@ from openagents.agents.worker_agent import (
     ChannelMessageContext,
     ReplyMessageContext
 )
-from openagents.models.message_thread import MessageThread
+from openagents.models.event_thread import EventThread
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -137,7 +137,7 @@ class ProductReviewAgent(WorkerAgent):
         self.client.send_event(msg.event)
         self.send_direct(msg.source_id, f"Hello {msg.source_id}!")
     
-    async def react(self, message_threads: Dict[str, MessageThread], incoming_thread_id: str, incoming_message: Event):
+    async def react(self, event_threads: Dict[str, EventThread], incoming_thread_id: str, incoming_message: Event):
         logger.info(f"Received message from {incoming_message.source_id}: {incoming_message.model_dump_json()}")
         if incoming_message.event_name == "thread.direct_message.notification":
             logger.info(f"Received direct message notification from {incoming_message.source_id}: {incoming_message.payload.get('content', {}).get('text', '')}")

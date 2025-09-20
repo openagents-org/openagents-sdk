@@ -5,7 +5,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from openagents.core.base_mod_adapter import BaseModAdapter
-from openagents.models.message_thread import MessageThread
+from openagents.models.event_thread import EventThread
 from openagents.models.event import Event
 from openagents.models.tool import AgentAdapterTool
 from openagents.core.client import AgentClient
@@ -105,14 +105,14 @@ class AgentRunner(ABC):
         return self.client.mod_adapters.get(mod_name)
 
     @abstractmethod
-    async def react(self, message_threads: Dict[str, MessageThread], incoming_thread_id: str, incoming_message: Event):
+    async def react(self, event_threads: Dict[str, EventThread], incoming_thread_id: str, incoming_message: Event):
         """React to an incoming message.
         
         This method is called when a new message is received and should implement
         the agent's logic for responding to messages.
         
         Args:
-            message_threads: Dictionary of all message threads available to the agent.
+            event_threads: Dictionary of all message threads available to the agent.
             incoming_thread_id: ID of the thread containing the incoming message.
             incoming_message: The incoming message to react to.
         """
@@ -140,8 +140,8 @@ class AgentRunner(ABC):
         try:    
             while self._running:
                 # Get all message threads from the client
-                message_threads = self.client.get_messsage_threads()
-                logger.debug(f"🔍 AGENT_RUNNER: Checking for messages... Found {len(message_threads)} threads")
+                event_threads = self.client.get_event_threads()
+                logger.debug(f"🔍 AGENT_RUNNER: Checking for messages... Found {len(event_threads)} threads")
                 
                 # Find the first unprocessed message across all threads
                 unprocessed_message = None
@@ -151,7 +151,7 @@ class AgentRunner(ABC):
                 total_messages = 0
                 unprocessed_count = 0
                 
-                for thread_id, thread in message_threads.items():
+                for thread_id, thread in event_threads.items():
                     print(f"   Thread {thread_id}: {len(thread.messages)} messages")
                     for message in thread.messages:
                         total_messages += 1
@@ -186,9 +186,9 @@ class AgentRunner(ABC):
                     current_time = unprocessed_message.timestamp
                     filtered_threads = {}
                     
-                    for thread_id, thread in message_threads.items():
+                    for thread_id, thread in event_threads.items():
                         # Create a new thread with only messages up to the current message's timestamp
-                        filtered_thread = MessageThread()
+                        filtered_thread = EventThread()
                         filtered_thread.messages = [
                             msg for msg in thread.messages 
                             if msg.timestamp <= current_time
