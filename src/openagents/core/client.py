@@ -18,7 +18,7 @@ from openagents.config.globals import (
     AGENT_EVENT_MESSAGE, SYSTEM_EVENT_LIST_AGENTS, SYSTEM_EVENT_LIST_MODS, SYSTEM_EVENT_GET_MOD_MANIFEST, SYSTEM_EVENT_SUBSCRIBE_EVENTS, SYSTEM_EVENT_UNSUBSCRIBE_EVENTS
 )
 from openagents.models.tool import AgentAdapterTool
-from openagents.models.message_thread import MessageThread
+from openagents.models.event_thread import EventThread
 from openagents.utils.verbose import verbose_print
 import aiohttp
 
@@ -61,8 +61,8 @@ class AgentClient:
         # Event handlers in the client level
         self._event_handlers: List[EventHandlerEntry] = []
 
-        # General message threads
-        self._general_message_threads: Dict[str, MessageThread] = {}
+        # Message threads
+        self._event_threads: Dict[str, EventThread] = {}
 
         # Register mod adapters if provided
         if mod_adapters:
@@ -507,48 +507,13 @@ class AgentClient:
         
         return tools
     
-    def get_messsage_threads(self) -> Dict[str, MessageThread]:
-        """Get all message threads from registered mod adapters.
+    def get_event_threads(self) -> Dict[str, EventThread]:
+        """Get all event threads.
         
         Returns:
-            Dict[str, ConversationThread]: Dictionary of conversation threads
+            Dict[str, MessageThread]: Dictionary of event threads
         """
-        threads = {}
-        
-        # Collect conversation threads from all registered mod adapters
-        logger.debug(f"🔧 CLIENT: get_messsage_threads called, found {len(self.mod_adapters)} adapters")
-        for mod_name, adapter in self.mod_adapters.items():
-            try:
-                adapter_threads = adapter.message_threads
-                logger.debug(f"🔧 CLIENT: Adapter {mod_name} has {len(adapter_threads) if adapter_threads else 0} threads")
-                if adapter_threads:
-                    # Merge the adapter's threads into our collection
-                    for thread_id, thread in adapter_threads.items():
-                        if thread_id in threads:
-                            # If thread already exists, merge messages and sort by timestamp
-                            existing_messages = threads[thread_id].messages
-                            new_messages = thread.messages
-                            # Combine messages from both threads
-                            combined_messages = existing_messages + new_messages
-                            # Create a new thread with the combined messages
-                            merged_thread = MessageThread()
-                            # Sort all messages by timestamp before adding them
-                            sorted_messages = list(sorted(combined_messages, key=lambda msg: msg.timestamp))
-                            merged_thread.messages = sorted_messages
-                            threads[thread_id] = merged_thread
-                        else:
-                            threads[thread_id] = thread
-                    logger.debug(f"Added {len(adapter_threads)} conversation threads from {mod_name}")
-            except Exception as e:
-                logger.error(f"Error getting message threads from mod adapter {mod_name}: {e}")
-        
-        for thread_id, thread in self._general_message_threads.items():
-            if thread_id not in threads:
-                threads[thread_id] = thread
-            else:
-                logger.warning(f"Thread {thread_id} already exists in general message threads")
-        
-        return threads
+        return self._event_threads
     
     
     async def _handle_event(self, event: Event) -> None:
@@ -574,13 +539,12 @@ class AgentClient:
         await self._call_event_handlers(event)
         
         # Notify mod adapters
-        processed_by_adapter = False
+        processed_event = event
         
         for mod_name, mod_adapter in self.mod_adapters.items():
             try:
-                processed_event = await mod_adapter.process_incoming_event(event)
+                processed_event = await mod_adapter.process_incoming_event(processed_event)
                 if processed_event is None:
-                    processed_by_adapter = True
                     logger.debug(f"Mod adapter {mod_name} processed the event")
                     break
             except Exception as e:
@@ -588,22 +552,22 @@ class AgentClient:
                 import traceback
                 traceback.print_exc()
         
-        # If no mod adapter processed the event, add it to message threads for agent processing
-        if not processed_by_adapter:
-            logger.debug(f"Event not processed by adapters, adding to message threads for agent processing")
-            
+        if processed_event is None:
+            return
+        # If no mod adapter classified the event, automatically classify using the event name
+        if event.thread_name is None:
             # Create a thread ID for the Event
             if "." in event.event_name:
-                thread_id = "client_thread:" + event.event_name.rsplit(".", 1)[0]
+                event.thread_name = "thread:" + event.event_name.rsplit(".", 1)[0]
             else:
-                thread_id = "client_thread:" + event.event_name
+                event.thread_name = "thread:" + event.event_name
             
-            # Try to add the event to any available mod adapter's message threads
-            if thread_id not in self._general_message_threads:
-                self._general_message_threads[thread_id] = MessageThread()
-            
-            # Add the Event to the thread
-            self._general_message_threads[thread_id].add_message(event)
+        # Try to add the event to any available mod adapter's event threads
+        if event.thread_name not in self._event_threads:
+            self._event_threads[event.thread_name] = EventThread()
+        
+        # Add the Event to the thread
+        self._event_threads[event.thread_name].add_event(event)
     
     async def wait_event(self, 
                        condition: Optional[Callable[[Event], bool]] = None,

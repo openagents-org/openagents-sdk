@@ -11,7 +11,7 @@ import logging
 from openagents.core.base_mod_adapter import BaseModAdapter
 from openagents.models.messages import Event, EventNames, Event
 from openagents.models.tool import AgentAdapterTool
-from openagents.utils.message_util import get_mod_message_thread_id
+from openagents.utils.message_util import get_mod_event_thread_id
 import copy
 
 logger = logging.getLogger(__name__)

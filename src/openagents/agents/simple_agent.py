@@ -5,7 +5,7 @@ import logging
 from typing import Dict, List, Any, Optional, Union
 
 from openagents.agents.runner import AgentRunner
-from openagents.models.message_thread import MessageThread
+from openagents.models.event_thread import EventThread
 from openagents.models.event import Event
 from openagents.models.tool import AgentAdapterTool
 from openagents.utils.verbose import verbose_print
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 user_prompt_template = Template("""
 <conversation>
     <threads>
-        {% for thread_id, thread in message_threads.items() %}
+        {% for thread_id, thread in event_threads.items() %}
         <thread id="{{ thread_id }}">
             {% for message in thread.messages[-10:] %}
             <message sender="{{ message.source_id }}">
@@ -281,13 +281,13 @@ class SimpleAgentRunner(AgentRunner):
             func=lambda reason: f"Action chain completed: {reason}"
         )
     
-    async def react(self, message_threads: Dict[str, MessageThread], incoming_thread_id: str, incoming_message: Event):
+    async def react(self, event_threads: Dict[str, EventThread], incoming_thread_id: str, incoming_message: Event):
         """React to an incoming message using the configured model provider."""
         verbose_print(f">>> Reacting to message: {incoming_message.text_representation} (thread:{incoming_thread_id})")
         
         # Generate the prompt using the template
         prompt_content = user_prompt_template.render(
-            message_threads=message_threads,
+            event_threads=event_threads,
             incoming_thread_id=incoming_thread_id,
             incoming_message=incoming_message
         )

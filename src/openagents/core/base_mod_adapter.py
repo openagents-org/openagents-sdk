@@ -4,7 +4,7 @@ from openagents.core.connectors.grpc_connector import GRPCNetworkConnector
 from openagents.models.messages import Event, EventNames
 from openagents.models.event import Event
 from openagents.models.tool import AgentAdapterTool
-from openagents.models.message_thread import MessageThread
+from openagents.models.event_thread import EventThread
 
 class BaseModAdapter(ABC):
     """Base class for agent adapter level mods in OpenAgents.
@@ -22,7 +22,6 @@ class BaseModAdapter(ABC):
         self._mod_name = mod_name
         self._agent_id = None
         self._connector = None
-        self._message_threads: Dict[str, MessageThread] = {}
 
     def bind_agent(self, agent_id: str) -> None:
         """Bind this mod adapter to an agent.
@@ -39,15 +38,6 @@ class BaseModAdapter(ABC):
             connector: The connector to bind to
         """
         self._connector = connector
-    
-    @property
-    def message_threads(self) -> Dict[str, MessageThread]:
-        """Get the message threads for the mod adapter.
-        
-        Returns:
-            Dict[str, MessageThread]: Dictionary of message threads
-        """
-        return self._message_threads
         
     @property
     def connector(self) -> GRPCNetworkConnector:
@@ -100,25 +90,6 @@ class BaseModAdapter(ABC):
         """
         return True
     
-    def add_message_to_thread(self, thread_id: str, message: Event, requires_response: bool = True, text_representation: str = None) -> None:
-        """Add a message to a conversation thread.
-        
-        Args:
-            thread_id: The ID of the thread to add the message to
-            message: The message to add to the thread
-            requires_response: Whether the message requires a response
-            text_representation: The text representation of the message
-        """
-        if thread_id not in self._message_threads:
-            self._message_threads[thread_id] = MessageThread()
-        
-        # Set the fields directly on the message
-        message.requires_response = requires_response
-        if text_representation:
-            message.text_representation = text_representation
-            
-        self._message_threads[thread_id].add_message(message)
-    
     async def process_incoming_event(self, event: Event) -> Optional[Event]:
         """
         Process an incoming event.
@@ -127,7 +98,8 @@ class BaseModAdapter(ABC):
             event: The event to process
 
         Returns:
-            Optional[Event]: The processed event, or None for stopping the event from being processed further by other adapters
+            Optional[Event]: The processed event, or None for stopping the event from being processed further by other adapters.
+            If this function returns None, the event will also not be added to the event thread, preventing a worker agent to respond to the event.
         """
         return event
 

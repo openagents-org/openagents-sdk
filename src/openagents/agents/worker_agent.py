@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 from openagents.agents.runner import AgentRunner
 from openagents.core.workspace import Workspace
-from openagents.models.message_thread import MessageThread
+from openagents.models.event_thread import EventThread
 from openagents.models.event import Event
 from openagents.models.event_response import EventResponse
 from openagents.models.messages import EventNames
@@ -401,7 +401,7 @@ class WorkerAgent(AgentRunner):
         
         await super().teardown()
 
-    async def react(self, message_threads: Dict[str, MessageThread], incoming_thread_id: str, incoming_message: Event):
+    async def react(self, event_threads: Dict[str, EventThread], incoming_thread_id: str, incoming_message: Event):
         """Route incoming messages to appropriate handlers."""
         # Skip our own messages if configured to do so
         if self.ignore_own_messages and incoming_message.source_id == self.client.agent_id:

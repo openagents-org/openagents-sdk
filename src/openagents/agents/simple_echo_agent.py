@@ -3,7 +3,7 @@ import logging
 from typing import Dict, List, Optional
 
 from openagents.agents.runner import AgentRunner
-from openagents.models.message_thread import MessageThread
+from openagents.models.event_thread import EventThread
 from openagents.models.messages import Event, EventNames
 from openagents.models.event import Event
 
@@ -30,11 +30,11 @@ class SimpleEchoAgentRunner(AgentRunner):
         self.echo_prefix = echo_prefix or "Echo"
         self.message_count = 0
 
-    async def react(self, message_threads: Dict[str, MessageThread], incoming_thread_id: str, incoming_message: Event):
+    async def react(self, event_threads: Dict[str, EventThread], incoming_thread_id: str, incoming_message: Event):
         """React to incoming messages by echoing them back.
         
         Args:
-            message_threads: Dictionary of all message threads available to the agent
+            event_threads: Dictionary of all message threads available to the agent
             incoming_thread_id: ID of the thread containing the incoming message
             incoming_message: The incoming message to react to
         """
