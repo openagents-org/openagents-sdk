@@ -9,16 +9,30 @@ routing and provides intuitive handler methods.
 import logging
 import re
 import asyncio
+import inspect
 from abc import abstractmethod
 from typing import Dict, List, Optional, Any, Callable, Union
-from dataclasses import dataclass
 
 from openagents.agents.runner import AgentRunner
 from openagents.core.workspace import Workspace
-from openagents.models.message_thread import MessageThread
+from openagents.models.event_thread import EventThread
 from openagents.models.event import Event
 from openagents.models.event_response import EventResponse
 from openagents.models.messages import EventNames
+from openagents.models.event_context import (
+    EventContext,
+    ChannelMessageContext,
+    ReplyMessageContext,
+    ReactionContext,
+    FileContext,
+    ProjectEventContext,
+    ProjectCompletedContext,
+    ProjectFailedContext,
+    ProjectMessageContext,
+    ProjectInputContext,
+    ProjectNotificationContext,
+    ProjectAgentContext
+)
 from openagents.config.globals import DEFAULT_TRANSPORT_ADDRESS
 from openagents.mods.workspace.messaging.thread_messages import (
     Event as ThreadEvent,
@@ -47,213 +61,49 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class MessageContext:
-    """Base context class for all message types."""
-    message_id: str
-    source_id: str
-    timestamp: int
-    payload: Dict[str, Any]
-    raw_message: Event
+def on_event(pattern: str):
+    """
+    Decorator for defining event handlers in WorkerAgent subclasses.
     
-    @property
-    def text(self) -> str:
-        """Extract text content from the message."""
-        if isinstance(self.payload, dict):
-            return self.payload.get('text', str(self.payload))
-        return str(self.payload)
-
-
-@dataclass
-class EventContext(MessageContext):
-    """Context for direct messages."""
-    target_agent_id: str
-    quoted_message_id: Optional[str] = None
-    quoted_text: Optional[str] = None
-
-
-@dataclass
-class ChannelMessageContext(MessageContext):
-    """Context for channel messages."""
-    channel: str
-    mentioned_agent_id: Optional[str] = None
-    quoted_message_id: Optional[str] = None
-    quoted_text: Optional[str] = None
+    This decorator allows you to define custom event handlers that will be called
+    when events matching the specified pattern are received.
     
-    @property
-    def mentions(self) -> List[str]:
-        """Extract all mentioned agent IDs from the message text."""
-        # Look for @agent_id patterns in the text
-        mention_pattern = r'@([a-zA-Z0-9_-]+)'
-        return re.findall(mention_pattern, self.text)
-
-
-@dataclass
-class ReplyMessageContext(MessageContext):
-    """Context for reply messages."""
-    reply_to_id: str
-    target_agent_id: Optional[str] = None
-    channel: Optional[str] = None
-    thread_level: int = 1
-    quoted_message_id: Optional[str] = None
-    quoted_text: Optional[str] = None
-
-
-@dataclass
-class ReactionContext:
-    """Context for reaction messages."""
-    message_id: str
-    target_message_id: str
-    reactor_id: str
-    reaction_type: str
-    action: str  # 'add' or 'remove'
-    timestamp: int
-    raw_message: Event
-
-
-@dataclass
-class FileContext:
-    """Context for file messages."""
-    message_id: str
-    source_id: str
-    filename: str
-    file_content: str  # Base64 encoded
-    mime_type: str
-    file_size: int
-    timestamp: int
-    raw_message: Event
+    Args:
+        pattern: Event name pattern to match. Supports wildcards with '*'.
+                Examples: "myplugin.message.received", "project.*", "thread.channel_message.*"
     
-    @property
-    def content_bytes(self) -> bytes:
-        """Decode the base64 file content to bytes."""
-        import base64
-        return base64.b64decode(self.file_content)
+    Example:
+        class MyAgent(WorkerAgent):
+            @on_event("myplugin.message.received")
+            async def handle_plugin_message(self, context: EventContext):
+                print(f"Got plugin message: {context.payload}")
+            
+            @on_event("project.*")
+            async def handle_any_project_event(self, context: EventContext):
+                print(f"Project event: {context.incoming_event.event_name}")
     
-    @property
-    def payload_bytes(self) -> bytes:
-        """Decode the base64 file content to bytes (modern API name)."""
-        return self.content_bytes
-
-
-# Project-related context classes (only available if project mod is enabled)
-@dataclass
-class ProjectEventContext:
-    """Base context for project events."""
-    project_id: str
-    project_name: str
-    event_type: str
-    timestamp: int
-    source_agent_id: str
-    data: Dict[str, Any]
-    raw_event: Any  # Event if available
+    Note:
+        - The decorated function must be async
+        - The function should accept (self, context: EventContext) as parameters
+        - Multiple handlers can be defined for the same pattern
+        - Handlers are executed before built-in WorkerAgent handlers
+    """
+    def decorator(func: Callable):
+        # Validate that the function is async
+        if not asyncio.iscoroutinefunction(func):
+            raise ValueError(f"@on_event decorated function '{func.__name__}' must be async")
+        
+        # Validate function signature
+        sig = inspect.signature(func)
+        params = list(sig.parameters.keys())
+        if len(params) < 2 or params[0] != 'self':
+            raise ValueError(f"@on_event decorated function '{func.__name__}' must have signature (self, context: EventContext)")
+        
+        # Store the event pattern on the function for later collection
+        func._event_pattern = pattern
+        return func
     
-    @property
-    def project_channel(self) -> Optional[str]:
-        """Get the project channel name if available."""
-        return self.data.get("channel_name")
-
-
-@dataclass
-class ProjectCompletedContext(ProjectEventContext):
-    """Context for project completion events."""
-    results: Dict[str, Any]
-    completed_by: str
-    completion_summary: str
-    
-    def __post_init__(self):
-        # Extract completion-specific data
-        if "results" in self.data:
-            self.results = self.data["results"]
-        if "completed_by" in self.data:
-            self.completed_by = self.data["completed_by"]
-        if "completion_summary" in self.data:
-            self.completion_summary = self.data["completion_summary"]
-
-
-@dataclass
-class ProjectFailedContext(ProjectEventContext):
-    """Context for project failure events."""
-    error_message: str
-    error_type: str
-    failed_by: str
-    
-    def __post_init__(self):
-        # Extract failure-specific data
-        if "error_message" in self.data:
-            self.error_message = self.data["error_message"]
-        if "error_type" in self.data:
-            self.error_type = self.data["error_type"]
-        if "failed_by" in self.data:
-            self.failed_by = self.data["failed_by"]
-
-
-@dataclass
-class ProjectMessageContext(ProjectEventContext):
-    """Context for project channel messages."""
-    channel: str
-    message_text: str
-    sender_id: str
-    message_id: str
-    
-    def __post_init__(self):
-        # Extract message-specific data
-        if "channel" in self.data:
-            self.channel = self.data["channel"]
-        if "message_text" in self.data:
-            self.message_text = self.data["message_text"]
-        if "message_id" in self.data:
-            self.message_id = self.data["message_id"]
-
-
-@dataclass
-class ProjectInputContext(ProjectEventContext):
-    """Context for project input requirements."""
-    input_type: str
-    prompt: str
-    options: List[str]
-    timeout: Optional[int]
-    
-    def __post_init__(self):
-        # Extract input-specific data
-        if "input_type" in self.data:
-            self.input_type = self.data["input_type"]
-        if "prompt" in self.data:
-            self.prompt = self.data["prompt"]
-        if "options" in self.data:
-            self.options = self.data["options"]
-        if "timeout" in self.data:
-            self.timeout = self.data["timeout"]
-
-
-@dataclass
-class ProjectNotificationContext(ProjectEventContext):
-    """Context for project notifications."""
-    notification_type: str
-    content: Dict[str, Any]
-    target_agent_id: Optional[str]
-    
-    def __post_init__(self):
-        # Extract notification-specific data
-        if "notification_type" in self.data:
-            self.notification_type = self.data["notification_type"]
-        if "content" in self.data:
-            self.content = self.data["content"]
-        if "target_agent_id" in self.data:
-            self.target_agent_id = self.data["target_agent_id"]
-
-
-@dataclass
-class ProjectAgentContext(ProjectEventContext):
-    """Context for project agent join/leave events."""
-    agent_id: str
-    action: str  # "joined" or "left"
-    
-    def __post_init__(self):
-        # Extract agent-specific data
-        if "agent_id" in self.data:
-            self.agent_id = self.data["agent_id"]
-        if "action" in self.data:
-            self.action = self.data["action"]
+    return decorator
 
 
 class WorkerAgent(AgentRunner):
@@ -312,6 +162,9 @@ class WorkerAgent(AgentRunner):
         self._message_history_cache: Dict[str, List[Dict[str, Any]]] = {}
         self._pending_history_requests: Dict[str, asyncio.Future] = {}
         
+        # Event handler storage for @on decorated methods
+        self._event_handlers: List[tuple[str, Callable]] = []  # List of (pattern, handler) tuples
+        
         # Project-related state (only used when project mod is available)
         self._active_projects: Dict[str, Dict[str, Any]] = {}
         self._project_channels: Dict[str, str] = {}  # project_id -> channel_name
@@ -319,6 +172,9 @@ class WorkerAgent(AgentRunner):
         self._project_event_queue = None
         self._workspace_client = None
         self._project_mod_available = False
+        
+        # Collect @on decorated event handlers
+        self._collect_event_handlers()
         
         logger.info(f"Initialized WorkerAgent '{self.default_agent_id}' with ID: {agent_id}")
     
@@ -351,6 +207,64 @@ class WorkerAgent(AgentRunner):
                 }
         
         return self._workspace_client
+
+    def _collect_event_handlers(self):
+        """
+        Collect all @on decorated methods from this class and its parent classes.
+        
+        This method scans the class hierarchy for methods with the _event_pattern
+        attribute (set by the @on_event decorator) and stores them for later event routing.
+        """
+        self._event_handlers.clear()
+        
+        # Get all methods from this class and parent classes
+        for cls in self.__class__.__mro__:
+            for method_name in dir(cls):
+                if method_name.startswith('_'):
+                    continue
+                    
+                method = getattr(self, method_name, None)
+                if method is None or not callable(method):
+                    continue
+                
+                # Check if this method has the _event_pattern attribute (set by @on decorator)
+                if hasattr(method, '_event_pattern'):
+                    pattern = method._event_pattern
+                    self._event_handlers.append((pattern, method))
+                    logger.debug(f"Collected event handler for pattern '{pattern}': {method_name}")
+        
+        if self._event_handlers:
+            patterns = [pattern for pattern, _ in self._event_handlers]
+            logger.info(f"WorkerAgent '{self.default_agent_id}' collected {len(self._event_handlers)} event handlers for patterns: {patterns}")
+
+    async def _execute_custom_event_handlers(self, context: EventContext) -> bool:
+        """
+        Execute custom @on decorated event handlers that match the given event.
+        
+        Args:
+            context: The event context to handle
+            
+        Returns:
+            True if at least one custom handler was executed, False otherwise
+        """
+        handlers_executed = 0
+        
+        for pattern, handler in self._event_handlers:
+            try:
+                # Use the Event's matches_pattern method to check if pattern matches
+                if context.incoming_event.matches_pattern(pattern):
+                    logger.debug(f"Executing custom handler for pattern '{pattern}': {handler.__name__}")
+                    await handler(context)
+                    handlers_executed += 1
+                    
+            except Exception as e:
+                logger.error(f"Error executing custom event handler {handler.__name__} for pattern '{pattern}': {e}")
+                # Continue executing other handlers even if one fails
+        
+        if handlers_executed > 0:
+            logger.debug(f"Executed {handlers_executed} custom event handlers for event '{context.incoming_event.event_name}'")
+        
+        return handlers_executed > 0
 
     async def setup(self):
         """Setup the WorkerAgent with thread messaging."""
@@ -401,114 +315,117 @@ class WorkerAgent(AgentRunner):
         
         await super().teardown()
 
-    async def react(self, message_threads: Dict[str, MessageThread], incoming_thread_id: str, incoming_message: Event):
+    async def react(self, context: EventContext):
         """Route incoming messages to appropriate handlers."""
         # Skip our own messages if configured to do so
-        if self.ignore_own_messages and incoming_message.source_id == self.client.agent_id:
+        if self.ignore_own_messages and context.incoming_event.source_id == self.client.agent_id:
             return
         
-        logger.debug(f"WorkerAgent '{self.default_agent_id}' processing event: {incoming_message.event_name} from {incoming_message.source_id}")
+        logger.debug(f"WorkerAgent '{self.default_agent_id}' processing event: {context.incoming_event.event_name} from {context.incoming_event.source_id}")
+        
+        # First, execute custom @on decorated event handlers
+        await self._execute_custom_event_handlers(context)
+
         
         # Handle different event types based on event names
-        event_name = incoming_message.event_name
+        event_name = context.incoming_event.event_name
         
         if event_name == "agent.message":
-            await self._handle_raw_direct_message(incoming_message)
+            await self._handle_raw_direct_message(context)
         elif event_name.startswith("thread.direct_message."):
-            await self._handle_thread_direct_message(incoming_message)
+            await self._handle_thread_direct_message(context)
         elif event_name.startswith("thread.channel_message."):
-            await self._handle_thread_channel_message(incoming_message)
+            await self._handle_thread_channel_message(context)
         elif event_name.startswith("thread.reaction."):
-            await self._handle_thread_reaction(incoming_message)
+            await self._handle_thread_reaction(context)
         elif event_name.startswith("thread.file."):
-            await self._handle_thread_file(incoming_message)
+            await self._handle_thread_file(context)
         elif event_name.startswith("thread."):
-            await self._handle_thread_event(incoming_message)
+            await self._handle_thread_event(context)
         elif event_name.startswith("system."):
-            await self._handle_system_message(incoming_message)
+            await self._handle_system_message(context)
         else:
             logger.debug(f"Unhandled event type: {event_name}")
 
 
-    async def _handle_raw_direct_message(self, message: Event):
+    async def _handle_raw_direct_message(self, context: EventContext):
         """Handle direct messages."""
-        context = EventContext(
-            message_id=message.event_id,
-            source_id=message.source_id,
-            timestamp=message.timestamp,
-            payload=message.payload,
-            raw_message=message,
-            target_agent_id=message.destination_id,
-            quoted_message_id=getattr(message, 'quoted_message_id', None),
-            quoted_text=getattr(message, 'quoted_text', None)
+        # Create specific context for direct messages with additional fields
+        direct_context = ChannelMessageContext(
+            incoming_event=context.incoming_event,
+            event_threads=context.event_threads,
+            incoming_thread_id=context.incoming_thread_id,
+            channel="direct",  # Special channel for direct messages
+            mentioned_agent_id=context.incoming_event.destination_id,
+            quoted_message_id=getattr(context.incoming_event, 'quoted_message_id', None),
+            quoted_text=getattr(context.incoming_event, 'quoted_text', None)
         )
         
         # Check for command patterns
-        if await self._handle_command(context):
+        if await self._handle_command(direct_context):
             return
         
         await self.on_direct(context)
 
-    async def _handle_broadcast_message(self, message: Event):
+    async def _handle_broadcast_message(self, context: EventContext):
         """Handle broadcast messages (treat as channel messages to 'general')."""
         # Convert broadcast to channel message context
-        context = ChannelMessageContext(
-            message_id=message.event_id,
-            source_id=message.source_id,
-            timestamp=message.timestamp,
-            payload=message.payload,
-            raw_message=message,
+        channel_context = ChannelMessageContext(
+            incoming_event=context.incoming_event,
+            event_threads=context.event_threads,
+            incoming_thread_id=context.incoming_thread_id,
             channel="general"  # Default channel for broadcasts
         )
         
         # Check if we're mentioned
-        if self.is_mentioned(context.text):
-            await self.on_channel_mention(context)
+        if self.is_mentioned(channel_context.text):
+            await self.on_channel_mention(channel_context)
         else:
-            await self.on_channel_post(context)
+            await self.on_channel_post(channel_context)
 
-    async def _handle_system_message(self, message: Event):
+    async def _handle_system_message(self, context: EventContext):
         """Handle mod messages from thread messaging."""
-        if message.relevant_mod != 'thread_messaging':
+        if context.incoming_event.relevant_mod != 'thread_messaging':
             return
         
         # Thread mod messages are now handled through event-specific handlers
         pass
 
-    async def _handle_thread_direct_message(self, message: Event):
+    async def _handle_thread_direct_message(self, context: EventContext):
         """Handle thread direct message events."""
-        if message.event_name == "thread.direct_message.notification":
-            await self._handle_direct_message_notification(message)
+        if context.incoming_event.event_name == "thread.direct_message.notification":
+            await self._handle_direct_message_notification(context)
         else:
-            logger.debug(f"Unhandled thread direct message event: {message.event_name}")
+            logger.debug(f"Unhandled thread direct message event: {context.incoming_event.event_name}")
 
-    async def _handle_thread_channel_message(self, message: Event):
+    async def _handle_thread_channel_message(self, context: EventContext):
         """Handle thread channel message events."""
-        if message.event_name == "thread.channel_message.notification":
-            await self._handle_channel_notification(message)
+        if context.incoming_event.event_name == "thread.channel_message.notification":
+            await self._handle_channel_notification(context)
         else:
-            logger.debug(f"Unhandled thread channel message event: {message.event_name}")
+            logger.debug(f"Unhandled thread channel message event: {context.incoming_event.event_name}")
 
-    async def _handle_thread_reaction(self, message: Event):
+    async def _handle_thread_reaction(self, context: EventContext):
         """Handle thread reaction events."""
-        if message.event_name == "thread.reaction.notification":
-            await self._handle_reaction_notification(message)
+        if context.incoming_event.event_name == "thread.reaction.notification":
+            await self._handle_reaction_notification(context)
         else:
-            logger.debug(f"Unhandled thread reaction event: {message.event_name}")
+            logger.debug(f"Unhandled thread reaction event: {context.incoming_event.event_name}")
 
-    async def _handle_thread_file(self, message: Event):
+    async def _handle_thread_file(self, context: EventContext):
         """Handle thread file events."""
-        if message.event_name in ["thread.file.upload_response", "thread.file.download_response"]:
-            await self._handle_file_notification(message)
+        if context.incoming_event.event_name in ["thread.file.upload_response", "thread.file.download_response"]:
+            await self._handle_file_notification(context)
         else:
-            logger.debug(f"Unhandled thread file event: {message.event_name}")
+            logger.debug(f"Unhandled thread file event: {context.incoming_event.event_name}")
 
-    async def _handle_thread_event(self, message: Event):
+    async def _handle_thread_event(self, context: EventContext):
         """Handle other thread events."""
-        logger.debug(f"Generic thread event: {message.event_name}")
+        logger.debug(f"Generic thread event: {context.incoming_event.event_name}")
 
-    async def _handle_channel_notification(self, message: Event):
+    async def _handle_channel_notification(self, context: EventContext):
         """Handle channel message notifications."""
+        message = context.incoming_event
         channel_msg_data = message.payload.get("message", {})
         channel = message.payload.get("channel", "")
         
@@ -850,7 +767,7 @@ class WorkerAgent(AgentRunner):
         logger.info(f"🔧 WORKER_AGENT: Calling on_direct with source={source_id}, text='{context.text}'")
         await self.on_direct(context)
 
-    async def _handle_command(self, context: MessageContext) -> bool:
+    async def _handle_command(self, context: EventContext) -> bool:
         """Handle registered text commands."""
         text = context.text.strip()
         
@@ -1033,29 +950,50 @@ class WorkerAgent(AgentRunner):
                     logger.warning("Network events not available for cleanup")
             except Exception as e:
                 logger.error(f"Error cleaning up project subscription: {e}")
+    
+    def agent(
+        self,
+        context: EventContext,
+        instruction: Optional[str] = None,
+    ):
+        """
+        Let the agent respond to the context and decide it's action automatically.
 
-    # Abstract handler methods that users should override
-    async def on_direct(self, msg: EventContext):
+        Args:
+            context: The event context containing incoming event, threads, and thread ID
+            instruction: The instruction for the agent to respond to the context
+        """
+
+        pass
+
+    async def on_direct(self, context: EventContext):
         """Handle direct messages. Override this method."""
         pass
 
-    async def on_channel_post(self, msg: ChannelMessageContext):
+        pass
+    
+    # Abstract handler methods that users should override
+    async def on_direct(self, context: EventContext):
+        """Handle direct messages. Override this method."""
+        pass
+
+    async def on_channel_post(self, context: ChannelMessageContext):
         """Handle new channel posts. Override this method."""
         pass
 
-    async def on_channel_reply(self, msg: ReplyMessageContext):
+    async def on_channel_reply(self, context: ReplyMessageContext):
         """Handle replies in channels. Override this method."""
         pass
 
-    async def on_channel_mention(self, msg: ChannelMessageContext):
+    async def on_channel_mention(self, context: ChannelMessageContext):
         """Handle when agent is mentioned in channels. Override this method."""
         pass
 
-    async def on_reaction(self, msg: ReactionContext):
+    async def on_reaction(self, context: ReactionContext):
         """Handle reactions to messages. Override this method."""
         pass
 
-    async def on_file_received(self, msg: FileContext):
+    async def on_file_received(self, context: FileContext):
         """Handle file uploads. Override this method."""
         pass
 
@@ -1068,43 +1006,43 @@ class WorkerAgent(AgentRunner):
         pass
 
     # Project handler methods (only called when project mod is enabled)
-    async def on_project_created(self, event: ProjectEventContext):
+    async def on_project_created(self, context: ProjectEventContext):
         """Handle project creation events. Override this method."""
         pass
 
-    async def on_project_started(self, event: ProjectEventContext):
+    async def on_project_started(self, context: ProjectEventContext):
         """Handle project start events. Override this method."""
         pass
 
-    async def on_project_completed(self, event: ProjectCompletedContext):
+    async def on_project_completed(self, context: ProjectCompletedContext):
         """Handle project completion events. Override this method."""
         pass
 
-    async def on_project_failed(self, event: ProjectFailedContext):
+    async def on_project_failed(self, context: ProjectFailedContext):
         """Handle project failure events. Override this method."""
         pass
 
-    async def on_project_stopped(self, event: ProjectEventContext):
+    async def on_project_stopped(self, context: ProjectEventContext):
         """Handle project stop events. Override this method."""
         pass
 
-    async def on_project_message(self, event: ProjectMessageContext):
+    async def on_project_message(self, context: ProjectMessageContext):
         """Handle project channel messages. Override this method."""
         pass
 
-    async def on_project_input_required(self, event: ProjectInputContext):
+    async def on_project_input_required(self, context: ProjectInputContext):
         """Handle project input requirements. Override this method."""
         pass
 
-    async def on_project_notification(self, event: ProjectNotificationContext):
+    async def on_project_notification(self, context: ProjectNotificationContext):
         """Handle project notifications. Override this method."""
         pass
 
-    async def on_project_joined(self, event: ProjectAgentContext):
+    async def on_project_joined(self, context: ProjectAgentContext):
         """Handle project agent join events. Override this method."""
         pass
 
-    async def on_project_left(self, event: ProjectAgentContext):
+    async def on_project_left(self, context: ProjectAgentContext):
         """Handle project agent leave events. Override this method."""
         pass
 

@@ -18,12 +18,10 @@ import time
 from typing import Dict, Any, List, Optional, Set
 from pathlib import Path
 
-from openagents.core.base_mod import BaseMod
-from openagents.models.messages import Event, EventNames
+from openagents.core.base_mod import BaseMod, mod_event_handler
 from openagents.models.event import Event
 from openagents.models.event_response import EventResponse
 from .thread_messages import (
-    Event,
     ChannelMessage, 
     ReplyMessage,
     FileUploadMessage,
@@ -111,18 +109,6 @@ class ThreadMessagingNetworkMod(BaseMod):
         """Initialize the thread messaging mod for a network."""
         super().__init__(mod_name=mod_name)
         
-        # Register event handlers using the elegant pattern
-        self.register_event_handler(self._handle_agent_message, "agent.message")
-        
-        # Register specific thread event handlers
-        self.register_event_handler(self._handle_thread_reply, ["thread.reply.sent", "thread.reply.post"])
-        self.register_event_handler(self._handle_thread_file_upload, ["thread.file.upload", "thread.file.upload_requested"])
-        self.register_event_handler(self._handle_thread_file_operation, ["thread.file.download", "thread.file.operation"])
-        self.register_event_handler(self._handle_thread_channels, ["thread.channels.info", "thread.channels.list"])
-        self.register_event_handler(self._handle_thread_message_retrieval, ["thread.messages.retrieve", "thread.channel_messages.retrieve", "thread.direct_messages.retrieve"])
-        self.register_event_handler(self._handle_thread_reactions, ["thread.reaction.add", "thread.reaction.remove", "thread.reaction.toggle"])
-        self.register_event_handler(self._handle_thread_direct_message, ["thread.direct_message.send"])
-        self.register_event_handler(self._handle_thread_channel_message, ["thread.channel_message.post"])
         
         # Initialize mod state
         self.active_agents: Set[str] = set()
@@ -341,6 +327,7 @@ class ThreadMessagingNetworkMod(BaseMod):
         
         return None  # Don't intercept the unregistration event
     
+    @mod_event_handler("agent.message")
     async def _handle_agent_message(self, event: Event) -> Optional[EventResponse]:
         """Handle agent message events (both direct and broadcast).
         
@@ -435,7 +422,125 @@ class ThreadMessagingNetworkMod(BaseMod):
         
         return content
     
-    async def _handle_thread_reply(self, event: Event) -> Optional[EventResponse]:
+    def _create_event_response(self, success: bool, message: str, data: Dict[str, Any] = None) -> EventResponse:
+        """Create a standardized event response."""
+        return EventResponse(
+            success=success,
+            message=message,
+            data=data or {}
+        )
+    
+    async def _process_thread_event(self, event: Event, message_class, processor_func, success_message: str):
+        """Generic helper for processing thread events.
+        
+        Args:
+            event: The event to process
+            message_class: The message class to instantiate
+            processor_func: The function to process the message
+            success_message: Success message for the response
+        """
+        content = self._prepare_thread_event_content(event)
+        if content is None:
+            return None
+        
+        try:
+            inner_message = message_class(**content)
+            self._add_to_history(inner_message)
+            
+            # Call the processor function (handle both async and sync)
+            import asyncio
+            if asyncio.iscoroutinefunction(processor_func):
+                result_data = await processor_func(inner_message)
+            else:
+                result_data = processor_func(inner_message)
+            
+            # Handle different return types
+            if isinstance(result_data, dict):
+                if "success" in result_data:
+                    # This is a response dict with operation status
+                    # Event processing succeeds, but the operation might have failed
+                    return self._create_event_response(
+                        success=True,  # Event was processed successfully
+                        message=success_message if result_data["success"] else result_data.get("error", "Unknown error"),
+                        data=result_data
+                    )
+                else:
+                    # This is just data, assume success
+                    return self._create_event_response(
+                        success=True,
+                        message=success_message,
+                        data=result_data
+                    )
+            else:
+                # No return data, assume success
+                return self._create_event_response(
+                    success=True,
+                    message=success_message,
+                    data={"event_name": event.event_name, "event_id": event.event_id}
+                )
+        except Exception as e:
+            logger.error(f"Error processing {event.event_name}: {e}")
+            return self._create_event_response(
+                success=False,
+                message=f"Error processing {event.event_name}: {str(e)}",
+                data={"error": str(e)}
+            )
+    
+    def _validate_reaction_target(self, target_message_id: str, message: ReactionMessage) -> Dict[str, Any]:
+        """Validate that a reaction target message exists.
+        
+        Returns:
+            Dict with error response if validation fails, empty dict if valid
+        """
+        if target_message_id not in self.message_history:
+            logger.warning(f"Cannot react: target message {target_message_id} not found")
+            return {
+                "success": False,
+                "error": f"Target message {target_message_id} not found",
+                "target_message_id": target_message_id,
+                "reaction_type": message.reaction_type,
+                "request_id": self._get_request_id(message)
+            }
+        return {}
+    
+    def _initialize_reaction_storage(self, target_message_id: str, reaction_type: str):
+        """Initialize reaction storage for a message and reaction type."""
+        if target_message_id not in self.reactions:
+            self.reactions[target_message_id] = {}
+        
+        if reaction_type not in self.reactions[target_message_id]:
+            self.reactions[target_message_id][reaction_type] = set()
+    
+    def _cleanup_empty_reactions(self, target_message_id: str, reaction_type: str):
+        """Clean up empty reaction sets and message entries."""
+        if not self.reactions[target_message_id][reaction_type]:
+            del self.reactions[target_message_id][reaction_type]
+        
+        if not self.reactions[target_message_id]:
+            del self.reactions[target_message_id]
+    
+    def _create_reaction_response(self, target_message_id: str, reaction_type: str, action_taken: str, success: bool, message: ReactionMessage) -> Dict[str, Any]:
+        """Create a standardized reaction response."""
+        return {
+            "success": success,
+            "target_message_id": target_message_id,
+            "reaction_type": reaction_type,
+            "action_taken": action_taken,
+            "total_reactions": len(self.reactions.get(target_message_id, {}).get(reaction_type, set())),
+            "request_id": self._get_request_id(message)
+        }
+    
+    @mod_event_handler("thread.reply.sent")
+    async def _handle_thread_reply_sent(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread reply sent events."""
+        return await self._handle_thread_reply_common(event)
+    
+    @mod_event_handler("thread.reply.post")
+    async def _handle_thread_reply_post(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread reply post events."""
+        return await self._handle_thread_reply_common(event)
+    
+    async def _handle_thread_reply_common(self, event: Event) -> Optional[EventResponse]:
         """Handle thread reply events.
         
         Args:
@@ -466,164 +571,127 @@ class ThreadMessagingNetworkMod(BaseMod):
             logger.error(f"Error processing thread reply event: {e}")
             return None
     
+    @mod_event_handler("thread.file.upload")
     async def _handle_thread_file_upload(self, event: Event) -> Optional[EventResponse]:
-        """Handle thread file upload events.
-        
-        Args:
-            event: The thread file upload event to process
-            
-        Returns:
-            Optional[EventResponse]: The response to the event with file upload data
-        """
-        content = self._prepare_thread_event_content(event)
-        if content is None:
-            return None
-        
-        try:
-            inner_message = FileUploadMessage(**content)
-            self._add_to_history(inner_message)
-            upload_data = await self._process_file_upload(inner_message)
-            
-            return EventResponse(
-                success=True,
-                message=f"Thread file upload event {event.event_name} processed successfully",
-                data=upload_data
-            )
-        except Exception as e:
-            logger.error(f"Error processing thread file upload event: {e}")
-            return None
+        """Handle thread file upload events."""
+        return await self._process_thread_event(
+            event, 
+            FileUploadMessage, 
+            self._process_file_upload, 
+            "File uploaded successfully"
+        )
     
+    @mod_event_handler("thread.file.upload_requested")
+    async def _handle_thread_file_upload_requested(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread file upload requested events."""
+        return await self._process_thread_event(
+            event, 
+            FileUploadMessage, 
+            self._process_file_upload, 
+            "File upload requested successfully"
+        )
+    
+    @mod_event_handler("thread.file.download")
+    async def _handle_thread_file_download(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread file download events."""
+        return await self._process_thread_event(
+            event, 
+            FileOperationMessage, 
+            self._process_file_operation, 
+            "File download completed successfully"
+        )
+    
+    @mod_event_handler("thread.file.operation")
     async def _handle_thread_file_operation(self, event: Event) -> Optional[EventResponse]:
-        """Handle thread file operation events.
-        
-        Args:
-            event: The thread file operation event to process
-            
-        Returns:
-            Optional[EventResponse]: The response to the event
-        """
-        content = self._prepare_thread_event_content(event)
-        if content is None:
-            return None
-        
-        try:
-            inner_message = FileOperationMessage(**content)
-            inner_message.event_name = event.event_name
-            self._add_to_history(inner_message)
-            operation_data = await self._process_file_operation(inner_message)
-            
-            return EventResponse(
-                success=True,
-                message=f"Thread file operation event {event.event_name} processed successfully",
-                data=operation_data
-            )
-        except Exception as e:
-            logger.error(f"Error processing thread file operation event: {e}")
-            return None
+        """Handle thread file operation events."""
+        return await self._process_thread_event(
+            event, 
+            FileOperationMessage, 
+            self._process_file_operation, 
+            "File operation completed successfully"
+        )
     
-    async def _handle_thread_channels(self, event: Event) -> Optional[EventResponse]:
-        """Handle thread channel info events.
-        
-        Args:
-            event: The thread channel info event to process
-            
-        Returns:
-            Optional[EventResponse]: The response to the event with channel data
-        """
-        content = self._prepare_thread_event_content(event)
-        if content is None:
-            return None
-        
-        try:
-            inner_message = ChannelInfoMessage(**content)
-            inner_message.event_name = event.event_name
-            self._add_to_history(inner_message)
-            
-            # Get the channel info data directly
-            channel_data = self._process_channel_info_request(inner_message)
-            
-            return EventResponse(
-                success=channel_data["success"],
-                message=f"Channel info retrieved successfully" if channel_data["success"] else channel_data.get("error", "Unknown error"),
-                data=channel_data
-            )
-        except Exception as e:
-            logger.error(f"Error processing thread channel info event: {e}")
-            return EventResponse(
-                success=False,
-                message=f"Error processing channel info request: {str(e)}",
-                data={"error": str(e)}
-            )
+    @mod_event_handler("thread.channels.info")
+    async def _handle_thread_channels_info(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread channels info events."""
+        return await self._process_thread_event(
+            event, 
+            ChannelInfoMessage, 
+            self._process_channel_info_request, 
+            "Channel info retrieved successfully"
+        )
     
-    async def _handle_thread_message_retrieval(self, event: Event) -> Optional[EventResponse]:
-        """Handle thread message retrieval events.
-        
-        Args:
-            event: The thread message retrieval event to process
-            
-        Returns:
-            Optional[EventResponse]: The response to the event with message data
-        """
-        content = self._prepare_thread_event_content(event)
-        if content is None:
-            return None
-        
-        try:
-            inner_message = MessageRetrievalMessage(**content)
-            inner_message.event_name = event.event_name
-            self._add_to_history(inner_message)
-            
-            # Get the message retrieval data directly
-            retrieval_data = self._process_message_retrieval_request(inner_message)
-            
-            return EventResponse(
-                success=retrieval_data["success"],
-                message=f"Message retrieval completed successfully" if retrieval_data["success"] else retrieval_data.get("error", "Unknown error"),
-                data=retrieval_data
-            )
-        except Exception as e:
-            logger.error(f"Error processing thread message retrieval event: {e}")
-            return EventResponse(
-                success=False,
-                message=f"Error processing message retrieval request: {str(e)}",
-                data={"error": str(e)}
-            )
+    @mod_event_handler("thread.channels.list")
+    async def _handle_thread_channels_list(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread channels list events."""
+        return await self._process_thread_event(
+            event, 
+            ChannelInfoMessage, 
+            self._process_channel_info_request, 
+            "Channel list retrieved successfully"
+        )
     
-    async def _handle_thread_reactions(self, event: Event) -> Optional[EventResponse]:
-        """Handle thread reaction events.
-        
-        Args:
-            event: The thread reaction event to process
-            
-        Returns:
-            Optional[EventResponse]: The response to the event with reaction data
-        """
-        content = self._prepare_thread_event_content(event)
-        if content is None:
-            return None
-        
-        try:
-            logger.debug(f"Creating ReactionMessage with content: {content}")
-            inner_message = ReactionMessage(**content)
-            inner_message.event_name = event.event_name
-            self._add_to_history(inner_message)
-            
-            # Get the reaction data directly
-            reaction_data = await self._process_reaction_message(inner_message)
-            
-            return EventResponse(
-                success=reaction_data["success"],
-                message=f"Reaction processed successfully" if reaction_data["success"] else reaction_data.get("error", "Unknown error"),
-                data=reaction_data
-            )
-        except Exception as e:
-            logger.error(f"Error processing thread reaction event: {e}")
-            return EventResponse(
-                success=False,
-                message=f"Error processing reaction request: {str(e)}",
-                data={"error": str(e)}
-            )
+    @mod_event_handler("thread.messages.retrieve")
+    async def _handle_thread_messages_retrieve(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread messages retrieve events."""
+        return await self._process_thread_event(
+            event, 
+            MessageRetrievalMessage, 
+            lambda msg: self._handle_channel_messages_retrieval(msg), 
+            "Message retrieval completed successfully"
+        )
     
+    @mod_event_handler("thread.channel_messages.retrieve")
+    async def _handle_thread_channel_messages_retrieve(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread channel messages retrieve events."""
+        return await self._process_thread_event(
+            event, 
+            MessageRetrievalMessage, 
+            lambda msg: self._handle_channel_messages_retrieval(msg), 
+            "Channel message retrieval completed successfully"
+        )
+    
+    @mod_event_handler("thread.direct_messages.retrieve")
+    async def _handle_thread_direct_messages_retrieve(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread direct messages retrieve events."""
+        return await self._process_thread_event(
+            event, 
+            MessageRetrievalMessage, 
+            lambda msg: self._handle_direct_messages_retrieval(msg), 
+            "Direct message retrieval completed successfully"
+        )
+    
+    @mod_event_handler("thread.reaction.add")
+    async def _handle_thread_reaction_add(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread reaction add events."""
+        return await self._process_thread_event(
+            event, 
+            ReactionMessage, 
+            self._process_add_reaction, 
+            "Reaction added successfully"
+        )
+    
+    @mod_event_handler("thread.reaction.remove")
+    async def _handle_thread_reaction_remove(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread reaction remove events."""
+        return await self._process_thread_event(
+            event, 
+            ReactionMessage, 
+            self._process_remove_reaction, 
+            "Reaction removed successfully"
+        )
+    
+    @mod_event_handler("thread.reaction.toggle")
+    async def _handle_thread_reaction_toggle(self, event: Event) -> Optional[EventResponse]:
+        """Handle thread reaction toggle events."""
+        return await self._process_thread_event(
+            event, 
+            ReactionMessage, 
+            self._process_toggle_reaction, 
+            "Reaction toggled successfully"
+        )
+    
+    @mod_event_handler("thread.direct_message.send")
     async def _handle_thread_direct_message(self, event: Event) -> Optional[EventResponse]:
         """Handle thread direct message events.
         
@@ -675,6 +743,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             logger.error(f"Error processing thread direct message event: {e}")
             return None
     
+    @mod_event_handler("thread.channel_message.post")
     async def _handle_thread_channel_message(self, event: Event) -> Optional[EventResponse]:
         """Handle thread channel message events.
         
@@ -1020,23 +1089,9 @@ class ThreadMessagingNetworkMod(BaseMod):
         Returns:
             Dict[str, Any]: File operation response data
         """
-        # Try to determine action from event_name first, fallback to message.action
-        action = getattr(message, 'action', 'download')
-        
-        # If we have the original event with the message, use its event_name to determine action
-        if hasattr(message, 'event_name'):
-            if "download" in message.event_name:
-                action = "download"
-            # Add other file operations as needed
-        
-        if action == "download":
-            return await self._handle_file_download(message.source_id, message.file_id, message)
-        else:
-            return {
-                "success": False,
-                "error": f"Unknown file operation: {action}",
-                "request_id": self._get_request_id(message)
-            }
+        # File operations are now handled based on specific event patterns
+        # This method assumes download operation since thread.file.download events route here
+        return await self._handle_file_download(message.source_id, message.file_id, message)
     
     async def _handle_file_download(self, agent_id: str, file_id: str, request_message: Event) -> Dict[str, Any]:
         """Handle a file download request.
@@ -1105,37 +1160,23 @@ class ThreadMessagingNetworkMod(BaseMod):
         Returns:
             Dict[str, Any]: The channel info response data
         """
-        # Determine action from event_name if possible, fallback to message.action
-        action = getattr(message, 'action', 'list_channels')
-        
-        # Use event_name to determine action
-        if hasattr(message, 'event_name'):
-            if "list" in message.event_name or "info" in message.event_name:
-                action = "list_channels"
-            # Add other channel actions as needed
-            
-        if action == "list_channels":
-            channels_data = []
-            for channel_name, channel_info in self.channels.items():
-                agents_in_channel = self.network.event_gateway.get_channel_members(channel_name)
-                channels_data.append({
-                    'name': channel_name,
-                    'description': channel_info['description'],
-                    'message_count': channel_info['message_count'],
-                    'thread_count': channel_info['thread_count'],
-                    'agents': agents_in_channel,
-                    'agent_count': len(agents_in_channel)
-                })
-            
-            return {
-                "success": True,
-                "channels": channels_data,
-                "request_id": self._get_request_id(message)
-            }
+        # Channel info operations are now handled based on specific event patterns
+        # Both thread.channels.info and thread.channels.list events route here
+        channels_data = []
+        for channel_name, channel_info in self.channels.items():
+            agents_in_channel = self.network.event_gateway.get_channel_members(channel_name)
+            channels_data.append({
+                'name': channel_name,
+                'description': channel_info['description'],
+                'message_count': channel_info['message_count'],
+                'thread_count': channel_info['thread_count'],
+                'agents': agents_in_channel,
+                'agent_count': len(agents_in_channel)
+            })
         
         return {
-            "success": False,
-            "error": f"Unknown action: {action}",
+            "success": True,
+            "channels": channels_data,
             "request_id": self._get_request_id(message)
         }
     
@@ -1148,31 +1189,17 @@ class ThreadMessagingNetworkMod(BaseMod):
         Returns:
             Dict[str, Any]: The message retrieval response data
         """
-        # Determine action from event_name if possible, fallback to message.action
-        action = getattr(message, 'action', 'retrieve_channel_messages')
-        agent_id = message.source_id
-        
-        # Use event_name to determine action
+        # Message retrieval operations are now handled based on specific event patterns
+        # Route to appropriate handler based on event name
         if hasattr(message, 'event_name'):
-            if "channel_messages" in message.event_name:
-                action = "retrieve_channel_messages"
-            elif "direct_messages" in message.event_name:
-                action = "retrieve_direct_messages"
-            # Default to channel messages if just "messages.retrieve"
-            elif "messages.retrieve" in message.event_name:
-                action = "retrieve_channel_messages"
-        
-        if action == "retrieve_channel_messages":
-            return self._handle_channel_messages_retrieval(message)
-        elif action == "retrieve_direct_messages":
-            return self._handle_direct_messages_retrieval(message)
+            if "direct_messages" in message.event_name:
+                return self._handle_direct_messages_retrieval(message)
+            else:
+                # Default to channel messages for thread.messages.retrieve and thread.channel_messages.retrieve
+                return self._handle_channel_messages_retrieval(message)
         else:
-            return {
-                "action": "unknown_action",
-                "success": False,
-                "error": f"Unknown retrieval action: {action}",
-                "request_id": self._get_request_id(message)
-            }
+            # Fallback for legacy calls without event_name
+            return self._handle_channel_messages_retrieval(message)
     
     def _handle_channel_messages_retrieval(self, message: MessageRetrievalMessage) -> Dict[str, Any]:
         """Handle channel messages retrieval request and return the data.
@@ -1184,7 +1211,6 @@ class ThreadMessagingNetworkMod(BaseMod):
             Dict[str, Any]: The channel messages retrieval response data
         """
         channel = message.channel
-        agent_id = message.source_id
         limit = int(message.limit)
         offset = int(message.offset)
         include_threads = message.include_threads
@@ -1394,17 +1420,15 @@ class ThreadMessagingNetworkMod(BaseMod):
         reaction_type = message.reaction_type
         agent_id = message.source_id
         
-        # Determine action from event_name if possible, fallback to message.action
-        action = getattr(message, 'action', 'add')
-        
-        # Use event_name to determine action
+        # Determine action based on event name
+        action = "add"  # default
         if hasattr(message, 'event_name'):
             if "add" in message.event_name:
                 action = "add"
             elif "remove" in message.event_name:
                 action = "remove"
             elif "toggle" in message.event_name:
-                # For toggle, we need to check if the reaction already exists
+                # For toggle, check if the reaction already exists
                 if (target_message_id in self.reactions and 
                     reaction_type in self.reactions[target_message_id] and
                     agent_id in self.reactions[target_message_id][reaction_type]):
@@ -1513,6 +1537,88 @@ class ThreadMessagingNetworkMod(BaseMod):
             await self.network.process_event(notification)
         
         return reaction_response
+    
+    async def _process_add_reaction(self, message: ReactionMessage) -> Dict[str, Any]:
+        """Process adding a reaction to a message."""
+        target_message_id = message.target_message_id
+        reaction_type = message.reaction_type
+        agent_id = message.source_id
+        
+        # Validate target message exists
+        validation_error = self._validate_reaction_target(target_message_id, message)
+        if validation_error:
+            return validation_error
+        
+        # Initialize reaction storage
+        self._initialize_reaction_storage(target_message_id, reaction_type)
+        
+        # Add reaction if not already present
+        success = False
+        if agent_id not in self.reactions[target_message_id][reaction_type]:
+            self.reactions[target_message_id][reaction_type].add(agent_id)
+            success = True
+            logger.debug(f"{agent_id} added {reaction_type} reaction to message {target_message_id}")
+        else:
+            logger.debug(f"{agent_id} already has {reaction_type} reaction on message {target_message_id}")
+        
+        return self._create_reaction_response(target_message_id, reaction_type, "add", success, message)
+    
+    async def _process_remove_reaction(self, message: ReactionMessage) -> Dict[str, Any]:
+        """Process removing a reaction from a message."""
+        target_message_id = message.target_message_id
+        reaction_type = message.reaction_type
+        agent_id = message.source_id
+        
+        # Validate target message exists
+        validation_error = self._validate_reaction_target(target_message_id, message)
+        if validation_error:
+            return validation_error
+        
+        # Remove reaction if present
+        success = False
+        if (target_message_id in self.reactions and 
+            reaction_type in self.reactions[target_message_id] and
+            agent_id in self.reactions[target_message_id][reaction_type]):
+            
+            self.reactions[target_message_id][reaction_type].discard(agent_id)
+            success = True
+            logger.debug(f"{agent_id} removed {reaction_type} reaction from message {target_message_id}")
+            
+            # Clean up empty reaction sets
+            self._cleanup_empty_reactions(target_message_id, reaction_type)
+        else:
+            logger.debug(f"{agent_id} doesn't have {reaction_type} reaction on message {target_message_id}")
+        
+        return self._create_reaction_response(target_message_id, reaction_type, "remove", success, message)
+    
+    async def _process_toggle_reaction(self, message: ReactionMessage) -> Dict[str, Any]:
+        """Process toggling a reaction on a message."""
+        target_message_id = message.target_message_id
+        reaction_type = message.reaction_type
+        agent_id = message.source_id
+        
+        # Validate target message exists
+        validation_error = self._validate_reaction_target(target_message_id, message)
+        if validation_error:
+            return validation_error
+        
+        # Initialize reaction storage
+        self._initialize_reaction_storage(target_message_id, reaction_type)
+        
+        # Toggle reaction based on current state
+        if agent_id in self.reactions[target_message_id][reaction_type]:
+            # Remove reaction
+            self.reactions[target_message_id][reaction_type].discard(agent_id)
+            action_taken = "remove"
+            logger.debug(f"{agent_id} toggled (removed) {reaction_type} reaction from message {target_message_id}")
+            self._cleanup_empty_reactions(target_message_id, reaction_type)
+        else:
+            # Add reaction
+            self.reactions[target_message_id][reaction_type].add(agent_id)
+            action_taken = "add"
+            logger.debug(f"{agent_id} toggled (added) {reaction_type} reaction to message {target_message_id}")
+        
+        return self._create_reaction_response(target_message_id, reaction_type, action_taken, True, message)
     
     def get_state(self) -> Dict[str, Any]:
         """Get the current state of the Thread Messaging protocol.

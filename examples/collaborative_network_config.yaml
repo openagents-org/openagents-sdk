@@ -239,7 +239,7 @@ collaboration:
   document_presence_timeout: 300  # 5 minutes
   
   # Messaging settings
-  message_threading: true
+  event_threading: true
   message_reactions: true
   message_search: true
   

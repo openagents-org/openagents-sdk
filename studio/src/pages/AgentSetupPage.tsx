@@ -46,12 +46,15 @@ const AgentNamePicker: React.FC = () => {
     e.preventDefault();
     const agentNameTrimmed = pageAgentName?.trim();
     if (!agentNameTrimmed || !selectedNetwork) return;
+
     // Save the agent name for this network
     saveAgentNameForNetwork(
       selectedNetwork.host,
       selectedNetwork.port,
       agentNameTrimmed
     );
+
+    // Set agent name in store - RouteGuard will handle navigation automatically
     setAgentName(agentNameTrimmed);
   };
 

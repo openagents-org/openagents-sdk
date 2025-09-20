@@ -37,7 +37,7 @@ class AgentConnection:
         """
         self.agent_id = agent_id
         self.workspace = workspace
-        self._client = workspace._client
+        self._client = workspace.client
         
     async def send_message(self, content: Union[str, Dict[str, Any]], **kwargs) -> EventResponse:
         """Send a direct message to this agent.
@@ -72,7 +72,7 @@ class AgentConnection:
             )
             
             # Send through client and get immediate response
-            response = await self._client.send_event(direct_message)
+            response = await self.workspace.send_event(direct_message)
             return response
             
         except Exception as e:
@@ -127,7 +127,7 @@ class AgentConnection:
                     return False
             
             # Wait for the direct message
-            response = await self._client.wait_direct_message(
+            response = await self._client.wait_event(
                 condition=message_condition,
                 timeout=timeout
             )
@@ -239,7 +239,7 @@ class ChannelConnection:
             )
             
             # Send through workspace and get immediate response
-            response = await self.workspace._send_mod_message(mod_message)
+            response = await self.workspace.send_event(mod_message)
             return response
             
         except Exception as e:
@@ -286,7 +286,7 @@ class ChannelConnection:
             )
             
             # Send through workspace's method
-            success = await self.workspace._send_mod_message(mod_message)
+            success = await self.workspace.send_event(mod_message)
             
             # Events are now emitted automatically by the client
             
@@ -322,7 +322,7 @@ class ChannelConnection:
             )
             
             # Send request synchronously and get immediate response
-            response = self.workspace._send_mod_message_sync(mod_message)
+            response = self.workspace.send_event_sync(mod_message)
             
             if not response.success:
                 logger.error(f"Failed to retrieve messages for channel {self.name}: {response.message}")
@@ -378,7 +378,7 @@ class ChannelConnection:
             )
             
             # Send through client
-            return await self._client.send_event(mod_message)
+            return await self.workspace.send_event(mod_message)
             
         except Exception as e:
             logger.error(f"Failed to reply to message {message_id} in channel {self.name}: {e}")
@@ -422,7 +422,7 @@ class ChannelConnection:
             )
             
             # Send through workspace's method
-            success = await self.workspace._send_mod_message(mod_message)
+            success = await self.workspace.send_event(mod_message)
             if success:
                 # In a real implementation, this would return the actual file UUID
                 # For now, return a placeholder
@@ -466,7 +466,7 @@ class ChannelConnection:
             )
             
             # Send through client
-            return await self._client.send_event(mod_message)
+            return await self.workspace.send_event(mod_message)
             
         except Exception as e:
             logger.error(f"Failed to react to message {message_id} in channel {self.name}: {e}")
@@ -676,7 +676,25 @@ class Workspace:
         self._pending_responses: Dict[str, asyncio.Future] = {}
         self._handlers_setup: bool = False
     
-    async def _send_mod_message(self, mod_message) -> EventResponse:
+    @property
+    def agent_id(self) -> str:
+        """Get the agent ID.
+        
+        Returns:
+            str: The agent ID
+        """
+        return self._client.agent_id
+    
+    @property
+    def client(self) -> AgentClient:
+        """Get the client instance.
+        
+        Returns:
+            AgentClient: The client instance
+        """
+        return self._client
+    
+    async def send_event(self, mod_message) -> EventResponse:
         """Send a mod message through connector.
         
         Args:
@@ -685,12 +703,12 @@ class Workspace:
         Returns:
             EventResponse: Response from the event system
         """
-        logger.info(f"🔧 WORKSPACE: Sending message through connector")
+        logger.debug(f"🔧 WORKSPACE: Sending message through connector")
         response = await self._client.connector.send_event(mod_message)
-        logger.info(f"🔧 WORKSPACE: Connector send result: {response}")
+        logger.debug(f"🔧 WORKSPACE: Connector send result: {response}")
         return response
 
-    def _send_mod_message_sync(self, mod_message) -> EventResponse:
+    def send_event_sync(self, mod_message) -> EventResponse:
         """Send a mod message through client synchronously.
         
         The client.send_event is async but returns synchronous EventResponse.
@@ -702,7 +720,7 @@ class Workspace:
         Returns:
             EventResponse: Response from the event system with data
         """
-        logger.info(f"🔧 WORKSPACE: Sending sync message through client")
+        logger.debug(f"🔧 WORKSPACE: Sending sync message through client")
         
         try:
             # Use asyncio.run to call the async method synchronously
@@ -724,53 +742,12 @@ class Workspace:
                 # No event loop running, safe to use asyncio.run
                 response = asyncio.run(self._client.send_event(mod_message))
             
-            logger.info(f"🔧 WORKSPACE: Sync client send result: {response}")
+            logger.debug(f"🔧 WORKSPACE: Sync client send result: {response}")
             return response
             
         except Exception as e:
             logger.error(f"Failed to send sync mod message: {e}")
             return EventResponse(success=False, message=f"Sync send failed: {str(e)}")
-    
-    def _setup_message_handlers(self) -> None:
-        """Set up message handlers for workspace responses."""
-        if self._handlers_setup or not self._client:
-            return
-            
-        try:
-            # Store original mod message handler to avoid recursion
-            if not hasattr(self, '_original_mod_handler'):
-                self._original_mod_handler = getattr(self._client, '_handle_mod_message', None)
-            
-            async def enhanced_mod_handler(message):
-                # Handle project mod responses first
-                await self._handle_project_responses(message)
-                
-                # Call original handler if it exists and is different from current
-                if self._original_mod_handler and self._original_mod_handler != enhanced_mod_handler:
-                    await self._original_mod_handler(message)
-            
-            async def enhanced_direct_handler(message):
-                # Handle project mod responses in direct messages too
-                await self._handle_project_responses(message)
-                
-                # Call original handler if it exists
-                if hasattr(self, '_original_direct_handler'):
-                    if self._original_direct_handler and self._original_direct_handler != enhanced_direct_handler:
-                        await self._original_direct_handler(message)
-            
-            # Replace the mod message handler only if not already replaced
-            if self._client._handle_mod_message != enhanced_mod_handler:
-                self._client._handle_mod_message = enhanced_mod_handler
-                self._handlers_setup = True
-            
-            # Also set up direct message handler for project responses
-            if not hasattr(self, '_original_direct_handler'):
-                self._original_direct_handler = getattr(self._client, '_handle_direct_message', None)
-            
-            if self._client._handle_direct_message != enhanced_direct_handler:
-                self._client._handle_direct_message = enhanced_direct_handler
-        except Exception as e:
-            logger.warning(f"Failed to setup message handlers: {e}")
     
     async def _handle_project_responses(self, message) -> None:
         """Handle project mod responses.
@@ -952,7 +929,7 @@ class Workspace:
             await asyncio.sleep(0.01)
             
             # Send request
-            success = await self._send_mod_message(mod_message)
+            success = await self.send_event(mod_message)
             if not success:
                 wait_task.cancel()
                 logger.error("Failed to send list_channels request")
@@ -1130,9 +1107,6 @@ class Workspace:
         if not await self._ensure_connected():
             raise RuntimeError("Could not establish client connection")
         
-        # Set up message handlers if not already done
-        self._setup_message_handlers()
-        
         # Validate project parameter
         if not isinstance(project, Project):
             raise ValueError("project must be an instance of Project class")
@@ -1169,7 +1143,7 @@ class Workspace:
             self._pending_responses[response_key] = response_future
             
             # Send the message
-            success = await self._send_mod_message(mod_message)
+            success = await self.send_event(mod_message)
             
             # Wait for response with timeout
             try:
@@ -1243,7 +1217,7 @@ class Workspace:
             self._pending_responses[response_key] = response_future
             
             # Send the message
-            success = await self._send_mod_message(mod_message)
+            success = await self.send_event(mod_message)
             
             # Wait for response with timeout
             try:
@@ -1314,7 +1288,7 @@ class Workspace:
             self._pending_responses[response_key] = response_future
             
             # Send the message
-            success = await self._send_mod_message(mod_message)
+            success = await self.send_event(mod_message)
             
             # Wait for response with timeout
             try:
