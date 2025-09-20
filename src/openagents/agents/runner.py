@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 from openagents.core.base_mod_adapter import BaseModAdapter
 from openagents.models.event_thread import EventThread
 from openagents.models.event import Event
+from openagents.models.event_context import EventContext
 from openagents.models.tool import AgentAdapterTool
 from openagents.core.client import AgentClient
 from openagents.utils.mod_loaders import load_mod_adapters
@@ -105,16 +106,14 @@ class AgentRunner(ABC):
         return self.client.mod_adapters.get(mod_name)
 
     @abstractmethod
-    async def react(self, event_threads: Dict[str, EventThread], incoming_thread_id: str, incoming_message: Event):
+    async def react(self, context: EventContext):
         """React to an incoming message.
         
         This method is called when a new message is received and should implement
         the agent's logic for responding to messages.
         
         Args:
-            event_threads: Dictionary of all message threads available to the agent.
-            incoming_thread_id: ID of the thread containing the incoming message.
-            incoming_message: The incoming message to react to.
+            context: The event context containing the incoming event, event threads, and thread ID.
         """
     
     async def setup(self):
@@ -195,9 +194,14 @@ class AgentRunner(ABC):
                         ]
                         filtered_threads[thread_id] = filtered_thread
                     
-                    # Call react with the filtered threads and the unprocessed message
+                    # Create EventContext and call react
+                    context = EventContext(
+                        incoming_event=unprocessed_message,
+                        event_threads=filtered_threads,
+                        incoming_thread_id=unprocessed_thread_id
+                    )
                     print(f"🔧 AGENT_RUNNER: Calling react method for message {unprocessed_message.message_id[:8]}...")
-                    await self.react(filtered_threads, unprocessed_thread_id, unprocessed_message)
+                    await self.react(context)
                     print(f"🔧 AGENT_RUNNER: react method completed for message {unprocessed_message.message_id[:8]}")
                 else:
                     await asyncio.sleep(self._interval or 1)
