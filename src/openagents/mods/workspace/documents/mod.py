@@ -15,7 +15,7 @@ import copy
 from typing import Dict, Any, List, Optional, Set
 from datetime import datetime, timedelta
 
-from openagents.core.base_mod import BaseMod
+from openagents.core.base_mod import BaseMod, mod_event_handler
 from openagents.models.event import Event
 from openagents.models.event_response import EventResponse
 from openagents.models.messages import EventNames
@@ -576,20 +576,6 @@ class SharedDocumentNetworkMod(BaseMod):
         """Initialize the shared document mod."""
         super().__init__(mod_name=mod_name)
         
-        # Register event handlers using the new pattern
-        self.register_event_handler(self._handle_document_create, "document.create")
-        self.register_event_handler(self._handle_document_open, "document.open") 
-        self.register_event_handler(self._handle_document_close, "document.close")
-        self.register_event_handler(self._handle_document_insert_lines, "document.insert_lines")
-        self.register_event_handler(self._handle_document_remove_lines, "document.remove_lines")
-        self.register_event_handler(self._handle_document_replace_lines, "document.replace_lines")
-        self.register_event_handler(self._handle_document_add_comment, "document.add_comment")
-        self.register_event_handler(self._handle_document_remove_comment, "document.remove_comment")
-        self.register_event_handler(self._handle_document_update_cursor, "document.update_cursor")
-        self.register_event_handler(self._handle_document_get_content, "document.get_content")
-        self.register_event_handler(self._handle_document_get_history, "document.get_history")
-        self.register_event_handler(self._handle_document_list, "document.list")
-        self.register_event_handler(self._handle_document_get_presence, "document.get_presence")
         
         # Document storage
         self.documents: Dict[str, SharedDocument] = {}
@@ -616,6 +602,7 @@ class SharedDocumentNetworkMod(BaseMod):
     
     # Event handlers using the new pattern
     
+    @mod_event_handler("document.create")
     async def _handle_document_create(self, event: Event) -> Optional[EventResponse]:
         """Handle document creation requests."""
         try:
@@ -668,6 +655,7 @@ class SharedDocumentNetworkMod(BaseMod):
                 message=f"Failed to create document: {str(e)}"
             )
     
+    @mod_event_handler("document.open")
     async def _handle_document_open(self, event: Event) -> Optional[EventResponse]:
         """Handle document open requests."""
         try:
@@ -712,6 +700,7 @@ class SharedDocumentNetworkMod(BaseMod):
                 message=f"Failed to open document: {str(e)}"
             )
     
+    @mod_event_handler("document.close")
     async def _handle_document_close(self, event: Event) -> Optional[EventResponse]:
         """Handle document close requests."""
         try:
@@ -736,6 +725,7 @@ class SharedDocumentNetworkMod(BaseMod):
             )
     
     # Placeholder handlers for other operations
+    @mod_event_handler("document.insert_lines")
     async def _handle_document_insert_lines(self, event: Event) -> Optional[EventResponse]:
         """Handle line insertion requests."""
         try:
@@ -789,14 +779,17 @@ class SharedDocumentNetworkMod(BaseMod):
                 message=f"Failed to insert lines: {str(e)}"
             )
     
+    @mod_event_handler("document.remove_lines")
     async def _handle_document_remove_lines(self, event: Event) -> Optional[EventResponse]:
         """Handle line removal requests."""
         return EventResponse(success=True, message="Remove lines operation completed")
     
+    @mod_event_handler("document.replace_lines")
     async def _handle_document_replace_lines(self, event: Event) -> Optional[EventResponse]:
         """Handle line replacement requests."""
         return EventResponse(success=True, message="Replace lines operation completed")
     
+    @mod_event_handler("document.add_comment")
     async def _handle_document_add_comment(self, event: Event) -> Optional[EventResponse]:
         """Handle add comment requests."""
         try:
@@ -842,10 +835,12 @@ class SharedDocumentNetworkMod(BaseMod):
                 message=f"Failed to add comment: {str(e)}"
             )
     
+    @mod_event_handler("document.remove_comment")
     async def _handle_document_remove_comment(self, event: Event) -> Optional[EventResponse]:
         """Handle remove comment requests."""
         return EventResponse(success=True, message="Comment removed successfully")
     
+    @mod_event_handler("document.update_cursor")
     async def _handle_document_update_cursor(self, event: Event) -> Optional[EventResponse]:
         """Handle cursor position updates."""
         try:
@@ -887,6 +882,7 @@ class SharedDocumentNetworkMod(BaseMod):
                 message=f"Failed to update cursor position: {str(e)}"
             )
     
+    @mod_event_handler("document.get_content")
     async def _handle_document_get_content(self, event: Event) -> Optional[EventResponse]:
         """Handle get document content requests."""
         try:
@@ -955,10 +951,12 @@ class SharedDocumentNetworkMod(BaseMod):
                 message=f"Failed to get document content: {str(e)}"
             )
     
+    @mod_event_handler("document.get_history")
     async def _handle_document_get_history(self, event: Event) -> Optional[EventResponse]:
         """Handle get document history requests."""
         return EventResponse(success=True, message="Document history retrieved", data={"history": []})
     
+    @mod_event_handler("document.list")
     async def _handle_document_list(self, event: Event) -> Optional[EventResponse]:
         """Handle list documents requests."""
         try:
@@ -988,6 +986,7 @@ class SharedDocumentNetworkMod(BaseMod):
                 message=f"Failed to list documents: {str(e)}"
             )
     
+    @mod_event_handler("document.get_presence")
     async def _handle_document_get_presence(self, event: Event) -> Optional[EventResponse]:
         """Handle get agent presence requests."""
         try:

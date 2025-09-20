@@ -109,15 +109,6 @@ class BasicTestAgentAdapter(BaseModAdapter):
             logger.info(f"Agent {self.agent_id} received ping")
             # Could send a response event here if needed
         
-        # Add to message thread if it's a threaded message
-        if hasattr(event, 'thread_id') and event.thread_id:
-            self.add_message_to_thread(
-                thread_id=event.thread_id,
-                message=event,
-                requires_response=event.event_name.endswith('.request'),
-                text_representation=str(event.payload) if event.payload else None
-            )
-        
         # Call registered message handlers
         if event.event_name in self.message_handlers:
             try:
@@ -270,7 +261,7 @@ class BasicTestAgentAdapter(BaseModAdapter):
                 "event_count": self.event_count,
                 "uptime_seconds": uptime,
                 "recent_events": self.processed_events[-5:] if self.processed_events else [],
-                "message_threads": len(self.message_threads),
+                "event_threads": len(self.event_threads),
                 "test_mode": self.test_mode
             }
         }

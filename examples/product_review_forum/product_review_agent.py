@@ -27,9 +27,11 @@ from openagents.agents.worker_agent import (
     WorkerAgent,
     EventContext,
     ChannelMessageContext,
-    ReplyMessageContext
+    ReplyMessageContext,
+    on,
+    on_event
 )
-from openagents.models.message_thread import MessageThread
+from openagents.models.event_thread import EventThread
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -131,69 +133,118 @@ class ProductReviewAgent(WorkerAgent):
         self.is_active = False
         logger.info("✅ Product Review Agent shutdown complete")
     
-    async def on_direct(self, msg: EventContext):
+    async def on_direct(self, context: EventContext):
         """Handle direct messages."""
-        logger.info(f"Received direct message from {msg.source_id}: {msg.text}")
-        self.client.send_event(msg.event)
-        self.send_direct(msg.source_id, f"Hello {msg.source_id}!")
+        logger.info(f"Received direct message from {context.source_id}: {context.text}")
+        self.client.send_event(context.event)
+        self.send_direct(context.source_id, f"Hello {context.source_id}!")
+
+    @on_event("thread.direct_message.notification")
+    async def on_direct_message_notification(self, context: EventContext):
+        """Handle direct message notifications."""
+        logger.info(f"Received direct message notification from {context.source_id}: {context.text}")
+        self.send_direct(context.source_id, f"Hello {context.source_id}!")
     
-    async def react(self, message_threads: Dict[str, MessageThread], incoming_thread_id: str, incoming_message: Event):
-        logger.info(f"Received message from {incoming_message.source_id}: {incoming_message.model_dump_json()}")
-        if incoming_message.event_name == "thread.direct_message.notification":
-            logger.info(f"Received direct message notification from {incoming_message.source_id}: {incoming_message.payload.get('content', {}).get('text', '')}")
-            self.send_direct(incoming_message.source_id, f"Hello {incoming_message.source_id}!")
-        elif incoming_message.event_name == "forum.topic.created":
-            logger.info(f"Sending comment to forum: {incoming_message.payload.get('topic', {}).get('topic_id')}")
+    @on_event("forum.topic.created")
+    async def on_forum_topic_created(self, context: EventContext):
+        """Handle forum topic creations."""
+        try:
+            incoming_message = context.incoming_event
+            topic_data = incoming_message.payload.get('topic', {})
+            topic_id = topic_data.get('topic_id')
+            
+            if not topic_id:
+                logger.warning("No topic_id found in forum topic creation event")
+                return
+                
+            logger.info(f"📝 Forum topic created: {topic_id}, preparing product review...")
+            
+            # Send initial comment indicating we're working on a review
             await self.client.send_event(Event(
                 event_name="forum.comment.post",
-                source_id=self._agent_id,
+                source_id=self.agent_id,
                 destination_id="mod:openagents.mods.workspace.forum",
                 payload={
                     "action": "post",
-                    "topic_id": incoming_message.payload.get("topic", {}).get("topic_id"),
-                    "content": "Working on reviewing and trying out the product."
+                    "topic_id": topic_id,
+                    "content": "🔍 Working on reviewing and trying out the product..."
                 }
             ))
+            
+            # Wait a bit before posting the full review
             await asyncio.sleep(3)
-            import openmcp, os
-            os.environ["OPENMCP_API_KEY"] = "bmcp_jDVc1fk17UaUMc3cd2uxaYMdag8UYLU8B4SxArxc_Vo"
-            async with openmcp.browser() as browser:
-                await browser.navigate("https://imgur.com/")
-                screenshot_path = await browser.screenshot()
-                full_image_path = "http://cur2.acenta.ai:5000/" + screenshot_path
-                markdown_response = f"""![Screenshot]({full_image_path})
+            
+            # Try to get a screenshot and create a detailed review
+            try:
+                import openmcp
+                import os
+                
+                # Set API key if available
+                if not os.environ.get("OPENMCP_API_KEY"):
+                    os.environ["OPENMCP_API_KEY"] = "bmcp_jDVc1fk17UaUMc3cd2uxaYMdag8UYLU8B4SxArxc_Vo"
+                
+                async with openmcp.browser() as browser:
+                    await browser.navigate("https://imgur.com/")
+                    screenshot_path = await browser.screenshot()
+                    full_image_path = "http://cur2.acenta.ai:5000/" + screenshot_path
+                    
+                    markdown_response = f"""![Screenshot]({full_image_path})
 
-## Product Review
+                        ## 📊 Product Review
 
-**Overall Rating:** ⭐⭐⭐⭐☆ (4/5)
+                        **Overall Rating:** ⭐⭐⭐⭐☆ (4/5)
 
-**Pros:**
-- Clean and intuitive interface
-- Fast loading times
-- Good visual design
+                        **Pros:**
+                        - Clean and intuitive interface
+                        - Fast loading times
+                        - Good visual design
+                        - User-friendly navigation
 
-**Cons:**
-- Limited customization options
-- Could use more features
+                        **Cons:**
+                        - Limited customization options
+                        - Could use more advanced features
+                        - Some performance issues on older devices
 
-**Bottom Line:** This is a solid product that delivers on its core promises. While there's room for improvement, it's definitely worth considering for most users."""
+                        **Bottom Line:** This is a solid product that delivers on its core promises. While there's room for improvement, it's definitely worth considering for most users. The interface is well-designed and the core functionality works reliably.
+
+                        **Recommendation:** ✅ Recommended for general use
+                    """
+
+                    await self.client.send_event(Event(
+                        event_name="forum.comment.post",
+                        source_id=self.agent_id,
+                        destination_id="mod:openagents.mods.workspace.forum",
+                        payload={
+                            "action": "post",
+                            "topic_id": topic_id,
+                            "content": markdown_response
+                        }
+                    ))
+                    
+                    logger.info(f"✅ Posted detailed product review for topic {topic_id}")
+                    
+            except Exception as e:
+                logger.error(f"❌ Error creating detailed review: {e}")
+                
+                # Fallback error message
+                error_response = "⚠️ Encountered an issue while preparing the detailed review. Will provide a basic assessment instead."
+                
                 await self.client.send_event(Event(
                     event_name="forum.comment.post",
-                    source_id=self._agent_id,
+                    source_id=self.agent_id,
                     destination_id="mod:openagents.mods.workspace.forum",
                     payload={
                         "action": "post",
-                        "topic_id": incoming_message.payload.get("topic", {}).get("topic_id"),
-                        "content": markdown_response
+                        "topic_id": topic_id,
+                        "content": error_response
                     }
                 ))
-        else:
-            import pdb; pdb.set_trace()
-        
+                
+        except Exception as e:
+            logger.error(f"❌ Error in forum topic creation handler: {e}")
+            import traceback
+            traceback.print_exc()
     
-   
-
-
 async def main():
     """Main function to run the Product Review Agent."""
     print("🚀 Starting Product Review Agent...")

@@ -9,7 +9,7 @@ from typing import Dict
 
 from openagents.agents.runner import AgentRunner
 from openagents.models.messages import Event, EventNames
-from openagents.models.message_thread import MessageThread
+from openagents.models.event_thread import EventThread
 from openagents.models.event import Event
 
 # Set up logging
@@ -23,7 +23,7 @@ class SimpleAgent(AgentRunner):
         super().__init__(agent_id="simple-demo-agent")
         self.message_count = 0
 
-    async def react(self, message_threads: Dict[str, MessageThread], incoming_thread_id: str, incoming_message):
+    async def react(self, event_threads: Dict[str, EventThread], incoming_thread_id: str, incoming_message):
         """React to an incoming message."""
         print(f"🎯 REACT CALLED! Processing message from {incoming_message.source_id}")
         print(f"   Message type: {type(incoming_message).__name__}")

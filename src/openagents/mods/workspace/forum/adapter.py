@@ -141,12 +141,7 @@ class ForumAgentAdapter(BaseModAdapter):
             
             # Add topic creation to message thread
             thread_id = f"forum_topic_{topic_id}"
-            self.add_message_to_thread(
-                thread_id=thread_id,
-                message=message,
-                requires_response=False,
-                text_representation=f"Created topic: {title}"
-            )
+            message.thread_name = thread_id
             
             return topic_id
         else:
@@ -316,12 +311,8 @@ class ForumAgentAdapter(BaseModAdapter):
             if parent_comment_id:
                 text_repr = f"Reply to {parent_comment_id}: {content}"
             
-            self.add_message_to_thread(
-                thread_id=thread_id,
-                message=message,
-                requires_response=False,
-                text_representation=text_repr
-            )
+            message.thread_name = thread_id
+            message.text_representation = text_repr
             
             return comment_id
         else:
@@ -533,23 +524,15 @@ class ForumAgentAdapter(BaseModAdapter):
             topic_id = message.payload.get('topic_id')
             if topic_id:
                 thread_id = f"forum_topic_{topic_id}"
-                self.add_message_to_thread(
-                    thread_id=thread_id,
-                    message=message,
-                    requires_response=False,
-                    text_representation=f"Topic created notification"
-                )
+                message.thread_name = thread_id
+                message.text_representation = f"Topic created notification"
         elif message.event_name == "forum.comment.posted":
             topic_id = message.payload.get('topic_id')
             comment_id = message.payload.get('comment_id')
             if topic_id:
                 thread_id = f"forum_topic_{topic_id}"
-                self.add_message_to_thread(
-                    thread_id=thread_id,
-                    message=message,
-                    requires_response=False,
-                    text_representation=f"Comment {comment_id} posted notification"
-                )
+                message.thread_name = thread_id
+                message.text_representation = f"Comment {comment_id} posted notification"
         
         # Notify handlers if any
         for handler in self.forum_handlers.values():
@@ -588,7 +571,7 @@ class ForumAgentAdapter(BaseModAdapter):
             MessageThread: The message thread for the topic, or None if not found
         """
         thread_id = f"forum_topic_{topic_id}"
-        return self.message_threads.get(thread_id)
+        return self.event_threads.get(thread_id)
     
     def get_all_forum_threads(self):
         """Get all forum-related message threads.
@@ -597,7 +580,7 @@ class ForumAgentAdapter(BaseModAdapter):
             Dict[str, MessageThread]: Dictionary of forum threads
         """
         forum_threads = {}
-        for thread_id, thread in self.message_threads.items():
+        for thread_id, thread in self.event_threads.items():
             if thread_id.startswith("forum_"):
                 forum_threads[thread_id] = thread
         return forum_threads

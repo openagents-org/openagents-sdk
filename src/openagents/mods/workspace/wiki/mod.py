@@ -15,7 +15,7 @@ import uuid
 from typing import Dict, Any, List, Optional, Set
 from pathlib import Path
 
-from openagents.core.base_mod import BaseMod
+from openagents.core.base_mod import BaseMod, mod_event_handler
 from openagents.models.messages import Event, EventNames
 from openagents.models.event import Event
 from openagents.models.event_response import EventResponse
@@ -53,17 +53,6 @@ class WikiNetworkMod(BaseMod):
         """Initialize the wiki mod for a network."""
         super().__init__(mod_name=mod_name)
         
-        # Register event handlers
-        self.register_event_handler(self._handle_wiki_page_create, "wiki.page.create")
-        self.register_event_handler(self._handle_wiki_page_edit, "wiki.page.edit")
-        self.register_event_handler(self._handle_wiki_page_get, "wiki.page.get")
-        self.register_event_handler(self._handle_wiki_pages_search, "wiki.pages.search")
-        self.register_event_handler(self._handle_wiki_pages_list, "wiki.pages.list")
-        self.register_event_handler(self._handle_wiki_page_proposal_create, "wiki.page.proposal.create")
-        self.register_event_handler(self._handle_wiki_proposals_list, "wiki.proposals.list")
-        self.register_event_handler(self._handle_wiki_proposal_resolve, "wiki.proposal.resolve")
-        self.register_event_handler(self._handle_wiki_page_history, "wiki.page.history")
-        self.register_event_handler(self._handle_wiki_page_revert, "wiki.page.revert")
         
         # Initialize mod state
         self.active_agents: Set[str] = set()
@@ -168,6 +157,7 @@ class WikiNetworkMod(BaseMod):
             return message.event_id
         return str(uuid.uuid4())
     
+    @mod_event_handler("wiki.page.create")
     async def _handle_wiki_page_create(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki page creation."""
         try:
@@ -247,6 +237,7 @@ class WikiNetworkMod(BaseMod):
                 }
             )
     
+    @mod_event_handler("wiki.page.edit")
     async def _handle_wiki_page_edit(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki page editing (owner only)."""
         try:
@@ -324,6 +315,7 @@ class WikiNetworkMod(BaseMod):
                 }
             )
     
+    @mod_event_handler("wiki.page.get")
     async def _handle_wiki_page_get(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki page retrieval."""
         try:
@@ -414,6 +406,7 @@ class WikiNetworkMod(BaseMod):
                 }
             )
     
+    @mod_event_handler("wiki.pages.search")
     async def _handle_wiki_pages_search(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki pages search."""
         try:
@@ -470,6 +463,7 @@ class WikiNetworkMod(BaseMod):
                 }
             )
     
+    @mod_event_handler("wiki.pages.list")
     async def _handle_wiki_pages_list(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki pages listing."""
         try:
@@ -522,6 +516,7 @@ class WikiNetworkMod(BaseMod):
                 }
             )
     
+    @mod_event_handler("wiki.page.proposal.create")
     async def _handle_wiki_page_proposal_create(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki page edit proposal creation."""
         try:
@@ -583,6 +578,7 @@ class WikiNetworkMod(BaseMod):
                 }
             )
     
+    @mod_event_handler("wiki.proposals.list")
     async def _handle_wiki_proposals_list(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki edit proposals listing."""
         try:
@@ -641,6 +637,7 @@ class WikiNetworkMod(BaseMod):
                 }
             )
     
+    @mod_event_handler("wiki.proposal.resolve")
     async def _handle_wiki_proposal_resolve(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki edit proposal resolution."""
         try:
@@ -755,6 +752,7 @@ class WikiNetworkMod(BaseMod):
                 }
             )
     
+    @mod_event_handler("wiki.page.history")
     async def _handle_wiki_page_history(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki page history retrieval."""
         try:
@@ -816,6 +814,7 @@ class WikiNetworkMod(BaseMod):
                 }
             )
     
+    @mod_event_handler("wiki.page.revert")
     async def _handle_wiki_page_revert(self, event: Event) -> Optional[EventResponse]:
         """Handle wiki page reversion."""
         try:

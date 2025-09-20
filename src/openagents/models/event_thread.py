@@ -3,9 +3,9 @@ from pydantic import BaseModel, Field
 from openagents.models.event import Event
 
 
-class MessageThread(BaseModel):
+class EventThread(BaseModel):
     """
-    A message thread maintains a list of messages in a channel.
+    A event thread maintains a list of events in a channel.
     """
     messages: List[Event] = Field(default_factory=list, description="The list of messages in the thread")
 

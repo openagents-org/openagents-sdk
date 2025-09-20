@@ -12,7 +12,7 @@ import {
   ThreadMessage,
   ThreadChannel,
   AgentInfo,
-} from "../types/events";
+} from "@/types/events";
 import { ConnectionStatusEnum, NetworkConnection } from "@/types/connection";
 
 export interface EventNetworkServiceOptions {
@@ -92,10 +92,10 @@ export class EventNetworkService {
     );
 
     if (response.success) {
-      console.log(`✅ Direct message sent to ${targetAgentId}`);
+      console.log(`✅ Direct message sent to ${targetAgentId} ${content}`);
     } else {
       console.error(
-        `❌ Failed to send direct message to ${targetAgentId}: ${response.message}`
+        `❌ Failed to send direct message to ${targetAgentId} ${content}: ${response.message}`
       );
     }
 
@@ -114,10 +114,10 @@ export class EventNetworkService {
     );
 
     if (response.success) {
-      console.log(`✅ Channel message sent to #${channel}`);
+      console.log(`✅ Channel message sent to #${channel} ${content}`);
     } else {
       console.error(
-        `❌ Failed to send message to #${channel}: ${response.message}`
+        `❌ Failed to send message to #${channel} ${content}: ${response.message}`
       );
     }
 

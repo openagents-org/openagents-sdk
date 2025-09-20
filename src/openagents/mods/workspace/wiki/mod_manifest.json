@@ -83,7 +83,7 @@
         "wiki.page.notification",
         "wiki.proposal.notification"
     ],
-    "message_threads": [
+    "event_threads": [
         "wiki_announcements",
         "wiki_new_pages",
         "wiki_recent_changes",
