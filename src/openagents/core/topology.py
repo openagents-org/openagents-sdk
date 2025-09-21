@@ -162,7 +162,7 @@ class CentralizedTopology(NetworkTopology):
     
     def __init__(self, node_id: str, config: NetworkConfig):
         super().__init__(node_id, config)
-        self._heartbeat_task: Optional[asyncio.Task] = None
+        self.heartbeat_task: Optional[asyncio.Task] = None
     
     async def initialize(self) -> bool:
         """Initialize the centralized topology."""
