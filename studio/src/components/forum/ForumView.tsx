@@ -51,7 +51,15 @@ const ForumView: React.FC<ForumViewProps> = ({
 
   // Load topics
   const loadTopics = useCallback(async () => {
-    if (!connection) return;
+    console.log('ForumView: loadTopics called, connection:', connection);
+    console.log('ForumView: connection type:', typeof connection);
+    console.log('ForumView: connection methods:', connection ? Object.getOwnPropertyNames(connection) : 'no connection');
+    
+    if (!connection) {
+      console.log('ForumView: No connection available');
+      setError('Agent is not connected to network');
+      return;
+    }
 
     try {
       setIsLoading(true);
@@ -197,10 +205,20 @@ const ForumView: React.FC<ForumViewProps> = ({
     }
   };
 
-  // Initialize
+  // Initialize - only load when connection is available and ready
   useEffect(() => {
     if (connection) {
-      loadTopics();
+      console.log('ForumView: Connection available, waiting for connection to stabilize...');
+      // Add a small delay to ensure the connection is fully established
+      const timer = setTimeout(() => {
+        console.log('ForumView: Connection stabilized, loading topics...');
+        loadTopics();
+      }, 500); // 500ms delay
+      
+      return () => clearTimeout(timer);
+    } else {
+      console.log('ForumView: No connection, waiting...');
+      setIsLoading(false); // Stop loading if no connection
     }
   }, [connection, loadTopics]);
 
@@ -211,13 +229,13 @@ const ForumView: React.FC<ForumViewProps> = ({
     }
   }, [selectedTopic, loadComments]);
 
-  if (isLoading) {
+  if (isLoading || !connection) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className={`${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            Loading forum...
+            {!connection ? 'Connecting to network...' : 'Loading forum...'}
           </p>
         </div>
       </div>
@@ -240,6 +258,10 @@ const ForumView: React.FC<ForumViewProps> = ({
           <p className={`${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-4`}>
             {error}
           </p>
+          <div className={`text-xs ${currentTheme === 'dark' ? 'text-gray-500' : 'text-gray-500'} mb-4`}>
+            Debug info: Connection: {connection ? 'Available' : 'Not available'}
+            {connection && ', Agent ID: ' + (connection.getAgentId?.() || 'Not set')}
+          </div>
           <button
             onClick={onBackClick}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

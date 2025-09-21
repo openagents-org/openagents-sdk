@@ -272,11 +272,21 @@ const WikiView: React.FC<WikiViewProps> = ({
     }
   };
 
-  // Initialize
+  // Initialize - only load when connection is available and ready
   useEffect(() => {
     if (connection) {
-      loadPages();
-      loadProposals();
+      console.log('WikiView: Connection available, waiting for connection to stabilize...');
+      // Add a small delay to ensure the connection is fully established
+      const timer = setTimeout(() => {
+        console.log('WikiView: Connection stabilized, loading pages...');
+        loadPages();
+        loadProposals();
+      }, 500); // 500ms delay
+      
+      return () => clearTimeout(timer);
+    } else {
+      console.log('WikiView: No connection, waiting...');
+      setIsLoading(false); // Stop loading if no connection
     }
   }, [connection, loadPages, loadProposals]);
 
@@ -289,13 +299,13 @@ const WikiView: React.FC<WikiViewProps> = ({
     return () => clearTimeout(timeoutId);
   }, [searchQuery, searchPages]);
 
-  if (isLoading) {
+  if (isLoading || !connection) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className={`${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            Loading wiki...
+            {!connection ? 'Connecting to network...' : 'Loading wiki...'}
           </p>
         </div>
       </div>

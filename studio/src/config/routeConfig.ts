@@ -11,6 +11,8 @@ import DocumentsMainPage from "@/pages/documents/DocumentsMainPage";
 import SettingsMainPage from "@/pages/settings/SettingsMainPage";
 import ProfileMainPage from "@/pages/profile/ProfileMainPage";
 import McpMainPage from "@/pages/mcp/McpMainPage";
+import ForumMainPage from "@/pages/forum/ForumMainPage";
+import WikiMainPage from "@/pages/wiki/WikiMainPage";
 
 // 导航图标组件
 export const NavigationIcons = {
@@ -100,6 +102,44 @@ export const NavigationIcons = {
       })
     )
   ),
+  Forum: React.memo(() =>
+    React.createElement("svg",
+      {
+        className: "w-5 h-5",
+        fill: "none", 
+        stroke: "currentColor",
+        viewBox: "0 0 24 24"
+      },
+      React.createElement("path", {
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        strokeWidth: 2,
+        d: "M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a2 2 0 01-2-2v-6a2 2 0 012-2h8V8z"
+      }),
+      React.createElement("path", {
+        strokeLinecap: "round", 
+        strokeLinejoin: "round",
+        strokeWidth: 2,
+        d: "M15 8v-2a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l4-4h6a2 2 0 002-2v-2"
+      })
+    )
+  ),
+  Wiki: React.memo(() =>
+    React.createElement("svg",
+      {
+        className: "w-5 h-5",
+        fill: "none",
+        stroke: "currentColor", 
+        viewBox: "0 0 24 24"
+      },
+      React.createElement("path", {
+        strokeLinecap: "round",
+        strokeLinejoin: "round", 
+        strokeWidth: 2,
+        d: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+      })
+    )
+  ),
 };
 
 // 路由配置接口
@@ -173,6 +213,36 @@ export const dynamicRouteConfig: RouteConfig[] = [
       group: 'primary',
     },
   },
+  {
+    path: "/forum/*",
+    element: ForumMainPage,
+    title: "Forum",
+    requiresAuth: true,
+    requiresLayout: true,
+    navigationConfig: {
+      key: PLUGIN_NAME_ENUM.FORUM,
+      label: "Forum",
+      icon: "Forum",
+      visible: false, // Will be set dynamically based on mod availability
+      order: 3,
+      group: 'primary',
+    },
+  },
+  {
+    path: "/wiki/*", 
+    element: WikiMainPage,
+    title: "Wiki",
+    requiresAuth: true,
+    requiresLayout: true,
+    navigationConfig: {
+      key: PLUGIN_NAME_ENUM.WIKI,
+      label: "Wiki", 
+      icon: "Wiki",
+      visible: false, // Will be set dynamically based on mod availability
+      order: 4,
+      group: 'primary',
+    },
+  },
 
   // 设置相关路由 - 这些页面需要完整的 sidebar 布局
   {
@@ -186,7 +256,7 @@ export const dynamicRouteConfig: RouteConfig[] = [
       label: "Settings",
       icon: "Settings",
       visible: true,
-      order: 3,
+      order: 5,
       group: 'secondary',
     },
   },
@@ -201,7 +271,7 @@ export const dynamicRouteConfig: RouteConfig[] = [
       label: "Profile",
       icon: "Profile",
       visible: true,
-      order: 4,
+      order: 6,
       group: 'secondary',
     },
   },
@@ -216,7 +286,7 @@ export const dynamicRouteConfig: RouteConfig[] = [
       label: "MCP",
       icon: "MCP",
       visible: true,
-      order: 5,
+      order: 7,
       group: 'secondary',
     },
   },
@@ -334,9 +404,13 @@ export const specialRoutes = [
 
 // 动态配置更新函数 - 可以通过接口调用来更新配置
 export const updateRouteVisibility = (pluginKey: PLUGIN_NAME_ENUM, visible: boolean) => {
+  console.log(`Updating route visibility for ${pluginKey}: ${visible}`);
   const route = dynamicRouteConfig.find(r => r.navigationConfig?.key === pluginKey);
   if (route?.navigationConfig) {
     route.navigationConfig.visible = visible;
+    console.log(`Route visibility updated for ${pluginKey}:`, route.navigationConfig);
+  } else {
+    console.log(`Route not found for ${pluginKey}`);
   }
 };
 
