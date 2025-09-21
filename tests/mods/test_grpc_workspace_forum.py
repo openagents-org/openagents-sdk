@@ -35,9 +35,9 @@ class TestForumMod:
         from openagents.models.network_config import TransportConfigItem
         import random
         
-        # Use random ports to avoid conflicts
-        http_port = random.randint(8700, 8800)
-        grpc_port = http_port - 100  # gRPC port should be different
+        # Use random ports to avoid conflicts - Forum test range: 20000-21999
+        http_port = random.randint(20000, 21999)
+        grpc_port = http_port + 2000  # gRPC port should be different
         
         config = NetworkConfig(
             name="TestForumNetwork", 

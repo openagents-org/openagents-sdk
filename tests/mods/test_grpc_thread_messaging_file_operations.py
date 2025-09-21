@@ -31,9 +31,9 @@ async def test_network():
     # Load config and use random port to avoid conflicts
     config = load_network_config(str(config_path))
     
-    # Update the gRPC transport port to avoid conflicts
-    grpc_port = random.randint(47000, 48000)
-    http_port = grpc_port + 100  # HTTP port should be different
+    # Update the gRPC transport port to avoid conflicts - gRPC file ops test range: 32000-33999
+    grpc_port = random.randint(32000, 33999)
+    http_port = grpc_port + 2000  # HTTP port should be different
     
     for transport in config.network.transports:
         if transport.type == "grpc":
