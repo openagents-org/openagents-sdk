@@ -2,7 +2,6 @@ import asyncio
 from typing import TYPE_CHECKING, Dict, Any, List, Optional, Set, Type, Callable, Awaitable
 import uuid
 import logging
-from warnings import deprecated
 
 from pydantic import BaseModel, Field
 

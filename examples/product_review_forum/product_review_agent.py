@@ -28,7 +28,6 @@ from openagents.agents.worker_agent import (
     EventContext,
     ChannelMessageContext,
     ReplyMessageContext,
-    on,
     on_event
 )
 from openagents.models.event_thread import EventThread
@@ -138,6 +137,12 @@ class ProductReviewAgent(WorkerAgent):
         logger.info(f"Received direct message from {context.source_id}: {context.text}")
         self.client.send_event(context.event)
         self.send_direct(context.source_id, f"Hello {context.source_id}!")
+    
+    @on_event("thread.direct_message.send")
+    async def on_direct_message_send(self, context: EventContext):
+        """Handle direct message send events."""
+        logger.info(f"Received direct message send event from {context.source_id}: {context.text}")
+        await self.send_direct(context.source_id, f"Hello {context.source_id}!")
 
     @on_event("thread.direct_message.notification")
     async def on_direct_message_notification(self, context: EventContext):

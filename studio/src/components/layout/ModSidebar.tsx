@@ -2,10 +2,14 @@ import React, { useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { NavigationIcons, getNavigationRoutesByGroup } from "@/config/routeConfig";
 import ModIcon from "./ModIcon";
+import { useRouteUpdates } from "@/hooks/useRouteUpdates";
 
 const ModSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Listen for route configuration updates
+  const routeUpdateCounter = useRouteUpdates();
 
   // 使用动态配置生成图标组
   const iconGroups = useMemo(() => {
@@ -28,7 +32,7 @@ const ModSidebar: React.FC = () => {
         route: route.path.replace('/*', ''), // 移除通配符
       })),
     ];
-  }, []);
+  }, [routeUpdateCounter]); // Add dependency on route updates
 
   // 判断当前路由是否激活
   const isRouteActive = (route: string) => {

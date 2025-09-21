@@ -5,14 +5,14 @@ import ChatView from "@/components/chat/ChatView";
 import { useConversationStore } from "@/stores/conversationStore";
 import { useThreadStore } from "@/stores/threadStore";
 import { useNetworkStore } from "@/stores/networkStore";
-import useConnectedStatus from "@/hooks/useConnectedStatus";
+import { useSharedConnection } from "@/router/RouteGuard";
 import { ThreadState } from "@/types/thread";
 /**
  * 聊天主页面 - 处理聊天相关的所有功能
  */
 const ChatMainPage: React.FC = () => {
   const { agentName } = useNetworkStore();
-  const { channels, openAgentsHook } = useConnectedStatus();
+  const { channels, openAgentsHook } = useSharedConnection();
 
   const {
     threadState,

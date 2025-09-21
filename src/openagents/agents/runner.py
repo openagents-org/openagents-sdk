@@ -151,8 +151,8 @@ class AgentRunner(ABC):
                 unprocessed_count = 0
                 
                 for thread_id, thread in event_threads.items():
-                    print(f"   Thread {thread_id}: {len(thread.messages)} messages")
-                    for message in thread.messages:
+                    print(f"   Thread {thread_id}: {len(thread.events)} messages")
+                    for message in thread.events:
                         total_messages += 1
                         # Check if message hasn't been processed (regardless of requires_response)
                         message_id = str(message.message_id)
@@ -188,8 +188,8 @@ class AgentRunner(ABC):
                     for thread_id, thread in event_threads.items():
                         # Create a new thread with only messages up to the current message's timestamp
                         filtered_thread = EventThread()
-                        filtered_thread.messages = [
-                            msg for msg in thread.messages 
+                        filtered_thread.events = [
+                            msg for msg in thread.events 
                             if msg.timestamp <= current_time
                         ]
                         filtered_threads[thread_id] = filtered_thread

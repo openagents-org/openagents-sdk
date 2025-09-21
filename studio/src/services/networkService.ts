@@ -1,5 +1,13 @@
 import { ConnectionStatusEnum, NetworkConnection } from "@/types/connection";
 
+export interface NetworkHealth {
+  status: 'healthy' | 'unhealthy';
+  timestamp: string;
+  available_mods: string[];
+  forum_available?: boolean;
+  wiki_available?: boolean;
+}
+
 export interface NetworkProfile {
   name: string;
   description: string;
@@ -28,8 +36,8 @@ export interface NetworkListResponse {
 }
 
 // Check if a local OpenAgents network is running on localhost:8700 (HTTP port)
-export const detectLocalNetwork =
-  async (): Promise<NetworkConnection | null> => {
+export const detectLocalNetwork = 
+  async (): Promise<(NetworkConnection & { health?: NetworkHealth }) | null> => {
     // Try common HTTP ports for OpenAgents networks
     const commonPorts = [8700, 8571, 8570]; // Try default HTTP port first
 
@@ -47,11 +55,16 @@ export const detectLocalNetwork =
           console.log(
             `Local OpenAgents network detected on HTTP port ${httpPort}`
           );
+          
+          // Get health information
+          const health = await checkNetworkHealth("localhost", httpPort);
+          
           return {
             host: "localhost",
             port: httpPort,
             status: ConnectionStatusEnum.CONNECTED,
             latency: 0,
+            health: health || undefined,
           };
         }
       } catch (error) {
@@ -62,6 +75,66 @@ export const detectLocalNetwork =
     console.log("No local OpenAgents network detected on common HTTP ports");
     return null;
   };
+
+// Check network health and detect available mods
+export const checkNetworkHealth = async (
+  host: string,
+  port: number
+): Promise<NetworkHealth | null> => {
+  try {
+    const protocol = window.location.protocol === "https:" ? "https" : "http";
+    const healthUrl = `${protocol}://${host}:${port}/api/health`;
+
+    console.log(`Checking network health at: ${healthUrl}`);
+
+    const response = await fetch(healthUrl, {
+      method: "GET",
+      mode: "cors",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      signal: AbortSignal.timeout(5000), // 5 second timeout
+    });
+
+    if (response.ok) {
+      const healthData = await response.json();
+      
+      // Extract available mods from the health response
+      // The actual format has mods in data.mods array with enabled status
+      const modsArray = healthData.data?.mods || [];
+      const availableMods = modsArray
+        .filter((mod: any) => mod.enabled)
+        .map((mod: any) => mod.name);
+      
+      // Check for specific mods we're interested in
+      const forumAvailable = availableMods.some((modName: string) => 
+        modName.includes('forum') || modName === 'openagents.mods.workspace.forum'
+      );
+      
+      const wikiAvailable = availableMods.some((modName: string) => 
+        modName.includes('wiki') || modName === 'openagents.mods.workspace.wiki'
+      );
+
+      console.log(`Network health check successful. Available mods:`, availableMods);
+      console.log(`Forum available: ${forumAvailable}, Wiki available: ${wikiAvailable}`);
+
+      return {
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        available_mods: availableMods,
+        forum_available: forumAvailable,
+        wiki_available: wikiAvailable
+      };
+    } else {
+      console.error(`Health check failed with status: ${response.status}`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`Health check failed for ${host}:${port}:`, error);
+    return null;
+  }
+};
 
 // Test connection to a specific network using HTTP port directly
 export const ManualNetworkConnection = async (
