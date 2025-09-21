@@ -11,7 +11,6 @@ import uuid
 from enum import Enum
 from typing import Dict, Any, Optional, Set, List
 import logging
-from warnings import deprecated
 from aiohttp.hdrs import DESTINATION
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -290,7 +289,6 @@ class Event(BaseModel):
         return self.destination_id
     
     @property 
-    @deprecated("Use destination_id instead")
     def relevant_agent_id(self) -> Optional[str]:
         return self.destination_id
         

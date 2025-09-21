@@ -2,7 +2,6 @@ import asyncio
 from typing import TYPE_CHECKING, Dict, Any, List, Optional, Set, Type, Callable, Awaitable
 import uuid
 import logging
-from warnings import deprecated
 
 from pydantic import BaseModel, Field
 
@@ -266,6 +265,8 @@ class AgentClient:
         """Disconnect from the network server."""
         for mod_adapter in self.mod_adapters.values():
             mod_adapter.on_disconnect()
+        if self.connector is None:
+            return True
         return await self.connector.disconnect()
     
     
