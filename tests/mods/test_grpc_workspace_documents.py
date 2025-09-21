@@ -27,10 +27,10 @@ async def documents_network():
     # Load config and use different ports to avoid conflicts
     config = load_network_config(str(config_path))
     
-    # Update ports to avoid conflicts (use random ports)
+    # Update ports to avoid conflicts - Documents test range: 24000-25999
     import random
-    grpc_port = random.randint(49000, 50000)
-    http_port = grpc_port + 100
+    grpc_port = random.randint(24000, 25999)
+    http_port = grpc_port + 2000
     
     for transport in config.network.transports:
         if transport.type == "grpc":

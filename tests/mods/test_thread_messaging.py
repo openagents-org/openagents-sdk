@@ -39,9 +39,9 @@ async def thread_messaging_network():
     # Load config and use random port to avoid conflicts
     config = load_network_config(str(config_path))
     
-    # Update the gRPC transport port to avoid conflicts
-    grpc_port = random.randint(49000, 50000)
-    http_port = grpc_port + 100  # HTTP port should be different
+    # Update the gRPC transport port to avoid conflicts - Thread messaging test range: 40000-41999
+    grpc_port = random.randint(40000, 41999)
+    http_port = grpc_port + 2000  # HTTP port should be different
     
     for transport in config.network.transports:
         if transport.type == "grpc":
