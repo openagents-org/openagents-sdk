@@ -178,6 +178,11 @@ class WorkerAgent(AgentRunner):
         
         logger.info(f"Initialized WorkerAgent '{self.default_agent_id}' with ID: {agent_id}")
     
+    @property
+    def agent_id(self) -> str:
+        """Get the agent ID."""
+        return self.client.agent_id
+    
     def workspace(self) -> Workspace:
         """Get the workspace client."""
         if self._workspace_client is None:
@@ -444,43 +449,40 @@ class WorkerAgent(AgentRunner):
         reply_to_id = channel_msg_data.get("reply_to_id")
         
         if message_type == "reply_message" or (message_type == "channel_message" and reply_to_id):
-            context = ReplyMessageContext(
-                message_id=message_id,
-                source_id=sender_id,
-                timestamp=timestamp,
-                payload=msg_content,
-                raw_message=message,
+            reply_context = ReplyMessageContext(
+                incoming_event=message,
+                event_threads=context.event_threads,
+                incoming_thread_id=context.incoming_thread_id,
                 reply_to_id=reply_to_id or "",
                 target_agent_id=channel_msg_data.get("target_agent_id"),
                 channel=channel,
                 thread_level=channel_msg_data.get("thread_level", 1)
             )
             
-            await self.on_channel_reply(context)
+            await self.on_channel_reply(reply_context)
             
         elif message_type == "channel_message":
-            context = ChannelMessageContext(
-                message_id=message_id,
-                source_id=sender_id,
-                timestamp=timestamp,
-                payload=msg_content,
-                raw_message=message,
+            channel_context = ChannelMessageContext(
+                incoming_event=message,
+                event_threads=context.event_threads,
+                incoming_thread_id=context.incoming_thread_id,
                 channel=channel,
                 mentioned_agent_id=channel_msg_data.get("mentioned_agent_id")
             )
             
             # Check if we're mentioned
-            if (context.mentioned_agent_id == self.client.agent_id or 
-                self.is_mentioned(context.text)):
-                await self.on_channel_mention(context)
+            if (channel_context.mentioned_agent_id == self.client.agent_id or 
+                self.is_mentioned(channel_context.text)):
+                await self.on_channel_mention(channel_context)
             else:
-                await self.on_channel_post(context)
+                await self.on_channel_post(channel_context)
 
-    async def _handle_reaction_notification(self, message: Event):
+    async def _handle_reaction_notification(self, context: EventContext):
         """Handle reaction notifications."""
+        message = context.incoming_event
         reaction_data = message.payload.get("reaction", {})
         
-        context = ReactionContext(
+        reaction_context = ReactionContext(
             message_id=message.event_id,
             target_message_id=reaction_data.get("target_message_id", ""),
             reactor_id=reaction_data.get("sender_id", ""),
@@ -490,13 +492,14 @@ class WorkerAgent(AgentRunner):
             raw_message=message
         )
         
-        await self.on_reaction(context)
+        await self.on_reaction(reaction_context)
 
-    async def _handle_file_notification(self, message: Event):
+    async def _handle_file_notification(self, context: EventContext):
         """Handle file upload notifications."""
+        message = context.incoming_event
         file_data = message.payload.get("file", {})
         
-        context = FileContext(
+        file_context = FileContext(
             message_id=message.event_id,
             source_id=message.source_id,
             filename=file_data.get("filename", ""),
@@ -507,12 +510,13 @@ class WorkerAgent(AgentRunner):
             raw_message=message
         )
         
-        await self.on_file_received(context)
+        await self.on_file_received(file_context)
 
-    async def _handle_direct_message_notification(self, message: Event):
+    async def _handle_direct_message_notification(self, context: EventContext):
         """Handle direct message notifications."""
         logger.info(f"🔧 WORKER_AGENT: Handling direct message notification")
         
+        message = context.incoming_event
         # Extract message details from the payload
         source_id = message.payload.get("sender_id", "")
         content = message.payload.get("content", {})
@@ -520,7 +524,7 @@ class WorkerAgent(AgentRunner):
         timestamp = message.payload.get("timestamp", 0)
         
         # Create EventContext for the on_direct method
-        context = EventContext(
+        direct_context = EventContext(
             message_id=message.event_id,
             source_id=source_id,
             timestamp=timestamp,
@@ -529,8 +533,8 @@ class WorkerAgent(AgentRunner):
             target_agent_id=message.destination_id or ""
         )
         
-        logger.info(f"🔧 WORKER_AGENT: Calling on_direct with source={source_id}, text='{context.text}'")
-        await self.on_direct(context)
+        logger.info(f"🔧 WORKER_AGENT: Calling on_direct with source={source_id}, text='{direct_context.text}'")
+        await self.on_direct(direct_context)
 
     async def _handle_thread_history_response(self, message: Event):
         """Handle thread history response events."""
@@ -627,145 +631,10 @@ class WorkerAgent(AgentRunner):
         
         logger.error(f"Message history retrieval failed: {error}")
 
-    async def _handle_thread_direct_message(self, message: Event):
-        """Handle thread direct message events."""
-        if message.event_name == "thread.direct_message.notification":
-            await self._handle_direct_message_notification(message)
-        else:
-            logger.debug(f"Unhandled thread direct message event: {message.event_name}")
-
-    async def _handle_thread_channel_message(self, message: Event):
-        """Handle thread channel message events."""
-        if message.event_name == "thread.channel_message.notification":
-            await self._handle_channel_notification(message)
-        else:
-            logger.debug(f"Unhandled thread channel message event: {message.event_name}")
-
-    async def _handle_thread_reaction(self, message: Event):
-        """Handle thread reaction events."""
-        if message.event_name == "thread.reaction.notification":
-            await self._handle_reaction_notification(message)
-        else:
-            logger.debug(f"Unhandled thread reaction event: {message.event_name}")
-
-    async def _handle_thread_file(self, message: Event):
-        """Handle thread file events."""
-        if message.event_name in ["thread.file.upload_response", "thread.file.download_response"]:
-            await self._handle_file_notification(message)
-        else:
-            logger.debug(f"Unhandled thread file event: {message.event_name}")
-
     async def _handle_thread_event(self, message: Event):
         """Handle other thread events."""
         logger.debug(f"Generic thread event: {message.event_name}")
 
-    async def _handle_channel_notification(self, message: Event):
-        """Handle channel message notifications."""
-        channel_msg_data = message.payload.get("message", {})
-        channel = message.payload.get("channel", "")
-        
-        # Extract message details
-        msg_content = channel_msg_data.get("content", {})
-        sender_id = channel_msg_data.get("sender_id", "")
-        message_id = channel_msg_data.get("message_id", "")
-        timestamp = channel_msg_data.get("timestamp", 0)
-        message_type = channel_msg_data.get("message_type", "")
-        
-        # Skip our own messages
-        if self.ignore_own_messages and sender_id == self.client.agent_id:
-            return
-        
-        # Check if this is a reply message (either explicit reply_message type or channel_message with reply_to_id)
-        reply_to_id = channel_msg_data.get("reply_to_id")
-        
-        if message_type == "reply_message" or (message_type == "channel_message" and reply_to_id):
-            context = ReplyMessageContext(
-                message_id=message_id,
-                source_id=sender_id,
-                timestamp=timestamp,
-                payload=msg_content,
-                raw_message=message,
-                reply_to_id=reply_to_id or "",
-                target_agent_id=channel_msg_data.get("target_agent_id"),
-                channel=channel,
-                thread_level=channel_msg_data.get("thread_level", 1)
-            )
-            
-            await self.on_channel_reply(context)
-            
-        elif message_type == "channel_message":
-            context = ChannelMessageContext(
-                message_id=message_id,
-                source_id=sender_id,
-                timestamp=timestamp,
-                payload=msg_content,
-                raw_message=message,
-                channel=channel,
-                mentioned_agent_id=channel_msg_data.get("mentioned_agent_id")
-            )
-            
-            # Check if we're mentioned
-            if (context.mentioned_agent_id == self.client.agent_id or 
-                self.is_mentioned(context.text)):
-                await self.on_channel_mention(context)
-            else:
-                await self.on_channel_post(context)
-
-    async def _handle_reaction_notification(self, message: Event):
-        """Handle reaction notifications."""
-        reaction_data = message.payload.get("reaction", {})
-        
-        context = ReactionContext(
-            message_id=message.event_id,
-            target_message_id=reaction_data.get("target_message_id", ""),
-            reactor_id=reaction_data.get("sender_id", ""),
-            reaction_type=reaction_data.get("reaction_type", ""),
-            action=reaction_data.get("action", "add"),
-            timestamp=message.timestamp,
-            raw_message=message
-        )
-        
-        await self.on_reaction(context)
-
-    async def _handle_file_notification(self, message: Event):
-        """Handle file upload notifications."""
-        file_data = message.payload.get("file", {})
-        
-        context = FileContext(
-            message_id=message.event_id,
-            sender_id=message.source_id,
-            filename=file_data.get("filename", ""),
-            file_content=file_data.get("file_content", ""),
-            mime_type=file_data.get("mime_type", "application/octet-stream"),
-            file_size=file_data.get("file_size", 0),
-            timestamp=message.timestamp,
-            raw_message=message
-        )
-        
-        await self.on_file_received(context)
-
-    async def _handle_direct_message_notification(self, message: Event):
-        """Handle direct message notifications."""
-        logger.info(f"🔧 WORKER_AGENT: Handling direct message notification")
-        
-        # Extract message details from the payload
-        source_id = message.payload.get("sender_id", "")
-        content = message.payload.get("content", {})
-        text = message.payload.get("text", "")
-        timestamp = message.payload.get("timestamp", 0)
-        
-        # Create EventContext for the on_direct method
-        context = EventContext(
-            message_id=message.event_id,
-            source_id=source_id,
-            timestamp=timestamp,
-            payload=content,
-            raw_message=message,
-            target_agent_id=message.destination_id or ""
-        )
-        
-        logger.info(f"🔧 WORKER_AGENT: Calling on_direct with source={source_id}, text='{context.text}'")
-        await self.on_direct(context)
 
     async def _handle_command(self, context: EventContext) -> bool:
         """Handle registered text commands."""
