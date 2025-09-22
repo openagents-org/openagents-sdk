@@ -4,8 +4,8 @@ import { useThreadStore } from "@/stores/threadStore";
 
 // Section Header Component
 const SectionHeader: React.FC<{ title: string }> = React.memo(({ title }) => (
-  <div className="px-5">
-    <div className="flex items-center mb-2">
+  <div className="px-5 my-3">
+    <div className="flex items-center">
       <div className="text-xs font-bold text-gray-400 tracking-wide select-none">
         {title}
       </div>
@@ -93,19 +93,15 @@ const AgentItem: React.FC<{
 ));
 AgentItem.displayName = "AgentItem";
 
-// Chat Sidebar Props - 现在不需要外部传递数据
-export interface ChatSidebarProps {}
-
 // Chat Sidebar Content Component - 自己管理数据
-const ChatSidebar: React.FC<ChatSidebarProps> = () => {
+const ChatSidebar: React.FC = () => {
   // 使用 threadStore 获取实际数据
   const {
-    threadState,
     getCurrentChannel,
     getCurrentDirectMessage,
     getChannels,
     getAgents,
-    updateThreadState
+    updateThreadState,
   } = useThreadStore();
 
   // 获取数据
@@ -121,7 +117,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = () => {
   const onChannelSelect = (channel: string) => {
     updateThreadState({
       currentChannel: channel,
-      currentDirectMessage: null // 切换到频道时清除私信选择
+      currentDirectMessage: null, // 切换到频道时清除私信选择
     });
   };
 
@@ -129,14 +125,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = () => {
   const onDirectMessageSelect = (agentId: string) => {
     updateThreadState({
       currentDirectMessage: agentId,
-      currentChannel: null // 切换到私信时清除频道选择
+      currentChannel: null, // 切换到私信时清除频道选择
     });
   };
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Channels Section */}
       <SectionHeader title="CHANNELS" />
-      <div className="px-3 mb-4">
+      <div className="px-3">
         <ul className="flex flex-col gap-1">
           {channels.map((channel) => (
             <ChannelItem

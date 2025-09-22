@@ -52,8 +52,8 @@ export const useThreadStore = create<ThreadStoreState>()(
                 agents: [],
                 currentChannel: null,
                 currentDirectMessage: null,
-                ...updates
-              }
+                ...updates,
+              },
         }));
       },
 
@@ -65,29 +65,30 @@ export const useThreadStore = create<ThreadStoreState>()(
       // 添加文档
       addDocument: (document: DocumentInfo) => {
         set((state) => ({
-          documents: [...state.documents, document]
+          documents: [...state.documents, document],
         }));
       },
 
       // 更新文档
       updateDocument: (documentId: string, updates: Partial<DocumentInfo>) => {
         set((state) => ({
-          documents: state.documents.map(doc =>
-            doc.document_id === documentId
-              ? { ...doc, ...updates }
-              : doc
-          )
+          documents: state.documents.map((doc) =>
+            doc.document_id === documentId ? { ...doc, ...updates } : doc
+          ),
         }));
       },
 
       // 移除文档
       removeDocument: (documentId: string) => {
         set((state) => ({
-          documents: state.documents.filter(doc => doc.document_id !== documentId),
+          documents: state.documents.filter(
+            (doc) => doc.document_id !== documentId
+          ),
           // 如果移除的是当前选中的文档，清除选择
-          selectedDocumentId: state.selectedDocumentId === documentId
-            ? null
-            : state.selectedDocumentId
+          selectedDocumentId:
+            state.selectedDocumentId === documentId
+              ? null
+              : state.selectedDocumentId,
         }));
       },
 
@@ -114,7 +115,7 @@ export const useThreadStore = create<ThreadStoreState>()(
       // 便捷方法：获取代理列表
       getAgents: () => {
         return get().threadState?.agents || [];
-      }
+      },
     }),
     {
       name: "openagents_thread", // localStorage key

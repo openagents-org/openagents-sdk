@@ -1,16 +1,20 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import OpenAgentsLogo from "@/components/icons/OpenAgentsLogo";
+// import OpenAgentsLogo from "@/components/icons/OpenAgentsLogo";
 import { useNetworkStore } from "@/stores/networkStore";
+import { useThreadStore } from "@/stores/threadStore";
+import { useConversationStore } from "@/stores/conversationStore";
+import { clearAllOpenAgentsDataForLogout } from "@/utils/cookies";
+import { useConfirm } from "@/context/ConfirmContext";
 import { getVisibleQuickActions } from "@/config/routeConfig";
 import { useThemeStore } from "@/stores/themeStore";
 import SidebarContent from "./SidebarContent";
 
 // Header Component - 缓存组件，因为内容是静态的
 const SidebarHeader: React.FC = React.memo(() => (
-  <div className="flex flex-col px-5 py-5">
-    <div className="flex items-center">
-      <OpenAgentsLogo className="w-10 h-10 mr-2 text-gray-900 dark:text-white" />
+  <div className="flex flex-col px-4 py-2">
+    <div className="flex items-center justify-center">
+      {/* <OpenAgentsLogo className="w-10 h-10 mr-2 text-gray-900 dark:text-white" /> */}
       <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent dark:bg-none dark:text-white">
         OpenAgents Studio
       </span>
@@ -82,16 +86,56 @@ const SidebarFooter: React.FC<{
   const navigate = useNavigate();
   const { agentName, selectedNetwork, clearNetwork, clearAgentName } =
     useNetworkStore();
+  const { setThreadState } = useThreadStore();
+  const { clearAllConversations } = useConversationStore();
+  const { confirm } = useConfirm();
 
   // 登出处理函数
-  const handleLogout = () => {
-    // 清空网络状态
-    clearNetwork();
-    clearAgentName();
-    // 清空localStorage中的其他缓存（如果有的话）
-    localStorage.clear();
-    // 跳转到网络选择页面
-    navigate("/network-selection", { replace: true });
+  const handleLogout = async () => {
+    console.log("🚪 Logout button clicked - showing confirmation dialog");
+
+    try {
+      // 显示确认对话框
+      const confirmed = await confirm(
+        'Logout Confirmation',
+        'Are you sure you want to logout? You will need to reconnect to continue using the application.',
+        {
+          confirmText: 'Logout',
+          cancelText: 'Cancel',
+          type: 'warning'
+        }
+      );
+
+      if (!confirmed) {
+        console.log("🚫 Logout cancelled by user");
+        return;
+      }
+
+      console.log("✅ Logout confirmed - starting logout process");
+
+      // 清空网络状态
+      clearNetwork();
+      clearAgentName();
+      console.log("🧹 Network state cleared");
+
+      // 重置 ThreadStore 的内存状态（这是关键！）
+      setThreadState(null);
+      console.log("🧹 Thread store memory state reset");
+
+      // 清空对话 store
+      clearAllConversations();
+      console.log("🧹 Conversations store cleared");
+
+      // 清空 OpenAgents 相关的所有数据（保留主题设置）
+      clearAllOpenAgentsDataForLogout();
+
+      // 跳转到网络选择页面
+      console.log("🔄 Navigating to network selection");
+      navigate("/network-selection", { replace: true });
+
+    } catch (error) {
+      console.error("❌ Error during logout:", error);
+    }
   };
 
   return (
@@ -203,7 +247,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
       <SidebarHeader />
 
       {/* 中：Dynamic Content - 由 SidebarContent 根据路由自动管理 */}
-      <div className="flex-1 mt-2">
+      <div className="flex-1">
         <SidebarContent />
       </div>
 

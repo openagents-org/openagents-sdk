@@ -1,27 +1,16 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef, useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
 import ThreadMessagingViewEventBased from "@/components/chat/ThreadMessagingViewEventBased";
-import ChatView from "@/components/chat/ChatView";
-import { useConversationStore } from "@/stores/conversationStore";
 import { useThreadStore } from "@/stores/threadStore";
 import { useNetworkStore } from "@/stores/networkStore";
-import useConnectedStatus from "@/hooks/useConnectedStatus";
 import { ThreadState } from "@/types/thread";
 /**
  * 聊天主页面 - 处理聊天相关的所有功能
  */
 const ChatMainPage: React.FC = () => {
   const { agentName } = useNetworkStore();
-  const { channels, openAgentsHook } = useConnectedStatus();
 
-  const {
-    threadState,
-    documents,
-    selectedDocumentId,
-    setSelectedDocument,
-    setDocuments,
-    setThreadState,
-  } = useThreadStore();
+  const { threadState, setThreadState } = useThreadStore();
 
   // 线程消息引用
   const threadMessagingRef = useRef<{
@@ -29,21 +18,6 @@ const ChatMainPage: React.FC = () => {
     selectChannel: (channel: string) => void;
     selectDirectMessage: (agentId: string) => void;
   } | null>(null);
-
-  // 获取当前线程状态
-  const getCurrentThreadState = useCallback((): ThreadState | null => {
-    if (threadMessagingRef.current) {
-      return threadMessagingRef.current.getState();
-    }
-    return (
-      threadState || {
-        channels: channels || [],
-        agents: [],
-        currentChannel: null,
-        currentDirectMessage: null,
-      }
-    );
-  }, [channels, threadState]);
 
   // 线程状态变化处理器
   const handleThreadStateChange = useCallback(
@@ -53,32 +27,23 @@ const ChatMainPage: React.FC = () => {
     [setThreadState]
   );
 
-  // 文档选择处理器
-  const handleDocumentSelect = useCallback(
-    (documentId: string | null) => {
-      setSelectedDocument(documentId);
-    },
-    [setSelectedDocument]
-  );
-  const {
-    activeConversationId,
-    conversations,
-    handleConversationChange,
-    createNewConversation,
-    deleteConversation,
-  } = useConversationStore();
+  // 注意：自动选择第一个channel的逻辑现在由ThreadMessagingViewEventBased负责
 
-  // 线程消息处理器
-  const handleChannelSelect = useCallback((channel: string) => {
-    threadMessagingRef.current?.selectChannel(channel);
-  }, [threadMessagingRef]);
+  // 监听 threadStore 状态变化，同步到 ThreadMessagingViewEventBased
+  useEffect(() => {
+    const currentChannel = threadState?.currentChannel;
+    const currentDirectMessage = threadState?.currentDirectMessage;
 
-  const handleDirectMessageSelect = useCallback((agentId: string) => {
-    threadMessagingRef.current?.selectDirectMessage(agentId);
-  }, [threadMessagingRef]);
-
-  // 判断是否使用线程消息系统
-  const hasThreadMessaging = true;
+    if (threadMessagingRef.current) {
+      if (currentChannel) {
+        console.log(`🔄 Syncing to channel: ${currentChannel}`);
+        threadMessagingRef.current.selectChannel(currentChannel);
+      } else if (currentDirectMessage) {
+        console.log(`🔄 Syncing to DM: ${currentDirectMessage}`);
+        threadMessagingRef.current.selectDirectMessage(currentDirectMessage);
+      }
+    }
+  }, [threadState?.currentChannel, threadState?.currentDirectMessage]);
 
   return (
     <Routes>
@@ -86,22 +51,11 @@ const ChatMainPage: React.FC = () => {
       <Route
         index
         element={
-          hasThreadMessaging ? (
-            <ThreadMessagingViewEventBased
-              ref={threadMessagingRef}
-              openAgentsHook={openAgentsHook}
-              agentName={agentName!}
-              onThreadStateChange={handleThreadStateChange}
-            />
-          ) : (
-            <ChatView
-              conversationId={activeConversationId}
-              onDeleteConversation={() => {
-                deleteConversation(activeConversationId);
-                createNewConversation();
-              }}
-            />
-          )
+          <ThreadMessagingViewEventBased
+            ref={threadMessagingRef}
+            agentName={agentName!}
+            onThreadStateChange={handleThreadStateChange}
+          />
         }
       />
 
