@@ -104,7 +104,7 @@ export class OpenAgentsService {
     return {
       success: response.success,
       message: response.message,
-      messageId: response.data?.message_id,
+      messageId: response.data?.event_id,
     };
   }
 
@@ -122,7 +122,7 @@ export class OpenAgentsService {
     return {
       success: response.success,
       message: response.message,
-      messageId: response.data?.message_id,
+      messageId: response.data?.event_id,
     };
   }
 
@@ -311,6 +311,12 @@ export class OpenAgentsService {
       console.log(`📨 New direct message from ${message.sender_id}`);
       this.emit("newDirectMessage", message);
       this.emit("newMessage", message); // Generic event
+    });
+
+    this.eventService.on("replyMessage", (message: ThreadMessage) => {
+      // Only emit as channel message since UI treats replies as channel messages for display
+      // This prevents duplicate detection issues from multiple event emissions
+      this.emit("newChannelMessage", message);
     });
 
     this.eventService.on("reaction", (reaction: any) => {

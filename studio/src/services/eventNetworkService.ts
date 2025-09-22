@@ -191,7 +191,7 @@ export class EventNetworkService {
    */
   async getChannelMessages(
     channel: string,
-    limit: number = 50,
+    limit: number = 200,
     offset: number = 0
   ): Promise<ThreadMessage[]> {
     try {
@@ -424,6 +424,18 @@ export class EventNetworkService {
     );
 
     this.connector.on(
+      EventNames.THREAD_REPLY_NOTIFICATION,
+      (event: Event) => {
+        const message = this.parseThreadMessage(event);
+        if (message) {
+          // Only emit as replyMessage to prevent duplicate processing
+          // The openAgentsService will handle converting this to channelMessage for UI
+          this.emit("replyMessage", message);
+        }
+      }
+    );
+
+    this.connector.on(
       EventNames.THREAD_REACTION_NOTIFICATION,
       (event: Event) => {
         if (event.payload?.reaction) {
@@ -445,47 +457,43 @@ export class EventNetworkService {
   }
 
   /**
-   * Parse thread message from event payload
+   * Parse thread message from event payload (updated for new payload structure)
    */
   private parseThreadMessage(event: Event): ThreadMessage | null {
     try {
       const payload = event.payload;
-      if (!payload?.message) {
+      if (!payload) {
         return null;
       }
 
-      const message = payload.message;
       console.log(`🔍 Parsing thread message:`, {
         eventId: event.event_id,
         sourceId: event.source_id,
-        messageStructure: message,
-        targetAgentId: message.target_agent_id,
-        targetAgentIdExists: "target_agent_id" in message,
+        eventName: event.event_name,
+        payload: payload,
       });
-      console.log(`🔍 origin thread message:`, message);
 
+      // Extract text content from the payload
+      const textContent = payload.text || payload.content?.text || "";
+      
       return {
-        message_id: message.message_id || event.event_id || "",
-        sender_id: message.source_id || event.source_id,
-        timestamp: message.timestamp || new Date().toISOString(),
-        content: message.content || message.payload.content || { text: "" },
-        message_type:
-          message.message_type ||
-          message.payload.message_type ||
-          "channel_message",
-        channel: message.channel,
-        target_agent_id:
-          message.target_agent_id || message.payload.target_agent_id,
-        reply_to_id: message.reply_to_id,
-        thread_level: message.thread_level || 1,
-        quoted_message_id: message.quoted_message_id,
-        quoted_text: message.quoted_text,
-        thread_info: message.thread_info,
-        reactions: message.reactions,
-        attachment_file_id: message.attachment_file_id,
-        attachment_filename: message.attachment_filename,
-        attachment_size: message.attachment_size,
-        attachments: message.attachments,
+        message_id: event.event_id || "",
+        sender_id: event.source_id,
+        timestamp: event.timestamp ? new Date(event.timestamp * 1000).toISOString() : new Date().toISOString(),
+        content: { text: textContent },
+        message_type: payload.message_type || "channel_message",
+        channel: payload.channel,
+        target_agent_id: payload.target_agent_id,
+        reply_to_id: payload.reply_to_id,
+        thread_level: payload.thread_level || 1,
+        quoted_message_id: payload.quoted_message_id,
+        quoted_text: payload.quoted_text,
+        thread_info: payload.thread_info,
+        reactions: payload.reactions,
+        attachment_file_id: payload.attachment_file_id,
+        attachment_filename: payload.attachment_filename,
+        attachment_size: payload.attachment_size,
+        attachments: payload.attachments,
       };
     } catch (error) {
       console.error("Error parsing thread message:", error);

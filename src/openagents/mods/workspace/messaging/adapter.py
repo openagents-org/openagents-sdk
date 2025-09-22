@@ -127,11 +127,14 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         Args:
             message: The broadcast message to process
         """
-        if isinstance(message, ChannelMessage):
-            logger.debug(f"Received channel message from {message.source_id} in {message.channel}")
+        # Check if this is a channel message by examining the payload
+        if hasattr(message, 'payload') and message.payload and 'channel' in message.payload:
+            channel = ChannelMessage.get_channel(message)
+            logger.debug(f"Received channel message from {message.source_id} in {channel}")
             
             # Add message to the channel thread
-            message.thread_name = f"channel_{message.channel}"
+            if hasattr(message, 'thread_name'):
+                message.thread_name = f"channel_{channel}"
             
             # Call registered message handlers
             for handler in self.message_handlers.values():
@@ -257,12 +260,12 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             quoted_message_id = quote
             quoted_text = f"[Quoted message {quote}]"
         
-        # Create channel message
-        channel_msg = ChannelMessage(
-            source_id=self.agent_id,
+        # Create channel message using the new create method
+        channel_msg = ChannelMessage.create(
             channel=normalized_channel,
+            text=text,
+            source_id=self.agent_id,
             mentioned_agent_id=mentioned_agent_id,
-            content=content,
             quoted_message_id=quoted_message_id,
             quoted_text=quoted_text,
             attachment_file_id=attachment_file_id,

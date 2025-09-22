@@ -35,6 +35,7 @@ export enum EventNames {
   // Thread messaging responses
   THREAD_DIRECT_MESSAGE_NOTIFICATION = 'thread.direct_message.notification',
   THREAD_CHANNEL_MESSAGE_NOTIFICATION = 'thread.channel_message.notification',
+  THREAD_REPLY_NOTIFICATION = 'thread.reply.notification',
   THREAD_REACTION_NOTIFICATION = 'thread.reaction.notification',
   THREAD_FILE_UPLOAD_RESPONSE = 'thread.file.upload_response',
   

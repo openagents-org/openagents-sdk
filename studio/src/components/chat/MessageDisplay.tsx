@@ -83,8 +83,8 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Build thread structure
-  const buildThreadStructure = (): ThreadStructure => {
+  // Build thread structure and return both structure and root message IDs
+  const buildThreadStructure = (): { structure: ThreadStructure; rootMessageIds: string[] } => {
     const structure: ThreadStructure = {};
     const rootMessages: string[] = [];
 
@@ -103,15 +103,28 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
       }
     });
 
+    // Track orphaned replies (replies whose parents are not in current message set)
+    const orphanedReplies: string[] = [];
+
     // Second pass: build parent-child relationships
     // Only for actual replies, not quotes
     messages.forEach((message) => {
-      if (message.reply_to_id && structure[message.reply_to_id]) {
-        structure[message.reply_to_id].children.push(message.message_id);
+      if (message.reply_to_id) {
+        if (structure[message.reply_to_id]) {
+          structure[message.reply_to_id].children.push(message.message_id);
+        } else {
+          // Parent not found - treat as orphaned reply
+          orphanedReplies.push(message.message_id);
+        }
       }
     });
 
-    return structure;
+    // Add orphaned replies as root messages so they still display
+    rootMessages.push(...orphanedReplies);
+    
+    
+
+    return { structure, rootMessageIds: rootMessages };
   };
 
   const handleReaction = (
@@ -389,20 +402,12 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
     );
   }
 
-  const threadStructure = buildThreadStructure();
-  const rootMessages = messages
-    .filter((m) => !m.reply_to_id)
-    .sort((a, b) => {
-      const aTime =
-        parseInt(a.timestamp) < 1e10
-          ? parseInt(a.timestamp) * 1000
-          : parseInt(a.timestamp);
-      const bTime =
-        parseInt(b.timestamp) < 1e10
-          ? parseInt(b.timestamp) * 1000
-          : parseInt(b.timestamp);
-      return aTime - bTime;
-    });
+  const { structure: threadStructure, rootMessageIds } = buildThreadStructure();
+  
+  // Get actual message objects for root message IDs in the correct order
+  const rootMessages = rootMessageIds
+    .map(id => messages.find(m => m.message_id === id))
+    .filter(Boolean) as ThreadMessage[];
 
   return (
     <div className="flex-1 overflow-y-auto p-4 scroll-smooth bg-white dark:bg-slate-800">
