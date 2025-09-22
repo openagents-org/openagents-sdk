@@ -262,17 +262,101 @@ export const clearAllSavedAgentNames = (): void => {
 };
 
 /**
- * Clear all OpenAgents related cookies (useful for troubleshooting)
+ * Clear all OpenAgents related cookies and localStorage (useful for troubleshooting)
  */
 export const clearAllOpenAgentsData = (): void => {
+  // Clear cookies
   clearSavedManualConnection();
   clearAllSavedAgentNames();
 
+  // Clear all OpenAgents related localStorage
   try {
+    // Theme store
     localStorage.removeItem("openagents_theme");
+
+    // Thread store (channels, current selection)
+    localStorage.removeItem("openagents_thread");
+
+    // Chat messages store
+    localStorage.removeItem("openagents_chat_messages");
+
+    // Conversations store
+    localStorage.removeItem("openagents_conversations");
+
+    // View store
+    localStorage.removeItem("openagents_view");
+
+    // Network store (if persisted)
+    localStorage.removeItem("openagents_network");
+
+    // Any other potential OpenAgents data
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith("openagents_")) {
+        localStorage.removeItem(key);
+      }
+    });
+
   } catch (error) {
-    console.warn("Failed to clear theme from localStorage:", error);
+    console.warn("Failed to clear some localStorage data:", error);
   }
 
-  console.log("Cleared all OpenAgents data from cookies and localStorage");
+  console.log("🧹 Cleared all OpenAgents data from cookies and localStorage");
+};
+
+/**
+ * Clear all OpenAgents data for logout (preserves theme preference and saved agent names)
+ */
+export const clearAllOpenAgentsDataForLogout = (): void => {
+  console.log("🚪 Starting logout data cleanup...");
+
+  // Clear manual connection but keep saved agent names for easier reconnection
+  clearSavedManualConnection();
+  console.log("🍪 Manual connection data cleared (agent names preserved)");
+
+  // Clear all OpenAgents related localStorage except theme
+  try {
+    // Thread store (channels, current selection) - 这个最重要
+    const threadData = localStorage.getItem("openagents_thread");
+    console.log("📋 Thread data before cleanup:", threadData);
+    localStorage.removeItem("openagents_thread");
+    console.log("📋 Thread store cleared");
+
+    // Chat messages store
+    localStorage.removeItem("openagents_chat_messages");
+    console.log("💬 Chat messages cleared");
+
+    // Conversations store
+    localStorage.removeItem("openagents_conversations");
+    console.log("🗣️ Conversations cleared");
+
+    // View store
+    localStorage.removeItem("openagents_view");
+    console.log("👁️ View store cleared");
+
+    // Network store (if persisted)
+    localStorage.removeItem("openagents_network");
+    console.log("🌐 Network store cleared");
+
+    // Clear other OpenAgents data but preserve theme
+    const keys = Object.keys(localStorage);
+    const clearedKeys: string[] = [];
+    keys.forEach(key => {
+      if (key.startsWith("openagents_") && key !== "openagents_theme") {
+        localStorage.removeItem(key);
+        clearedKeys.push(key);
+      }
+    });
+
+    if (clearedKeys.length > 0) {
+      console.log("🧹 Additional keys cleared:", clearedKeys);
+    }
+
+    console.log("✅ Thread data after cleanup:", localStorage.getItem("openagents_thread"));
+
+  } catch (error) {
+    console.warn("Failed to clear some localStorage data:", error);
+  }
+
+  console.log("🚪 Cleared OpenAgents session data (theme + agent names preserved)");
 };

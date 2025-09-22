@@ -1,7 +1,11 @@
 import React, { useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { NavigationIcons, getNavigationRoutesByGroup } from "@/config/routeConfig";
+import {
+  NavigationIcons,
+  getNavigationRoutesByGroup,
+} from "@/config/routeConfig";
 import ModIcon from "./ModIcon";
+import logo from "@/assets/images/open-agents-logo.png";
 
 const ModSidebar: React.FC = () => {
   const navigate = useNavigate();
@@ -9,23 +13,27 @@ const ModSidebar: React.FC = () => {
 
   // 使用动态配置生成图标组
   const iconGroups = useMemo(() => {
-    const primaryRoutes = getNavigationRoutesByGroup('primary');
-    const secondaryRoutes = getNavigationRoutesByGroup('secondary');
+    const primaryRoutes = getNavigationRoutesByGroup("primary");
+    const secondaryRoutes = getNavigationRoutesByGroup("secondary");
 
     return [
       // Primary group (主要功能)
-      primaryRoutes.map(route => ({
+      primaryRoutes.map((route) => ({
         key: route.navigationConfig!.key,
         label: route.navigationConfig!.label,
-        icon: React.createElement(NavigationIcons[route.navigationConfig!.icon]),
-        route: route.path.replace('/*', ''), // 移除通配符
+        icon: React.createElement(
+          NavigationIcons[route.navigationConfig!.icon]
+        ),
+        route: route.path.replace("/*", ""), // 移除通配符
       })),
       // Secondary group (设置相关)
-      secondaryRoutes.map(route => ({
+      secondaryRoutes.map((route) => ({
         key: route.navigationConfig!.key,
         label: route.navigationConfig!.label,
-        icon: React.createElement(NavigationIcons[route.navigationConfig!.icon]),
-        route: route.path.replace('/*', ''), // 移除通配符
+        icon: React.createElement(
+          NavigationIcons[route.navigationConfig!.icon]
+        ),
+        route: route.path.replace("/*", ""), // 移除通配符
       })),
     ];
   }, []);
@@ -51,7 +59,7 @@ const ModSidebar: React.FC = () => {
     >
       {/* Logo/Brand Icon */}
       <div className="mb-6">
-        <div
+        {/* <div
           className="
           w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg
           bg-gradient-to-br from-blue-600 to-purple-600 text-white
@@ -59,6 +67,13 @@ const ModSidebar: React.FC = () => {
         "
         >
           OA
+        </div> */}
+        <div
+          className="
+          w-10 h-10 rounded-xl flex items-center justify-center shadow-lg
+        "
+        >
+          <img src={logo} alt="OA" className="w-10 h-10" />
         </div>
       </div>
 

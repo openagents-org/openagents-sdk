@@ -100,11 +100,7 @@ const SidebarContent: React.FC = () => {
     return <DefaultSidebar />;
   };
 
-  return (
-    <div className="flex-1 overflow-y-auto">
-      {renderContent()}
-    </div>
-  );
+  return <div className="flex-1 overflow-y-auto">{renderContent()}</div>;
 };
 
 export default React.memo(SidebarContent);
