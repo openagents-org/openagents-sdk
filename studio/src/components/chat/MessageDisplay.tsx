@@ -206,7 +206,8 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
             )}
           </div>
 
-          {message.quoted_text && (
+          {/* 2025/09/25 no need this */}
+          {/* {message.quoted_text && (
             <div className="border-l-3 px-3 py-2 my-2 rounded-md text-sm bg-slate-100 border-slate-400 text-slate-600 dark:bg-slate-600 dark:border-slate-500 dark:text-slate-300">
               {(() => {
                 // Parse "Author: message text" format
@@ -231,7 +232,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                 }
               })()}
             </div>
-          )}
+          )} */}
 
           <div className="message-content leading-6 break-words">
             {message.content?.text ? (

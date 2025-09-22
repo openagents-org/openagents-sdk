@@ -149,14 +149,16 @@ const styles = `
   }
   
   .input-area {
+    margin-bottom: 6px;
     position: relative;
+    font-size: 0;
   }
   
   .message-textarea {
     width: 100%;
     min-height: 44px;
     max-height: 200px;
-    padding: 12px 60px 12px 16px;
+    padding: 12px 110px 12px 16px;
     border: 1px solid #d1d5db;
     border-radius: 24px;
     resize: none;
@@ -166,6 +168,7 @@ const styles = `
     background: #ffffff;
     color: #374151;
     transition: all 0.15s ease;
+    overflow-y: hidden;
   }
   
   .message-textarea:focus {
@@ -798,7 +801,8 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
       formData.append("message", message || `Uploading file: ${file.name}`);
 
       const response = await fetch(
-        "http://cur2.acenta.ai:9572/api/workspace/upload",
+        // "http://cur2.acenta.ai:9572/api/workspace/upload",
+        "/api/workspace/upload",
         {
           method: "POST",
           body: formData,

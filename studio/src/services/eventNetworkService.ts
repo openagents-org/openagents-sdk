@@ -455,14 +455,27 @@ export class EventNetworkService {
       }
 
       const message = payload.message;
+      console.log(`🔍 Parsing thread message:`, {
+        eventId: event.event_id,
+        sourceId: event.source_id,
+        messageStructure: message,
+        targetAgentId: message.target_agent_id,
+        targetAgentIdExists: "target_agent_id" in message,
+      });
+      console.log(`🔍 origin thread message:`, message);
+
       return {
         message_id: message.message_id || event.event_id || "",
-        sender_id: event.source_id,
+        sender_id: message.source_id || event.source_id,
         timestamp: message.timestamp || new Date().toISOString(),
-        content: message.content || { text: "" },
-        message_type: message.message_type || "channel_message",
+        content: message.content || message.payload.content || { text: "" },
+        message_type:
+          message.message_type ||
+          message.payload.message_type ||
+          "channel_message",
         channel: message.channel,
-        target_agent_id: message.target_agent_id,
+        target_agent_id:
+          message.target_agent_id || message.payload.target_agent_id,
         reply_to_id: message.reply_to_id,
         thread_level: message.thread_level || 1,
         quoted_message_id: message.quoted_message_id,

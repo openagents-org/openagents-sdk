@@ -6,7 +6,7 @@ import { useThreadStore } from "@/stores/threadStore";
 // Section Header Component
 const SectionHeader: React.FC<{ title: string }> = React.memo(({ title }) => (
   <div className="px-5">
-    <div className="flex items-center mb-2">
+    <div className="flex items-center my-3">
       <div className="text-xs font-bold text-gray-400 tracking-wide select-none">
         {title}
       </div>
@@ -81,7 +81,8 @@ export interface DocumentsSidebarProps {}
 // Documents Sidebar Content Component - 自己管理数据
 const DocumentsSidebar: React.FC<DocumentsSidebarProps> = () => {
   // 使用 threadStore 获取实际数据
-  const { documents, selectedDocumentId, setSelectedDocument } = useThreadStore();
+  const { documents, selectedDocumentId, setSelectedDocument } =
+    useThreadStore();
 
   // 文档选择处理
   const onDocumentSelect = (documentId: string | null) => {

@@ -461,7 +461,7 @@ export class HttpEventConnector {
   private handleIncomingEvent(event: Event): void {
     try {
       console.log(
-        `📨 Received event: ${event.event_name} from ${event.source_id}`
+        `📨 Received event: ${event.event_name} from source_id: ${event.source_id}`
       );
 
       // Emit specific event
