@@ -15,7 +15,8 @@ import React, {
   useMemo,
 } from "react";
 import { AgentInfo, ThreadMessage } from "../../types/events";
-import { UseOpenAgentsReturn } from "../../hooks/useOpenAgents";
+import { useOpenAgentsService } from "@/contexts/OpenAgentsServiceContext";
+import { useOpenAgentsData } from "@/hooks/useOpenAgentsData";
 import { ThreadState } from "@/types/thread";
 import { MessageSendResult } from "../../services/openAgentsService";
 import MessageDisplay from "./MessageDisplay";
@@ -24,9 +25,9 @@ import DocumentsView from "../documents/DocumentsView";
 import { ReadMessageStore } from "../../utils/readMessageStore";
 import { ConnectionStatusEnum } from "@/types/connection";
 import { useThemeStore } from "@/stores/themeStore";
+import { useThreadStore } from "@/stores/threadStore";
 
 interface ThreadMessagingViewEventBasedProps {
-  openAgentsHook: UseOpenAgentsReturn;
   agentName: string;
   onThreadStateChange?: (state: ThreadState) => void;
 }
@@ -48,31 +49,57 @@ const CONNECTED_STATUS_COLOR = {
 const ThreadMessagingViewEventBased = forwardRef<
   ThreadMessagingViewEventBasedRef,
   ThreadMessagingViewEventBasedProps
->(({ openAgentsHook, agentName, onThreadStateChange }, ref) => {
+>(({ agentName, onThreadStateChange }, ref) => {
   // Use theme from store
   const { theme: currentTheme } = useThemeStore();
-  // Destructure the event system hook
+
+  // 从 threadStore 获取当前状态，而不是使用本地状态
+  const { threadState } = useThreadStore();
+  const currentChannel = threadState?.currentChannel || "";
+  const currentDirectMessage = threadState?.currentDirectMessage || "";
+
+  // 调试日志：监听 threadState 变化
+  useEffect(() => {
+    console.log(
+      `📋 ThreadState changed: channel="${currentChannel}", direct="${currentDirectMessage}"`
+    );
+  }, [currentChannel, currentDirectMessage]);
+
+  // Clear reply and quote states when channel or direct message changes
+  useEffect(() => {
+    console.log(`🧹 Clearing reply/quote states due to channel/DM change`);
+    setReplyingTo(null);
+    setQuotingMessage(null);
+  }, [currentChannel, currentDirectMessage]);
+
+  // 这些本地状态用于 UI 控制，不影响频道选择逻辑
+
+  // 使用全局服务层
   const {
     connectionStatus,
-    channels,
-    messages,
-    setMessages,
     sendChannelMessage,
     sendDirectMessage,
     addReaction,
     removeReaction,
+    lastError,
+    clearError,
+  } = useOpenAgentsService();
+
+  // 使用组件数据层，传入当前关注的频道/私信
+  const {
+    channels,
+    messages,
+    setMessages,
     loadChannels,
     loadChannelMessages,
     loadDirectMessages,
     loadConnectedAgents,
     isLoading,
-    lastError,
-    clearError,
-  } = openAgentsHook;
-
-  // Local state
-  const [currentChannel, setCurrentChannel] = useState<string>("");
-  const [currentDirectMessage, setCurrentDirectMessage] = useState<string>("");
+  } = useOpenAgentsData({
+    autoLoadChannels: true,
+    currentChannel: currentChannel || undefined,
+    currentDirectTarget: currentDirectMessage || undefined,
+  });
   const [sendingMessage, setSendingMessage] = useState<boolean>(false);
   const [showDocuments, setShowDocuments] = useState<boolean>(false);
   const [agents, setAgents] = useState<AgentInfo[]>([]);
@@ -116,8 +143,19 @@ const ThreadMessagingViewEventBased = forwardRef<
       if (channelName === currentChannel) return;
 
       console.log(`📂 Switching to channel #${channelName}`);
-      setCurrentChannel(channelName);
-      setCurrentDirectMessage("");
+
+      // Clear reply and quote states when switching channels
+      setReplyingTo(null);
+      setQuotingMessage(null);
+
+      // 通过 store 更新状态而不是本地状态
+      if (onThreadStateChange) {
+        onThreadStateChange({
+          currentChannel: channelName,
+          currentDirectMessage: null,
+        });
+      }
+
       setShowDocuments(false);
 
       // Load messages for the selected channel
@@ -131,7 +169,7 @@ const ThreadMessagingViewEventBased = forwardRef<
         console.error(`Failed to load messages for #${channelName}:`, error);
       }
     },
-    [currentChannel, loadChannelMessages, messages]
+    [currentChannel, loadChannelMessages, messages, onThreadStateChange]
   );
 
   // Load connected agents
@@ -155,14 +193,69 @@ const ThreadMessagingViewEventBased = forwardRef<
       // Load connected agents
       await loadAgents();
 
-      // Select first channel if available
-      if (channelList.length > 0 && !currentChannel) {
-        handleChannelSelect(channelList[0].name);
+      // 智能频道选择逻辑
+      if (channelList.length > 0 && onThreadStateChange) {
+        console.log(`🔍 Channel selection logic:`, {
+          currentChannel,
+          currentDirectMessage,
+          availableChannels: channelList.map((c) => c.name),
+          threadStateFromStore: threadState,
+        });
+
+        let selectedChannel = null;
+        let selectionReason = "";
+
+        if (currentChannel) {
+          // 检查当前选择的频道是否仍然存在
+          const channelExists = channelList.some(
+            (channel) => channel.name === currentChannel
+          );
+          console.log(
+            `🔍 Current channel "${currentChannel}" exists: ${channelExists}`
+          );
+
+          if (channelExists) {
+            selectedChannel = currentChannel;
+            selectionReason = "恢复上次选择";
+          } else {
+            selectedChannel = channelList[0].name;
+            selectionReason = "上次频道不存在，回退到首个频道";
+            console.warn(
+              `⚠️ Previously selected channel "${currentChannel}" no longer exists, falling back to first channel`
+            );
+          }
+        } else if (!currentDirectMessage) {
+          // 没有任何选择，选择第一个频道
+          selectedChannel = channelList[0].name;
+          selectionReason = "首次选择第一个频道";
+          console.log(
+            `🎯 No current selection, choosing first channel: ${selectedChannel}`
+          );
+        }
+
+        if (selectedChannel && selectedChannel !== currentChannel) {
+          console.log(`🎯 ${selectionReason}: ${selectedChannel}`);
+          // Clear reply and quote states when automatically switching channels
+          setReplyingTo(null);
+          setQuotingMessage(null);
+          onThreadStateChange({
+            currentChannel: selectedChannel,
+            currentDirectMessage: null,
+          });
+        } else if (selectedChannel === currentChannel) {
+          console.log(`✅ 保持当前频道选择: ${selectedChannel}`);
+        }
       }
     } catch (error) {
       console.error("Failed to load initial data:", error);
     }
-  }, [loadChannels, loadAgents, currentChannel, handleChannelSelect]);
+  }, [
+    loadChannels,
+    loadAgents,
+    currentChannel,
+    currentDirectMessage,
+    onThreadStateChange,
+  ]);
 
   // Load initial data when connected
   useEffect(() => {
@@ -185,14 +278,49 @@ const ThreadMessagingViewEventBased = forwardRef<
     }
   }, [connectionStatus.status, loadAgents]);
 
+  // 当 threadStore 状态恢复后，加载对应的消息
+  useEffect(() => {
+    if (connectionStatus.status === "connected" && channels.length > 0) {
+      if (currentChannel) {
+        console.log(
+          `🔄 Loading messages for restored channel: ${currentChannel}`
+        );
+        loadChannelMessages(currentChannel);
+      } else if (currentDirectMessage) {
+        console.log(
+          `🔄 Loading messages for restored direct message: ${currentDirectMessage}`
+        );
+        loadDirectMessages(currentDirectMessage);
+      }
+    }
+  }, [
+    connectionStatus.status,
+    channels.length,
+    currentChannel,
+    currentDirectMessage,
+    loadChannelMessages,
+    loadDirectMessages,
+  ]);
+
   // Handle direct message selection
   const handleDirectMessageSelect = useCallback(
     async (agentId: string) => {
       if (agentId === currentDirectMessage) return;
 
       console.log(`📨 Switching to DM with ${agentId}`);
-      setCurrentDirectMessage(agentId);
-      setCurrentChannel("");
+
+      // Clear reply and quote states when switching to direct messages
+      setReplyingTo(null);
+      setQuotingMessage(null);
+
+      // 通过 store 更新状态而不是本地状态
+      if (onThreadStateChange) {
+        onThreadStateChange({
+          currentChannel: null,
+          currentDirectMessage: agentId,
+        });
+      }
+
       setShowDocuments(false);
 
       // Load direct messages
@@ -206,7 +334,7 @@ const ThreadMessagingViewEventBased = forwardRef<
         console.error(`Failed to load DMs with ${agentId}:`, error);
       }
     },
-    [currentDirectMessage, loadDirectMessages, messages]
+    [currentDirectMessage, loadDirectMessages, messages, onThreadStateChange]
   );
 
   // Handle sending messages
@@ -279,7 +407,7 @@ const ThreadMessagingViewEventBased = forwardRef<
         }
 
         if (result.success) {
-          console.log("✅ Message sent successfully");
+          console.log("✅ Message sent successfully", result);
 
           // If the server returns a real message ID, update the optimistic message
           if (result.messageId) {
@@ -288,6 +416,10 @@ const ThreadMessagingViewEventBased = forwardRef<
                 msg.message_id === optimisticMessage.message_id
                   ? { ...msg, message_id: result.messageId! }
                   : msg
+            );
+            console.log(
+              "✅ Message updatedMessages successfully",
+              updatedMessages
             );
             setMessages(updatedMessages);
           }

@@ -1,7 +1,6 @@
 // Layout components
 
 // Chat components
-export { default as ChatView } from "./chat/ChatView";
 export { default as MessageBubble } from "./chat/MessageBubble";
 export { default as MessageInput } from "./chat/MessageInput";
 export { default as MessageList } from "./chat/MessageList";
