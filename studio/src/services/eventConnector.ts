@@ -235,7 +235,7 @@ export class HttpEventConnector {
       destination_id: `agent:${targetAgentId}`,
       payload: {
         target_agent_id: targetAgentId,
-        content: { text: content },
+        text: content,
         message_type: "direct_message",
       },
     });
@@ -248,7 +248,7 @@ export class HttpEventConnector {
   ): Promise<EventResponse> {
     const payload: any = {
       channel: channel,
-      content: { text: content },
+      text: content,  // Updated: use 'text' directly instead of nested 'content.text'
       message_type: "channel_message",
     };
 
@@ -312,7 +312,7 @@ export class HttpEventConnector {
 
   async getChannelMessages(
     channel: string,
-    limit: number = 50,
+    limit: number = 200,
     offset: number = 0
   ): Promise<EventResponse> {
     return this.sendEvent({
@@ -486,7 +486,11 @@ export class HttpEventConnector {
     data?: any
   ): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
-    console.log(`🌐 ${method} ${url}`, data ? { body: data } : "");
+    const isPolling = endpoint.includes('/poll?agent_id=');
+    
+    if (!isPolling) {
+      console.log(`🌐 ${method} ${url}`, data ? { body: data } : "");
+    }
 
     const options: RequestInit = {
       method,
@@ -502,8 +506,7 @@ export class HttpEventConnector {
 
     try {
       const response = await fetch(url, options);
-      console.log(`📡 Response ${response.status} for ${method} ${endpoint}`);
-
+      
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`❌ HTTP Error ${response.status}:`, errorText);
@@ -511,7 +514,20 @@ export class HttpEventConnector {
       }
 
       const result = await response.json();
-      console.log(`📦 Response data for ${endpoint}:`, result);
+      
+      // For polling, only log when there are messages
+      if (isPolling) {
+        const hasMessages = result.messages && result.messages.length > 0;
+        if (hasMessages) {
+          console.log(`🌐 ${method} ${url}`);
+          console.log(`📡 Response ${response.status} for ${method} ${endpoint}`);
+          console.log(`📦 Response data for ${endpoint}:`, result);
+        }
+      } else {
+        console.log(`📡 Response ${response.status} for ${method} ${endpoint}`);
+        console.log(`📦 Response data for ${endpoint}:`, result);
+      }
+      
       return result;
     } catch (error) {
       console.error(`❌ Request failed for ${method} ${url}:`, error);

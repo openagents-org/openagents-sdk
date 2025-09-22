@@ -274,9 +274,8 @@ async def test_direct_messaging_with_thread_direct_message_send(alice_client, bo
     received_notification = direct_notifications[0]
     assert received_notification.event_name == "thread.direct_message.notification"
     
-    # Extract the actual message from the notification payload
-    message_data = received_notification.payload.get("message", {})
-    message_payload = message_data.get("payload", {})
+    # Extract the actual message from the notification payload (now flat structure)
+    message_payload = received_notification.payload
     assert "text" in message_payload, "Notification should contain message text in payload"
     assert message_payload["text"] == "Hello Bob! This is a direct message using thread.direct_message.send event."
     
@@ -782,8 +781,8 @@ async def test_reaction_system(alice_client, bob_client):
     assert channel_notification.event_name == "thread.channel_message.notification"
     
     # Extract the actual message ID from the notification
-    notification_message = channel_notification.payload.get('message', {})
-    actual_stored_message_id = notification_message.get('message_id') or notification_message.get('event_id')
+    # The event_id of the notification is the same as the original message event_id
+    actual_stored_message_id = channel_notification.event_id
     print(f"📋 Actual stored message ID from notification: {actual_stored_message_id}")
     
     # Bob adds a reaction to Alice's message using the actual stored message ID

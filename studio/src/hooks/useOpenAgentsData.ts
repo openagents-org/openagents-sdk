@@ -91,7 +91,6 @@ export const useOpenAgentsData = (
         (existingMsg) => existingMsg.message_id === message.message_id
       );
       if (exists) {
-        console.log(`📨 Duplicate message ignored: ${message.message_id}`);
         return prev;
       }
       return [...prev, message];

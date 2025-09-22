@@ -651,29 +651,31 @@ const ThreadMessagingViewEventBased = forwardRef<
                   const parseTimestamp = (
                     timestamp: string | number
                   ): number => {
-                    timestamp = String(timestamp);
-                    // Handle ISO string format
-                    if (timestamp.includes("T") || timestamp.includes("-")) {
-                      return new Date(timestamp).getTime();
+                    if (!timestamp) return 0;
+                    
+                    const timestampStr = String(timestamp);
+                    
+                    // Handle ISO string format (e.g., '2025-09-22T20:20:09.000Z')
+                    if (timestampStr.includes("T") || timestampStr.includes("-")) {
+                      const time = new Date(timestampStr).getTime();
+                      return isNaN(time) ? 0 : time;
                     }
+                    
                     // Handle Unix timestamp (seconds or milliseconds)
-                    const num = parseInt(timestamp);
+                    const num = parseInt(timestampStr);
                     if (isNaN(num)) return 0;
-                    return num < 1e10 ? num * 1000 : num;
+                    
+                    // If timestamp appears to be in seconds (typical range: 10 digits)
+                    // Convert to milliseconds. Otherwise assume it's already in milliseconds
+                    if (num < 10000000000) { // Less than 10 billion = seconds
+                      return num * 1000;
+                    } else {
+                      return num; // Already in milliseconds
+                    }
                   };
 
                   const aTime = parseTimestamp(a.timestamp);
                   const bTime = parseTimestamp(b.timestamp);
-
-                  console.log("🔧 Sorting messages:", {
-                    aId: a.message_id,
-                    aTimestamp: a.timestamp,
-                    aTime,
-                    bId: b.message_id,
-                    bTimestamp: b.timestamp,
-                    bTime,
-                    result: aTime - bTime,
-                  });
 
                   return aTime - bTime;
                 });

@@ -44,9 +44,9 @@ class MessageThread:
         self.message_levels: Dict[str, int] = {root_message_id: 0}  # message_id -> level
         self.created_timestamp = root_message.timestamp
         
-    def add_reply(self, reply: ReplyMessage) -> bool:
+    def add_reply(self, reply: Event) -> bool:
         """Add a reply to the thread."""
-        parent_id = reply.reply_to_id
+        parent_id = ReplyMessage.get_reply_to_id(reply)
         
         # Check if parent exists and level is valid
         if parent_id not in self.message_levels:
@@ -62,7 +62,11 @@ class MessageThread:
         
         self.replies[parent_id].append(reply)
         self.message_levels[reply.event_id] = parent_level + 1
-        reply.thread_level = parent_level + 1
+        
+        # Set thread level in the event payload
+        if not reply.payload:
+            reply.payload = {}
+        reply.payload['thread_level'] = parent_level + 1
         
         return True
     
@@ -115,7 +119,6 @@ class ThreadMessagingNetworkMod(BaseMod):
         self.message_history: Dict[str, Event] = {}  # message_id -> message
         self.threads: Dict[str, MessageThread] = {}  # thread_id -> MessageThread
         self.message_to_thread: Dict[str, str] = {}  # message_id -> thread_id
-        self.reactions: Dict[str, Dict[str, Set[str]]] = {}  # message_id -> {reaction_type -> set of agent_ids}
         self.max_history_size = 2000  # Number of messages to keep in history
         
         # Channel management - use EventGateway as single source of truth
@@ -239,7 +242,6 @@ class ThreadMessagingNetworkMod(BaseMod):
         self.message_history.clear()
         self.threads.clear()
         self.message_to_thread.clear()
-        self.reactions.clear()
         self.files.clear()
         
         # Remove all channels from EventGateway
@@ -351,77 +353,6 @@ class ThreadMessagingNetworkMod(BaseMod):
             return None
     
     
-    def _prepare_thread_event_content(self, event: Event) -> Optional[Dict[str, Any]]:
-        """Prepare and extract content from a thread event.
-        
-        Args:
-            event: The thread event to process
-            
-        Returns:
-            Optional[Dict[str, Any]]: Prepared content dictionary, or None if invalid
-        """
-        # Prevent infinite loops - don't process messages we generated
-        if (self.network and event.source_id == self.network.network_id and 
-            event.relevant_mod == "openagents.mods.workspace.messaging"):
-            logger.debug("Skipping thread messaging response message to prevent infinite loop")
-            return None
-        
-        # Extract the inner message from the Event content
-        content = event.payload if hasattr(event, 'payload') else event.content
-        
-        # Ensure content is a dictionary
-        if not isinstance(content, dict):
-            content = {}
-        else:
-            content = content.copy()  # Don't modify the original
-        
-        # Set source_id from the event if not already present
-        if 'source_id' not in content:
-            content['source_id'] = event.source_id
-        
-        # Fix: Map sender_id to source_id for all message types that extend Event
-        if 'sender_id' in content and 'source_id' not in content:
-            content['source_id'] = content['sender_id']
-        
-        # Convert protobuf content to dict if needed
-        if hasattr(content, 'fields'):
-            logger.debug(f"Converting protobuf content to dict")
-            content_dict = {}
-            for field_name, field_value in content.fields.items():
-                if hasattr(field_value, 'string_value'):
-                    content_dict[field_name] = field_value.string_value
-                elif hasattr(field_value, 'struct_value'):
-                    # Handle nested struct (like content.text)
-                    nested_dict = {}
-                    for nested_name, nested_value in field_value.struct_value.fields.items():
-                        if hasattr(nested_value, 'string_value'):
-                            nested_dict[nested_name] = nested_value.string_value
-                    content_dict[field_name] = nested_dict
-                elif hasattr(field_value, 'number_value'):
-                    content_dict[field_name] = field_value.number_value
-                elif hasattr(field_value, 'bool_value'):
-                    content_dict[field_name] = field_value.bool_value
-                elif hasattr(field_value, 'null_value'):
-                    content_dict[field_name] = None
-                else:
-                    # Try to get the value using WhichOneof
-                    if hasattr(field_value, 'WhichOneof'):
-                        which = field_value.WhichOneof('kind')
-                        if which:
-                            content_dict[field_name] = getattr(field_value, which)
-                        else:
-                            content_dict[field_name] = str(field_value)
-                    else:
-                        content_dict[field_name] = str(field_value)
-            content = content_dict
-            logger.debug(f"Converted protobuf content to dict: {content}")
-            
-            # Ensure source_id is set after protobuf conversion
-            if 'source_id' not in content:
-                content['source_id'] = event.source_id
-        
-        return content
-    
     def _create_event_response(self, success: bool, message: str, data: Dict[str, Any] = None) -> EventResponse:
         """Create a standardized event response."""
         return EventResponse(
@@ -430,7 +361,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             data=data or {}
         )
     
-    async def _process_thread_event(self, event: Event, message_class, processor_func, success_message: str):
+    async def _process_thread_event_common(self, event: Event, message_class, processor_func, success_message: str):
         """Generic helper for processing thread events.
         
         Args:
@@ -439,20 +370,24 @@ class ThreadMessagingNetworkMod(BaseMod):
             processor_func: The function to process the message
             success_message: Success message for the response
         """
-        content = self._prepare_thread_event_content(event)
-        if content is None:
+        # Prevent infinite loops - don't process messages we generated
+        if (self.network and event.source_id == self.network.network_id and 
+            event.relevant_mod == "openagents.mods.workspace.messaging"):
+            logger.debug("Skipping thread messaging response message to prevent infinite loop")
             return None
         
         try:
-            inner_message = message_class(**content)
-            self._add_to_history(inner_message)
+            # Validate the event using the message class validator
+            validated_event = message_class.validate(event)
+            logger.debug(f"Validated {message_class.__name__} with event_id: {validated_event.event_id}")
+            self._add_to_history(validated_event)
             
             # Call the processor function (handle both async and sync)
             import asyncio
             if asyncio.iscoroutinefunction(processor_func):
-                result_data = await processor_func(inner_message)
+                result_data = await processor_func(validated_event)
             else:
-                result_data = processor_func(inner_message)
+                result_data = processor_func(validated_event)
             
             # Handle different return types
             if isinstance(result_data, dict):
@@ -486,7 +421,7 @@ class ThreadMessagingNetworkMod(BaseMod):
                 data={"error": str(e)}
             )
     
-    def _validate_reaction_target(self, target_message_id: str, message: ReactionMessage) -> Dict[str, Any]:
+    def _validate_reaction_target(self, target_message_id: str, message: Event) -> Dict[str, Any]:
         """Validate that a reaction target message exists.
         
         Returns:
@@ -498,35 +433,100 @@ class ThreadMessagingNetworkMod(BaseMod):
                 "success": False,
                 "error": f"Target message {target_message_id} not found",
                 "target_message_id": target_message_id,
-                "reaction_type": message.reaction_type,
+                "reaction_type": ReactionMessage.get_reaction_type(message),
                 "request_id": self._get_request_id(message)
             }
         return {}
     
-    def _initialize_reaction_storage(self, target_message_id: str, reaction_type: str):
-        """Initialize reaction storage for a message and reaction type."""
-        if target_message_id not in self.reactions:
-            self.reactions[target_message_id] = {}
+    def _get_reactions_for_message(self, target_message_id: str) -> Dict[str, List[str]]:
+        """Get reactions directly from the message payload - O(1) lookup.
         
-        if reaction_type not in self.reactions[target_message_id]:
-            self.reactions[target_message_id][reaction_type] = set()
+        Returns:
+            Dict mapping reaction_type to list of agent_ids
+        """
+        target_message = self.message_history.get(target_message_id)
+        if not target_message or not target_message.payload:
+            return {}
+        return target_message.payload.get("reactions", {})
     
-    def _cleanup_empty_reactions(self, target_message_id: str, reaction_type: str):
-        """Clean up empty reaction sets and message entries."""
-        if not self.reactions[target_message_id][reaction_type]:
-            del self.reactions[target_message_id][reaction_type]
+    def _get_notification_targets(self, target_message: Event) -> Set[str]:
+        """Determine which agents should be notified about reactions to this message."""
+        notify_agents = set()
         
-        if not self.reactions[target_message_id]:
-            del self.reactions[target_message_id]
+        if isinstance(target_message, Event):
+            # Always notify the message author
+            notify_agents.add(target_message.source_id)
+            
+            # If it has a destination_id, notify that agent too (for direct messages)
+            if target_message.destination_id:
+                notify_agents.add(target_message.destination_id)
+        
+        # Check if this is a channel message
+        if target_message.payload and target_message.payload.get('message_type') == 'channel_message':
+            channel = target_message.payload.get('channel')
+            if channel:
+                channel_members = self.network.event_gateway.get_channel_members(channel)
+                notify_agents.update(channel_members)
+        elif target_message.payload and target_message.payload.get('message_type') == 'reply':
+            # For replies, notify based on whether it's a channel or direct reply
+            channel = target_message.payload.get('channel')
+            if channel:
+                channel_members = self.network.event_gateway.get_channel_members(channel)
+                notify_agents.update(channel_members)
+            elif target_message.payload.get('target_agent_id'):
+                notify_agents.add(target_message.payload.get('target_agent_id'))
+        
+        return notify_agents
     
-    def _create_reaction_response(self, target_message_id: str, reaction_type: str, action_taken: str, success: bool, message: ReactionMessage) -> Dict[str, Any]:
+    async def _send_reaction_notification(self, target_message_id: str, reaction_type: str, 
+                                         reacting_agent: str, action: str):
+        """Send reaction notifications to relevant agents."""
+        target_message = self.message_history.get(target_message_id)
+        if not target_message:
+            return
+        
+        # Determine who to notify based on message type
+        notify_agents = self._get_notification_targets(target_message)
+        notify_agents.discard(reacting_agent)  # Don't notify the reacting agent
+        
+        if not notify_agents:
+            return
+        
+        # Get current reaction count
+        current_reactions = self._get_reactions_for_message(target_message_id)
+        total_reactions = len(current_reactions.get(reaction_type, []))
+        
+        for agent_id in notify_agents:
+            notification = Event(
+                event_name="thread.reaction.notification",  # Standard reaction notification event
+                source_id=reacting_agent,
+                destination_id=agent_id,
+                payload={
+                    "target_message_id": target_message_id,
+                    "reaction_type": reaction_type,
+                    "reacting_agent": reacting_agent,
+                    "action": action,
+                    "total_reactions": total_reactions
+                }
+            )
+            try:
+                await self.network.process_event(notification)
+                logger.debug(f"Sent reaction notification to {agent_id}: {action} {reaction_type}")
+            except Exception as e:
+                logger.error(f"Failed to send reaction notification to {agent_id}: {e}")
+    
+    def _create_reaction_response(self, target_message_id: str, reaction_type: str, action_taken: str, success: bool, message: Event) -> Dict[str, Any]:
         """Create a standardized reaction response."""
+        # Count current reactions of this type
+        current_reactions = self._get_reactions_for_message(target_message_id)
+        total_reactions = len(current_reactions.get(reaction_type, []))
+        
         return {
             "success": success,
             "target_message_id": target_message_id,
             "reaction_type": reaction_type,
             "action_taken": action_taken,
-            "total_reactions": len(self.reactions.get(target_message_id, {}).get(reaction_type, set())),
+            "total_reactions": total_reactions,
             "request_id": self._get_request_id(message)
         }
     
@@ -549,18 +549,24 @@ class ThreadMessagingNetworkMod(BaseMod):
         Returns:
             Optional[EventResponse]: The response to the event
         """
-        content = self._prepare_thread_event_content(event)
-        if content is None:
+        # Prevent infinite loops - don't process messages we generated
+        if (self.network and event.source_id == self.network.network_id and 
+            event.relevant_mod == "openagents.mods.workspace.messaging"):
+            logger.debug("Skipping thread messaging response message to prevent infinite loop")
             return None
         
         try:
-            # Populate quoted_text if quoted_message_id is provided
-            if 'quoted_message_id' in content and content['quoted_message_id']:
-                content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
+            # Populate quoted_text if quoted_message_id is provided in payload
+            if event.payload and 'quoted_message_id' in event.payload and event.payload['quoted_message_id']:
+                # Update the event payload with quoted text
+                if 'quoted_text' not in event.payload:
+                    event.payload['quoted_text'] = self._get_quoted_text(event.payload['quoted_message_id'])
             
-            inner_message = ReplyMessage(**content)
-            self._add_to_history(inner_message)
-            await self._process_reply_message(inner_message)
+            # Validate the reply message payload
+            validated_event = ReplyMessage.validate(event)
+            logger.debug(f"Validated ReplyMessage with event_id: {validated_event.event_id}")
+            self._add_to_history(validated_event)
+            await self._process_reply_message(validated_event)
             
             return EventResponse(
                 success=True,
@@ -574,7 +580,7 @@ class ThreadMessagingNetworkMod(BaseMod):
     @mod_event_handler("thread.file.upload")
     async def _handle_thread_file_upload(self, event: Event) -> Optional[EventResponse]:
         """Handle thread file upload events."""
-        return await self._process_thread_event(
+        return await self._process_thread_event_common(
             event, 
             FileUploadMessage, 
             self._process_file_upload, 
@@ -584,7 +590,7 @@ class ThreadMessagingNetworkMod(BaseMod):
     @mod_event_handler("thread.file.upload_requested")
     async def _handle_thread_file_upload_requested(self, event: Event) -> Optional[EventResponse]:
         """Handle thread file upload requested events."""
-        return await self._process_thread_event(
+        return await self._process_thread_event_common(
             event, 
             FileUploadMessage, 
             self._process_file_upload, 
@@ -594,7 +600,7 @@ class ThreadMessagingNetworkMod(BaseMod):
     @mod_event_handler("thread.file.download")
     async def _handle_thread_file_download(self, event: Event) -> Optional[EventResponse]:
         """Handle thread file download events."""
-        return await self._process_thread_event(
+        return await self._process_thread_event_common(
             event, 
             FileOperationMessage, 
             self._process_file_operation, 
@@ -604,7 +610,7 @@ class ThreadMessagingNetworkMod(BaseMod):
     @mod_event_handler("thread.file.operation")
     async def _handle_thread_file_operation(self, event: Event) -> Optional[EventResponse]:
         """Handle thread file operation events."""
-        return await self._process_thread_event(
+        return await self._process_thread_event_common(
             event, 
             FileOperationMessage, 
             self._process_file_operation, 
@@ -614,7 +620,7 @@ class ThreadMessagingNetworkMod(BaseMod):
     @mod_event_handler("thread.channels.info")
     async def _handle_thread_channels_info(self, event: Event) -> Optional[EventResponse]:
         """Handle thread channels info events."""
-        return await self._process_thread_event(
+        return await self._process_thread_event_common(
             event, 
             ChannelInfoMessage, 
             self._process_channel_info_request, 
@@ -624,7 +630,7 @@ class ThreadMessagingNetworkMod(BaseMod):
     @mod_event_handler("thread.channels.list")
     async def _handle_thread_channels_list(self, event: Event) -> Optional[EventResponse]:
         """Handle thread channels list events."""
-        return await self._process_thread_event(
+        return await self._process_thread_event_common(
             event, 
             ChannelInfoMessage, 
             self._process_channel_info_request, 
@@ -634,7 +640,7 @@ class ThreadMessagingNetworkMod(BaseMod):
     @mod_event_handler("thread.messages.retrieve")
     async def _handle_thread_messages_retrieve(self, event: Event) -> Optional[EventResponse]:
         """Handle thread messages retrieve events."""
-        return await self._process_thread_event(
+        return await self._process_thread_event_common(
             event, 
             MessageRetrievalMessage, 
             lambda msg: self._handle_channel_messages_retrieval(msg), 
@@ -644,7 +650,7 @@ class ThreadMessagingNetworkMod(BaseMod):
     @mod_event_handler("thread.channel_messages.retrieve")
     async def _handle_thread_channel_messages_retrieve(self, event: Event) -> Optional[EventResponse]:
         """Handle thread channel messages retrieve events."""
-        return await self._process_thread_event(
+        return await self._process_thread_event_common(
             event, 
             MessageRetrievalMessage, 
             lambda msg: self._handle_channel_messages_retrieval(msg), 
@@ -654,7 +660,7 @@ class ThreadMessagingNetworkMod(BaseMod):
     @mod_event_handler("thread.direct_messages.retrieve")
     async def _handle_thread_direct_messages_retrieve(self, event: Event) -> Optional[EventResponse]:
         """Handle thread direct messages retrieve events."""
-        return await self._process_thread_event(
+        return await self._process_thread_event_common(
             event, 
             MessageRetrievalMessage, 
             lambda msg: self._handle_direct_messages_retrieval(msg), 
@@ -664,7 +670,7 @@ class ThreadMessagingNetworkMod(BaseMod):
     @mod_event_handler("thread.reaction.add")
     async def _handle_thread_reaction_add(self, event: Event) -> Optional[EventResponse]:
         """Handle thread reaction add events."""
-        return await self._process_thread_event(
+        return await self._process_thread_event_common(
             event, 
             ReactionMessage, 
             self._process_add_reaction, 
@@ -674,7 +680,7 @@ class ThreadMessagingNetworkMod(BaseMod):
     @mod_event_handler("thread.reaction.remove")
     async def _handle_thread_reaction_remove(self, event: Event) -> Optional[EventResponse]:
         """Handle thread reaction remove events."""
-        return await self._process_thread_event(
+        return await self._process_thread_event_common(
             event, 
             ReactionMessage, 
             self._process_remove_reaction, 
@@ -684,7 +690,7 @@ class ThreadMessagingNetworkMod(BaseMod):
     @mod_event_handler("thread.reaction.toggle")
     async def _handle_thread_reaction_toggle(self, event: Event) -> Optional[EventResponse]:
         """Handle thread reaction toggle events."""
-        return await self._process_thread_event(
+        return await self._process_thread_event_common(
             event, 
             ReactionMessage, 
             self._process_toggle_reaction, 
@@ -701,36 +707,37 @@ class ThreadMessagingNetworkMod(BaseMod):
         Returns:
             Optional[EventResponse]: The response to the event
         """
-        content = self._prepare_thread_event_content(event)
-        if content is None:
+        # Prevent infinite loops - don't process messages we generated
+        if (self.network and event.source_id == self.network.network_id and 
+            event.relevant_mod == "openagents.mods.workspace.messaging"):
+            logger.debug("Skipping thread messaging response message to prevent infinite loop")
             return None
         
         try:
+            # Use event.model_dump() to preserve all event information including payload
+            event_data = event.model_dump()
+            
+            # Preprocess event_data to extract direct message specific fields from payload
+            if 'payload' in event_data and isinstance(event_data['payload'], dict):
+                payload = event_data['payload']
+                
+                # Extract direct message info from payload to top level
+                if 'target_agent_id' in payload:
+                    event_data['target_agent_id'] = payload['target_agent_id']
+                if 'quoted_message_id' in payload:
+                    event_data['quoted_message_id'] = payload['quoted_message_id']
+                if 'quoted_text' in payload:
+                    event_data['quoted_text'] = payload['quoted_text']
+            
             # Populate quoted_text if quoted_message_id is provided
-            if 'quoted_message_id' in content and content['quoted_message_id']:
-                content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
+            if 'quoted_message_id' in event_data and event_data['quoted_message_id']:
+                event_data['quoted_text'] = self._get_quoted_text(event_data['quoted_message_id'])
             
-            # Extract Event-specific fields from content
-            event_fields = {}
-            payload_fields = {}
+            # Create ThreadMessageEvent with preserved original event information
+            from .thread_messages import ThreadMessageEvent
+            inner_message = ThreadMessageEvent.model_validate(event_data)
+            logger.debug(f"Created direct message ThreadMessageEvent with preserved event_id: {inner_message.event_id}")
             
-            # Define which fields belong to the Event model vs payload
-            event_field_names = {'event_name', 'source_id', 'destination_id', 'event_id', 'timestamp', 
-                                'source_type', 'relevant_mod', 'requires_response', 'response_to', 
-                                'metadata', 'text_representation', 'visibility', 'allowed_agents'}
-            
-            for key, value in content.items():
-                if key in event_field_names:
-                    event_fields[key] = value
-                else:
-                    payload_fields[key] = value
-            
-            # Create the Event with proper field separation
-            inner_message = Event(
-                event_name=event.event_name,
-                payload=payload_fields,
-                **event_fields
-            )
             self._add_to_history(inner_message)
             await self._process_direct_message(inner_message)
             
@@ -753,18 +760,24 @@ class ThreadMessagingNetworkMod(BaseMod):
         Returns:
             Optional[EventResponse]: The response to the event
         """
-        content = self._prepare_thread_event_content(event)
-        if content is None:
+        # Prevent infinite loops - don't process messages we generated
+        if (self.network and event.source_id == self.network.network_id and 
+            event.relevant_mod == "openagents.mods.workspace.messaging"):
+            logger.debug("Skipping thread messaging response message to prevent infinite loop")
             return None
         
         try:
-            # Populate quoted_text if quoted_message_id is provided
-            if 'quoted_message_id' in content and content['quoted_message_id']:
-                content['quoted_text'] = self._get_quoted_text(content['quoted_message_id'])
+            # Populate quoted_text if quoted_message_id is provided in payload
+            if event.payload and 'quoted_message_id' in event.payload and event.payload['quoted_message_id']:
+                # Update the event payload with quoted text
+                if 'quoted_text' not in event.payload:
+                    event.payload['quoted_text'] = self._get_quoted_text(event.payload['quoted_message_id'])
             
-            inner_message = ChannelMessage(**content)
-            self._add_to_history(inner_message)
-            await self._process_channel_message(inner_message)
+            # Validate the channel message payload
+            validated_event = ChannelMessage.validate(event)
+            logger.debug(f"Validated ChannelMessage with event_id: {validated_event.event_id}")
+            self._add_to_history(validated_event)
+            await self._process_channel_message(validated_event)
             
             return EventResponse(
                 success=True,
@@ -803,22 +816,15 @@ class ThreadMessagingNetworkMod(BaseMod):
             # This is a channel broadcast - thread messaging should handle it
             logger.debug(f"Thread messaging capturing channel broadcast to {channel_name}")
             
-            # Convert to ChannelMessage and process it
-            # Extract reply_to_id from payload if present
-            reply_to_id = None
-            if isinstance(event.payload, dict):
-                reply_to_id = event.payload.get('reply_to_id')
+            # Validate as channel message and process it
+            # Ensure the payload has the channel field
+            if not event.payload:
+                event.payload = {}
+            if 'channel' not in event.payload:
+                event.payload['channel'] = channel_name
             
-            channel_message = ChannelMessage(
-                sender_id=event.source_id,
-                channel=channel_name,
-                content=event.payload,
-                timestamp=event.timestamp,
-                message_id=event.event_id,
-                reply_to_id=reply_to_id
-            )
-            
-            await self._process_channel_message(channel_message)
+            validated_event = ChannelMessage.validate(event)
+            await self._process_channel_message(validated_event)
             
             # Return response to stop further processing - thread messaging handled this
             return EventResponse(
@@ -863,7 +869,7 @@ class ThreadMessagingNetworkMod(BaseMod):
         return None
     
     
-    async def _process_channel_message(self, message: ChannelMessage) -> None:
+    async def _process_channel_message(self, message: Event) -> None:
         """Process a channel message.
         
         Args:
@@ -872,7 +878,7 @@ class ThreadMessagingNetworkMod(BaseMod):
         self._add_to_history(message)
         
         # Track message in channel
-        channel = message.channel
+        channel = ChannelMessage.get_channel(message)
         if channel in self.channels:
             self.channels[channel]['message_count'] += 1
         else:
@@ -890,13 +896,13 @@ class ThreadMessagingNetworkMod(BaseMod):
         # Broadcast the message to all other agents in the channel
         await self._broadcast_channel_message(message)
     
-    async def _broadcast_channel_message(self, message: ChannelMessage) -> None:
+    async def _broadcast_channel_message(self, message: Event) -> None:
         """Broadcast a channel message to all other agents in the channel.
         
         Args:
             message: The channel message to broadcast
         """
-        channel = message.channel
+        channel = ChannelMessage.get_channel(message)
         
         # Get all agents in the channel from EventGateway
         channel_members = self.network.event_gateway.get_channel_members(channel)
@@ -918,13 +924,18 @@ class ThreadMessagingNetworkMod(BaseMod):
         # Create a mod message to notify other agents about the new channel message
         for agent_id in notify_agents:
             logger.info(f"🔧 THREAD MESSAGING: Creating notification for agent: {agent_id}")
+            
+            # Extract payload from original message and add notification metadata
+            original_payload = message.payload or {}
+            notification_payload = original_payload.copy()
+            notification_payload["channel"] = channel
+            
             notification = Event(
                 event_name="thread.channel_message.notification",
-                source_id=self.network.network_id,
-                payload={
-                    "message": message.model_dump(),
-                    "channel": channel
-                },
+                source_id=message.source_id,  # Keep original sender
+                event_id=message.event_id,     # Keep original event ID
+                timestamp=message.timestamp,   # Keep original timestamp
+                payload=notification_payload,
                 direction="inbound",
                 destination_id=agent_id
             )
@@ -966,14 +977,17 @@ class ThreadMessagingNetworkMod(BaseMod):
         try:
             from openagents.models.event import Event as EventModel
             
-            # Create direct message notification
+            # Create direct message notification with flat payload structure
+            original_payload = message.payload or {}
+            notification_payload = original_payload.copy()
+            notification_payload["sender_id"] = message.source_id
+            
             notification = EventModel(
                 event_name="thread.direct_message.notification",
-                source_id=self.network.network_id,
-                payload={
-                    "message": message.model_dump() if hasattr(message, 'model_dump') else message.__dict__,
-                    "sender_id": message.source_id
-                },
+                source_id=message.source_id,  # Keep original sender
+                event_id=message.event_id,     # Keep original event ID
+                timestamp=message.timestamp,   # Keep original timestamp
+                payload=notification_payload,
                 direction="inbound",
                 destination_id=target_agent_id
             )
@@ -986,13 +1000,80 @@ class ThreadMessagingNetworkMod(BaseMod):
             import traceback
             traceback.print_exc()
     
-    async def _process_reply_message(self, message: ReplyMessage) -> None:
+    async def _send_reply_notifications(self, reply_message: Event, original_message: Event) -> None:
+        """Send notifications about a reply to interested parties.
+        
+        Args:
+            reply_message: The reply message event
+            original_message: The original message being replied to
+        """
+        try:
+            # Determine who should be notified about this reply
+            notify_agents = set()
+            
+            # Always notify the original message author (unless they're the one replying)
+            if original_message.source_id != reply_message.source_id:
+                notify_agents.add(original_message.source_id)
+            
+            # If this is a channel reply, notify channel members
+            if reply_message.payload and 'channel' in reply_message.payload:
+                channel = reply_message.payload['channel']
+                if channel in self.channels:
+                    # Get channel members from EventGateway (single source of truth)
+                    channel_members = self.network.event_gateway.get_channel_members(channel)
+                    notify_agents.update(channel_members)
+                    
+                    # Remove the reply sender (they already know they sent it)
+                    notify_agents.discard(reply_message.source_id)
+            
+            # If this is a direct message reply, notify the target agent
+            if original_message.payload and 'target_agent_id' in original_message.payload:
+                target_agent = original_message.payload['target_agent_id']
+                if target_agent != reply_message.source_id:
+                    notify_agents.add(target_agent)
+            
+            logger.info(f"🔧 THREAD MESSAGING: Sending reply notifications to {len(notify_agents)} agents: {notify_agents}")
+            
+            # Send notifications to each interested agent
+            for agent_id in notify_agents:
+                logger.info(f"🔧 THREAD MESSAGING: Creating reply notification for agent: {agent_id}")
+                
+                # Create notification with flat payload structure
+                original_payload = reply_message.payload or {}
+                notification_payload = original_payload.copy()
+                notification_payload["original_message_id"] = original_message.event_id
+                notification_payload["original_sender"] = original_message.source_id
+                
+                notification = Event(
+                    event_name="thread.reply.notification",
+                    source_id=reply_message.source_id,  # Keep original reply sender
+                    event_id=reply_message.event_id,     # Keep original reply event ID
+                    timestamp=reply_message.timestamp,   # Keep original timestamp
+                    payload=notification_payload,
+                    direction="inbound",
+                    destination_id=agent_id
+                )
+                
+                try:
+                    await self.network.process_event(notification)
+                    logger.info(f"✅ THREAD MESSAGING: Sent reply notification to agent {agent_id}")
+                except Exception as e:
+                    logger.error(f"❌ THREAD MESSAGING: Failed to send reply notification to {agent_id}: {e}")
+                    import traceback
+                    traceback.print_exc()
+        
+        except Exception as e:
+            logger.error(f"❌ THREAD MESSAGING: Error in _send_reply_notifications: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    async def _process_reply_message(self, message: Event) -> None:
         """Process a reply message and manage thread creation/updates.
         
         Args:
-            message: The reply message to process
+            message: The reply message event to process
         """
-        reply_to_id = message.reply_to_id
+        reply_to_id = ReplyMessage.get_reply_to_id(message)
         
         # Check if the original message exists
         if reply_to_id not in self.message_history:
@@ -1023,14 +1104,19 @@ class ThreadMessagingNetworkMod(BaseMod):
                 self.message_to_thread[message.event_id] = thread.thread_id
                 
                 # Track thread in channel if applicable
-                if hasattr(original_message, 'channel') and original_message.channel in self.channels:
-                    self.channels[original_message.channel]['thread_count'] += 1
+                if original_message.payload and 'channel' in original_message.payload:
+                    channel = original_message.payload['channel']
+                    if channel in self.channels:
+                        self.channels[channel]['thread_count'] += 1
                 
                 logger.debug(f"Created new thread {thread.thread_id} for message {reply_to_id}")
             else:
                 logger.warning(f"Could not create thread - max nesting level reached")
+        
+        # Send reply notifications to interested parties
+        await self._send_reply_notifications(message, original_message)
     
-    async def _process_file_upload(self, message: FileUploadMessage) -> Dict[str, Any]:
+    async def _process_file_upload(self, message: Event) -> Dict[str, Any]:
         """Process a file upload request.
         
         Args:
@@ -1046,28 +1132,28 @@ class ThreadMessagingNetworkMod(BaseMod):
         
         try:
             # Decode and save file
-            file_content = base64.b64decode(message.file_content)
+            file_content = base64.b64decode(FileUploadMessage.get_file_content(message))
             with open(file_path, "wb") as f:
                 f.write(file_content)
             
             # Store file metadata
             self.files[file_id] = {
                 "file_id": file_id,
-                "filename": message.filename,
-                "mime_type": message.mime_type,
-                "size": message.file_size,
+                "filename": FileUploadMessage.get_filename(message),
+                "mime_type": FileUploadMessage.get_mime_type(message),
+                "size": FileUploadMessage.get_file_size(message),
                 "uploaded_by": message.source_id,
                 "upload_timestamp": message.timestamp,
                 "path": str(file_path)
             }
             
-            logger.info(f"File uploaded: {message.filename} -> {file_id}")
+            logger.info(f"File uploaded: {FileUploadMessage.get_filename(message)} -> {file_id}")
             
             # Return response data instead of sending event
             return {
                 "success": True,
                 "file_id": file_id,
-                "filename": message.filename,
+                "filename": FileUploadMessage.get_filename(message),
                 "request_id": self._get_request_id(message)
             }
         
@@ -1080,7 +1166,7 @@ class ThreadMessagingNetworkMod(BaseMod):
                 "request_id": self._get_request_id(message)
             }
     
-    async def _process_file_operation(self, message: FileOperationMessage) -> Dict[str, Any]:
+    async def _process_file_operation(self, message: Event) -> Dict[str, Any]:
         """Process file operations like download.
         
         Args:
@@ -1091,7 +1177,7 @@ class ThreadMessagingNetworkMod(BaseMod):
         """
         # File operations are now handled based on specific event patterns
         # This method assumes download operation since thread.file.download events route here
-        return await self._handle_file_download(message.source_id, message.file_id, message)
+        return await self._handle_file_download(message.source_id, FileOperationMessage.get_file_id(message), message)
     
     async def _handle_file_download(self, agent_id: str, file_id: str, request_message: Event) -> Dict[str, Any]:
         """Handle a file download request.
@@ -1151,7 +1237,7 @@ class ThreadMessagingNetworkMod(BaseMod):
                 "request_id": request_message.event_id
             }
     
-    def _process_channel_info_request(self, message: ChannelInfoMessage) -> Dict[str, Any]:
+    def _process_channel_info_request(self, message: Event) -> Dict[str, Any]:
         """Process a channel info request and return the data.
         
         Args:
@@ -1180,7 +1266,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             "request_id": self._get_request_id(message)
         }
     
-    def _process_message_retrieval_request(self, message: MessageRetrievalMessage) -> Dict[str, Any]:
+    def _process_message_retrieval_request(self, message: Event) -> Dict[str, Any]:
         """Process a message retrieval request and return the data.
         
         Args:
@@ -1201,7 +1287,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             # Fallback for legacy calls without event_name
             return self._handle_channel_messages_retrieval(message)
     
-    def _handle_channel_messages_retrieval(self, message: MessageRetrievalMessage) -> Dict[str, Any]:
+    def _handle_channel_messages_retrieval(self, message: Event) -> Dict[str, Any]:
         """Handle channel messages retrieval request and return the data.
         
         Args:
@@ -1210,10 +1296,10 @@ class ThreadMessagingNetworkMod(BaseMod):
         Returns:
             Dict[str, Any]: The channel messages retrieval response data
         """
-        channel = message.channel
-        limit = int(message.limit)
-        offset = int(message.offset)
-        include_threads = message.include_threads
+        channel = MessageRetrievalMessage.get_channel(message)
+        limit = MessageRetrievalMessage.get_limit(message)
+        offset = MessageRetrievalMessage.get_offset(message)
+        include_threads = MessageRetrievalMessage.get_include_threads(message)
         
         if not channel:
             return {
@@ -1233,8 +1319,58 @@ class ThreadMessagingNetworkMod(BaseMod):
         channel_messages = []
         for msg_id, msg in self.message_history.items():
             # Check if this is a channel message for the requested channel
-            if isinstance(msg, ChannelMessage) and msg.channel == channel:
-                msg_data = msg.model_dump()
+            # Handle both Event objects and ChannelMessage objects for backward compatibility
+            is_channel_message = False
+            msg_channel = None
+            
+            if isinstance(msg, Event):
+                # For Event objects, check the payload for channel information
+                if msg.payload and 'channel' in msg.payload:
+                    msg_channel = msg.payload['channel']
+                    # Also check if it's a channel message type
+                    message_type = msg.payload.get('message_type', '')
+                    is_channel_message = (msg_channel == channel and 
+                                        ('channel' in message_type or message_type == 'channel_message' or message_type == 'reply_message'))
+                elif msg.event_name and 'channel' in msg.event_name:
+                    # Check for channel-related events
+                    is_channel_message = True
+                    # Try to extract channel from destination_id if available
+                    if msg.destination_id and msg.destination_id.startswith('channel:'):
+                        msg_channel = msg.destination_id.split(':', 1)[1]
+                    else:
+                        msg_channel = channel  # Assume it's the requested channel
+                        
+            else:
+                # For backward compatibility with ChannelMessage objects
+                from .thread_messages import ChannelMessage
+                if isinstance(msg, ChannelMessage) and msg.channel == channel:
+                    is_channel_message = True
+                    msg_channel = msg.channel
+            
+            if is_channel_message and msg_channel == channel:
+                # Extract message data based on the type of object
+                if isinstance(msg, Event):
+                    # For Event objects, convert to the expected message format
+                    msg_data = {
+                        'message_id': msg.event_id,
+                        'sender_id': msg.source_id,
+                        'timestamp': msg.timestamp,
+                        'content': {'text': msg.payload.get('text', '') if msg.payload else ''},
+                        'channel': msg_channel,
+                        'message_type': msg.payload.get('message_type', 'channel_message') if msg.payload else 'channel_message',
+                        'reply_to_id': msg.payload.get('reply_to_id') if msg.payload else None,
+                        'thread_level': msg.payload.get('thread_level', 1) if msg.payload else 1,
+                        'quoted_message_id': msg.payload.get('quoted_message_id') if msg.payload else None,
+                        'quoted_text': msg.payload.get('quoted_text') if msg.payload else None,
+                        'attachment_file_id': msg.payload.get('attachment_file_id') if msg.payload else None,
+                        'attachment_filename': msg.payload.get('attachment_filename') if msg.payload else None,
+                        'attachment_size': msg.payload.get('attachment_size') if msg.payload else None,
+                        'attachments': msg.payload.get('attachments') if msg.payload else None,
+                    }
+                else:
+                    # For ChannelMessage objects, use the existing model_dump
+                    msg_data = msg.model_dump()
+                
                 msg_data['thread_info'] = None
                 
                 # Add thread information if this message is part of a thread
@@ -1248,13 +1384,12 @@ class ThreadMessagingNetworkMod(BaseMod):
                     }
                 
                 # Add reactions to the message
-                if msg_id in self.reactions:
-                    msg_data['reactions'] = {}
-                    for reaction_type, agents in self.reactions[msg_id].items():
-                        if agents:  # Only include reactions with at least one agent
-                            msg_data['reactions'][reaction_type] = len(agents)
-                else:
-                    msg_data['reactions'] = {}
+                msg_reactions = msg.payload.get("reactions", {}) if msg.payload else {}
+                msg_data['reactions'] = {
+                    reaction_type: len(agents)
+                    for reaction_type, agents in msg_reactions.items()
+                    if agents  # Only include reactions with at least one agent
+                }
                 
                 channel_messages.append(msg_data)
             
@@ -1272,13 +1407,12 @@ class ThreadMessagingNetworkMod(BaseMod):
                     }
                 
                 # Add reactions to the reply message
-                if msg_id in self.reactions:
-                    msg_data['reactions'] = {}
-                    for reaction_type, agents in self.reactions[msg_id].items():
-                        if agents:  # Only include reactions with at least one agent
-                            msg_data['reactions'][reaction_type] = len(agents)
-                else:
-                    msg_data['reactions'] = {}
+                msg_reactions = msg.payload.get("reactions", {}) if msg.payload else {}
+                msg_data['reactions'] = {
+                    reaction_type: len(agents)
+                    for reaction_type, agents in msg_reactions.items()
+                    if agents  # Only include reactions with at least one agent
+                }
                 
                 channel_messages.append(msg_data)
         
@@ -1302,7 +1436,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             "request_id": self._get_request_id(message)
         }
     
-    def _handle_direct_messages_retrieval(self, message: MessageRetrievalMessage) -> Dict[str, Any]:
+    def _handle_direct_messages_retrieval(self, message: Event) -> Dict[str, Any]:
         """Handle direct messages retrieval request and return the data.
         
         Args:
@@ -1311,11 +1445,11 @@ class ThreadMessagingNetworkMod(BaseMod):
         Returns:
             Dict[str, Any]: The direct messages retrieval response data
         """
-        target_agent_id = message.destination_id
+        target_agent_id = MessageRetrievalMessage.get_target_agent_id(message)
         agent_id = message.source_id
-        limit = int(message.limit)
-        offset = int(message.offset)
-        include_threads = message.include_threads
+        limit = MessageRetrievalMessage.get_limit(message)
+        offset = MessageRetrievalMessage.get_offset(message)
+        include_threads = MessageRetrievalMessage.get_include_threads(message)
         
         if not target_agent_id:
             return {
@@ -1326,14 +1460,30 @@ class ThreadMessagingNetworkMod(BaseMod):
         
         # Find direct messages between the two agents
         direct_messages = []
+        logger.debug(f"Direct message retrieval: Looking for messages between {agent_id} and {target_agent_id}")
+        logger.debug(f"Total messages in history: {len(self.message_history)}")
+        
         for msg_id, msg in self.message_history.items():
-            # Check if this is a direct message between the agents (check for target_agent_id field)
-            has_target_agent = hasattr(msg, 'target_agent_id') and msg.destination_id
-            is_direct_msg_between_agents = (
-                has_target_agent and 
-                ((msg.source_id == agent_id and msg.destination_id == target_agent_id) or
-                 (msg.source_id == target_agent_id and msg.destination_id == agent_id))
+            # Check if this is a direct message between the agents
+            # Direct messages have target_agent_id in payload and destination_id like "agent:X"
+            is_direct_message = (
+                msg.payload and 
+                'target_agent_id' in msg.payload and 
+                msg.destination_id and 
+                msg.destination_id.startswith('agent:')
             )
+            
+            if is_direct_message:
+                payload_target = msg.payload['target_agent_id']
+                # Check if this message is between the requesting agents
+                is_direct_msg_between_agents = (
+                    (msg.source_id == agent_id and payload_target == target_agent_id) or
+                    (msg.source_id == target_agent_id and payload_target == agent_id)
+                )
+                if is_direct_msg_between_agents:
+                    logger.debug(f"Found direct message: {msg_id} from {msg.source_id} to {payload_target}")
+            else:
+                is_direct_msg_between_agents = False
             
             if is_direct_msg_between_agents:
                 msg_data = msg.model_dump()
@@ -1350,13 +1500,12 @@ class ThreadMessagingNetworkMod(BaseMod):
                     }
                 
                 # Add reactions to the direct message
-                if msg_id in self.reactions:
-                    msg_data['reactions'] = {}
-                    for reaction_type, agents in self.reactions[msg_id].items():
-                        if agents:  # Only include reactions with at least one agent
-                            msg_data['reactions'][reaction_type] = len(agents)
-                else:
-                    msg_data['reactions'] = {}
+                msg_reactions = msg.payload.get("reactions", {}) if msg.payload else {}
+                msg_data['reactions'] = {
+                    reaction_type: len(agents)
+                    for reaction_type, agents in msg_reactions.items()
+                    if agents  # Only include reactions with at least one agent
+                }
                 
                 direct_messages.append(msg_data)
             
@@ -1380,13 +1529,12 @@ class ThreadMessagingNetworkMod(BaseMod):
                         }
                     
                     # Add reactions to the reply message
-                    if msg_id in self.reactions:
-                        msg_data['reactions'] = {}
-                        for reaction_type, agents in self.reactions[msg_id].items():
-                            if agents:  # Only include reactions with at least one agent
-                                msg_data['reactions'][reaction_type] = len(agents)
-                    else:
-                        msg_data['reactions'] = {}
+                    msg_reactions = msg.payload.get("reactions", {}) if msg.payload else {}
+                    msg_data['reactions'] = {
+                        reaction_type: len(agents)
+                        for reaction_type, agents in msg_reactions.items()
+                        if agents  # Only include reactions with at least one agent
+                    }
                     
                     direct_messages.append(msg_data)
         
@@ -1410,138 +1558,11 @@ class ThreadMessagingNetworkMod(BaseMod):
             "request_id": self._get_request_id(message)
         }
     
-    async def _process_reaction_message(self, message: ReactionMessage) -> Dict[str, Any]:
-        """Process a reaction message.
-        
-        Args:
-            message: The reaction message
-        """
-        target_message_id = message.target_message_id
-        reaction_type = message.reaction_type
-        agent_id = message.source_id
-        
-        # Determine action based on event name
-        action = "add"  # default
-        if hasattr(message, 'event_name'):
-            if "add" in message.event_name:
-                action = "add"
-            elif "remove" in message.event_name:
-                action = "remove"
-            elif "toggle" in message.event_name:
-                # For toggle, check if the reaction already exists
-                if (target_message_id in self.reactions and 
-                    reaction_type in self.reactions[target_message_id] and
-                    agent_id in self.reactions[target_message_id][reaction_type]):
-                    action = "remove"
-                else:
-                    action = "add"
-        
-        # Check if the target message exists
-        if target_message_id not in self.message_history:
-            logger.warning(f"Cannot react: target message {target_message_id} not found")
-            return {
-                "success": False,
-                "error": f"Target message {target_message_id} not found",
-                "target_message_id": target_message_id,
-                "reaction_type": reaction_type,
-                "request_id": self._get_request_id(message)
-            }
-        
-        # Initialize reactions for the message if not exists
-        if target_message_id not in self.reactions:
-            self.reactions[target_message_id] = {}
-        
-        # Initialize reaction type if not exists
-        if reaction_type not in self.reactions[target_message_id]:
-            self.reactions[target_message_id][reaction_type] = set()
-        
-        success = False
-        
-        if action == "add":
-            # Add reaction
-            if agent_id not in self.reactions[target_message_id][reaction_type]:
-                self.reactions[target_message_id][reaction_type].add(agent_id)
-                success = True
-                logger.debug(f"{agent_id} added {reaction_type} reaction to message {target_message_id}")
-            else:
-                logger.debug(f"{agent_id} already has {reaction_type} reaction on message {target_message_id}")
-        
-        elif action == "remove":
-            # Remove reaction
-            if agent_id in self.reactions[target_message_id][reaction_type]:
-                self.reactions[target_message_id][reaction_type].discard(agent_id)
-                success = True
-                logger.debug(f"{agent_id} removed {reaction_type} reaction from message {target_message_id}")
-                
-                # Clean up empty reaction sets
-                if not self.reactions[target_message_id][reaction_type]:
-                    del self.reactions[target_message_id][reaction_type]
-                
-                # Clean up empty message reactions
-                if not self.reactions[target_message_id]:
-                    del self.reactions[target_message_id]
-            else:
-                logger.debug(f"{agent_id} doesn't have {reaction_type} reaction on message {target_message_id}")
-        
-        # Return response data
-        reaction_response = {
-            "success": success,
-            "target_message_id": target_message_id,
-            "reaction_type": reaction_type,
-            "action_taken": action,
-            "total_reactions": len(self.reactions.get(target_message_id, {}).get(reaction_type, set())),
-            "request_id": self._get_request_id(message)
-        }
-        
-        # Notify other agents about the reaction (broadcast to interested parties)
-        # Note: We still send notifications to other agents since they need to know about reactions
-        target_message = self.message_history[target_message_id]
-        
-        # Determine who should be notified based on the message type
-        notify_agents = set()
-        
-        if isinstance(target_message, Event):
-            # Notify both participants in the direct conversation
-            notify_agents.add(target_message.source_id)
-            notify_agents.add(target_message.destination_id)
-        elif isinstance(target_message, ChannelMessage):
-            # Notify agents in the channel
-            channel_members = self.network.event_gateway.get_channel_members(target_message.channel)
-            notify_agents.update(channel_members)
-        elif isinstance(target_message, ReplyMessage):
-            # Notify based on whether it's a channel or direct reply
-            if target_message.channel:
-                channel_members = self.network.event_gateway.get_channel_members(target_message.channel)
-                notify_agents.update(channel_members)
-            elif target_message.target_agent_id:
-                notify_agents.add(target_message.source_id)
-                notify_agents.add(target_message.target_agent_id)
-        
-        # Remove the reacting agent from notifications (they already know)
-        notify_agents.discard(agent_id)
-        
-        # Send notification to relevant agents
-        for notify_agent in notify_agents:
-            notification = Event(
-                event_name="thread.reaction.notification",
-                source_id=self.network.network_id,
-                destination_id=notify_agent,
-                payload={
-                    "target_message_id": target_message_id,
-                    "reaction_type": reaction_type,
-                    "reacting_agent": agent_id,
-                    "action_taken": action,
-                    "total_reactions": len(self.reactions.get(target_message_id, {}).get(reaction_type, set()))
-                }
-            )
-            await self.network.process_event(notification)
-        
-        return reaction_response
     
-    async def _process_add_reaction(self, message: ReactionMessage) -> Dict[str, Any]:
+    async def _process_add_reaction(self, message: Event) -> Dict[str, Any]:
         """Process adding a reaction to a message."""
-        target_message_id = message.target_message_id
-        reaction_type = message.reaction_type
+        target_message_id = ReactionMessage.get_target_message_id(message)
+        reaction_type = ReactionMessage.get_reaction_type(message)
         agent_id = message.source_id
         
         # Validate target message exists
@@ -1549,24 +1570,35 @@ class ThreadMessagingNetworkMod(BaseMod):
         if validation_error:
             return validation_error
         
-        # Initialize reaction storage
-        self._initialize_reaction_storage(target_message_id, reaction_type)
+        # Get the target message and modify its payload directly
+        target_message = self.message_history[target_message_id]
         
-        # Add reaction if not already present
+        # Initialize payload and reactions if they don't exist
+        if not target_message.payload:
+            target_message.payload = {}
+        if "reactions" not in target_message.payload:
+            target_message.payload["reactions"] = {}
+        if reaction_type not in target_message.payload["reactions"]:
+            target_message.payload["reactions"][reaction_type] = []
+        
         success = False
-        if agent_id not in self.reactions[target_message_id][reaction_type]:
-            self.reactions[target_message_id][reaction_type].add(agent_id)
+        if agent_id not in target_message.payload["reactions"][reaction_type]:
+            # Add reaction directly to the target message payload
+            target_message.payload["reactions"][reaction_type].append(agent_id)
             success = True
             logger.debug(f"{agent_id} added {reaction_type} reaction to message {target_message_id}")
+            
+            # Send notification to relevant agents
+            await self._send_reaction_notification(target_message_id, reaction_type, agent_id, "added")
         else:
             logger.debug(f"{agent_id} already has {reaction_type} reaction on message {target_message_id}")
         
         return self._create_reaction_response(target_message_id, reaction_type, "add", success, message)
     
-    async def _process_remove_reaction(self, message: ReactionMessage) -> Dict[str, Any]:
+    async def _process_remove_reaction(self, message: Event) -> Dict[str, Any]:
         """Process removing a reaction from a message."""
-        target_message_id = message.target_message_id
-        reaction_type = message.reaction_type
+        target_message_id = ReactionMessage.get_target_message_id(message)
+        reaction_type = ReactionMessage.get_reaction_type(message)
         agent_id = message.source_id
         
         # Validate target message exists
@@ -1574,27 +1606,39 @@ class ThreadMessagingNetworkMod(BaseMod):
         if validation_error:
             return validation_error
         
-        # Remove reaction if present
+        # Get the target message and modify its payload directly
+        target_message = self.message_history[target_message_id]
+        
         success = False
-        if (target_message_id in self.reactions and 
-            reaction_type in self.reactions[target_message_id] and
-            agent_id in self.reactions[target_message_id][reaction_type]):
+        if (target_message.payload and 
+            "reactions" in target_message.payload and 
+            reaction_type in target_message.payload["reactions"] and
+            agent_id in target_message.payload["reactions"][reaction_type]):
             
-            self.reactions[target_message_id][reaction_type].discard(agent_id)
+            # Remove reaction directly from the target message payload
+            target_message.payload["reactions"][reaction_type].remove(agent_id)
             success = True
             logger.debug(f"{agent_id} removed {reaction_type} reaction from message {target_message_id}")
             
-            # Clean up empty reaction sets
-            self._cleanup_empty_reactions(target_message_id, reaction_type)
+            # Clean up empty reaction lists
+            if not target_message.payload["reactions"][reaction_type]:
+                del target_message.payload["reactions"][reaction_type]
+            
+            # Clean up empty reactions dict
+            if not target_message.payload["reactions"]:
+                del target_message.payload["reactions"]
+            
+            # Send notification to relevant agents
+            await self._send_reaction_notification(target_message_id, reaction_type, agent_id, "removed")
         else:
             logger.debug(f"{agent_id} doesn't have {reaction_type} reaction on message {target_message_id}")
         
         return self._create_reaction_response(target_message_id, reaction_type, "remove", success, message)
     
-    async def _process_toggle_reaction(self, message: ReactionMessage) -> Dict[str, Any]:
+    async def _process_toggle_reaction(self, message: Event) -> Dict[str, Any]:
         """Process toggling a reaction on a message."""
-        target_message_id = message.target_message_id
-        reaction_type = message.reaction_type
+        target_message_id = ReactionMessage.get_target_message_id(message)
+        reaction_type = ReactionMessage.get_reaction_type(message)
         agent_id = message.source_id
         
         # Validate target message exists
@@ -1602,21 +1646,42 @@ class ThreadMessagingNetworkMod(BaseMod):
         if validation_error:
             return validation_error
         
-        # Initialize reaction storage
-        self._initialize_reaction_storage(target_message_id, reaction_type)
+        # Get the target message and modify its payload directly
+        target_message = self.message_history[target_message_id]
         
-        # Toggle reaction based on current state
-        if agent_id in self.reactions[target_message_id][reaction_type]:
+        # Initialize payload and reactions if they don't exist
+        if not target_message.payload:
+            target_message.payload = {}
+        if "reactions" not in target_message.payload:
+            target_message.payload["reactions"] = {}
+        if reaction_type not in target_message.payload["reactions"]:
+            target_message.payload["reactions"][reaction_type] = []
+        
+        # Check current state to determine toggle action
+        if agent_id in target_message.payload["reactions"][reaction_type]:
             # Remove reaction
-            self.reactions[target_message_id][reaction_type].discard(agent_id)
+            target_message.payload["reactions"][reaction_type].remove(agent_id)
             action_taken = "remove"
             logger.debug(f"{agent_id} toggled (removed) {reaction_type} reaction from message {target_message_id}")
-            self._cleanup_empty_reactions(target_message_id, reaction_type)
+            
+            # Clean up empty reaction lists
+            if not target_message.payload["reactions"][reaction_type]:
+                del target_message.payload["reactions"][reaction_type]
+            
+            # Clean up empty reactions dict
+            if not target_message.payload["reactions"]:
+                del target_message.payload["reactions"]
+            
+            # Send notification to relevant agents
+            await self._send_reaction_notification(target_message_id, reaction_type, agent_id, "removed")
         else:
             # Add reaction
-            self.reactions[target_message_id][reaction_type].add(agent_id)
+            target_message.payload["reactions"][reaction_type].append(agent_id)
             action_taken = "add"
             logger.debug(f"{agent_id} toggled (added) {reaction_type} reaction to message {target_message_id}")
+            
+            # Send notification to relevant agents
+            await self._send_reaction_notification(target_message_id, reaction_type, agent_id, "added")
         
         return self._create_reaction_response(target_message_id, reaction_type, action_taken, True, message)
     
