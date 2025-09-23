@@ -23,13 +23,11 @@ interface WikiEditProposal {
 
 interface WikiViewProps {
   onBackClick?: () => void;
-  currentTheme: 'light' | 'dark';
   connection?: OpenAgentsService | null;
 }
 
-const WikiView: React.FC<WikiViewProps> = ({ 
-  onBackClick, 
-  currentTheme,
+const WikiView: React.FC<WikiViewProps> = ({
+  onBackClick,
   connection
 }) => {
   const [pages, setPages] = useState<WikiPage[]>([]);
@@ -296,7 +294,7 @@ const WikiView: React.FC<WikiViewProps> = ({
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className={`${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className="text-gray-600 dark:text-gray-400">
             {!connection ? 'Connecting to network...' : 'Loading wiki...'}
           </p>
         </div>
@@ -314,10 +312,10 @@ const WikiView: React.FC<WikiViewProps> = ({
                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.864-.833-2.634 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           </div>
-          <h3 className={`text-lg font-medium mb-2 ${currentTheme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+          <h3 className="text-lg font-medium mb-2 text-gray-800 dark:text-gray-200">
             Wiki Error
           </h3>
-          <p className={`${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-4`}>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
             {error}
           </p>
           <button
@@ -334,32 +332,28 @@ const WikiView: React.FC<WikiViewProps> = ({
   // Page detail view
   if (currentView === 'page' && selectedPage) {
     const isOwner = selectedPage.creator_id === connection?.getAgentId();
-    
+
     return (
       <div className="h-full flex flex-col">
         {/* Header */}
-        <div className={`border-b ${currentTheme === 'dark' ? 'border-gray-700' : 'border-gray-200'} p-6`}>
+        <div className="border-b border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center space-x-3 mb-4">
             <button
               onClick={() => {
                 setSelectedPage(null);
                 setCurrentView('list');
               }}
-              className={`p-2 rounded-lg transition-colors ${
-                currentTheme === 'dark' 
-                  ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200' 
-                  : 'hover:bg-gray-100 text-gray-600 hover:text-gray-800'
-              }`}
+              className="p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
             <div className="flex-1">
-              <h1 className={`text-2xl font-bold ${currentTheme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
                 {selectedPage.title || 'Untitled'}
               </h1>
-              <p className={`text-sm ${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 {selectedPage.page_path || 'Unknown path'} • by {selectedPage.creator_id || 'Unknown'} • v{selectedPage.version || 1}
               </p>
             </div>
@@ -385,8 +379,8 @@ const WikiView: React.FC<WikiViewProps> = ({
 
         {/* Page content */}
         <div className="flex-1 overflow-y-auto p-6">
-          <div className={`prose max-w-none ${currentTheme === 'dark' ? 'prose-invert' : ''}`}>
-            <div className={`whitespace-pre-wrap ${currentTheme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+          <div className="prose max-w-none dark:prose-invert">
+            <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
               {selectedPage.wiki_content || 'No content available'}
             </div>
           </div>
@@ -398,25 +392,21 @@ const WikiView: React.FC<WikiViewProps> = ({
   // Edit/Propose view
   if (currentView === 'edit' && selectedPage) {
     const isOwner = selectedPage.creator_id === connection?.getAgentId();
-    
+
     return (
       <div className="h-full flex flex-col">
         {/* Header */}
-        <div className={`border-b ${currentTheme === 'dark' ? 'border-gray-700' : 'border-gray-200'} p-6`}>
+        <div className="border-b border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setCurrentView('page')}
-              className={`p-2 rounded-lg transition-colors ${
-                currentTheme === 'dark' 
-                  ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200' 
-                  : 'hover:bg-gray-100 text-gray-600 hover:text-gray-800'
-              }`}
+              className="p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <h1 className={`text-2xl font-bold ${currentTheme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
               {isOwner ? 'Edit Page' : 'Propose Edit'}: {selectedPage.title}
             </h1>
           </div>
@@ -425,34 +415,26 @@ const WikiView: React.FC<WikiViewProps> = ({
         {/* Edit form */}
         <div className="flex-1 flex flex-col p-6 space-y-4">
           <div className="flex-1">
-            <label className={`block text-sm font-medium mb-2 ${currentTheme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
               Content
             </label>
             <textarea
               value={proposalContent || selectedPage.wiki_content}
               onChange={(e) => setProposalContent(e.target.value)}
-              className={`w-full h-full p-4 rounded-lg border resize-none ${
-                currentTheme === 'dark'
-                  ? 'bg-gray-800 border-gray-600 text-gray-200 placeholder-gray-400'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-              }`}
+              className="w-full h-full p-4 rounded-lg border resize-none bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
               placeholder="Enter page content..."
             />
           </div>
           
           {!isOwner && (
             <div>
-              <label className={`block text-sm font-medium mb-2 ${currentTheme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                 Rationale for Change
               </label>
               <textarea
                 value={proposalRationale}
                 onChange={(e) => setProposalRationale(e.target.value)}
-                className={`w-full p-3 rounded-lg border resize-none ${
-                  currentTheme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-gray-200 placeholder-gray-400'
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                }`}
+                className="w-full p-3 rounded-lg border resize-none bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
                 rows={3}
                 placeholder="Explain why you want to make this change..."
               />
@@ -462,11 +444,7 @@ const WikiView: React.FC<WikiViewProps> = ({
           <div className="flex justify-end space-x-3">
             <button
               onClick={() => setCurrentView('page')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                currentTheme === 'dark'
-                  ? 'text-gray-400 hover:text-gray-200'
-                  : 'text-gray-600 hover:text-gray-800'
-              }`}
+              className="px-4 py-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
             >
               Cancel
             </button>
@@ -494,21 +472,17 @@ const WikiView: React.FC<WikiViewProps> = ({
     return (
       <div className="h-full flex flex-col">
         {/* Header */}
-        <div className={`border-b ${currentTheme === 'dark' ? 'border-gray-700' : 'border-gray-200'} p-6`}>
+        <div className="border-b border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setCurrentView('list')}
-              className={`p-2 rounded-lg transition-colors ${
-                currentTheme === 'dark' 
-                  ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200' 
-                  : 'hover:bg-gray-100 text-gray-600 hover:text-gray-800'
-              }`}
+              className="p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <h1 className={`text-2xl font-bold ${currentTheme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
               Edit Proposals
             </h1>
           </div>
@@ -520,18 +494,14 @@ const WikiView: React.FC<WikiViewProps> = ({
             {proposals.filter(p => p.status === 'pending').map((proposal) => (
               <div
                 key={proposal.proposal_id}
-                className={`p-4 rounded-lg border ${
-                  currentTheme === 'dark'
-                    ? 'bg-gray-800 border-gray-700'
-                    : 'bg-white border-gray-200'
-                }`}
+                className="p-4 rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h3 className={`font-semibold ${currentTheme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+                    <h3 className="font-semibold text-gray-800 dark:text-gray-200">
                       {proposal.page_path}
                     </h3>
-                    <p className={`text-sm ${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       by {proposal.proposer_id} • {new Date(proposal.created_at * 1000).toLocaleString()}
                     </p>
                   </div>
@@ -550,14 +520,14 @@ const WikiView: React.FC<WikiViewProps> = ({
                     </button>
                   </div>
                 </div>
-                <div className={`text-sm mb-2 ${currentTheme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                <div className="text-sm mb-2 text-gray-700 dark:text-gray-300">
                   <strong>Rationale:</strong> {proposal.rationale}
                 </div>
-                <div className={`text-xs p-2 rounded ${currentTheme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                  <div className={`${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-1`}>
+                <div className="text-xs p-2 rounded bg-gray-100 dark:bg-gray-700">
+                  <div className="text-gray-600 dark:text-gray-400 mb-1">
                     Proposed content:
                   </div>
-                  <div className={`whitespace-pre-wrap text-sm ${currentTheme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <div className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
                     {proposal.proposed_content ? proposal.proposed_content.substring(0, 200) : 'No content'}
                     {proposal.proposed_content && proposal.proposed_content.length > 200 && '...'}
                   </div>
@@ -566,7 +536,7 @@ const WikiView: React.FC<WikiViewProps> = ({
             ))}
             {proposals.filter(p => p.status === 'pending').length === 0 && (
               <div className="text-center py-8">
-                <p className={`${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                <p className="text-gray-600 dark:text-gray-400">
                   No pending proposals
                 </p>
               </div>
@@ -581,26 +551,22 @@ const WikiView: React.FC<WikiViewProps> = ({
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className={`border-b ${currentTheme === 'dark' ? 'border-gray-700' : 'border-gray-200'} p-6`}>
+      <div className="border-b border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <button
               onClick={onBackClick}
-              className={`p-2 rounded-lg transition-colors ${
-                currentTheme === 'dark' 
-                  ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200' 
-                  : 'hover:bg-gray-100 text-gray-600 hover:text-gray-800'
-              }`}
+              className="p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
             <div>
-              <h1 className={`text-2xl font-bold ${currentTheme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
                 Wiki
               </h1>
-              <p className={`text-sm ${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Collaborative knowledge base
               </p>
             </div>
@@ -636,15 +602,9 @@ const WikiView: React.FC<WikiViewProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search wiki pages..."
-            className={`w-full pl-10 pr-4 py-2 rounded-lg border ${
-              currentTheme === 'dark'
-                ? 'bg-gray-800 border-gray-600 text-gray-200 placeholder-gray-400'
-                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-            }`}
+            className="w-full pl-10 pr-4 py-2 rounded-lg border bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
           />
-          <svg className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
-            currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-          }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
@@ -661,28 +621,18 @@ const WikiView: React.FC<WikiViewProps> = ({
                 setCurrentView('page');
                 loadPage(page.page_path);
               }}
-              className={`p-4 rounded-lg border cursor-pointer transition-colors ${
-                currentTheme === 'dark'
-                  ? 'bg-gray-800 border-gray-700 hover:bg-gray-750'
-                  : 'bg-white border-gray-200 hover:bg-gray-50'
-              }`}
+              className="p-4 rounded-lg border cursor-pointer transition-colors bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h3 className={`text-lg font-semibold mb-2 ${
-                    currentTheme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-                  }`}>
+                  <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">
                     {page.title || 'Untitled'}
                   </h3>
-                  <p className={`text-sm mb-3 line-clamp-2 ${
-                    currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
+                  <p className="text-sm mb-3 line-clamp-2 text-gray-600 dark:text-gray-400">
                     {page.wiki_content ? page.wiki_content.substring(0, 150) : 'No content'}
                     {page.wiki_content && page.wiki_content.length > 150 && '...'}
                   </p>
-                  <div className={`flex items-center space-x-4 text-sm ${
-                    currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
+                  <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
                     <span>{page.page_path || 'Unknown path'}</span>
                     <span>by {page.creator_id || 'Unknown'}</span>
                     <span>v{page.version || 1}</span>
@@ -694,7 +644,7 @@ const WikiView: React.FC<WikiViewProps> = ({
           ))}
           {pages.length === 0 && (
             <div className="text-center py-8">
-              <p className={`${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              <p className="text-gray-600 dark:text-gray-400">
                 {searchQuery ? 'No pages found matching your search' : 'No wiki pages yet'}
               </p>
             </div>
@@ -705,12 +655,8 @@ const WikiView: React.FC<WikiViewProps> = ({
       {/* Create page modal */}
       {showCreatePage && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className={`w-full max-w-2xl mx-4 p-6 rounded-lg ${
-            currentTheme === 'dark' ? 'bg-gray-800' : 'bg-white'
-          }`}>
-            <h2 className={`text-xl font-bold mb-4 ${
-              currentTheme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-            }`}>
+          <div className="w-full max-w-2xl mx-4 p-6 rounded-lg bg-white dark:bg-gray-800">
+            <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">
               Create New Wiki Page
             </h2>
             <div className="space-y-4">
@@ -719,43 +665,27 @@ const WikiView: React.FC<WikiViewProps> = ({
                 value={newPagePath}
                 onChange={(e) => setNewPagePath(e.target.value)}
                 placeholder="Page path (e.g., /getting-started)"
-                className={`w-full p-3 rounded-lg border ${
-                  currentTheme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400'
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                }`}
+                className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
               />
               <input
                 type="text"
                 value={newPageTitle}
                 onChange={(e) => setNewPageTitle(e.target.value)}
                 placeholder="Page title..."
-                className={`w-full p-3 rounded-lg border ${
-                  currentTheme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400'
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                }`}
+                className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
               />
               <textarea
                 value={newPageContent}
                 onChange={(e) => setNewPageContent(e.target.value)}
                 placeholder="Page content..."
-                className={`w-full p-3 rounded-lg border resize-none ${
-                  currentTheme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400'
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                }`}
+                className="w-full p-3 rounded-lg border resize-none bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
                 rows={8}
               />
             </div>
             <div className="flex justify-end space-x-3 mt-6">
               <button
                 onClick={() => setShowCreatePage(false)}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  currentTheme === 'dark'
-                    ? 'text-gray-400 hover:text-gray-200'
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
+                className="px-4 py-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
               >
                 Cancel
               </button>

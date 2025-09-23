@@ -1,30 +1,25 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
-import { useThemeStore } from "@/stores/themeStore";
-import { useOpenAgentsService } from "@/contexts/OpenAgentsServiceContext";
-import ForumView from "@/components/forum/ForumView";
+import ForumTopicList from "@/components/forum/ForumTopicList";
+import ForumTopicDetail from "@/components/forum/ForumTopicDetail";
 
 /**
  * Forum主页面 - 处理Forum相关的所有功能
  */
 const ForumMainPage: React.FC = () => {
-  const { theme } = useThemeStore();
-  const { service: openAgentsService } = useOpenAgentsService();
-
   return (
     <Routes>
-      {/* 默认Forum视图 */}
+      {/* 话题列表页 */}
       <Route
         index
-        element={
-          <ForumView
-            currentTheme={theme}
-            connection={openAgentsService}
-          />
-        }
+        element={<ForumTopicList />}
       />
 
-      {/* 其他Forum相关的子路由可以在这里添加 */}
+      {/* 话题详情页 */}
+      <Route
+        path=":topicId"
+        element={<ForumTopicDetail />}
+      />
     </Routes>
   );
 };
