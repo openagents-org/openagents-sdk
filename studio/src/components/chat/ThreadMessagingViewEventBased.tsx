@@ -669,6 +669,8 @@ const ThreadMessagingViewEventBased = forwardRef<
                   //   currentDirectMessage
                   // });
 
+
+
                   if (currentChannel) {
                     // For channel messages, match the channel
                     // Also include optimistic messages that are being sent to this channel
@@ -679,15 +681,30 @@ const ThreadMessagingViewEventBased = forwardRef<
                         message.channel === currentChannel)
                     );
                   } else if (currentDirectMessage) {
+                    // 安全获取字段，支持多种数据格式（standardized 和 原始格式）
+                    const messageType = message.message_type;
+                    const targetAgentId = message.target_agent_id;
+                    const senderId = message.sender_id;
+
                     // For direct messages, match the target agent or sender
                     // Include messages where current user is sender or receiver
                     const currentUserId = connectionStatus.agentId || agentName;
+                    console.log('🔧 Filtering direct message:', {
+                      messageId: message.message_id,
+                      messageType,
+                      targetAgentId,
+                      senderId,
+                      currentDirectMessage,
+                      currentUserId,
+                      message
+                    });
+
                     return (
-                      message.message_type === "direct_message" &&
-                      (message.target_agent_id === currentDirectMessage ||
-                        message.sender_id === currentDirectMessage ||
-                        (message.sender_id === currentUserId &&
-                          message.target_agent_id === currentDirectMessage))
+                      messageType === "direct_message" &&
+                      (targetAgentId === currentDirectMessage ||
+                        senderId === currentDirectMessage ||
+                        (senderId === currentUserId &&
+                          targetAgentId === currentDirectMessage))
                     );
                   }
                   return false;
