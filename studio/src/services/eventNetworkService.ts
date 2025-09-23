@@ -413,6 +413,14 @@ export class EventNetworkService {
     }
   }
 
+  /**
+   * Send a generic event (for Forum and other custom functionality)
+   */
+  async sendEvent(event: Event): Promise<EventResponse> {
+    console.log(`📤 Sending custom event: ${event.event_name}`);
+    return await this.connector.sendEvent(event);
+  }
+
   // Legacy methods that emit events (for backward compatibility)
   async listChannels(): Promise<void> {
     const channels = await this.getChannels();
