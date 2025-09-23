@@ -135,13 +135,24 @@ export class EventNetworkService {
       channel
     );
 
-    if (response.success) {
+    // 检查外层success和内层data.success
+    const isSuccess = response.success && response.data?.success !== false;
+
+    if (isSuccess) {
       console.log(`✅ Reaction ${reactionType} added to message ${messageId}`);
     } else {
-      console.error(`❌ Failed to add reaction: ${response.message}`);
+      console.error(
+        `❌ Failed to add reaction: ${
+          response.message || response.data?.message || "Unknown error"
+        }`
+      );
     }
 
-    return response;
+    // 返回修正后的success状态
+    return {
+      ...response,
+      success: isSuccess,
+    };
   }
 
   async removeReaction(
@@ -155,15 +166,26 @@ export class EventNetworkService {
       channel
     );
 
-    if (response.success) {
+    // 检查外层success和内层data.success
+    const isSuccess = response.success && response.data?.success !== false;
+
+    if (isSuccess) {
       console.log(
         `✅ Reaction ${reactionType} removed from message ${messageId}`
       );
     } else {
-      console.error(`❌ Failed to remove reaction: ${response.message}`);
+      console.error(
+        `❌ Failed to remove reaction: ${
+          response.message || response.data?.message || "Unknown error"
+        }`
+      );
     }
 
-    return response;
+    // 返回修正后的success状态
+    return {
+      ...response,
+      success: isSuccess,
+    };
   }
 
   /**
@@ -423,27 +445,26 @@ export class EventNetworkService {
       }
     );
 
-    this.connector.on(
-      EventNames.THREAD_REPLY_NOTIFICATION,
-      (event: Event) => {
-        const message = this.parseThreadMessage(event);
-        if (message) {
-          // Only emit as replyMessage to prevent duplicate processing
-          // The openAgentsService will handle converting this to channelMessage for UI
-          this.emit("replyMessage", message);
-        }
+    this.connector.on(EventNames.THREAD_REPLY_NOTIFICATION, (event: Event) => {
+      const message = this.parseThreadMessage(event);
+      if (message) {
+        // Only emit as replyMessage to prevent duplicate processing
+        // The openAgentsService will handle converting this to channelMessage for UI
+        this.emit("replyMessage", message);
       }
-    );
+    });
 
     this.connector.on(
       EventNames.THREAD_REACTION_NOTIFICATION,
       (event: Event) => {
-        if (event.payload?.reaction) {
+        console.log(`📨 THREAD_REACTION_NOTIFICATION: `, event);
+        if (event.payload) {
           this.emit("reaction", {
-            message_id: event.payload.reaction.target_message_id,
-            reaction_type: event.payload.reaction.reaction_type,
-            action: event.payload.reaction.action,
-            user_id: event.source_id,
+            message_id: event.payload.target_message_id,
+            reaction_type: event.payload.reaction_type,
+            action: event.payload.action,
+            user_id: event.payload.reacting_agent,
+            total_reactions: event.payload.total_reactions,
           });
         }
       }
@@ -475,11 +496,13 @@ export class EventNetworkService {
 
       // Extract text content from the payload
       const textContent = payload.text || payload.content?.text || "";
-      
+
       return {
         message_id: event.event_id || "",
         sender_id: event.source_id,
-        timestamp: event.timestamp ? new Date(event.timestamp * 1000).toISOString() : new Date().toISOString(),
+        timestamp: event.timestamp
+          ? new Date(event.timestamp * 1000).toISOString()
+          : new Date().toISOString(),
         content: { text: textContent },
         message_type: payload.message_type || "channel_message",
         channel: payload.channel,
