@@ -222,78 +222,78 @@ export const dynamicRouteConfig: RouteConfig[] = [
   },
 ];
 
-// 快捷操作配置 - 独立于路由的快速操作
-export interface QuickActionConfig {
-  id: string;
-  title: string;
-  subtitle: string;
-  icon: React.ReactNode;
-  route: string;
-  visible: boolean;
-  order: number;
-  style: {
-    gradient: string;
-    hoverGradient: string;
-    backgroundImage?: string;
-  };
-}
+// // 快捷操作配置 - 独立于路由的快速操作
+// export interface QuickActionConfig {
+//   id: string;
+//   title: string;
+//   subtitle: string;
+//   icon: React.ReactNode;
+//   route: string;
+//   visible: boolean;
+//   order: number;
+//   style: {
+//     gradient: string;
+//     hoverGradient: string;
+//     backgroundImage?: string;
+//   };
+// }
 
-export const quickActionConfig: QuickActionConfig[] = [
-  {
-    id: 'documents-quick',
-    title: 'Documents',
-    subtitle: 'Collaborative editing',
-    icon: React.createElement("svg",
-      {
-        className: "w-4 h-4",
-        fill: "none",
-        stroke: "currentColor",
-        viewBox: "0 0 24 24"
-      },
-      React.createElement("path", {
-        strokeLinecap: "round",
-        strokeLinejoin: "round",
-        strokeWidth: 2,
-        d: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-      })
-    ),
-    route: '/documents',
-    visible: true,
-    order: 1,
-    style: {
-      gradient: 'bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium shadow-md',
-      hoverGradient: 'bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 text-green-700 dark:text-green-300 font-medium border border-green-200 dark:border-green-800/50 hover:shadow-md hover:from-green-200 hover:to-emerald-200 dark:hover:from-green-800/40 dark:hover:to-emerald-800/40',
-      backgroundImage: 'radial-gradient(circle at 20% 80%, rgba(34, 197, 94, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(16, 185, 129, 0.1) 0%, transparent 50%), linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%)'
-    }
-  },
-  {
-    id: 'mcp-quick',
-    title: 'MCP Store',
-    subtitle: 'Browse AI plugins & tools',
-    icon: React.createElement("svg",
-      {
-        className: "w-4 h-4",
-        fill: "none",
-        stroke: "currentColor",
-        viewBox: "0 0 24 24"
-      },
-      React.createElement("path", {
-        strokeLinecap: "round",
-        strokeLinejoin: "round",
-        strokeWidth: 2,
-        d: "M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
-      })
-    ),
-    route: '/mcp',
-    visible: true,
-    order: 2,
-    style: {
-      gradient: 'bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium shadow-md',
-      hoverGradient: 'bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-700 dark:text-purple-300 font-medium border border-purple-200 dark:border-purple-800/50 hover:shadow-md hover:from-purple-200 hover:to-pink-200 dark:hover:from-purple-800/40 dark:hover:to-pink-800/40',
-      backgroundImage: 'radial-gradient(circle at 25% 25%, rgba(147, 51, 234, 0.1) 0%, transparent 50%), radial-gradient(circle at 75% 75%, rgba(236, 72, 153, 0.1) 0%, transparent 50%), linear-gradient(45deg, rgba(147, 51, 234, 0.05) 0%, rgba(236, 72, 153, 0.05) 100%), repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(147, 51, 234, 0.03) 2px, rgba(147, 51, 234, 0.03) 4px)'
-    }
-  },
-];
+// export const quickActionConfig: QuickActionConfig[] = [
+//   {
+//     id: 'documents-quick',
+//     title: 'Documents',
+//     subtitle: 'Collaborative editing',
+//     icon: React.createElement("svg",
+//       {
+//         className: "w-4 h-4",
+//         fill: "none",
+//         stroke: "currentColor",
+//         viewBox: "0 0 24 24"
+//       },
+//       React.createElement("path", {
+//         strokeLinecap: "round",
+//         strokeLinejoin: "round",
+//         strokeWidth: 2,
+//         d: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+//       })
+//     ),
+//     route: '/documents',
+//     visible: true,
+//     order: 1,
+//     style: {
+//       gradient: 'bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium shadow-md',
+//       hoverGradient: 'bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 text-green-700 dark:text-green-300 font-medium border border-green-200 dark:border-green-800/50 hover:shadow-md hover:from-green-200 hover:to-emerald-200 dark:hover:from-green-800/40 dark:hover:to-emerald-800/40',
+//       backgroundImage: 'radial-gradient(circle at 20% 80%, rgba(34, 197, 94, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(16, 185, 129, 0.1) 0%, transparent 50%), linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%)'
+//     }
+//   },
+//   {
+//     id: 'mcp-quick',
+//     title: 'MCP Store',
+//     subtitle: 'Browse AI plugins & tools',
+//     icon: React.createElement("svg",
+//       {
+//         className: "w-4 h-4",
+//         fill: "none",
+//         stroke: "currentColor",
+//         viewBox: "0 0 24 24"
+//       },
+//       React.createElement("path", {
+//         strokeLinecap: "round",
+//         strokeLinejoin: "round",
+//         strokeWidth: 2,
+//         d: "M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+//       })
+//     ),
+//     route: '/mcp',
+//     visible: true,
+//     order: 2,
+//     style: {
+//       gradient: 'bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium shadow-md',
+//       hoverGradient: 'bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-700 dark:text-purple-300 font-medium border border-purple-200 dark:border-purple-800/50 hover:shadow-md hover:from-purple-200 hover:to-pink-200 dark:hover:from-purple-800/40 dark:hover:to-pink-800/40',
+//       backgroundImage: 'radial-gradient(circle at 25% 25%, rgba(147, 51, 234, 0.1) 0%, transparent 50%), radial-gradient(circle at 75% 75%, rgba(236, 72, 153, 0.1) 0%, transparent 50%), linear-gradient(45deg, rgba(147, 51, 234, 0.05) 0%, rgba(236, 72, 153, 0.05) 100%), repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(147, 51, 234, 0.03) 2px, rgba(147, 51, 234, 0.03) 4px)'
+//     }
+//   },
+// ];
 
 // 工具函数：获取可见的导航路由
 export const getVisibleNavigationRoutes = () => {
@@ -308,12 +308,12 @@ export const getNavigationRoutesByGroup = (group: 'primary' | 'secondary') => {
     .filter(route => route.navigationConfig?.group === group);
 };
 
-// 工具函数：获取可见的快捷操作
-export const getVisibleQuickActions = () => {
-  return quickActionConfig
-    .filter(action => action.visible)
-    .sort((a, b) => a.order - b.order);
-};
+// // 工具函数：获取可见的快捷操作
+// export const getVisibleQuickActions = () => {
+//   return quickActionConfig
+//     .filter(action => action.visible)
+//     .sort((a, b) => a.order - b.order);
+// };
 
 // 工具函数：获取所有需要注册的路由
 export const getAllRoutes = () => {
@@ -340,9 +340,9 @@ export const updateRouteVisibility = (pluginKey: PLUGIN_NAME_ENUM, visible: bool
   }
 };
 
-export const updateQuickActionVisibility = (actionId: string, visible: boolean) => {
-  const action = quickActionConfig.find(a => a.id === actionId);
-  if (action) {
-    action.visible = visible;
-  }
-};
+// export const updateQuickActionVisibility = (actionId: string, visible: boolean) => {
+//   const action = quickActionConfig.find(a => a.id === actionId);
+//   if (action) {
+//     action.visible = visible;
+//   }
+// };
