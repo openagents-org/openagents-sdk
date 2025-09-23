@@ -182,8 +182,13 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                   return "You";
                 }
 
-                // Extract a more readable name from sender_id
-                const senderId = message.sender_id;
+                // 安全获取发送者ID，支持多种字段（为 direct messages 提供 fallback）
+                const senderId = message.sender_id || (message as any).source_id || 'Unknown';
+
+                // 安全检查：确保 senderId 是字符串
+                if (!senderId || typeof senderId !== 'string') {
+                  return 'Unknown';
+                }
 
                 // If sender_id contains '@', take the part before it
                 if (senderId.includes("@")) {
@@ -269,6 +274,8 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
           {message.reactions && Object.keys(message.reactions).length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {Object.entries(message.reactions).map(([type, count]) => {
+                // 调试 reactions 显示
+                console.log(`🎭 Rendering reaction ${type}:${count} for message ${messageId}`);
                 const numCount = Number(count);
                 return (
                   numCount > 0 && (
@@ -302,7 +309,11 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
             <button
               className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
               onClick={() =>
-                onReply(messageId, message.content.text, message.sender_id)
+                onReply(
+                  messageId,
+                  message.content?.text || '',
+                  message.sender_id || (message as any).source_id || 'Unknown'
+                )
               }
               title="Reply"
             >
@@ -324,7 +335,11 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
             <button
               className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
               onClick={() =>
-                onQuote(messageId, message.content.text, message.sender_id)
+                onQuote(
+                  messageId,
+                  message.content?.text || '',
+                  message.sender_id || (message as any).source_id || 'Unknown'
+                )
               }
               title="Quote message"
             >
