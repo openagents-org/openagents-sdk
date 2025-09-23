@@ -176,12 +176,19 @@ const ThreadMessagingViewEventBased = forwardRef<
   const loadAgents = useCallback(async () => {
     try {
       const agentList = await loadConnectedAgents();
-      console.log(`👥 Loaded ${agentList.length} connected agents`);
-      setAgents(agentList);
+      const currentUserId = connectionStatus.agentId || agentName;
+
+      // 过滤掉当前用户，避免用户在 DM 列表中看到自己
+      const filteredAgentList = agentList.filter(
+        (agent) => agent.agent_id !== currentUserId
+      );
+
+      console.log(`👥 Loaded ${agentList.length} connected agents, filtered to ${filteredAgentList.length} (excluded current user: ${currentUserId})`);
+      setAgents(filteredAgentList);
     } catch (error) {
       console.error("Failed to load connected agents:", error);
     }
-  }, [loadConnectedAgents]);
+  }, [loadConnectedAgents, connectionStatus.agentId, agentName]);
 
   // Load initial data function
   const loadInitialData = useCallback(async () => {
@@ -192,8 +199,15 @@ const ThreadMessagingViewEventBased = forwardRef<
 
       // Load connected agents
       const agentList = await loadConnectedAgents();
-      console.log(`👥 Loaded ${agentList.length} connected agents`);
-      setAgents(agentList);
+      const currentUserId = connectionStatus.agentId || agentName;
+
+      // 过滤掉当前用户，避免用户在 DM 列表中看到自己
+      const filteredAgentList = agentList.filter(
+        (agent) => agent.agent_id !== currentUserId
+      );
+
+      console.log(`👥 Loaded ${agentList.length} connected agents, filtered to ${filteredAgentList.length} (excluded current user: ${currentUserId})`);
+      setAgents(filteredAgentList);
 
       // 智能频道选择逻辑
       if (channelList.length > 0 && onThreadStateChange) {
@@ -201,7 +215,7 @@ const ThreadMessagingViewEventBased = forwardRef<
           currentChannel,
           currentDirectMessage,
           availableChannels: channelList.map((c) => c.name),
-          availableAgents: agentList.map((a) => a.agent_id),
+          availableAgents: filteredAgentList.map((a) => a.agent_id),
           threadStateFromStore: threadState,
         });
 
@@ -229,7 +243,7 @@ const ThreadMessagingViewEventBased = forwardRef<
           }
         } else if (currentDirectMessage) {
           // 检查当前选择的直接消息对象是否仍然在连接的代理列表中
-          const agentExists = agentList.some(
+          const agentExists = filteredAgentList.some(
             (agent) => agent.agent_id === currentDirectMessage
           );
           console.log(
@@ -265,7 +279,7 @@ const ThreadMessagingViewEventBased = forwardRef<
           });
         } else if (selectedChannel === currentChannel) {
           console.log(`✅ 保持当前频道选择: ${selectedChannel}`);
-        } else if (currentDirectMessage && agentList.some(agent => agent.agent_id === currentDirectMessage)) {
+        } else if (currentDirectMessage && filteredAgentList.some(agent => agent.agent_id === currentDirectMessage)) {
           console.log(`✅ 保持当前直接消息选择: ${currentDirectMessage}`);
         }
       }
@@ -279,6 +293,8 @@ const ThreadMessagingViewEventBased = forwardRef<
     currentDirectMessage,
     onThreadStateChange,
     threadState,
+    connectionStatus.agentId,
+    agentName,
   ]);
 
   // Load initial data when connected
@@ -383,7 +399,7 @@ const ThreadMessagingViewEventBased = forwardRef<
       const optimisticMessage: ThreadMessage = {
         message_id: `temp_${Date.now()}_${Math.random()
           .toString(36)
-          .substr(2, 9)}`,
+          .slice(2, 11)}`,
         sender_id: connectionStatus.agentId || agentName,
         timestamp: Date.now().toString(),
         content: { text: content },
