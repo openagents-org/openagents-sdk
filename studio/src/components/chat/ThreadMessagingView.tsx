@@ -19,13 +19,13 @@ import { useOpenAgentsService } from "@/contexts/OpenAgentsServiceContext";
 import { useOpenAgentsData } from "@/hooks/useOpenAgentsData";
 import { ThreadState } from "@/types/thread";
 import { MessageSendResult } from "../../services/openAgentsService";
-import MessageDisplay from "./MessageDisplay";
+import MessageRenderer from "./MessageRenderer";
 import ThreadMessageInput from "./ThreadMessageInput";
 import DocumentsView from "../documents/DocumentsView";
 import { ReadMessageStore } from "../../utils/readMessageStore";
-import { ConnectionStatusEnum } from "@/types/connection";
 import { useThemeStore } from "@/stores/themeStore";
 import { useThreadStore } from "@/stores/threadStore";
+import { CONNECTED_STATUS_COLOR } from "@/constants/chatConstants";
 
 interface ThreadMessagingViewEventBasedProps {
   agentName: string;
@@ -38,13 +38,6 @@ export interface ThreadMessagingViewEventBasedRef {
   selectDirectMessage: (agentId: string) => void;
 }
 
-const CONNECTED_STATUS_COLOR = {
-  [ConnectionStatusEnum.CONNECTED]: "#10b981",
-  [ConnectionStatusEnum.CONNECTING]: "#f59e0b",
-  [ConnectionStatusEnum.DISCONNECTED]: "#6b7280",
-  [ConnectionStatusEnum.ERROR]: "#ef4444",
-  default: "#6b7280",
-};
 
 const ThreadMessagingViewEventBased = forwardRef<
   ThreadMessagingViewEventBasedRef,
@@ -772,14 +765,14 @@ const ThreadMessagingViewEventBased = forwardRef<
                   return aTime - bTime;
                 });
 
-                // Render all messages together so MessageDisplay can build proper thread structure
+                // Render all messages together so MessageRenderer can build proper thread structure
                 return (
-                  <MessageDisplay
+                  <MessageRenderer
                     key="all-messages"
                     messages={sortedMessages}
                     currentUserId={connectionStatus.agentId || agentName}
                     onReaction={(messageId: string, reactionType: string, action?: "add" | "remove") => {
-                      // 如果MessageDisplay没有指定action，则默认为add
+                      // 如果MessageRenderer没有指定action，则默认为add
                       const finalAction = action || "add";
                       console.log(`🔧 Reaction click: ${finalAction} ${reactionType} for message ${messageId}`);
                       handleReaction(messageId, reactionType, finalAction);
