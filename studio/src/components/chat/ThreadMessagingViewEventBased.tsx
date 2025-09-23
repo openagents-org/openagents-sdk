@@ -191,7 +191,9 @@ const ThreadMessagingViewEventBased = forwardRef<
       console.log(`📋 Loaded ${channelList.length} channels`);
 
       // Load connected agents
-      await loadAgents();
+      const agentList = await loadConnectedAgents();
+      console.log(`👥 Loaded ${agentList.length} connected agents`);
+      setAgents(agentList);
 
       // 智能频道选择逻辑
       if (channelList.length > 0 && onThreadStateChange) {
@@ -199,6 +201,7 @@ const ThreadMessagingViewEventBased = forwardRef<
           currentChannel,
           currentDirectMessage,
           availableChannels: channelList.map((c) => c.name),
+          availableAgents: agentList.map((a) => a.agent_id),
           threadStateFromStore: threadState,
         });
 
@@ -224,7 +227,25 @@ const ThreadMessagingViewEventBased = forwardRef<
               `⚠️ Previously selected channel "${currentChannel}" no longer exists, falling back to first channel`
             );
           }
-        } else if (!currentDirectMessage) {
+        } else if (currentDirectMessage) {
+          // 检查当前选择的直接消息对象是否仍然在连接的代理列表中
+          const agentExists = agentList.some(
+            (agent) => agent.agent_id === currentDirectMessage
+          );
+          console.log(
+            `🔍 Current DM agent "${currentDirectMessage}" exists: ${agentExists}`
+          );
+
+          if (!agentExists) {
+            // 如果直接消息的代理不再可用，回退到第一个频道
+            selectedChannel = channelList[0].name;
+            selectionReason = "直接消息代理不可用，回退到首个频道";
+            console.warn(
+              `⚠️ DM agent "${currentDirectMessage}" is no longer available, falling back to first channel`
+            );
+          }
+          // 如果代理存在，不设置selectedChannel，保持当前直接消息状态
+        } else {
           // 没有任何选择，选择第一个频道
           selectedChannel = channelList[0].name;
           selectionReason = "首次选择第一个频道";
@@ -244,6 +265,8 @@ const ThreadMessagingViewEventBased = forwardRef<
           });
         } else if (selectedChannel === currentChannel) {
           console.log(`✅ 保持当前频道选择: ${selectedChannel}`);
+        } else if (currentDirectMessage && agentList.some(agent => agent.agent_id === currentDirectMessage)) {
+          console.log(`✅ 保持当前直接消息选择: ${currentDirectMessage}`);
         }
       }
     } catch (error) {
@@ -251,10 +274,11 @@ const ThreadMessagingViewEventBased = forwardRef<
     }
   }, [
     loadChannels,
-    loadAgents,
+    loadConnectedAgents,
     currentChannel,
     currentDirectMessage,
     onThreadStateChange,
+    threadState,
   ]);
 
   // Load initial data when connected
@@ -488,6 +512,33 @@ const ThreadMessagingViewEventBased = forwardRef<
       reactionType: string,
       action: "add" | "remove" = "add"
     ) => {
+      // 乐观更新：立即更新本地状态
+      const currentMessages = messagesRef.current || [];
+      const optimisticMessages = currentMessages.map((msg) => {
+        if (msg.message_id === messageId) {
+          const reactions = { ...(msg.reactions || {}) };
+          const currentCount = reactions[reactionType] || 0;
+
+          if (action === "add") {
+            reactions[reactionType] = currentCount + 1;
+          } else {
+            reactions[reactionType] = Math.max(currentCount - 1, 0);
+            // 如果计数为0，从reactions对象中删除这个属性
+            if (reactions[reactionType] === 0) {
+              delete reactions[reactionType];
+            }
+          }
+
+          return { ...msg, reactions };
+        }
+        return msg;
+      });
+
+      console.log(
+        `🔧 Optimistic reaction update: ${action} ${reactionType} on message ${messageId}`
+      );
+      setMessages(optimisticMessages);
+
       try {
         const result =
           action === "add"
@@ -502,12 +553,20 @@ const ThreadMessagingViewEventBased = forwardRef<
           );
         } else {
           console.error(`Failed to ${action} reaction:`, result.message);
+
+          // 如果服务器请求失败，回滚乐观更新
+          console.log(`🔄 Rolling back optimistic reaction update`);
+          setMessages(currentMessages);
         }
       } catch (error) {
         console.error(`Failed to ${action} reaction:`, error);
+
+        // 如果请求出错，回滚乐观更新
+        console.log(`🔄 Rolling back optimistic reaction update due to error`);
+        setMessages(currentMessages);
       }
     },
-    [addReaction, removeReaction, currentChannel]
+    [addReaction, removeReaction, currentChannel, setMessages]
   );
 
   // Expose methods to parent via ref
@@ -686,8 +745,11 @@ const ThreadMessagingViewEventBased = forwardRef<
                     key="all-messages"
                     messages={sortedMessages}
                     currentUserId={connectionStatus.agentId || agentName}
-                    onReaction={(messageId: string, reactionType: string) => {
-                      handleReaction(messageId, reactionType, "add");
+                    onReaction={(messageId: string, reactionType: string, action?: "add" | "remove") => {
+                      // 如果MessageDisplay没有指定action，则默认为add
+                      const finalAction = action || "add";
+                      console.log(`🔧 Reaction click: ${finalAction} ${reactionType} for message ${messageId}`);
+                      handleReaction(messageId, reactionType, finalAction);
                     }}
                     onReply={startReply}
                     onQuote={startQuote}

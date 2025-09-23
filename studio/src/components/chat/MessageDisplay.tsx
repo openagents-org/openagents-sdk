@@ -9,7 +9,7 @@ interface MessageDisplayProps {
   currentUserId: string;
   onReply: (messageId: string, text: string, author: string) => void;
   onQuote: (messageId: string, text: string, author: string) => void;
-  onReaction: (messageId: string, reactionType: string) => void;
+  onReaction: (messageId: string, reactionType: string, action?: "add" | "remove") => void;
 }
 
 interface ThreadStructure {
@@ -130,13 +130,14 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
   const handleReaction = (
     messageId: string,
     reactionType: string,
-    event?: React.MouseEvent
+    event?: React.MouseEvent,
+    action?: "add" | "remove"
   ) => {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
-    onReaction(messageId, reactionType);
+    onReaction(messageId, reactionType, action);
     setShowReactionPicker(null);
   };
 
@@ -275,7 +276,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                       key={type}
                       className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs cursor-pointer transition-all duration-150 border bg-slate-100 border-slate-200 hover:bg-slate-200 hover:border-slate-300 dark:bg-slate-600 dark:border-slate-500 dark:text-gray-200 dark:hover:bg-slate-500 dark:hover:border-slate-400"
                       onClick={(event) =>
-                        handleReaction(messageId, type, event)
+                        handleReaction(messageId, type, event, "add")
                       }
                     >
                       <span>
@@ -339,7 +340,7 @@ const MessageDisplay: React.FC<MessageDisplayProps> = ({
                   <div
                     key={type}
                     className="p-1 rounded cursor-pointer transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    onClick={(event) => handleReaction(messageId, type, event)}
+                    onClick={(event) => handleReaction(messageId, type, event, "add")}
                   >
                     {emoji}
                   </div>
