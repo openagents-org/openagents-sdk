@@ -2,31 +2,31 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { useThemeStore } from "@/stores/themeStore";
 import { useOpenAgentsService } from "@/contexts/OpenAgentsServiceContext";
-import ForumView from "@/components/forum/ForumView";
+import WikiView from "@/components/wiki/WikiView";
 
 /**
- * Forum主页面 - 处理Forum相关的所有功能
+ * Wiki主页面 - 处理Wiki相关的所有功能
  */
-const ForumMainPage: React.FC = () => {
+const WikiMainPage: React.FC = () => {
   const { theme } = useThemeStore();
   const { service: openAgentsService } = useOpenAgentsService();
 
   return (
     <Routes>
-      {/* 默认Forum视图 */}
+      {/* 默认Wiki视图 */}
       <Route
         index
         element={
-          <ForumView
+          <WikiView
             currentTheme={theme}
             connection={openAgentsService}
           />
         }
       />
 
-      {/* 其他Forum相关的子路由可以在这里添加 */}
+      {/* 其他Wiki相关的子路由可以在这里添加 */}
     </Routes>
   );
 };
 
-export default ForumMainPage;
+export default WikiMainPage;
