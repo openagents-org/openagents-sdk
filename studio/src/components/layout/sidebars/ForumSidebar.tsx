@@ -146,19 +146,19 @@ const ForumSidebar: React.FC = () => {
     }
   }, [openAgentsService, setupEventListeners, cleanupEventListeners]);
 
-  // 分类数据（静态）
-  const forumCategories = [
-    { name: "General Discussion", id: "general" },
-    { name: "Q&A", id: "qa" },
-    { name: "Feature Requests", id: "features" },
-    { name: "Bug Reports", id: "bugs" },
-  ];
+  // // 分类数据（静态）
+  // const forumCategories = [
+  //   { name: "General Discussion", id: "general" },
+  //   { name: "Q&A", id: "qa" },
+  //   { name: "Feature Requests", id: "features" },
+  //   { name: "Bug Reports", id: "bugs" },
+  // ];
 
-  // 分类选择处理
-  const onCategorySelect = (categoryId: string) => {
-    // 导航到论坛列表页（将来可以添加分类过滤）
-    navigate('/forum');
-  };
+  // // 分类选择处理
+  // const onCategorySelect = (categoryId: string) => {
+  //   // 导航到论坛列表页（将来可以添加分类过滤）
+  //   navigate('/forum');
+  // };
 
   // 话题选择处理
   const onTopicSelect = (topicId: string) => {
