@@ -26,8 +26,13 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
     loadTopicDetail,
     addComment,
     vote,
-    resetSelectedTopic
+    resetSelectedTopic,
+    getTotalComments
   } = useForumStore();
+
+  // 使用实时计算的评论总数
+  const totalComments = getTotalComments();
+
 
   // 设置连接并加载话题详情
   useEffect(() => {
@@ -104,7 +109,7 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
             onClick={handleBack}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
-            Back to Forum
+            Back to Forum List
           </button>
         </div>
       </div>
@@ -124,12 +129,14 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          <span>Back to Forum</span>
+          <span>Back to Forum List</span>
         </button>
       </div>
 
       {/* 主要内容 - 使用全宽度 */}
-      <div className="flex-1 flex flex-col overflow-hidden dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+      <div className="flex-1 flex flex-col overflow-hidden dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+        
+      <div className="flex-1 flex flex-col overflow-y-auto">
         {/* 话题内容 */}
         <div className="p-6 border-b bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
           {/* 话题标题 */}
@@ -143,7 +150,7 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
               by {selectedTopic.owner_id} • {timeAgo}
             </span>
             <span>
-              {selectedTopic.comment_count} comments
+              {totalComments} comments
             </span>
           </div>
 
@@ -180,36 +187,35 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
           </div>
         </div>
 
-        {/* 评论区 */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* 评论标题 */}
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Comments ({selectedTopic.comment_count})
-            </h2>
-          </div>
+            {/* 评论标题 */}
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Comments ({totalComments})
+              </h2>
+            </div>
 
-          {/* 评论列表 - 可滚动的中间区域 */}
-          <div className="flex-1 overflow-y-auto px-6 py-4">
-            {commentsLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
-                <p className="text-gray-600 dark:text-gray-400">
-                  Loading comments...
-                </p>
-              </div>
-            ) : comments.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-600 dark:text-gray-400">
-                  No comments yet. Be the first to comment!
-                </p>
-              </div>
-            ) : (
-              <ForumCommentThread
-                comments={comments}
-                topicId={selectedTopic.topic_id}
-              />
-            )}
+            {/* 评论列表 - 可滚动的中间区域 */}
+            <div className="py-4">
+              {commentsLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Loading comments...
+                  </p>
+                </div>
+              ) : comments.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    No comments yet. Be the first to comment!
+                  </p>
+                </div>
+              ) : (
+                <ForumCommentThread
+                  comments={comments}
+                  topicId={selectedTopic.topic_id}
+                />
+              )}
+            </div>
           </div>
 
           {/* 添加评论表单 - 固定在底部 */}
@@ -267,7 +273,6 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
               </button>
             </div>
           </div>
-        </div>
       </div>
     </div>
   );
