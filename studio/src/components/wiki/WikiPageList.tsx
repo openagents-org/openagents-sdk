@@ -4,6 +4,7 @@ import { useWikiStore } from '@/stores/wikiStore';
 import { useOpenAgentsService } from '@/contexts/OpenAgentsServiceContext';
 import useConnectedStatus from '@/hooks/useConnectedStatus';
 import WikiCreateModal from './components/WikiCreateModal';
+import { formatDateTime } from '@/utils/utils';
 
 const WikiPageList: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -206,7 +207,7 @@ const WikiPageList: React.FC = () => {
                       <span>{page.page_path || 'Unknown path'}</span>
                       <span>by {page.creator_id || 'Unknown'}</span>
                       <span>v{page.version || 1}</span>
-                      <span>{page.last_modified ? new Date(page.last_modified * 1000).toLocaleDateString() : 'Unknown date'}</span>
+                      <span>{formatDateTime(page.last_modified)}</span>
                     </div>
                   </div>
                 </div>
