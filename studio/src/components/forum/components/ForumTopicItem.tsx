@@ -30,7 +30,7 @@ const ForumTopicItem: React.FC<ForumTopicItemProps> = React.memo(({
       </h3>
 
       {/* 话题内容预览 */}
-      <div className="text-sm mb-3 line-clamp-3">
+      <div className="text-sm line-clamp-3">
         <MarkdownRenderer
           content={topic.content}
           truncate={true}

@@ -183,7 +183,7 @@ const ForumSidebar: React.FC = () => {
       </div> */}
 
       {/* Popular Topics Section */}
-      <SectionHeader title="POPULAR TOPICS" />
+      <SectionHeader title="POPULAR 10 TOPICS" />
       <div className="flex-1 overflow-y-auto px-3 custom-scrollbar">
         {popularTopics.length === 0 ? (
           <div className="text-center py-4">
