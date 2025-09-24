@@ -66,6 +66,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+
   // 消息类型检测和属性获取
   const getMessageProps = (message: SupportedMessage) => {
     // 检测是否为 ThreadMessage 类型
@@ -153,6 +154,18 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
     setShowReactionPicker(null);
   };
 
+  // 简单的表情选择器切换
+  const handleReactionPickerToggle = (
+    messageId: string,
+    event?: React.MouseEvent
+  ) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    setShowReactionPicker(showReactionPicker === messageId ? null : messageId);
+  };
+
   const toggleThread = (messageId: string) => {
     const newCollapsed = new Set(collapsedThreads);
     if (newCollapsed.has(messageId)) {
@@ -205,7 +218,8 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
   const renderThreadMessage = (
     messageId: string,
     structure: { [messageId: string]: { message: ThreadMessage; children: string[]; level: number } },
-    level = 0
+    level = 0,
+    messageIndex?: number
   ): React.ReactNode => {
     const item = structure[messageId];
     if (!item) return null;
@@ -290,11 +304,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             )}
             <button
               className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                setShowReactionPicker(showReactionPicker === messageId ? null : messageId);
-              }}
+              onClick={(event) => handleReactionPickerToggle(messageId, event)}
               title="Add reaction"
             >
               😊
@@ -310,7 +320,12 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
 
           {/* 反应选择器 */}
           {showReactionPicker === messageId && (
-            <div className="absolute bottom-full left-0 flex gap-1 p-2 rounded-lg border z-10 shadow-lg bg-white border-slate-200 shadow-black/10 dark:bg-gray-800 dark:border-gray-700 dark:shadow-black/30">
+            <div
+              className="absolute bottom-full left-0 flex gap-1 p-2 rounded-lg border z-10 shadow-lg bg-white border-slate-200 shadow-black/10 dark:bg-gray-800 dark:border-gray-700 dark:shadow-black/30"
+              style={{
+                transform: level === 0 && messageIndex === 0 ? 'translateY(50px)' : 'none'
+              }}
+            >
               {REACTION_PICKER_EMOJIS.map(({ type, emoji }) => (
                 <div
                   key={type}
@@ -343,7 +358,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
         {/* 渲染子消息 */}
         {hasChildren && !isCollapsed && level < maxThreadDepth && (
           <div className={`border-l-2 mt-2 pl-4 border-slate-200 dark:border-slate-600 ${getThreadStyleClass(level)}`}>
-            {item.children.map((childId) => renderThreadMessage(childId, structure, level + 1))}
+            {item.children.map((childId) => renderThreadMessage(childId, structure, level + 1, undefined))}
           </div>
         )}
       </div>
@@ -354,7 +369,8 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
   const renderUnifiedMessage = (
     message: UnifiedMessage,
     level = 0,
-    children?: MessageTreeNode[]
+    children?: MessageTreeNode[],
+    messageIndex?: number
   ): React.ReactNode => {
     const isOwnMessage = isMessageAuthor(message, currentUserId);
     const isCollapsed = collapsedThreads.has(message.id);
@@ -428,11 +444,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             )}
             <button
               className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                setShowReactionPicker(showReactionPicker === message.id ? null : message.id);
-              }}
+              onClick={(event) => handleReactionPickerToggle(message.id, event)}
               title="Add reaction"
             >
               😊
@@ -448,7 +460,12 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
 
           {/* 反应选择器 */}
           {showReactionPicker === message.id && (
-            <div className="absolute bottom-full left-0 flex gap-1 p-2 rounded-lg border z-10 shadow-lg bg-white border-slate-200 shadow-black/10 dark:bg-gray-800 dark:border-gray-700 dark:shadow-black/30">
+            <div
+              className="absolute bottom-full left-0 flex gap-1 p-2 rounded-lg border z-10 shadow-lg bg-white border-slate-200 shadow-black/10 dark:bg-gray-800 dark:border-gray-700 dark:shadow-black/30"
+              style={{
+                transform: level === 0 && messageIndex === 0 ? 'translateY(50px)' : 'none'
+              }}
+            >
               {REACTION_PICKER_EMOJIS.map(({ type, emoji }) => (
                 <div
                   key={type}
@@ -481,7 +498,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
         {/* 渲染子消息 */}
         {hasChildren && !isCollapsed && level < maxThreadDepth && (
           <div className={`border-l-2 mt-2 pl-4 border-slate-200 dark:border-slate-600 ${getThreadStyleClass(level)}`}>
-            {children?.map((child) => renderUnifiedMessage(child.message, level + 1, child.children))}
+            {children?.map((child) => renderUnifiedMessage(child.message, level + 1, child.children, undefined))}
           </div>
         )}
       </div>
@@ -513,7 +530,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
     return (
       <div className="flex-1 overflow-y-auto p-4 scroll-smooth bg-white dark:bg-slate-800">
         <style>{MESSAGE_DISPLAY_STYLES}</style>
-        {rootMessageIds.map((messageId) => renderThreadMessage(messageId, structure))}
+        {rootMessageIds.map((messageId, index) => renderThreadMessage(messageId, structure, 0, index))}
         <div ref={messagesEndRef} />
       </div>
     );
@@ -526,7 +543,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
       return (
         <div className="flex-1 overflow-y-auto p-4 scroll-smooth bg-white dark:bg-slate-800">
           <style>{MESSAGE_DISPLAY_STYLES}</style>
-          {unifiedMessages.map((message) => renderUnifiedMessage(message))}
+          {unifiedMessages.map((message, index) => renderUnifiedMessage(message, 0, undefined, index))}
           <div ref={messagesEndRef} />
         </div>
       );
@@ -537,7 +554,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
       return (
         <div className="flex-1 overflow-y-auto p-4 scroll-smooth bg-white dark:bg-slate-800">
           <style>{MESSAGE_DISPLAY_STYLES}</style>
-          {messageTree.map((node) => renderUnifiedMessage(node.message, 0, node.children))}
+          {messageTree.map((node, index) => renderUnifiedMessage(node.message, 0, node.children, index))}
           <div ref={messagesEndRef} />
         </div>
       );

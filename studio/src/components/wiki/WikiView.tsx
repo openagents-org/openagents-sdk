@@ -333,7 +333,7 @@ const WikiView: React.FC<WikiViewProps> = ({
     return (
       <div className="h-full flex flex-col">
         {/* Header */}
-        <div className="border-b border-gray-200 dark:border-gray-700 p-6">
+        <div className="border-b border-gray-200 dark:border-gray-700 dark:bg-gray-800 p-6">
           <div className="flex items-center space-x-3">
             <button
               onClick={() => {
@@ -375,7 +375,7 @@ const WikiView: React.FC<WikiViewProps> = ({
         </div>
 
         {/* Page content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 dark:bg-gray-900">
           <div className="prose max-w-none dark:prose-invert">
             <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
               {selectedPage.wiki_content || 'No content available'}
@@ -393,7 +393,7 @@ const WikiView: React.FC<WikiViewProps> = ({
     return (
       <div className="h-full flex flex-col">
         {/* Header */}
-        <div className="border-b border-gray-200 dark:border-gray-700 p-6">
+        <div className="border-b border-gray-200 dark:border-gray-700 dark:bg-gray-800 p-6">
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setCurrentView('page')}
@@ -410,7 +410,7 @@ const WikiView: React.FC<WikiViewProps> = ({
         </div>
 
         {/* Edit form */}
-        <div className="flex-1 flex flex-col p-6 space-y-4">
+        <div className="flex-1 flex flex-col p-6 space-y-4 dark:bg-gray-900">
           <div className="flex-1">
             <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
               Content
@@ -469,7 +469,7 @@ const WikiView: React.FC<WikiViewProps> = ({
     return (
       <div className="h-full flex flex-col">
         {/* Header */}
-        <div className="border-b border-gray-200 dark:border-gray-700 p-6">
+        <div className="border-b border-gray-200 dark:border-gray-700 dark:bg-gray-800 p-6">
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setCurrentView('list')}
@@ -486,7 +486,7 @@ const WikiView: React.FC<WikiViewProps> = ({
         </div>
 
         {/* Proposals list */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 dark:bg-gray-900">
           <div className="space-y-4">
             {proposals.filter(p => p.status === 'pending').map((proposal) => (
               <div
@@ -548,7 +548,7 @@ const WikiView: React.FC<WikiViewProps> = ({
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="border-b border-gray-200 dark:border-gray-700 p-6">
+      <div className="border-b border-gray-200 dark:border-gray-700 dark:bg-gray-800 p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div>
@@ -600,7 +600,7 @@ const WikiView: React.FC<WikiViewProps> = ({
       </div>
 
       {/* Pages list */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6 dark:bg-gray-900">
         <div className="space-y-4">
           {pages.map((page) => (
             <div
