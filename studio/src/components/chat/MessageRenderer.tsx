@@ -43,6 +43,8 @@ interface MessageRendererProps {
   renderMode?: 'flat' | 'threaded';
   // 最大线程深度
   maxThreadDepth?: number;
+  // 是否为直接消息聊天（DM）
+  isDMChat?: boolean;
 }
 
 const MessageRenderer: React.FC<MessageRendererProps> = ({
@@ -53,6 +55,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
   onReaction,
   renderMode = 'threaded',
   maxThreadDepth = 4,
+  isDMChat = false,
 }) => {
   const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
   const [hoveredMessage, setHoveredMessage] = useState<string | null>(null);
@@ -275,13 +278,16 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
               hoveredMessage === messageId ? "opacity-100 visible" : "opacity-0 invisible"
             }`}
           >
-            <button
-              className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
-              onClick={() => onReply(messageId, messageProps.content, messageProps.senderId)}
-              title="Reply"
-            >
-              ↩️
-            </button>
+            {/* 回复按钮 - 在 DM 聊天中不显示 */}
+            {!isDMChat && (
+              <button
+                className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
+                onClick={() => onReply(messageId, messageProps.content, messageProps.senderId)}
+                title="Reply"
+              >
+                ↩️
+              </button>
+            )}
             <button
               className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
               onClick={(event) => {
@@ -410,13 +416,16 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
               hoveredMessage === message.id ? "opacity-100 visible" : "opacity-0 invisible"
             }`}
           >
-            <button
-              className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
-              onClick={() => onReply(message.id, message.content, message.senderId)}
-              title="Reply"
-            >
-              ↩️
-            </button>
+            {/* 回复按钮 - 在 DM 聊天中不显示 */}
+            {!isDMChat && (
+              <button
+                className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
+                onClick={() => onReply(message.id, message.content, message.senderId)}
+                title="Reply"
+              >
+                ↩️
+              </button>
+            )}
             <button
               className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
               onClick={(event) => {
