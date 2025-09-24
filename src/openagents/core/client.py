@@ -365,6 +365,11 @@ class AgentClient:
                     return None
             
             if processed_event is not None:
+                if self.connector is None:
+                    print(f"❌ Cannot send event: connector is None (client not connected)")
+                    verbose_print(f"❌ Cannot send event: connector is None (client not connected)")
+                    return None
+                    
                 print(f"🚀 Sending event via connector...")
                 print(f"   Final processed event name: {processed_event.event_name}")
                 print(f"   Final processed event target: {processed_event.destination_id}")
