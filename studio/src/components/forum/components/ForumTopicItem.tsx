@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ForumTopic } from '@/stores/forumStore';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer';
+import { formatDateTime } from '@/utils/utils';
 
 interface ForumTopicItemProps {
   topic: ForumTopic;
@@ -17,7 +18,7 @@ const ForumTopicItem: React.FC<ForumTopicItemProps> = React.memo(({
     navigate(`/forum/${topic.topic_id}`);
   };
 
-  const timeAgo = new Date(topic.timestamp * 1000).toLocaleString();
+  const timeAgo = formatDateTime(topic.timestamp * 1000);
 
   return (
     <div
