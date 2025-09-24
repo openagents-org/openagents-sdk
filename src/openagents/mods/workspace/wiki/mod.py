@@ -63,6 +63,7 @@ class WikiNetworkMod(BaseMod):
     @property
     def pages(self) -> Dict[str, WikiPage]:
         """Get all pages (loaded from storage)."""
+        # TODO: either add cache or implement get_pages method
         pages = {}
         try:
             storage_path = self.get_storage_path()
@@ -807,10 +808,22 @@ class WikiNetworkMod(BaseMod):
                 # Filter by status
                 if proposal.status != message.status:
                     continue
+
+                # Filter by page owner, only show proposals for pages that the agent has created
+                if proposal.page_path not in self.pages:
+                    continue
+
+                page = self.pages[proposal.page_path]
+                if page.created_by != message.source_id:
+                    continue
+                
+                # Get old content of the page
+                old_content = page.content
                 
                 proposal_data = {
                     "proposal_id": proposal.proposal_id,
                     "page_path": proposal.page_path,
+                    "old_content": old_content,
                     "proposed_content": proposal.proposed_content,
                     "rationale": proposal.rationale,
                     "proposed_by": proposal.proposed_by,
@@ -1148,7 +1161,8 @@ class WikiNetworkMod(BaseMod):
                     "created_by": page.created_by,
                     "created_timestamp": page.created_timestamp,
                     "category": page.category,
-                    "tags": page.tags
+                    "tags": page.tags,
+                    "content": page.content
                 }
             )
             
@@ -1169,6 +1183,7 @@ class WikiNetworkMod(BaseMod):
                     "action": "page_edited",
                     "page_path": page.page_path,
                     "title": page.title,
+                    "content": page.content,
                     "edited_by": version.edited_by,
                     "edit_timestamp": version.edit_timestamp,
                     "version": version.version_number,

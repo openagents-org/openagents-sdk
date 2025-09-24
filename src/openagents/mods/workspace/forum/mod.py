@@ -1103,6 +1103,20 @@ class ForumNetworkMod(BaseMod):
             self._save_metadata(metadata['topic_order_recent'], topic_order_popular)
         
         logger.info(f"Cast {vote_type} on {target_type} {target_id} by {voter_id}")
+
+        self.send_event(Event(
+            event_name="forum.vote.notification",
+            source_id=voter_id,
+            destination_id=BROADCAST_AGENT_ID,
+            payload={
+                'target_type': target_type,
+                'target_id': target_id,
+                'vote_type': vote_type,
+                'upvotes': target_obj.upvotes,
+                'downvotes': target_obj.downvotes,
+                'vote_score': target_obj.get_vote_score()
+            }
+        ))
         
         return EventResponse(
             success=True,
