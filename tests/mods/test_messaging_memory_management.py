@@ -133,8 +133,10 @@ class TestMessagingMemoryManagement:
     
     def test_daily_archive_creation(self, messaging_mod, temp_workspace):
         """Test that daily archives are created and compressed correctly."""
-        # Create messages with different timestamps (simulate old messages)
-        old_timestamp = int(time.time()) - (2 * 24 * 3600)  # 2 days ago
+        # Create messages with same day timestamps to ensure they go to the same archive
+        import datetime
+        base_date = datetime.date.today() - datetime.timedelta(days=2)
+        base_timestamp = int(datetime.datetime.combine(base_date, datetime.time(12, 0)).timestamp())
         
         messages = []
         for i in range(3):
@@ -142,7 +144,7 @@ class TestMessagingMemoryManagement:
                 event_name="test.old_message",
                 source_id=f"old_agent_{i}",
                 payload={"text": f"Old message {i}"},
-                timestamp=old_timestamp + (i * 3600)  # 1 hour apart
+                timestamp=base_timestamp + (i * 1800)  # 30 minutes apart, same day
             )
             messages.append(message)
             messaging_mod.message_history[message.event_id] = message
@@ -158,10 +160,14 @@ class TestMessagingMemoryManagement:
         archive_files = list(archive_dir.glob("*.json.gz"))
         assert len(archive_files) >= 1, "No compressed archive files were created"
         
-        # Verify archive content
-        with gzip.open(archive_files[0], 'rt') as f:
-            archive_data = json.load(f)
-        assert len(archive_data) == 3, f"Expected 3 messages in archive, got {len(archive_data)}"
+        # Count total archived messages across all files
+        total_archived = 0
+        for archive_file in archive_files:
+            with gzip.open(archive_file, 'rt') as f:
+                archive_data = json.load(f)
+                total_archived += len(archive_data)
+        
+        assert total_archived == 3, f"Expected 3 messages archived total, got {total_archived}"
         
         # Verify messages can be deserialized
         for msg_id, msg_data in archive_data.items():
