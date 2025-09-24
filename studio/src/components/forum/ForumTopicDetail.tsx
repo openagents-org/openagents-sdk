@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForumStore } from '@/stores/forumStore';
 import { useOpenAgentsService } from '@/contexts/OpenAgentsServiceContext';
+import useConnectedStatus from '@/hooks/useConnectedStatus';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer';
 import ForumCommentThread from './components/ForumCommentThread';
 
@@ -16,6 +17,7 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { service: openAgentsService } = useOpenAgentsService();
+  const { isConnected } = useConnectedStatus();
 
   const {
     selectedTopic,
@@ -34,28 +36,35 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
   const totalComments = getTotalComments();
 
 
-  // 设置连接并加载话题详情
+  // 设置连接
   useEffect(() => {
-    console.log('ForumTopicDetail: useEffect triggered with topicId:', topicId, 'service:', !!openAgentsService);
-
     if (openAgentsService) {
       console.log('ForumTopicDetail: Setting connection');
       setConnection(openAgentsService);
     }
+  }, [openAgentsService, setConnection]);
 
-    if (topicId && openAgentsService) {
-      console.log('ForumTopicDetail: Loading topic detail for:', topicId);
+  // 加载话题详情（等待连接建立）
+  useEffect(() => {
+    if (topicId && openAgentsService && isConnected) {
+      console.log('ForumTopicDetail: Connection ready, loading topic detail for:', topicId);
       loadTopicDetail(topicId);
     } else {
-      console.warn('ForumTopicDetail: Missing topicId or openAgentsService', { topicId, hasService: !!openAgentsService });
+      console.log('ForumTopicDetail: Waiting for connection or missing topicId', {
+        topicId,
+        hasService: !!openAgentsService,
+        isConnected
+      });
     }
+  }, [topicId, openAgentsService, isConnected, loadTopicDetail]);
 
-    // 组件卸载时重置选中话题
+  // 组件卸载时重置选中话题
+  useEffect(() => {
     return () => {
       console.log('ForumTopicDetail: Cleanup - resetting selected topic');
       resetSelectedTopic();
     };
-  }, [topicId, openAgentsService, setConnection, loadTopicDetail, resetSelectedTopic]);
+  }, [resetSelectedTopic]);
 
   const handleBack = () => {
     navigate('/forum');
@@ -80,9 +89,24 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
     setIsSubmitting(false);
   };
 
+  // 显示连接等待状态
+  if (!openAgentsService || !isConnected) {
+    return (
+      <div className="flex-1 flex items-center justify-center dark:bg-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">
+            {!openAgentsService ? 'Connecting to network...' : 'Establishing connection...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // 显示加载状态
   if (commentsLoading && !selectedTopic) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">
@@ -93,6 +117,7 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
     );
   }
 
+  // 显示错误状态
   if (commentsError || !selectedTopic) {
     return (
       <div className="flex-1 flex items-center justify-center">

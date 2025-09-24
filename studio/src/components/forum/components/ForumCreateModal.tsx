@@ -51,7 +51,6 @@ const ForumCreateModal: React.FC<ForumCreateModalProps> = ({
         {/* 背景遮罩 */}
         <div
           className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
-          onClick={handleClose}
         />
 
         {/* 模态框 */}

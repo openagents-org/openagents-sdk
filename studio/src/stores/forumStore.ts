@@ -212,7 +212,10 @@ export const useForumStore = create<ForumState>((set, get) => ({
 
       if (response.success && response.data) {
         console.log('ForumStore: API success, topic data:', response.data);
-        const topic = response.data.topic;
+
+        // 检查数据结构 - API可能返回 response.data 就是topic，或者 response.data.topic
+        const topic = response.data.topic_id ? response.data : response.data.topic;
+
         if (topic) {
           // 按timestamp降序排序comments，确保最新comment在最上面
           const comments = response.data.comments || [];
