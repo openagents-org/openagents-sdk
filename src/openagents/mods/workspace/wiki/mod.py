@@ -234,6 +234,97 @@ class WikiNetworkMod(BaseMod):
     
     # Old _load_wiki_data method removed - now using storage-first approach with properties
     
+    def get_page(self, page_path: str) -> Optional[WikiPage]:
+        """Get a single page by path (loads only that page from storage)."""
+        try:
+            storage_path = self.get_storage_path()
+            pages_dir = storage_path / "pages"
+            filename = self._encode_page_path_for_filename(page_path) + ".json"
+            page_file = pages_dir / filename
+            
+            if not page_file.exists():
+                return None
+                
+            with open(page_file, 'r') as f:
+                page_dict = json.load(f)
+            
+            return WikiPage(
+                page_path=page_dict['page_path'],
+                title=page_dict['title'],
+                content=page_dict['content'],
+                created_by=page_dict['created_by'],
+                created_timestamp=page_dict['created_timestamp'],
+                current_version=page_dict.get('current_version', 1),
+                category=page_dict.get('category'),
+                is_locked=page_dict.get('is_locked', False),
+                protection_level=page_dict.get('protection_level', 'none'),
+                tags=page_dict.get('tags', [])
+            )
+        except Exception as e:
+            logger.error(f"Failed to load page {page_path}: {e}")
+            return None
+    
+    def get_page_versions(self, page_path: str) -> List[WikiPageVersion]:
+        """Get versions for a specific page (loads only that page's versions from storage)."""
+        try:
+            storage_path = self.get_storage_path()
+            versions_dir = storage_path / "versions"
+            filename = self._encode_page_path_for_filename(page_path) + ".json"
+            version_file = versions_dir / filename
+            
+            if not version_file.exists():
+                return []
+                
+            with open(version_file, 'r') as f:
+                versions_list = json.load(f)
+            
+            versions = []
+            for version_dict in versions_list:
+                version = WikiPageVersion(
+                    version_id=version_dict['version_id'],
+                    page_path=version_dict['page_path'],
+                    version_number=version_dict['version_number'],
+                    content=version_dict['content'],
+                    edited_by=version_dict['edited_by'],
+                    edit_timestamp=version_dict['edit_timestamp'],
+                    edit_type=version_dict.get('edit_type', 'direct'),
+                    parent_version=version_dict.get('parent_version')
+                )
+                versions.append(version)
+            return versions
+        except Exception as e:
+            logger.error(f"Failed to load versions for page {page_path}: {e}")
+            return []
+    
+    def get_proposal(self, proposal_id: str) -> Optional[WikiEditProposal]:
+        """Get a specific proposal by ID (loads only that proposal from storage)."""
+        try:
+            storage_path = self.get_storage_path()
+            proposals_dir = storage_path / "proposals"
+            proposal_file = proposals_dir / f"{proposal_id}.json"
+            
+            if not proposal_file.exists():
+                return None
+                
+            with open(proposal_file, 'r') as f:
+                proposal_dict = json.load(f)
+            
+            return WikiEditProposal(
+                proposal_id=proposal_dict['proposal_id'],
+                page_path=proposal_dict['page_path'],
+                proposed_content=proposal_dict['proposed_content'],
+                rationale=proposal_dict.get('rationale', ''),
+                proposed_by=proposal_dict['proposed_by'],
+                created_timestamp=proposal_dict['created_timestamp'],
+                status=proposal_dict.get('status', 'pending'),
+                resolved_by=proposal_dict.get('resolved_by'),
+                resolved_timestamp=proposal_dict.get('resolved_timestamp'),
+                resolution_comments=proposal_dict.get('resolution_comments')
+            )
+        except Exception as e:
+            logger.error(f"Failed to load proposal {proposal_id}: {e}")
+            return None
+    
     def _encode_page_path_for_filename(self, page_path: str) -> str:
         """Encode page path to be safe for filename."""
         return page_path.replace('/', '_SLASH_')
@@ -363,7 +454,7 @@ class WikiNetworkMod(BaseMod):
             message = WikiPageCreateMessage(**content)
             
             # Check if page already exists
-            if message.page_path in self.pages:
+            if self.get_page(message.page_path) is not None:
                 return EventResponse(
                     success=False,
                     message=f"Page already exists: {message.page_path}",
@@ -449,7 +540,8 @@ class WikiNetworkMod(BaseMod):
             message = WikiPageEditMessage(**content)
             
             # Check if page exists
-            if message.page_path not in self.pages:
+            page = self.get_page(message.page_path)
+            if page is None:
                 return EventResponse(
                     success=False,
                     message=f"Page not found: {message.page_path}",
@@ -458,8 +550,6 @@ class WikiNetworkMod(BaseMod):
                         "request_id": self._get_request_id(message)
                     }
                 )
-            
-            page = self.pages[message.page_path]
             
             # Check if agent is the owner
             if page.created_by != message.source_id:
@@ -493,7 +583,7 @@ class WikiNetworkMod(BaseMod):
             self._save_page(page)
             
             # Update and save versions
-            current_versions = self.page_versions[message.page_path]
+            current_versions = self.get_page_versions(message.page_path)
             current_versions.append(version)
             self._save_page_versions(message.page_path, current_versions)
             
@@ -532,7 +622,8 @@ class WikiNetworkMod(BaseMod):
             message = WikiPageGetMessage(**content)
             
             # Check if page exists
-            if message.page_path not in self.pages:
+            page = self.get_page(message.page_path)
+            if page is None:
                 return EventResponse(
                     success=False,
                     message=f"Page not found: {message.page_path}",
@@ -542,8 +633,7 @@ class WikiNetworkMod(BaseMod):
                     }
                 )
             
-            page = self.pages[message.page_path]
-            versions = self.page_versions[message.page_path]
+            versions = self.get_page_versions(message.page_path)
             
             # Get specific version or latest
             if message.version is not None:
@@ -733,7 +823,7 @@ class WikiNetworkMod(BaseMod):
             message = WikiPageEditProposalMessage(**content)
             
             # Check if page exists
-            if message.page_path not in self.pages:
+            if self.get_page(message.page_path) is None:
                 return EventResponse(
                     success=False,
                     message=f"Page not found: {message.page_path}",
@@ -810,10 +900,10 @@ class WikiNetworkMod(BaseMod):
                     continue
 
                 # Filter by page owner, only show proposals for pages that the agent has created
-                if proposal.page_path not in self.pages:
+                page = self.get_page(proposal.page_path)
+                if page is None:
                     continue
 
-                page = self.pages[proposal.page_path]
                 if page.created_by != message.source_id:
                     continue
                 
@@ -870,7 +960,8 @@ class WikiNetworkMod(BaseMod):
             message = WikiEditProposalResolveMessage(**content)
             
             # Check if proposal exists
-            if message.proposal_id not in self.proposals:
+            proposal = self.get_proposal(message.proposal_id)
+            if proposal is None:
                 return EventResponse(
                     success=False,
                     message=f"Proposal not found: {message.proposal_id}",
@@ -879,8 +970,6 @@ class WikiNetworkMod(BaseMod):
                         "request_id": self._get_request_id(message)
                     }
                 )
-            
-            proposal = self.proposals[message.proposal_id]
             
             # Check if proposal is still pending
             if proposal.status != "pending":
@@ -894,7 +983,8 @@ class WikiNetworkMod(BaseMod):
                 )
             
             # Check if page exists
-            if proposal.page_path not in self.pages:
+            page = self.get_page(proposal.page_path)
+            if page is None:
                 return EventResponse(
                     success=False,
                     message=f"Page not found: {proposal.page_path}",
@@ -903,8 +993,6 @@ class WikiNetworkMod(BaseMod):
                         "request_id": self._get_request_id(message)
                     }
                 )
-            
-            page = self.pages[proposal.page_path]
             
             # Check if agent is the page owner
             if page.created_by != message.source_id:
@@ -946,7 +1034,7 @@ class WikiNetworkMod(BaseMod):
                 self._save_page(page)
                 
                 # Update and save versions
-                current_versions = self.page_versions[proposal.page_path]
+                current_versions = self.get_page_versions(proposal.page_path)
                 current_versions.append(version)
                 self._save_page_versions(proposal.page_path, current_versions)
             
@@ -994,7 +1082,7 @@ class WikiNetworkMod(BaseMod):
             message = WikiPageHistoryMessage(**content)
             
             # Check if page exists
-            if message.page_path not in self.pages:
+            if self.get_page(message.page_path) is None:
                 return EventResponse(
                     success=False,
                     message=f"Page not found: {message.page_path}",
@@ -1004,7 +1092,7 @@ class WikiNetworkMod(BaseMod):
                     }
                 )
             
-            versions = self.page_versions[message.page_path]
+            versions = self.get_page_versions(message.page_path)
             
             # Sort versions by version number (newest first) and limit
             sorted_versions = sorted(versions, key=lambda v: v.version_number, reverse=True)
@@ -1056,7 +1144,8 @@ class WikiNetworkMod(BaseMod):
             message = WikiPageRevertMessage(**content)
             
             # Check if page exists
-            if message.page_path not in self.pages:
+            page = self.get_page(message.page_path)
+            if page is None:
                 return EventResponse(
                     success=False,
                     message=f"Page not found: {message.page_path}",
@@ -1065,8 +1154,6 @@ class WikiNetworkMod(BaseMod):
                         "request_id": self._get_request_id(message)
                     }
                 )
-            
-            page = self.pages[message.page_path]
             
             # Check if agent is the owner
             if page.created_by != message.source_id:
@@ -1080,7 +1167,7 @@ class WikiNetworkMod(BaseMod):
                 )
             
             # Find target version
-            versions = self.page_versions[message.page_path]
+            versions = self.get_page_versions(message.page_path)
             target_version = None
             for version in versions:
                 if version.version_number == message.target_version:
