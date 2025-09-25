@@ -165,7 +165,13 @@ export const formatDateTime = (timestamp: number, options?: {
     return 'Unknown date';
   }
 
-  const date = new Date(timestamp);
+  // 检测时间戳格式：如果是10位数的秒级时间戳，转换为毫秒级
+  let milliseconds = timestamp;
+  if (timestamp < 10000000000) { // 10位数，说明是秒级时间戳
+    milliseconds = timestamp * 1000;
+  }
+
+  const date = new Date(milliseconds);
 
   if (isNaN(date.getTime())) {
     return 'Invalid date';

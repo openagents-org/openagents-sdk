@@ -52,6 +52,7 @@ const WikiPageDetail: React.FC = () => {
     }
   }, [selectedPage, showEditModal]);
 
+
   const handleBack = () => {
     navigate('/wiki');
   };
@@ -201,7 +202,7 @@ const WikiPageDetail: React.FC = () => {
                 oldValue={selectedPage?.wiki_content || ''}
                 oldTitle="Current Version"
                 newTitle="Your Changes"
-                style={{ height: '400px' }}
+                style={{ height: '200px' }}
                 placeholder="Enter page content in Markdown format..."
               />
 

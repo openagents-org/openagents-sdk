@@ -52,7 +52,7 @@ interface ForumState {
   loadTopicDetail: (topicId: string) => Promise<void>;
   createTopic: (data: CreateTopicData) => Promise<boolean>;
   addComment: (topicId: string, content: string, parentId?: string) => Promise<boolean>;
-  vote: (type: 'topic' | 'comment', targetId: string, voteType: 'upvote' | 'downvote') => Promise<boolean>;
+  vote: (type: 'topic' | 'comment', targetId: string, voteType: 'upvote' | 'downvote', onError?: (message: string) => void) => Promise<boolean>;
 
   // Real-time updates
   addTopicToList: (topic: ForumTopic) => void;
@@ -346,9 +346,12 @@ export const useForumStore = create<ForumState>((set, get) => ({
     }
   },
 
-  vote: async (type: 'topic' | 'comment', targetId: string, voteType: 'upvote' | 'downvote') => {
+  vote: async (type: 'topic' | 'comment', targetId: string, voteType: 'upvote' | 'downvote', onError?: (message: string) => void) => {
     const { connection } = get();
-    if (!connection) return false;
+    if (!connection) {
+      onError?.('No connection available');
+      return false;
+    }
 
     try {
       const response = await connection.sendEvent({
@@ -379,10 +382,15 @@ export const useForumStore = create<ForumState>((set, get) => ({
           }
         }
         return true;
+      } else {
+        // 处理投票失败的情况
+        const errorMessage = response.message || 'Vote failed';
+        onError?.(errorMessage);
+        return false;
       }
-      return false;
     } catch (error) {
       console.error('Failed to vote:', error);
+      onError?.('Failed to vote due to network error');
       return false;
     }
   },
@@ -390,7 +398,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
   getPopularTopics: () => {
     const { topics } = get();
     return [...topics]
-      .sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes))
+      .sort((a, b) => (b.upvotes + b.downvotes) - (a.upvotes + a.downvotes))
       .slice(0, 10);
   },
 
@@ -504,6 +512,33 @@ export const useForumStore = create<ForumState>((set, get) => ({
           };
 
           get().addCommentToTopic(topicId, forumComment);
+        }
+      }
+
+      // 处理投票事件
+      else if (event.event_name === 'forum.vote.cast' && event.payload) {
+        console.log('ForumStore: Received forum.vote.cast event:', event);
+        const { target_type, target_id, vote_type, voter_id } = event.payload;
+
+        // 根据投票目标类型刷新相应的数据
+        if (target_type === 'topic') {
+          // 刷新topics列表以更新投票计数
+          console.log('ForumStore: Vote cast on topic, refreshing topics list');
+          get().loadTopics();
+
+          // 如果是当前查看的topic，也刷新详情
+          const { selectedTopic } = get();
+          if (selectedTopic && selectedTopic.topic_id === target_id) {
+            console.log('ForumStore: Vote cast on current topic, refreshing topic detail');
+            get().loadTopicDetail(target_id);
+          }
+        } else if (target_type === 'comment') {
+          // 刷新当前topic的评论以更新投票计数
+          const { selectedTopic } = get();
+          if (selectedTopic) {
+            console.log('ForumStore: Vote cast on comment, refreshing topic detail');
+            get().loadTopicDetail(selectedTopic.topic_id);
+          }
         }
       }
     });
