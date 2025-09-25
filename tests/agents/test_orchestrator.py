@@ -96,11 +96,12 @@ def test_tools():
 
 
 @pytest.mark.skipif(
-    not os.getenv("OPENAI_API_KEY"), 
+    not os.getenv("OPENAI_API_KEY"),
     reason="OPENAI_API_KEY environment variable not set"
 )
 @pytest.mark.integration
-def test_orchestrate_agent_with_openai_gpt4o_mini(mock_event_context, test_tools):
+@pytest.mark.asyncio
+async def test_orchestrate_agent_with_openai_gpt4o_mini(mock_event_context, test_tools):
     """Test orchestrate_agent with OpenAI GPT-4o-mini model."""
     # Create agent config for OpenAI GPT-4o-mini
     agent_config = AgentConfig(
@@ -112,7 +113,7 @@ def test_orchestrate_agent_with_openai_gpt4o_mini(mock_event_context, test_tools
     )
     
     # Run orchestration
-    trajectory = orchestrate_agent(
+    trajectory = await orchestrate_agent(
         context=mock_event_context,
         agent_config=agent_config,
         tools=test_tools,
@@ -152,7 +153,8 @@ def test_orchestrate_agent_with_openai_gpt4o_mini(mock_event_context, test_tools
     reason="OPENAI_API_KEY environment variable not set"
 )
 @pytest.mark.integration
-def test_orchestrate_agent_tool_usage(test_tools):
+@pytest.mark.asyncio
+async def test_orchestrate_agent_tool_usage(test_tools):
     """Test that orchestrate_agent can successfully use tools with OpenAI."""
     # Create a new context with tool usage request
     incoming_event = Event(
@@ -190,7 +192,7 @@ def test_orchestrate_agent_tool_usage(test_tools):
         triggers=[]
     )
     
-    trajectory = orchestrate_agent(
+    trajectory = await orchestrate_agent(
         context=context,
         agent_config=agent_config,
         tools=test_tools,

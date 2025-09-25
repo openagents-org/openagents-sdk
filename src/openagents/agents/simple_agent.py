@@ -16,4 +16,4 @@ class SimpleAutoAgent(AgentRunner):
         
     async def react(self, context: EventContext):
         """React to an incoming message using agent orchestrator."""
-        self.run_agent(context=context)
+        await self.run_agent(context=context)

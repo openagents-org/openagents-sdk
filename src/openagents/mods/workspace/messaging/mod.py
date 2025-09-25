@@ -606,7 +606,9 @@ class ThreadMessagingNetworkMod(BaseMod):
     @mod_event_handler("thread.reply.sent")
     async def _handle_thread_reply_sent(self, event: Event) -> Optional[EventResponse]:
         """Handle thread reply sent events."""
-        return await self._handle_thread_reply_common(event)
+        logger.info(f"🔍 MOD_DEBUG: _handle_thread_reply_sent called with event {event.event_id} from {event.source_id}")
+        result = await self._handle_thread_reply_common(event)
+        return result
     
     @mod_event_handler("thread.reply.post")
     async def _handle_thread_reply_post(self, event: Event) -> Optional[EventResponse]:
@@ -615,10 +617,10 @@ class ThreadMessagingNetworkMod(BaseMod):
     
     async def _handle_thread_reply_common(self, event: Event) -> Optional[EventResponse]:
         """Handle thread reply events.
-        
+
         Args:
             event: The thread reply event to process
-            
+
         Returns:
             Optional[EventResponse]: The response to the event
         """
@@ -629,25 +631,33 @@ class ThreadMessagingNetworkMod(BaseMod):
             return None
         
         try:
+            logger.info(f"🔍 DEBUG: Starting reply processing for {event.event_id}")
             # Populate quoted_text if quoted_message_id is provided in payload
             if event.payload and 'quoted_message_id' in event.payload and event.payload['quoted_message_id']:
                 # Update the event payload with quoted text
                 if 'quoted_text' not in event.payload:
                     event.payload['quoted_text'] = self._get_quoted_text(event.payload['quoted_message_id'])
-            
+
+            logger.info(f"🔍 DEBUG: About to validate ReplyMessage for {event.event_id}")
+            logger.info(f"🔍 DEBUG: Event payload: {event.payload}")
             # Validate the reply message payload
             validated_event = ReplyMessage.validate(event)
             logger.debug(f"Validated ReplyMessage with event_id: {validated_event.event_id}")
+            logger.info(f"🔍 DEBUG: About to add reply to history: {validated_event.event_id} from {validated_event.source_id}")
             self._add_to_history(validated_event)
+            logger.info(f"🔍 DEBUG: Added reply to history, total messages: {len(self.message_history)}")
             await self._process_reply_message(validated_event)
-            
+            logger.info(f"🔍 DEBUG: Completed reply processing for {event.event_id}")
+
             return EventResponse(
                 success=True,
                 message=f"Thread reply event {event.event_name} processed successfully",
                 data={"event_name": event.event_name, "event_id": event.event_id}
             )
         except Exception as e:
-            logger.error(f"Error processing thread reply event: {e}")
+            logger.error(f"🔍 DEBUG: Error processing thread reply event {event.event_id}: {e}")
+            import traceback
+            logger.error(f"🔍 DEBUG: Traceback: {traceback.format_exc()}")
             return None
     
     @mod_event_handler("thread.file.upload")
@@ -1405,8 +1415,8 @@ class ThreadMessagingNetworkMod(BaseMod):
                     msg_channel = msg.payload['channel']
                     # Also check if it's a channel message type
                     message_type = msg.payload.get('message_type', '')
-                    is_channel_message = (msg_channel == channel and 
-                                        ('channel' in message_type or message_type == 'channel_message' or message_type == 'reply_message'))
+                    is_channel_message = (msg_channel == channel and
+                                        ('channel' in message_type or message_type == 'channel_message' or message_type == 'reply' or message_type == 'reply_message'))
                 elif msg.event_name and 'channel' in msg.event_name:
                     # Check for channel-related events
                     is_channel_message = True

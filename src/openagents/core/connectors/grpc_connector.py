@@ -361,7 +361,8 @@ class GRPCNetworkConnector(NetworkConnector):
             source_id=event.source_id,
             target_agent_id=event.destination_id or '',
             timestamp=self._to_timestamp(event.timestamp),
-            visibility=event.visibility if hasattr(event, 'visibility') else 'network'
+            visibility=event.visibility if hasattr(event, 'visibility') else 'network',
+            relevant_mod=event.relevant_mod or ''
         )
         
         # Add metadata
@@ -373,33 +374,40 @@ class GRPCNetworkConnector(NetworkConnector):
         try:
             from google.protobuf.any_pb2 import Any
             from google.protobuf.struct_pb2 import Struct
-            
+
             # Convert event payload to protobuf Struct
             struct = Struct()
             if event.payload:
                 payload_data = self._make_json_serializable(event.payload)
                 struct.update(payload_data)
-            
+
             # Pack into Any field
             any_field = Any()
             any_field.Pack(struct)
             grpc_event.payload.CopyFrom(any_field)
-            
+
         except Exception as e:
-            logger.warning(f"Failed to serialize event payload: {e}")
+            logger.error(f"Failed to serialize event payload for {event.event_name}: {e}")
+            raise
         
         return grpc_event
     
     def _make_json_serializable(self, obj):
         """Convert an object to be JSON serializable, handling gRPC types."""
         import json
+        from enum import Enum
         from google.protobuf.struct_pb2 import ListValue, Struct
         from google.protobuf.message import Message
-        
+
         if isinstance(obj, dict):
             return {k: self._make_json_serializable(v) for k, v in obj.items()}
         elif isinstance(obj, list):
             return [self._make_json_serializable(item) for item in obj]
+        elif isinstance(obj, tuple):
+            return [self._make_json_serializable(item) for item in obj]
+        elif isinstance(obj, Enum):
+            # Handle enum types by converting to their value
+            return obj.value
         elif isinstance(obj, ListValue):
             return [self._make_json_serializable(item) for item in obj]
         elif isinstance(obj, Struct):

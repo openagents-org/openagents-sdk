@@ -42,7 +42,7 @@ def _create_finish_tool() -> AgentAdapterTool:
     )
 
 
-def orchestrate_agent(
+async def orchestrate_agent(
     context: EventContext,
     agent_config: AgentConfig,
     tools: List[AgentAdapterTool],
@@ -127,8 +127,9 @@ def orchestrate_agent(
         iteration += 1
         
         try:
-            # Call the model provider - now synchronous
-            response = model_provider.chat_completion(messages, formatted_tools)
+            # Call the model provider - async
+            response = await model_provider.chat_completion(messages, formatted_tools)
+
             
             # Add the assistant's response to the conversation
             # Handle content and tool_calls properly for OpenAI API
@@ -176,7 +177,7 @@ def orchestrate_agent(
             if response.get("tool_calls"):
                 for tool_call in response["tool_calls"]:
                     verbose_print(f">>> tool >>> {tool_call['name']}({tool_call['arguments']})")
-                    
+
                     tool_name = tool_call["name"]
                     
                     # Create action for this tool call
@@ -225,11 +226,12 @@ def orchestrate_agent(
                             arguments = json.loads(tool_call["arguments"])
                             
                             # Execute the tool
-                            result = tool.execute(**arguments)
+                            result = await tool.execute(**arguments)
                             
                             # Add the tool result to the conversation
                             messages.append({
                                 "role": "tool",
+                                "tool_call_id": tool_call["id"],
                                 "content": str(result)
                             })
                             
@@ -242,6 +244,7 @@ def orchestrate_agent(
                             error_msg = f"Error: {str(e)}"
                             messages.append({
                                 "role": "tool",
+                                "tool_call_id": tool_call["id"],
                                 "content": error_msg
                             })
                             
@@ -255,6 +258,7 @@ def orchestrate_agent(
                         error_msg = f"Tool '{tool_name}' not found"
                         messages.append({
                             "role": "tool",
+                            "tool_call_id": tool_call["id"],
                             "content": error_msg
                         })
                         

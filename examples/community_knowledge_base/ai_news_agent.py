@@ -255,7 +255,7 @@ I automatically share interesting findings every 30 minutes!
     async def on_channel_mention(self, context: ChannelMessageContext):
         """Handle mentions in channels."""
         text = context.incoming_event.payload['content']['text'].lower()
-        self.run_agent(context=context, instruction="reply to the message")
+        await self.run_agent(context=context, instruction="send a post in the channel")
         return
 
         if context.source_id == self.client.agent_id:

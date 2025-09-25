@@ -166,7 +166,7 @@ class AgentRunner(ABC):
             context: The event context containing the incoming event, event threads, and thread ID.
         """
     
-    def run_agent(
+    async def run_agent(
         self,
         context: EventContext,
         instruction: Optional[str] = None,
@@ -180,7 +180,7 @@ class AgentRunner(ABC):
             user_instruction: The instruction for the agent to respond to the context
             max_iterations: The maximum number of iterations for the agent to respond to the context
         """
-        return orchestrate_agent(
+        return await orchestrate_agent(
             context=context,
             agent_config=self.agent_config,
             tools=self.tools,
@@ -204,7 +204,7 @@ class AgentRunner(ABC):
 
     async def _async_loop(self):
         """Async implementation of the main loop for the agent runner.
-        
+
         This is the internal async implementation that should not be called directly.
         """
         # print(f"🔄 Agent loop starting for {self._agent_id}...")

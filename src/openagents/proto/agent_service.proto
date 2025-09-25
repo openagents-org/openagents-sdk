@@ -36,6 +36,7 @@ message Event {
   google.protobuf.Timestamp timestamp = 6;
   map<string, string> metadata = 7;
   string visibility = 8;         // "local", "network", "external"
+  string relevant_mod = 9;       // Specific mod to process this event (for MOD_ONLY visibility)
 }
 
 // Unified event response

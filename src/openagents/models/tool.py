@@ -42,6 +42,9 @@ class AgentAdapterTool(BaseModel):
         """
         Execute the tool with the provided parameters.
 
+        Automatically detects whether the underlying function is async or sync
+        and handles the execution accordingly.
+
         Args:
             **kwargs: Parameters to pass to the callback function
 
@@ -54,10 +57,9 @@ class AgentAdapterTool(BaseModel):
                 if param not in kwargs:
                     raise ValueError(f"Missing required parameter: {param}")
 
-        # Check if the function is a coroutine function (async)
+        # Check if the underlying function is async
         is_async = inspect.iscoroutinefunction(self.func)
 
-        # Execute the callback
         if is_async:
             return await self.func(**kwargs)
         else:

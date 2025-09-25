@@ -197,6 +197,10 @@ class ReplyMessage:
         # Validate thread level if present
         if 'thread_level' in payload:
             thread_level = payload['thread_level']
+            # Handle both int and float (from protobuf conversion)
+            if isinstance(thread_level, float) and thread_level.is_integer():
+                payload['thread_level'] = int(thread_level)
+                thread_level = int(thread_level)
             if not isinstance(thread_level, int) or not 1 <= thread_level <= 5:
                 raise ValueError('thread_level must be an integer between 1 and 5')
         

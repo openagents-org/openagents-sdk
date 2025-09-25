@@ -171,7 +171,7 @@ class SimpleOpenAIAgentRunner(AgentRunner):
                             # Parse the function arguments
                             arguments = json.loads(tool_call.function.arguments)
                             
-                            # Execute the tool (now we can use await directly since the method is async)
+                            # Execute the tool (async)
                             result = await tool.execute(**arguments)
                             
                             # Add the tool result to the conversation
