@@ -126,7 +126,7 @@ class ChannelMessage:
         """
         payload = {
             "channel": channel,
-            "text": text,
+            "content": {"text": text},
             "message_type": "channel_message"
         }
         
@@ -240,7 +240,7 @@ class ReplyMessage:
         
         payload = {
             "reply_to_id": reply_to_id,
-            "text": text,
+            "content": {"text": text},
             "message_type": "reply",
             "thread_level": thread_level
         }

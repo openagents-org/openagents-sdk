@@ -6,10 +6,8 @@ extracted from SimpleAgentRunner to improve reusability and testability.
 """
 
 import asyncio
-import concurrent.futures
 import json
 import logging
-import threading
 import uuid
 from datetime import datetime
 from typing import List, Optional
@@ -122,14 +120,6 @@ def orchestrate_agent(
     
     formatted_tools = model_provider.format_tools(all_tools)
     
-    # Check if we're in an async context
-    running_in_async = False
-    try:
-        asyncio.get_running_loop()
-        running_in_async = True
-    except RuntimeError:
-        running_in_async = False
-    
     # Conversation loop with action tracking
     is_finished = False
     iteration = 0
@@ -138,30 +128,35 @@ def orchestrate_agent(
         iteration += 1
         
         try:
-            # Call the model provider
-            if asyncio.iscoroutinefunction(model_provider.chat_completion):
-                # If chat_completion is async, handle properly based on context
-                if running_in_async:
-                    # We're already in an async context, we need to use a different approach
-                    # Create a new thread to run the async function
+            # Call the model provider - handle both sync and async cases simply
+            result = model_provider.chat_completion(messages, formatted_tools)
+            if asyncio.iscoroutine(result):
+                # Check if we're already in an event loop
+                try:
+                    loop = asyncio.get_running_loop()
+                    # We're in an event loop, can't use asyncio.run()
+                    # Create a task and run it synchronously
+                    import concurrent.futures
+                    import threading
                     
-                    def run_in_thread():
-                        # Create new event loop in thread
+                    def run_in_new_loop():
                         new_loop = asyncio.new_event_loop()
                         asyncio.set_event_loop(new_loop)
                         try:
-                            return new_loop.run_until_complete(model_provider.chat_completion(messages, formatted_tools))
+                            return new_loop.run_until_complete(result)
                         finally:
                             new_loop.close()
+                            asyncio.set_event_loop(loop)
                     
                     with concurrent.futures.ThreadPoolExecutor() as executor:
-                        future = executor.submit(run_in_thread)
+                        future = executor.submit(run_in_new_loop)
                         response = future.result()
-                else:
-                    # We're not in async context, create new loop
-                    response = asyncio.run(model_provider.chat_completion(messages, formatted_tools))
+                        
+                except RuntimeError:
+                    # No event loop running, safe to use asyncio.run()
+                    response = asyncio.run(result)
             else:
-                response = model_provider.chat_completion(messages, formatted_tools)
+                response = result
             
             # Add the assistant's response to the conversation
             # Handle content and tool_calls properly for OpenAI API
@@ -246,26 +241,34 @@ def orchestrate_agent(
                             # Parse the function arguments
                             arguments = json.loads(tool_call["arguments"])
                             
-                            # Execute the tool
-                            if asyncio.iscoroutinefunction(tool.execute):
-                                if running_in_async:
-                                    # Use thread executor for async tools when in async context
+                            # Execute the tool - handle both sync and async cases simply
+                            tool_result = tool.execute(**arguments)
+                            if asyncio.iscoroutine(tool_result):
+                                # Check if we're already in an event loop
+                                try:
+                                    loop = asyncio.get_running_loop()
+                                    # We're in an event loop, can't use asyncio.run()
+                                    import concurrent.futures
+                                    import threading
                                     
-                                    def run_tool_in_thread():
+                                    def run_tool_in_new_loop():
                                         new_loop = asyncio.new_event_loop()
                                         asyncio.set_event_loop(new_loop)
                                         try:
-                                            return new_loop.run_until_complete(tool.execute(**arguments))
+                                            return new_loop.run_until_complete(tool_result)
                                         finally:
                                             new_loop.close()
+                                            asyncio.set_event_loop(loop)
                                     
                                     with concurrent.futures.ThreadPoolExecutor() as executor:
-                                        future = executor.submit(run_tool_in_thread)
+                                        future = executor.submit(run_tool_in_new_loop)
                                         result = future.result()
-                                else:
-                                    result = asyncio.run(tool.execute(**arguments))
+                                        
+                                except RuntimeError:
+                                    # No event loop running, safe to use asyncio.run()
+                                    result = asyncio.run(tool_result)
                             else:
-                                result = tool.execute(**arguments)
+                                result = tool_result
                             
                             # Add the tool result to the conversation
                             messages.append({

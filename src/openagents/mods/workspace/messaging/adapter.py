@@ -260,31 +260,37 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             quoted_message_id = quote
             quoted_text = f"[Quoted message {quote}]"
         
-        # Create channel message using the new create method
-        channel_msg = ChannelMessage.create(
-            channel=normalized_channel,
-            text=text,
-            source_id=self.agent_id,
-            mentioned_agent_id=mentioned_agent_id,
-            quoted_message_id=quoted_message_id,
-            quoted_text=quoted_text,
-            attachment_file_id=attachment_file_id,
-            attachment_filename=attachment_filename,
-            attachment_size=attachment_size
-        )
+        # Create Event directly without using ChannelMessage
+        payload = {
+            "message_type": "channel_message",
+            "channel": normalized_channel,
+            "content": content,
+            "source_id": self.agent_id,
+            "relevant_agent_id": self.agent_id
+        }
         
-        # Wrap in Event for proper transport
-        wrapper_payload = channel_msg.model_dump()
-        wrapper_payload["relevant_agent_id"] = self.agent_id
+        # Add optional fields if provided
+        if mentioned_agent_id:
+            payload["mentioned_agent_id"] = mentioned_agent_id
+        if quoted_message_id:
+            payload["quoted_message_id"] = quoted_message_id
+        if quoted_text:
+            payload["quoted_text"] = quoted_text
+        if attachment_file_id:
+            payload["attachment_file_id"] = attachment_file_id
+        if attachment_filename:
+            payload["attachment_filename"] = attachment_filename
+        if attachment_size:
+            payload["attachment_size"] = attachment_size
+        
         # CRITICAL FIX: Set destination_id on Event for proper message routing
         # The network's message classification depends on this field
         message = Event(
             event_name="thread.channel_message.post", 
             source_id=self.agent_id, 
             destination_id=f"channel:{normalized_channel}",  # This is the key fix!
-            payload=wrapper_payload,
-            relevant_mod="openagents.mods.workspace.messaging",
-            visibility=EventVisibility.MOD_ONLY
+            payload=payload,
+            relevant_mod="openagents.mods.workspace.messaging"
         )
         logger.info(f"🔧 ADAPTER: Created Event with visibility={message.visibility}, relevant_mod={message.relevant_mod}")
         logger.info(f"🔧 ADAPTER: Event destination_id={message.destination_id}")
