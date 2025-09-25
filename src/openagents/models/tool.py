@@ -41,10 +41,10 @@ class AgentAdapterTool(BaseModel):
     async def execute(self, **kwargs) -> Any:
         """
         Execute the tool with the provided parameters.
-        
+
         Args:
             **kwargs: Parameters to pass to the callback function
-            
+
         Returns:
             Any: The result of the callback function
         """
@@ -53,10 +53,10 @@ class AgentAdapterTool(BaseModel):
             for param in self.input_schema["required"]:
                 if param not in kwargs:
                     raise ValueError(f"Missing required parameter: {param}")
-        
+
         # Check if the function is a coroutine function (async)
         is_async = inspect.iscoroutinefunction(self.func)
-        
+
         # Execute the callback
         if is_async:
             return await self.func(**kwargs)

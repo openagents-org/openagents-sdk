@@ -1495,8 +1495,8 @@ class ThreadMessagingNetworkMod(BaseMod):
                 
                 channel_messages.append(msg_data)
         
-        # Sort by timestamp (newest first)
-        channel_messages.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
+        # Sort by timestamp (oldest first - chronological order)
+        channel_messages.sort(key=lambda x: x.get('timestamp', 0), reverse=False)
         
         # Apply pagination
         total_count = len(channel_messages)
@@ -1617,8 +1617,8 @@ class ThreadMessagingNetworkMod(BaseMod):
                     
                     direct_messages.append(msg_data)
         
-        # Sort by timestamp (newest first)
-        direct_messages.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
+        # Sort by timestamp (oldest first - chronological order)
+        direct_messages.sort(key=lambda x: x.get('timestamp', 0), reverse=False)
         
         # Apply pagination
         total_count = len(direct_messages)

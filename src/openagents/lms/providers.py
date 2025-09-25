@@ -23,7 +23,7 @@ class BaseModelProvider(ABC):
         pass
     
     @abstractmethod
-    async def chat_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    def chat_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """Generate a chat completion.
         
         Args:
@@ -79,7 +79,7 @@ class OpenAIProvider(BaseModelProvider):
             # Standard OpenAI
             self.client = OpenAI(api_key=effective_api_key)
     
-    async def chat_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    def chat_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """Generate chat completion using OpenAI API."""
         kwargs = {
             "model": self.model_name,
@@ -128,7 +128,7 @@ class AnthropicProvider(BaseModelProvider):
         api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
         self.client = anthropic.Anthropic(api_key=api_key)
     
-    async def chat_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    def chat_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """Generate chat completion using Anthropic API."""
         # Convert messages to Anthropic format
         anthropic_messages = []
@@ -203,15 +203,15 @@ class BedrockProvider(BaseModelProvider):
         
         self.client = boto3.client("bedrock-runtime", region_name=self.region)
     
-    async def chat_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    def chat_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """Generate chat completion using AWS Bedrock."""
         # Format depends on the specific model
         if "claude" in self.model_name.lower():
-            return await self._claude_bedrock_completion(messages, tools)
+            return self._claude_bedrock_completion(messages, tools)
         else:
             raise NotImplementedError(f"Model {self.model_name} not yet supported in Bedrock provider")
     
-    async def _claude_bedrock_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    def _claude_bedrock_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """Handle Claude models on Bedrock."""
         # Convert to Claude Bedrock format
         claude_messages = []
@@ -292,7 +292,7 @@ class GeminiProvider(BaseModelProvider):
         genai.configure(api_key=api_key)
         self.client = genai.GenerativeModel(model_name)
     
-    async def chat_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    def chat_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """Generate chat completion using Gemini API."""
         # Convert messages to Gemini format
         gemini_messages = []
@@ -338,7 +338,7 @@ class SimpleGenericProvider(BaseModelProvider):
         
         self.client = OpenAI(base_url=api_base, api_key=api_key or "dummy")
     
-    async def chat_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    def chat_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """Generate chat completion using OpenAI-compatible API."""
         kwargs = {
             "model": self.model_name,

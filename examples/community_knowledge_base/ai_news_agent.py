@@ -258,7 +258,6 @@ I automatically share interesting findings every 30 minutes!
         self.run_agent(context=context, instruction="reply to the message")
         return
 
-
         if context.source_id == self.client.agent_id:
             return
         
