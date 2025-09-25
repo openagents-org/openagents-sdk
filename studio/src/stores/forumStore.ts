@@ -514,6 +514,33 @@ export const useForumStore = create<ForumState>((set, get) => ({
           get().addCommentToTopic(topicId, forumComment);
         }
       }
+
+      // 处理投票事件
+      else if (event.event_name === 'forum.vote.cast' && event.payload) {
+        console.log('ForumStore: Received forum.vote.cast event:', event);
+        const { target_type, target_id, vote_type, voter_id } = event.payload;
+
+        // 根据投票目标类型刷新相应的数据
+        if (target_type === 'topic') {
+          // 刷新topics列表以更新投票计数
+          console.log('ForumStore: Vote cast on topic, refreshing topics list');
+          get().loadTopics();
+
+          // 如果是当前查看的topic，也刷新详情
+          const { selectedTopic } = get();
+          if (selectedTopic && selectedTopic.topic_id === target_id) {
+            console.log('ForumStore: Vote cast on current topic, refreshing topic detail');
+            get().loadTopicDetail(target_id);
+          }
+        } else if (target_type === 'comment') {
+          // 刷新当前topic的评论以更新投票计数
+          const { selectedTopic } = get();
+          if (selectedTopic) {
+            console.log('ForumStore: Vote cast on comment, refreshing topic detail');
+            get().loadTopicDetail(selectedTopic.topic_id);
+          }
+        }
+      }
     });
   },
 

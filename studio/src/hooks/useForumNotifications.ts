@@ -105,6 +105,37 @@ export const useForumNotifications = ({
     setNotifications(prev => [notification, ...prev.slice(0, 49)]);
   }, [currentUserId]);
 
+  // Handle forum vote notifications
+  const handleVoteCast = useCallback((event: any) => {
+    // if (!event.payload) return;
+    console.log('Forum notifications: Received forum.vote.cast event:', event);
+
+    const { target_type, target_id, vote_type, voter_id } = event.payload;
+
+    // Don't notify user about their own votes
+    if (voter_id === currentUserId) return;
+
+    const isUpvote = vote_type === 'upvote';
+    const targetTypeDisplay = target_type === 'topic' ? 'Topic' : 'Comment';
+
+    const notification: ForumNotification = {
+      id: `vote_cast_${target_type}_${target_id}_${Date.now()}`,
+      type: 'vote_cast',
+      title: `${targetTypeDisplay} ${isUpvote ? 'Upvoted' : 'Downvoted'}`,
+      message: `${voter_id} ${isUpvote ? 'upvoted' : 'downvoted'} a ${target_type}`,
+      timestamp: Date.now(),
+      data: {
+        target_type,
+        target_id,
+        vote_type,
+        voter_id
+      },
+      read: false,
+    };
+
+    setNotifications(prev => [notification, ...prev.slice(0, 49)]);
+  }, [currentUserId]);
+
   // Set up event handlers
   useEffect(() => {
     if (!enabled || !openAgentsService || !currentUserId) return;
@@ -114,6 +145,7 @@ export const useForumNotifications = ({
       'forum.topic.edited': handleTopicUpdated,
       'forum.comment.posted': handleCommentPosted,
       'forum.comment.replied': handleCommentReplied,
+      'forum.vote.cast': handleVoteCast,
     };
 
     eventHandlersRef.current = handlers;
@@ -134,7 +166,7 @@ export const useForumNotifications = ({
       }
       console.log('Forum notifications: Event handlers cleaned up');
     };
-  }, [enabled, openAgentsService, currentUserId, handleTopicCreated, handleTopicUpdated, handleCommentPosted, handleCommentReplied]);
+  }, [enabled, openAgentsService, currentUserId, handleTopicCreated, handleTopicUpdated, handleCommentPosted, handleCommentReplied, handleVoteCast]);
 
   // Update unread count when notifications change
   useEffect(() => {
