@@ -73,10 +73,10 @@ const PopularTopicItem: React.FC<{
       >
         <div className="flex items-start justify-between">
           <div className="flex items-start min-w-0 flex-1">
-            <span className="mr-2 text-gray-400 mt-0.5">🔥</span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center truncate font-medium overflow-hidden">
                 <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{topic.title}</div>
+                <span className="mr-2 text-gray-400">🔥</span>
                 <span className="text-xs text-gray-500 dark:text-gray-400">{totalVotes}</span>
               </div>
               {/* <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mt-1">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWikiStore } from '@/stores/wikiStore';
+import { useRecentPagesStore } from '@/stores/recentPagesStore';
 import { useOpenAgentsService } from '@/contexts/OpenAgentsServiceContext';
 import useConnectedStatus from '@/hooks/useConnectedStatus';
 import WikiCreateModal from './components/WikiCreateModal';
@@ -14,6 +15,7 @@ const WikiPageList: React.FC = () => {
 
   const { service: openAgentsService } = useOpenAgentsService();
   const { isConnected } = useConnectedStatus();
+  const { addRecentPage } = useRecentPagesStore();
 
   const {
     pages,
@@ -67,6 +69,15 @@ const WikiPageList: React.FC = () => {
   }, [searchQuery, searchPages]);
 
   const handlePageClick = (pagePath: string) => {
+    // 先找到对应的页面对象
+    const page = pages.find(p => p.page_path === pagePath);
+
+    // 如果找到页面，记录到recent pages
+    if (page) {
+      console.log('WikiPageList: Adding page to recent pages:', page.title);
+      addRecentPage(page);
+    }
+
     console.log('WikiPageList: Navigating to page:', pagePath, 'URL:', `/wiki/detail/${encodeURIComponent(pagePath)}`);
     navigate(`/wiki/detail/${encodeURIComponent(pagePath)}`);
   };

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useWikiStore } from '@/stores/wikiStore';
 import { useOpenAgentsService } from '@/contexts/OpenAgentsServiceContext';
 import DiffViewer from '@/components/common/DiffViewer';
+import { formatDateTime } from '@/utils/utils';
 
 const WikiProposals: React.FC = () => {
   const navigate = useNavigate();
@@ -171,7 +172,7 @@ const WikiProposals: React.FC = () => {
                         </button>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        by {proposal.proposer_id} • {new Date(proposal.created_at * 1000).toLocaleString()}
+                        by {proposal.proposed_by} • {formatDateTime(proposal.created_timestamp / 1000)}
                       </p>
                     </div>
                     <div className="flex space-x-2 ml-4">
