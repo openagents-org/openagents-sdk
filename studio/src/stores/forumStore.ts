@@ -52,7 +52,7 @@ interface ForumState {
   loadTopicDetail: (topicId: string) => Promise<void>;
   createTopic: (data: CreateTopicData) => Promise<boolean>;
   addComment: (topicId: string, content: string, parentId?: string) => Promise<boolean>;
-  vote: (type: 'topic' | 'comment', targetId: string, voteType: 'upvote' | 'downvote') => Promise<boolean>;
+  vote: (type: 'topic' | 'comment', targetId: string, voteType: 'upvote' | 'downvote', onError?: (message: string) => void) => Promise<boolean>;
 
   // Real-time updates
   addTopicToList: (topic: ForumTopic) => void;
@@ -346,9 +346,12 @@ export const useForumStore = create<ForumState>((set, get) => ({
     }
   },
 
-  vote: async (type: 'topic' | 'comment', targetId: string, voteType: 'upvote' | 'downvote') => {
+  vote: async (type: 'topic' | 'comment', targetId: string, voteType: 'upvote' | 'downvote', onError?: (message: string) => void) => {
     const { connection } = get();
-    if (!connection) return false;
+    if (!connection) {
+      onError?.('No connection available');
+      return false;
+    }
 
     try {
       const response = await connection.sendEvent({
@@ -379,10 +382,15 @@ export const useForumStore = create<ForumState>((set, get) => ({
           }
         }
         return true;
+      } else {
+        // 处理投票失败的情况
+        const errorMessage = response.message || 'Vote failed';
+        onError?.(errorMessage);
+        return false;
       }
-      return false;
     } catch (error) {
       console.error('Failed to vote:', error);
+      onError?.('Failed to vote due to network error');
       return false;
     }
   },
@@ -390,7 +398,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
   getPopularTopics: () => {
     const { topics } = get();
     return [...topics]
-      .sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes))
+      .sort((a, b) => (b.upvotes + b.downvotes) - (a.upvotes + a.downvotes))
       .slice(0, 10);
   },
 

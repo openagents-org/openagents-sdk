@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer';
 import { ForumComment } from '@/stores/forumStore';
 import { useForumStore } from '@/stores/forumStore';
+import { useToast } from '@/context/ToastContext';
 
 interface ForumCommentThreadProps {
   comments: ForumComment[];
@@ -45,9 +46,10 @@ const ForumCommentItem: React.FC<ForumCommentItemProps> = React.memo(({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { vote, addComment } = useForumStore();
+  const { error: showErrorToast } = useToast();
 
   const handleVote = async (voteType: 'upvote' | 'downvote') => {
-    await vote('comment', comment.comment_id, voteType);
+    await vote('comment', comment.comment_id, voteType, showErrorToast);
   };
 
   const handleReply = async () => {
@@ -93,22 +95,21 @@ const ForumCommentItem: React.FC<ForumCommentItemProps> = React.memo(({
           <div className="flex items-center space-x-2">
             <button
               onClick={() => handleVote('upvote')}
-              className="p-1 rounded transition-colors hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400"
+              className="flex items-center space-x-1 p-1 rounded transition-colors hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-              </svg>
+              <span className="text-sm">👍</span>
+              <span className="text-xs font-medium">
+                {comment.upvotes}
+              </span>
             </button>
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              {comment.upvotes - comment.downvotes}
-            </span>
             <button
               onClick={() => handleVote('downvote')}
-              className="p-1 rounded transition-colors hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+              className="flex items-center space-x-1 p-1 rounded transition-colors hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              <span className="text-sm">👎</span>
+              <span className="text-xs font-medium">
+                {comment.downvotes}
+              </span>
             </button>
           </div>
         </div>
