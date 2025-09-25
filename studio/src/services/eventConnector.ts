@@ -235,7 +235,7 @@ export class HttpEventConnector {
       destination_id: `agent:${targetAgentId}`,
       payload: {
         target_agent_id: targetAgentId,
-        text: content,
+        content: { text: content },
         message_type: "direct_message",
       },
     });
@@ -248,7 +248,7 @@ export class HttpEventConnector {
   ): Promise<EventResponse> {
     const payload: any = {
       channel: channel,
-      text: content,  // Updated: use 'text' directly instead of nested 'content.text'
+      content: { text: content },
       message_type: "channel_message",
     };
 

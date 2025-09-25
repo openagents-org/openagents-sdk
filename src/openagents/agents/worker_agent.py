@@ -221,18 +221,26 @@ class WorkerAgent(CollaboratorAgent):
         """
         self._event_handlers.clear()
         
+        # Track unique methods to avoid duplicates from inheritance
+        seen_methods = set()
+        
         # Get all methods from this class and parent classes
         for cls in self.__class__.__mro__:
             for method_name in dir(cls):
-                if method_name.startswith('_'):
-                    continue
-                    
                 method = getattr(self, method_name, None)
                 if method is None or not callable(method):
                     continue
                 
                 # Check if this method has the _event_pattern attribute (set by @on decorator)
                 if hasattr(method, '_event_pattern'):
+                    # Use function name + pattern to avoid duplicates from inheritance
+                    # This ensures we only register each unique method once per pattern
+                    method_key = f"{method_name}:{method._event_pattern}"
+                    if method_key in seen_methods:
+                        logger.debug(f"Skipping duplicate event handler: {method_name} for pattern '{method._event_pattern}'")
+                        continue
+                    
+                    seen_methods.add(method_key)
                     pattern = method._event_pattern
                     self._event_handlers.append((pattern, method))
                     logger.debug(f"Collected event handler for pattern '{pattern}': {method_name}")
@@ -373,7 +381,7 @@ class WorkerAgent(CollaboratorAgent):
     async def _handle_channel_notification(self, context: EventContext):
         """Handle channel message notifications."""
         message = context.incoming_event
-        channel_msg_data = message.payload.get("message", {})
+        channel_msg_data = message.payload
         channel = message.payload.get("channel", "")
         
         # Extract message details
@@ -386,7 +394,6 @@ class WorkerAgent(CollaboratorAgent):
         # Skip our own messages
         if self.ignore_own_messages and sender_id == self.client.agent_id:
             return
-        
         # Check if this is a reply message (either explicit reply_message type or channel_message with reply_to_id)
         reply_to_id = channel_msg_data.get("reply_to_id")
         
@@ -460,26 +467,8 @@ class WorkerAgent(CollaboratorAgent):
     @on_event("thread.direct_message.notification")
     async def _handle_direct_message_notification(self, context: EventContext):
         """Handle direct message notifications."""
-        logger.info(f"🔧 WORKER_AGENT: Handling direct message notification")
-        
-        message = context.incoming_event
-        # Extract message details from the payload
-        source_id = message.payload.get("sender_id", "")
-        content = message.payload.get("content", {})
-        timestamp = message.payload.get("timestamp", 0)
-        
-        # Create EventContext for the on_direct method
-        direct_context = EventContext(
-            message_id=message.event_id,
-            source_id=source_id,
-            timestamp=timestamp,
-            payload=content,
-            raw_message=message,
-            target_agent_id=message.destination_id or ""
-        )
-        
-        logger.info(f"🔧 WORKER_AGENT: Calling on_direct with source={source_id}, text='{direct_context.text}'")
-        await self.on_direct(direct_context)
+        logger.info(f"🔧 WORKER_AGENT: Calling on_direct with source={context.incoming_event.source_id}")
+        await self.on_direct(context)
 
     async def _handle_thread_history_response(self, message: Event):
         """Handle thread history response events."""

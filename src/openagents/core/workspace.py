@@ -61,12 +61,16 @@ class AgentConnection:
             else:
                 message_content = content.copy()
             
-            # Create direct message event for thread messaging
+            # Create direct message event for thread messaging with nested structure
             direct_message = Event(
                 event_name="thread.direct_message.send",
                 source_id=self._client.agent_id,
                 destination_id=self.agent_id,
-                payload=message_content,
+                payload={
+                    "target_agent_id": self.agent_id,
+                    "message_type": "direct_message",
+                    "content": message_content,  # Nested structure like channel messages
+                },
                 relevant_mod=WORKSPACE_MESSAGING_MOD_NAME,
                 **kwargs
             )
@@ -230,10 +234,8 @@ class ChannelConnection:
                 payload={
                     "action": "channel_message",
                     "message_type": "channel_message", 
-                    "sender_id": self._client.agent_id,
                     "channel": self.name.lstrip('#') if self.name else self.name,  # Normalize channel name
-                    "content": {"text": message_content.get("text", str(message_content))},
-                    "source_id": self._client.agent_id,
+                    "content": message_content,
                     **kwargs
                 }
             )
@@ -271,15 +273,14 @@ class ChannelConnection:
             
             # Create mod message for thread messaging with mention
             mod_message = Event(
-                event_name="thread.channel_message",
+                event_name="thread.channel_message.post",
                 source_id=self._client.agent_id,
                 relevant_mod=WORKSPACE_MESSAGING_MOD_NAME,
-                destination_id=self._client.agent_id,
+                destination_id=f"channel:{self.name.lstrip('#')}",
                 payload={
                     "message_type": "channel_message",
-                    "sender_id": self._client.agent_id,
-                    "channel": self.name,
-                    "text": message_content.get("text", str(message_content)),
+                    "channel": self.name.lstrip('#'),
+                    "content": message_content,
                     "mentioned_agent_id": mention_agent_id,  # Add explicit mention
                     **kwargs
                 }
@@ -704,6 +705,14 @@ class Workspace:
             EventResponse: Response from the event system
         """
         logger.debug(f"🔧 WORKSPACE: Sending message through connector")
+        
+        # Check if client and connector are available
+        if not self._client:
+            raise ValueError("No client available for sending event")
+        
+        if not self._client.connector:
+            raise ValueError("No connector available for sending event")
+        
         response = await self._client.connector.send_event(mod_message)
         logger.debug(f"🔧 WORKSPACE: Connector send result: {response}")
         return response

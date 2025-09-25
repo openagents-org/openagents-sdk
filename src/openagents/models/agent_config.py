@@ -47,7 +47,7 @@ class AgentConfig(BaseModel):
     api_key: Optional[str] = Field(None, description="API key (if not provided, will use environment variables)")
 
     # Triggers
-    triggers: List[AgentTriggerConfigItem] = Field(..., description="Triggers for the agent")
+    triggers: List[AgentTriggerConfigItem] = Field(default_factory=list, description="Triggers for the agent")
 
     # React to all messages
     react_to_all_messages: bool = Field(default=False, description="Whether to react to all messages")

@@ -190,8 +190,10 @@ class HTTPClient:
         """Send a message to a channel."""
         payload = {
             "channel": channel,
-            "text": text,
-            "message_type": "channel_message"
+            "message_type": "channel_message",
+            "content": {
+                "text": text
+            }
         }
         return await self.send_event("thread.channel_message.post", payload, target_agent_id=f"channel:{channel}")
     
@@ -199,8 +201,10 @@ class HTTPClient:
         """Send a direct message to another agent."""
         payload = {
             "target_agent_id": target_agent_id,
-            "text": text,
-            "message_type": "direct_message"
+            "message_type": "direct_message",
+            "content": {
+                "text": text
+            }
         }
         return await self.send_event("thread.direct_message.send", payload, target_agent_id=f"agent:{target_agent_id}")
     
@@ -208,9 +212,11 @@ class HTTPClient:
         """Send a reply to a message in a channel."""
         payload = {
             "channel": channel,
-            "text": text,
             "message_type": "reply_message",
-            "reply_to_id": reply_to_id
+            "reply_to_id": reply_to_id,
+            "content": {
+                "text": text
+            }
         }
         return await self.send_event("thread.reply.sent", payload, target_agent_id=f"channel:{channel}")
     
@@ -418,7 +424,11 @@ class TestMessagingFlow:
         found_via_polling = False
         for msg in channel_notifications:
             payload = msg.get("payload", {})
-            received_text = payload.get("text", "")
+            # Handle nested content structure (payload.content.text)
+            if 'content' in payload and isinstance(payload['content'], dict):
+                received_text = payload['content'].get('text', '')
+            else:
+                received_text = ''
             if received_text == test_message:
                 found_via_polling = True
                 assert payload.get("channel") == "general", "Message should be in general channel"
@@ -477,7 +487,11 @@ class TestMessagingFlow:
         found_via_polling = False
         for msg in direct_notifications:
             payload = msg.get("payload", {})
-            received_text = payload.get("text", "")
+            # Handle nested content structure (payload.content.text)
+            if 'content' in payload and isinstance(payload['content'], dict):
+                received_text = payload['content'].get('text', '')
+            else:
+                received_text = ''
             if received_text == test_message:
                 found_via_polling = True
                 assert payload.get("target_agent_id") == "ClientB_Test", "Message should be targeted to Client B"
@@ -496,7 +510,11 @@ class TestMessagingFlow:
         for msg in retrieved_messages:
             # Direct message retrieval returns full event objects with payload.text structure
             payload = msg.get("payload", {})
-            text = payload.get("text", "")
+            # Handle nested content structure (payload.content.text)
+            if 'content' in payload and isinstance(payload['content'], dict):
+                text = payload['content'].get('text', '')
+            else:
+                text = ''
             source_id = msg.get("source_id", "")
             if text == test_message and source_id == "ClientA_Test":
                 found_via_retrieval = True
@@ -546,7 +564,11 @@ class TestMessagingFlow:
         found_reply_via_polling = False
         for msg in reply_notifications:
             payload = msg.get("payload", {})
-            received_text = payload.get("text", "")
+            # Handle nested content structure (payload.content.text)
+            if 'content' in payload and isinstance(payload['content'], dict):
+                received_text = payload['content'].get('text', '')
+            else:
+                received_text = ''
             if received_text == reply_message:
                 found_reply_via_polling = True
                 assert payload.get("channel") == "general", "Reply should be in general channel"
@@ -610,7 +632,11 @@ class TestMessagingFlow:
         received_message_id = None
         for msg in channel_notifications:
             payload = msg.get("payload", {})
-            if payload.get("text") == original_message:
+            # Handle nested content structure (payload.content.text)
+            text = ''
+            if 'content' in payload and isinstance(payload['content'], dict):
+                text = payload['content'].get('text', '')
+            if text == original_message:
                 received_message_id = msg.get("event_id")
                 break
         
@@ -633,7 +659,11 @@ class TestMessagingFlow:
             event_name = msg.get("event_name", "")
             if "reply.notification" in event_name or "channel_message.notification" in event_name:
                 payload = msg.get("payload", {})
-                received_text = payload.get("text", "")
+                # Handle nested content structure (payload.content.text)
+                if 'content' in payload and isinstance(payload['content'], dict):
+                    received_text = payload['content'].get('text', '')
+                else:
+                    received_text = ''
                 if received_text == reply_message:
                     found_reply_via_polling = True
                     assert payload.get("channel") == "general", "Reply should be in general channel"
@@ -696,7 +726,11 @@ class TestMessagingFlow:
         received_message_id = None
         for msg in channel_notifications:
             payload = msg.get("payload", {})
-            if payload.get("text") == original_message:
+            # Handle nested content structure (payload.content.text)
+            text = ''
+            if 'content' in payload and isinstance(payload['content'], dict):
+                text = payload['content'].get('text', '')
+            if text == original_message:
                 received_message_id = msg.get("event_id")
                 break
         

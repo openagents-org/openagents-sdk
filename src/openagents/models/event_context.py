@@ -26,7 +26,11 @@ class EventContext(BaseModel):
     def text(self) -> str:
         """Extract text content from the incoming event."""
         if isinstance(self.incoming_event.payload, dict):
-            return self.incoming_event.payload.get('text', str(self.incoming_event.payload))
+            # Handle nested content structure (payload.content.text)
+            if 'content' in self.incoming_event.payload and isinstance(self.incoming_event.payload['content'], dict):
+                return self.incoming_event.payload['content'].get('text', '')
+            else:
+                return ''
         return str(self.incoming_event.payload)
     
     @property

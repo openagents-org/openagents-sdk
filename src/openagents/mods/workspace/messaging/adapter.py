@@ -394,11 +394,10 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             encoded_content = base64.b64encode(file_content).decode("utf-8")
             
             # Create upload message
-            upload_msg = FileUploadMessage(
-                event_name="thread.file.upload",  # Use the correct event name that mod expects
-                source_id=self.agent_id,
-                file_content=encoded_content,
+            upload_msg = FileUploadMessage.create(
                 filename=file_path.name,
+                file_content=encoded_content,
+                source_id=self.agent_id,
                 mime_type=self._get_mime_type(file_path),
                 file_size=len(file_content)
             )
@@ -483,11 +482,11 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             quoted_text = f"[Quoted message {quote}]"
         
         # Create reply message
-        reply_msg = ReplyMessage(
-            source_id=self.agent_id,
+        reply_msg = ReplyMessage.create(
             reply_to_id=reply_to_id,
+            text=text,
+            source_id=self.agent_id,
             channel=channel,
-            payload=content,
             quoted_message_id=quoted_message_id,
             quoted_text=quoted_text
         )
@@ -528,11 +527,11 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             quoted_text = f"[Quoted message {quote}]"
         
         # Create reply message
-        reply_msg = ReplyMessage(
-            source_id=self.agent_id,
+        reply_msg = ReplyMessage.create(
             reply_to_id=reply_to_id,
-            destination_id=target_agent_id,
-            payload=content,
+            text=text,
+            source_id=self.agent_id,
+            target_agent_id=target_agent_id,
             quoted_message_id=quoted_message_id,
             quoted_text=quoted_text
         )
@@ -569,7 +568,8 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             return
         
         # Create retrieval request
-        retrieval_msg = MessageRetrievalMessage(
+        retrieval_msg = MessageRetrievalMessage.create(
+            action="retrieve_channel_messages",
             source_id=self.agent_id,
             channel=channel,
             limit=limit,
@@ -619,9 +619,10 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             return
         
         # Create retrieval request
-        retrieval_msg = MessageRetrievalMessage(
+        retrieval_msg = MessageRetrievalMessage.create(
+            action="retrieve_direct_messages",
             source_id=self.agent_id,
-            destination_id=target_agent_id,
+            target_agent_id=target_agent_id,
             limit=limit,
             offset=offset,
             include_threads=include_threads
@@ -671,7 +672,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             return self.available_channels
         
         # Create channel info request
-        channel_info_msg = ChannelInfoMessage(
+        channel_info_msg = ChannelInfoMessage.create(
             source_id=self.agent_id
         )
         
@@ -733,10 +734,11 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             return
         
         # Create reaction message
-        reaction_msg = ReactionMessage(
-            source_id=self.agent_id,
+        reaction_msg = ReactionMessage.create(
             target_message_id=target_message_id,
-            reaction_type=reaction_type
+            reaction_type=reaction_type,
+            source_id=self.agent_id,
+            action=action
         )
         
         # Wrap in Event for proper transport

@@ -5,6 +5,27 @@ from pydantic import BaseModel
 from openagents.models.event import Event
 from dataclasses import dataclass, field
 
+
+def _extract_text_from_event_payload(event: Event) -> str:
+    """Extract text content from an Event object's payload.
+    
+    This handles the nested content structure: payload.content.text
+    
+    Args:
+        event: The Event object to extract text from
+        
+    Returns:
+        The extracted text content, or empty string if not found
+    """
+    if not event or not event.payload:
+        return ""
+    
+    # Handle nested content structure (payload.content.text)
+    if 'content' in event.payload and isinstance(event.payload['content'], dict):
+        return event.payload['content'].get('text', '')
+    else:
+        return ""
+
 @dataclass
 class ThreadMessageEvent(Event):
     """A thread message event with additional threading fields."""
@@ -137,7 +158,7 @@ class ChannelMessage:
     @staticmethod
     def get_text(event: Event) -> str:
         """Extract message text from event payload."""
-        return event.payload.get("text", "") if event.payload else ""
+        return _extract_text_from_event_payload(event)
     
     @staticmethod
     def get_mentioned_agent(event: Event) -> Optional[str]:
@@ -257,7 +278,7 @@ class ReplyMessage:
     @staticmethod
     def get_text(event: Event) -> str:
         """Extract message text from event payload."""
-        return event.payload.get("text", "") if event.payload else ""
+        return _extract_text_from_event_payload(event)
     
     @staticmethod
     def get_thread_level(event: Event) -> int:

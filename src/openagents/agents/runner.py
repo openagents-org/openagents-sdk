@@ -169,7 +169,7 @@ class AgentRunner(ABC):
     def run_agent(
         self,
         context: EventContext,
-        user_instruction: Optional[str] = None,
+        instruction: Optional[str] = None,
         max_iterations: Optional[int] = None,
     ) -> AgentTrajectory:
         """
@@ -184,7 +184,7 @@ class AgentRunner(ABC):
             context=context,
             agent_config=self.agent_config,
             tools=self.tools,
-            user_instruction=user_instruction,
+            user_instruction=instruction,
             max_iterations=max_iterations
         )
     

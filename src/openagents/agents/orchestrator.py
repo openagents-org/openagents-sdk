@@ -6,8 +6,10 @@ extracted from SimpleAgentRunner to improve reusability and testability.
 """
 
 import asyncio
+import concurrent.futures
 import json
 import logging
+import threading
 import uuid
 from datetime import datetime
 from typing import List, Optional
@@ -120,13 +122,13 @@ def orchestrate_agent(
     
     formatted_tools = model_provider.format_tools(all_tools)
     
-    # Get event loop for async operations
+    # Check if we're in an async context
+    running_in_async = False
     try:
-        loop = asyncio.get_running_loop()
+        asyncio.get_running_loop()
+        running_in_async = True
     except RuntimeError:
-        # Create new event loop if none exists
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        running_in_async = False
     
     # Conversation loop with action tracking
     is_finished = False
@@ -138,17 +140,59 @@ def orchestrate_agent(
         try:
             # Call the model provider
             if asyncio.iscoroutinefunction(model_provider.chat_completion):
-                # If chat_completion is async, we need to run it in event loop
-                loop = asyncio.get_event_loop()
-                response = loop.run_until_complete(model_provider.chat_completion(messages, formatted_tools))
+                # If chat_completion is async, handle properly based on context
+                if running_in_async:
+                    # We're already in an async context, we need to use a different approach
+                    # Create a new thread to run the async function
+                    
+                    def run_in_thread():
+                        # Create new event loop in thread
+                        new_loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(new_loop)
+                        try:
+                            return new_loop.run_until_complete(model_provider.chat_completion(messages, formatted_tools))
+                        finally:
+                            new_loop.close()
+                    
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(run_in_thread)
+                        response = future.result()
+                else:
+                    # We're not in async context, create new loop
+                    response = asyncio.run(model_provider.chat_completion(messages, formatted_tools))
             else:
                 response = model_provider.chat_completion(messages, formatted_tools)
             
             # Add the assistant's response to the conversation
-            messages.append({
-                "role": "assistant",
-                "content": response.get("content") or None
-            })
+            # Handle content and tool_calls properly for OpenAI API
+            assistant_message = {"role": "assistant"}
+            
+            # If there are tool calls, content can be null, but if no tool calls, content must be a string
+            if response.get("tool_calls"):
+                assistant_message["tool_calls"] = response["tool_calls"]
+                assistant_message["content"] = response.get("content") or None
+            else:
+                # No tool calls, so content must be a non-empty string
+                assistant_content = response.get("content") or ""
+                if assistant_content:
+                    assistant_message["content"] = assistant_content
+                else:
+                    # If no content and no tool calls, something went wrong - finish the conversation
+                    logger.warning("Model returned empty response with no tool calls")
+                    completion_action = AgentAction(
+                        action_id=str(uuid.uuid4()),
+                        action_type=AgentActionType.COMPLETE,
+                        timestamp=datetime.now(),
+                        payload={
+                            "reason": "Model returned empty response",
+                            "response": ""
+                        }
+                    )
+                    actions.append(completion_action)
+                    is_finished = True
+                    break
+            
+            messages.append(assistant_message)
             
             # Check if the model wants to call tools
             if response.get("tool_calls"):
@@ -204,7 +248,22 @@ def orchestrate_agent(
                             
                             # Execute the tool
                             if asyncio.iscoroutinefunction(tool.execute):
-                                result = loop.run_until_complete(tool.execute(**arguments))
+                                if running_in_async:
+                                    # Use thread executor for async tools when in async context
+                                    
+                                    def run_tool_in_thread():
+                                        new_loop = asyncio.new_event_loop()
+                                        asyncio.set_event_loop(new_loop)
+                                        try:
+                                            return new_loop.run_until_complete(tool.execute(**arguments))
+                                        finally:
+                                            new_loop.close()
+                                    
+                                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                                        future = executor.submit(run_tool_in_thread)
+                                        result = future.result()
+                                else:
+                                    result = asyncio.run(tool.execute(**arguments))
                             else:
                                 result = tool.execute(**arguments)
                             

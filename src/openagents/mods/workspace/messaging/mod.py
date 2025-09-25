@@ -1427,11 +1427,14 @@ class ThreadMessagingNetworkMod(BaseMod):
                 # Extract message data based on the type of object
                 if isinstance(msg, Event):
                     # For Event objects, convert to the expected message format
+                    # Extract text content using the helper function
+                    text_content = self._extract_text_from_event(msg)
+                    
                     msg_data = {
                         'message_id': msg.event_id,
                         'sender_id': msg.source_id,
                         'timestamp': msg.timestamp,
-                        'content': {'text': msg.payload.get('text', '') if msg.payload else ''},
+                        'content': {'text': text_content},
                         'channel': msg_channel,
                         'message_type': msg.payload.get('message_type', 'channel_message') if msg.payload else 'channel_message',
                         'reply_to_id': msg.payload.get('reply_to_id') if msg.payload else None,
@@ -1846,6 +1849,26 @@ class ThreadMessagingNetworkMod(BaseMod):
         """Remove archived files older than retention policy. [DEPRECATED - use storage helper]"""
         self.storage_helper.cleanup_expired_archives()
     
+    def _extract_text_from_event(self, event: Event) -> str:
+        """Extract text content from an Event object's payload.
+        
+        This handles the nested content structure: payload.content.text
+        
+        Args:
+            event: The Event object to extract text from
+            
+        Returns:
+            The extracted text content, or empty string if not found
+        """
+        if not event or not event.payload:
+            return ""
+        
+        # Handle nested content structure (payload.content.text)
+        if 'content' in event.payload and isinstance(event.payload['content'], dict):
+            return event.payload['content'].get('text', '')
+        else:
+            return ""
+    
     def _get_quoted_text(self, quoted_message_id: str) -> str:
         """Get the text content of a quoted message with author information.
         
@@ -1857,17 +1880,25 @@ class ThreadMessagingNetworkMod(BaseMod):
         """
         if quoted_message_id in self.message_history:
             quoted_message = self.message_history[quoted_message_id]
-            if hasattr(quoted_message, 'content') and isinstance(quoted_message.content, dict):
+            
+            # Extract text content based on message type (Event object vs direct content)
+            if isinstance(quoted_message, Event):
+                # For Event objects, use the helper function
+                text = self._extract_text_from_event(quoted_message)
+                author = getattr(quoted_message, 'source_id', 'Unknown')
+            elif hasattr(quoted_message, 'content') and isinstance(quoted_message.content, dict):
+                # Legacy: Direct content access
                 text = quoted_message.content.get('text', '')
                 author = getattr(quoted_message, 'sender_id', 'Unknown')
-                
-                # Truncate long quotes
-                if len(text) > 100:
-                    text = f"{text[:100]}..."
-                
-                # Format: "Author: quoted text"
-                return f"{author}: {text}"
             else:
-                return "[Quoted message content unavailable]"
+                text = ""
+                author = getattr(quoted_message, 'sender_id', getattr(quoted_message, 'source_id', 'Unknown'))
+            
+            # Truncate long quotes
+            if len(text) > 100:
+                text = f"{text[:100]}..."
+            
+            # Format: "Author: quoted text"
+            return f"{author}: {text}"
         else:
             return f"[Quoted message {quoted_message_id} not found]"

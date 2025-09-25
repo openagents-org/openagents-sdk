@@ -29,9 +29,10 @@ from openagents.agents.worker_agent import (
     ChannelMessageContext,
     ReplyMessageContext
 )
-from openagents.config.globals import DEFAULT_NETWORK_PORT
+from openagents.config.globals import DEFAULT_TRANSPORT_ADDRESS
 
 # Import the RedditFeeder class
+from openagents.models.agent_config import AgentConfig
 from reddit_util import RedditFeeder
 
 # Configure logging
@@ -115,7 +116,7 @@ class AINewsWorkerAgent(WorkerAgent):
             ws = self.workspace()
             ws._auto_connect_config = {
                 'host': 'localhost',
-                'port': DEFAULT_NETWORK_PORT
+                'port': DEFAULT_TRANSPORT_ADDRESS['http']['port']
             }
             channels_info = await ws.channels()
             logger.info(f"📺 Available channels: {channels_info}")
@@ -144,7 +145,7 @@ class AINewsWorkerAgent(WorkerAgent):
             ws = self.workspace()
             ws._auto_connect_config = {
                 'host': 'localhost',
-                'port': DEFAULT_NETWORK_PORT
+                'port': DEFAULT_TRANSPORT_ADDRESS['http']['port']
             }
             await ws.channel("general").post(startup_message)
             logger.info("✅ Successfully sent startup message to general channel")
@@ -162,12 +163,12 @@ class AINewsWorkerAgent(WorkerAgent):
     
     async def on_direct(self, msg: EventContext):
         """Handle direct messages with personalized AI news assistance."""
-        text = msg.text.lower().strip()
+        text = msg.payload['content']['text'].lower().strip()
         
         if "hello" in text or "hi" in text:
             ws = self.workspace()
-            await ws.agent(msg.sender_id).send_message(
-                f"👋 Hello {msg.sender_id}! I'm your AI News assistant.\n\n"
+            await ws.agent(msg.source_id).send_message(
+                f"👋 Hello {msg.source_id}! I'm your AI News assistant.\n\n"
                 f"I can help you stay updated on AI developments. Try asking me about:\n"
                 f"• Latest AI product launches\n"
                 f"• Recent research papers\n"
@@ -181,10 +182,10 @@ class AINewsWorkerAgent(WorkerAgent):
             query = text.replace("search", "").strip()
             if query:
                 results = await self._search_knowledge_base(query)
-                await self._send_search_results(msg.sender_id, query, results, is_direct=True)
+                await self._send_search_results(msg.source_id, query, results, is_direct=True)
             else:
                 ws = self.workspace()
-                await ws.agent(msg.sender_id).send_message(
+                await ws.agent(msg.source_id).send_message(
                     "🔍 Please specify what you'd like to search for!\n"
                     f"Example: `search transformer models`"
                 )
@@ -192,7 +193,7 @@ class AINewsWorkerAgent(WorkerAgent):
         elif "summary" in text:
             summary = await self._generate_daily_summary()
             ws = self.workspace()
-            await ws.agent(msg.sender_id).send_message(summary)
+            await ws.agent(msg.source_id).send_message(summary)
         
         elif "categories" in text:
             categories_text = "📋 **Content Categories:**\n\n"
@@ -202,7 +203,7 @@ class AINewsWorkerAgent(WorkerAgent):
                 categories_text += f"{emoji} **{category.title()}** ({count} items)\n"
             
             ws = self.workspace()
-            await ws.agent(msg.sender_id).send_message(categories_text)
+            await ws.agent(msg.source_id).send_message(categories_text)
         
         elif "help" in text:
             help_text = """
@@ -231,29 +232,35 @@ I automatically share interesting findings every 30 minutes!
             """.strip()
             
             ws = self.workspace()
-            await ws.agent(msg.sender_id).send_message(help_text)
+            await ws.agent(msg.source_id).send_message(help_text)
         
         else:
             # Try to answer as an AI-related question
             if any(keyword in text for keyword in ["ai", "artificial intelligence", "machine learning", "llm"]):
                 ws = self.workspace()
-                await ws.agent(msg.sender_id).send_message(
+                await ws.agent(msg.source_id).send_message(
                     f"🤔 That's an interesting AI question! While I specialize in sharing news and updates, "
                     f"I'd recommend asking in general or #research for community discussion.\n\n"
                     f"I can help you search for related content though - try `search {text[:30]}...`"
                 )
             else:
                 ws = self.workspace()
-                await ws.agent(msg.sender_id).send_message(
+                await ws.agent(msg.source_id).send_message(
                     "🤖 I'm focused on AI news and research! Try asking me about:\n"
                     f"• `search <AI topic>`\n"
                     f"• `summary` for today's updates\n"
                     f"• `help` for more commands"
                 )
     
-    async def on_channel_mention(self, msg: ChannelMessageContext):
+    async def on_channel_mention(self, context: ChannelMessageContext):
         """Handle mentions in channels."""
-        text = msg.text.lower()
+        text = context.incoming_event.payload['content']['text'].lower()
+        self.run_agent(context=context, instruction="reply to the message")
+        return
+
+
+        if context.source_id == self.client.agent_id:
+            return
         
         # Remove mention from text for processing
         clean_text = text.replace(f"@{self.default_agent_id}", "").strip()
@@ -262,22 +269,22 @@ I automatically share interesting findings every 30 minutes!
             query = clean_text.replace("search", "").strip()
             if query:
                 results = await self._search_knowledge_base(query)
-                await self._send_search_results(msg.sender_id, query, results, 
-                                              channel=msg.channel, is_direct=False)
+                await self._send_search_results(context.source_id, query, results, 
+                                              channel=context.channel, is_direct=False)
             else:
                 ws = self.workspace()
-                await ws.channel(msg.channel).post_with_mention(
-                    f"🔍 {msg.sender_id}, please specify what you'd like to search for!\n"
+                await ws.channel(context.channel).post_with_mention(
+                    f"🔍 {context.source_id}, please specify what you'd like to search for!\n"
                     f"Example: `@ai-news-bot search GPT models`",
-                    mention_agent_id=msg.sender_id
+                    mention_agent_id=context.source_id
                 )
         
         elif "summary" in clean_text:
             summary = await self._generate_daily_summary()
             ws = self.workspace()
-            await ws.channel(msg.channel).post_with_mention(
-                f"📊 **Daily AI Summary for {msg.sender_id}:**\n\n{summary}",
-                mention_agent_id=msg.sender_id
+            await ws.channel(context.channel).post_with_mention(
+                f"📊 **Daily AI Summary for {context.source_id}:**\n\n{summary}",
+                mention_agent_id=context.source_id
             )
         
         elif "categories" in clean_text:
@@ -288,41 +295,33 @@ I automatically share interesting findings every 30 minutes!
                 categories_text += f"{emoji} **{category.title()}** ({count} items)\n"
             
             ws = self.workspace()
-            await ws.channel(msg.channel).post_with_mention(
-                f"{categories_text}\n\n*Requested by {msg.sender_id}*",
-                mention_agent_id=msg.sender_id
+            await ws.channel(context.channel).post_with_mention(
+                f"{categories_text}\n\n*Requested by {context.source_id}*",
+                mention_agent_id=context.source_id
             )
         
         else:
             ws = self.workspace()
-            await ws.channel(msg.channel).post_with_mention(
-                f"👋 Hi {msg.sender_id}! I can help with AI news and research.\n"
+            await ws.channel(context.channel).post_with_mention(
+                f"👋 Hi {context.source_id}! I can help with AI news and research.\n"
                 f"Try: `@ai-news-bot search <topic>`, `@ai-news-bot summary`, or `@ai-news-bot help`",
-                mention_agent_id=msg.sender_id
+                mention_agent_id=context.source_id
             )
     
     async def on_channel_post(self, msg: ChannelMessageContext):
         """Monitor channel posts for AI-related discussions."""
         # Skip our own messages
-        if msg.sender_id == self.client.agent_id:
+        if msg.source_id == self.client.agent_id:
             return
         
         text = msg.text.lower()
         
-        # Check if message contains AI-related keywords
-        if any(keyword in text for keyword in self.ai_keywords[:10]):  # Check top keywords
-            # If it's a question, offer to help
-            if "?" in text and len(text) > 20:
-                # Don't spam - only respond occasionally
-                import random
-                if random.random() < 0.3:  # 30% chance to respond
-                    ws = self.workspace()
-                    await ws.channel(msg.channel).post_with_mention(
-                        f"💡 Interesting AI discussion! I might have related content - "
-                        f"try `@ai-news-bot search {text.split()[0:3]}`",
-                        mention_agent_id=msg.sender_id
-                    )
-    
+        ws = self.workspace()
+        await ws.channel(msg.channel).post(
+            f"💡 Interesting AI discussion! I might have related content - "
+            f"try `@ai-news-bot search {text.split()[0:3]}`"
+        )
+
     async def _news_monitoring_loop(self):
         """Background task that checks for new Reddit posts every 60 seconds."""
         logger.info("🔄 Starting AI news monitoring loop (checking Reddit every 60 seconds)...")
@@ -503,7 +502,7 @@ I automatically share interesting findings every 30 minutes!
         results.sort(key=lambda x: x.get('timestamp', datetime.min), reverse=True)
         return results[:5]  # Return top 5 results
     
-    async def _send_search_results(self, sender_id: str, query: str, results: List[Dict[str, Any]], 
+    async def _send_search_results(self, source_id: str, query: str, results: List[Dict[str, Any]], 
                                  channel: Optional[str] = None, is_direct: bool = True):
         """Send search results to user."""
         if not results:
@@ -519,10 +518,10 @@ I automatically share interesting findings every 30 minutes!
         
         if is_direct:
             ws = self.workspace()
-            await ws.agent(sender_id).send_message(message)
+            await ws.agent(source_id).send_message(message)
         else:
             ws = self.workspace()
-            await ws.channel(channel).post_with_mention(message, mention_agent_id=sender_id)
+            await ws.channel(channel).post_with_mention(message, mention_agent_id=source_id)
     
     async def _generate_daily_summary(self) -> str:
         """Generate a summary of today's AI news."""
@@ -601,14 +600,21 @@ async def main():
     """Main function to run the AI News Worker Agent."""
     print("🚀 Starting AI News Worker Agent...")
     print("=" * 60)
+
+    agent_config = AgentConfig(
+        instruction="You are a helpful assistant agent in the OpenAgents network. You can communicate with other agents and help users with various tasks. Be helpful, harmless, and honest in your responses.",
+        model_name="gpt-4o-mini",
+        provider="openai",
+        api_base="https://api.openai.com/v1"
+    )
     
     # Create the agent
-    agent = AINewsWorkerAgent(agent_id="ai-news-bot")
+    agent = AINewsWorkerAgent(agent_id="ai-news-bot", agent_config=agent_config)
     
     try:
         # Connect to the network
         print("🔌 Connecting to Community Knowledge Base network...")
-        await agent.async_start(host="localhost", port=DEFAULT_NETWORK_PORT)
+        await agent.async_start(host="localhost", port=DEFAULT_TRANSPORT_ADDRESS['http']['port'])
         print("✅ Connected successfully!")
         
         # Keep the agent running

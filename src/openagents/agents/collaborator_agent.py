@@ -14,7 +14,10 @@ class CollaboratorAgent(AgentRunner):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._triggers_map: Dict[str, AgentTriggerConfigItem] = {trigger.event: trigger for trigger in self.agent_config.triggers}
+        if self.agent_config is not None and self.agent_config.triggers is not None:
+            self._triggers_map: Dict[str, AgentTriggerConfigItem] = {trigger.event: trigger for trigger in self.agent_config.triggers}
+        else:
+            self._triggers_map = {}
     
     async def react(self, context: EventContext):
         """React to an incoming message using agent orchestrator."""

@@ -289,24 +289,25 @@ class AgentClient:
         # Bind the agent to the mod
         mod_adapter.bind_agent(self.agent_id)
         
-        # Store adapter under class name (primary key)
-        self.mod_adapters[class_name] = mod_adapter
-        
-        # Also store under module name for backward compatibility if available
-        if module_name and module_name != class_name:
-            self.mod_adapters[module_name] = mod_adapter
-            
-        # Also store under full module path if the adapter module is available
+        # Register adapter under a single, canonical key to avoid duplicates
+        # Use the parent module path (e.g., "openagents.mods.workspace.messaging")
+        # as the canonical key for consistency
         module_path = getattr(mod_adapter.__class__, '__module__', None)
-        if module_path and module_path not in self.mod_adapters:
-            self.mod_adapters[module_path] = mod_adapter
-            
-            # Also store under parent module (e.g., "openagents.mods.workspace.messaging" 
+        if module_path and '.' in module_path:
+            # Use parent module (e.g., "openagents.mods.workspace.messaging" 
             # for "openagents.mods.workspace.messaging.adapter")
-            if '.' in module_path:
-                parent_module = '.'.join(module_path.split('.')[:-1])
-                if parent_module and parent_module not in self.mod_adapters:
-                    self.mod_adapters[parent_module] = mod_adapter
+            canonical_key = '.'.join(module_path.split('.')[:-1])
+        else:
+            # Fallback to class name if no proper module path
+            canonical_key = class_name
+            
+        # Check if already registered under canonical key
+        if canonical_key in self.mod_adapters:
+            logger.warning(f"Mod adapter {canonical_key} already registered with agent {self.agent_id}")
+            return False
+            
+        # Store adapter only under the canonical key to prevent duplicates
+        self.mod_adapters[canonical_key] = mod_adapter
         
         mod_adapter.initialize()
         if self.connector is not None:

@@ -265,8 +265,12 @@ async def main():
                             print(f"   Channel: {event.target_channel}")
                         if event.target_agent_id:
                             print(f"   Target: {event.target_agent_id}")
-                        if event.payload.get('text'):
-                            print(f"   Text: {event.payload['text']}")
+                        # Handle nested content structure (payload.content.text)
+                        text = ""
+                        if 'content' in event.payload and isinstance(event.payload['content'], dict):
+                            text = event.payload['content'].get('text', '')
+                        if text:
+                            print(f"   Text: {text}")
                         if event.payload.get('mention_type'):
                             print(f"   Mention Type: {event.payload['mention_type']}")
                         print()

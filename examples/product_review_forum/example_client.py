@@ -15,7 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from openagents.agents.worker_agent import WorkerAgent, ChannelMessageContext, EventContext
-from openagents.config.globals import DEFAULT_NETWORK_PORT
+from openagents.config.globals import DEFAULT_TRANSPORT_ADDRESS
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -78,7 +78,7 @@ class CommunityMemberAgent:
                 channel="general"
             )
     
-    async def connect(self, host="localhost", port=DEFAULT_NETWORK_PORT):
+    async def connect(self, host="localhost", port=DEFAULT_TRANSPORT_ADDRESS['http']['port']):
         """Connect to the community network."""
         try:
             success = await self.client.connect_to_server(host=host, port=port)

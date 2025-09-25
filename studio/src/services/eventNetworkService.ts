@@ -319,7 +319,7 @@ export class EventNetworkService {
                   : msg.timestamp)
               : Date.now().toString(),
             content: {
-              text: msg.payload?.text || msg.payload?.content?.text || msg.text || msg.content?.text || ''
+              text: msg.payload?.content?.text || msg.content?.text || ''
             },
             message_type: 'direct_message' as const,
             target_agent_id: msg.payload?.target_agent_id || msg.target_agent_id || targetAgentId,
@@ -585,7 +585,7 @@ export class EventNetworkService {
       });
 
       // Extract text content from the payload
-      const textContent = payload.text || payload.content?.text || "";
+      const textContent = payload.content?.text || "";
 
       return {
         message_id: event.event_id || "",
