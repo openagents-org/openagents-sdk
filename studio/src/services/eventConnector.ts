@@ -79,8 +79,8 @@ export class HttpEventConnector {
       }
 
       // Register agent
-      console.log(`📡 Sending registration to ${this.baseUrl}/api/register`);
-      const registerResponse = await this.sendHttpRequest("/api/register", "POST", {
+      console.log(`📡 Sending registration to ${this.baseUrl}/register`);
+      const registerResponse = await this.sendHttpRequest("/register", "POST", {
         agent_id: this.agentId,
         metadata: {
           display_name: this.agentId,
@@ -140,7 +140,7 @@ export class HttpEventConnector {
     }
 
     try {
-      await this.sendHttpRequest("/api/unregister", "POST", {
+      await this.sendHttpRequest("/unregister", "POST", {
         agent_id: this.agentId,
       });
     } catch (error) {
@@ -188,7 +188,7 @@ export class HttpEventConnector {
         `📤 Sending event: ${event.event_name} from ${event.source_id}`
       );
 
-      const response = await this.sendHttpRequest("/api/send_event", "POST", {
+      const response = await this.sendHttpRequest("/send_event", "POST", {
         event_id: event.event_id,
         event_name: event.event_name,
         source_id: event.source_id,
@@ -441,7 +441,7 @@ export class HttpEventConnector {
   private async pollEvents(): Promise<void> {
     try {
       const response = await this.sendHttpRequest(
-        `/api/poll?agent_id=${this.agentId}`,
+        `/poll?agent_id=${this.agentId}`,
         "GET"
       );
 
@@ -489,7 +489,7 @@ export class HttpEventConnector {
     method: "GET" | "POST",
     data?: any
   ): Promise<any> {
-    const isPolling = endpoint.includes('/api/poll?agent_id=');
+    const isPolling = endpoint.includes('/poll?agent_id=');
     
     if (!isPolling) {
       console.log(`🌐 ${method} ${endpoint}`, data ? { body: data } : "");
