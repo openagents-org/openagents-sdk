@@ -152,6 +152,7 @@ export class HttpEventConnector {
     try {
       await this.sendHttpRequest("/api/unregister", "POST", {
         agent_id: this.agentId,
+        secret: this.secret,
       });
     } catch (error) {
       // Don't log unregister errors as errors since they often happen during cleanup
@@ -456,8 +457,10 @@ export class HttpEventConnector {
    */
   private async pollEvents(): Promise<void> {
     try {
+      // Include secret in polling request if available
+      const secretParam = this.secret ? `&secret=${encodeURIComponent(this.secret)}` : '';
       const response = await this.sendHttpRequest(
-        `/api/poll?agent_id=${this.agentId}`,
+        `/api/poll?agent_id=${this.agentId}${secretParam}`,
         "GET"
       );
 

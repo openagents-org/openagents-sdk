@@ -65,6 +65,7 @@ message RegisterAgentResponse {
 // Agent unregistration
 message UnregisterAgentRequest {
   string agent_id = 1;
+  string secret = 2;
 }
 
 message UnregisterAgentResponse {

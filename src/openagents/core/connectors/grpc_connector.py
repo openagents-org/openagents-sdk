@@ -198,7 +198,8 @@ class GRPCNetworkConnector(NetworkConnector):
             if self.stub:
                 try:
                     unregister_request = self.agent_service_pb2.UnregisterAgentRequest(
-                        agent_id=self.agent_id
+                        agent_id=self.agent_id,
+                        secret=self.secret or ""
                     )
                     await self.stub.UnregisterAgent(unregister_request, timeout=5.0)
                 except Exception as e:

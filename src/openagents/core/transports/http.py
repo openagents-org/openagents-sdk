@@ -224,6 +224,7 @@ class HttpTransport(Transport):
         try:
             data = await request.json()
             agent_id = data.get("agent_id")
+            secret = data.get("secret")
 
             if not agent_id:
                 return web.json_response(
@@ -233,11 +234,12 @@ class HttpTransport(Transport):
 
             logger.info(f"HTTP Agent unregistration: {agent_id}")
 
-            # Create unregister event
+            # Create unregister event with authentication
             unregister_event = Event(
                 event_name=SYSTEM_EVENT_UNREGISTER_AGENT,
                 source_id=agent_id,
                 payload={"agent_id": agent_id},
+                secret=secret,
             )
 
             # Process the unregistration event through the event handler
@@ -273,6 +275,7 @@ class HttpTransport(Transport):
         """Handle message polling for HTTP agents."""
         try:
             agent_id = request.query.get("agent_id")
+            secret = request.query.get("secret")
 
             if not agent_id:
                 return web.json_response(
@@ -285,12 +288,13 @@ class HttpTransport(Transport):
 
             logger.debug(f"HTTP polling messages for agent: {agent_id}")
 
-            # Create poll messages event
+            # Create poll messages event with authentication
             poll_event = Event(
                 event_name=SYSTEM_EVENT_POLL_MESSAGES,
                 source_id=agent_id,
                 destination_id="system:system",
                 payload={"agent_id": agent_id},
+                secret=secret,
             )
 
             # Send the poll request through event handler
