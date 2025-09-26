@@ -23,14 +23,14 @@ from .forum_messages import (
     ForumTopicMessage,
     ForumCommentMessage,
     ForumVoteMessage,
-    ForumQueryMessage
+    ForumQueryMessage,
 )
 
 __all__ = [
-    "ForumAgentAdapter", 
+    "ForumAgentAdapter",
     "ForumNetworkMod",
     "ForumTopicMessage",
-    "ForumCommentMessage", 
+    "ForumCommentMessage",
     "ForumVoteMessage",
-    "ForumQueryMessage"
+    "ForumQueryMessage",
 ]

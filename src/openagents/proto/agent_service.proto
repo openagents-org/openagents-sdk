@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package openagents;
 
-import "google/protobuf/timestamp.proto";
 import "google/protobuf/any.proto";
 
 // Agent service for OpenAgents gRPC transport
@@ -33,9 +32,11 @@ message Event {
   string source_id = 3;          // Source agent ID
   string target_agent_id = 4;    // Target agent ID (optional for broadcasts)
   google.protobuf.Any payload = 5;  // Event-specific data
-  google.protobuf.Timestamp timestamp = 6;
+  int64 timestamp = 6;
   map<string, string> metadata = 7;
   string visibility = 8;         // "local", "network", "external"
+  string relevant_mod = 9;       // Specific mod to process this event (for MOD_ONLY visibility)
+  string secret = 10;            // Authentication secret for the source agent
 }
 
 // Unified event response
@@ -94,7 +95,7 @@ message AgentInfo {
   string agent_id = 1;
   map<string, string> metadata = 2;
   repeated string capabilities = 3;
-  google.protobuf.Timestamp last_seen = 4;
+  int64 last_seen = 4;
   string transport_type = 5;
   string address = 6;
 }
@@ -102,12 +103,12 @@ message AgentInfo {
 // Heartbeat for connection monitoring
 message HeartbeatRequest {
   string agent_id = 1;
-  google.protobuf.Timestamp timestamp = 2;
+  int64 timestamp = 2;
 }
 
 message HeartbeatResponse {
   bool success = 1;
-  google.protobuf.Timestamp timestamp = 2;
+  int64 timestamp = 2;
 }
 
 // Network information

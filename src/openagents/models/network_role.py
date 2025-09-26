@@ -9,7 +9,7 @@ from enum import Enum
 
 class NetworkRole(str, Enum):
     """Defines the type of destination for an event."""
-    
+
     AGENT = "agent"
     CHANNEL = "channel"
     MOD = "mod"

@@ -8,15 +8,18 @@ Includes WebSocket, gRPC, and base transport abstractions.
 # Import base classes
 from .base import Transport, Message
 
-# Import transport implementations  
+# Import transport implementations
 from .websocket import WebSocketTransport, create_websocket_transport
 from .grpc import GRPCTransport, OpenAgentsGRPCServicer, create_grpc_transport
 from .http import HttpTransport
 
 # Import transport types and models
 from openagents.models.transport import (
-    TransportType, ConnectionState, PeerMetadata, 
-    ConnectionInfo, AgentConnection
+    TransportType,
+    ConnectionState,
+    PeerMetadata,
+    ConnectionInfo,
+    AgentConnection,
 )
 from openagents.models.event import Event
 
@@ -24,23 +27,20 @@ from openagents.models.event import Event
 __all__ = [
     # Base classes
     "Transport",
-    "Message", 
+    "Message",
     "Event",
-    
     # Transport implementations
-    "WebSocketTransport", 
+    "WebSocketTransport",
     "GRPCTransport",
     "HttpTransport",
     "OpenAgentsGRPCServicer",
-    
     # Convenience functions
     "create_websocket_transport",
     "create_grpc_transport",
-    
     # Transport types and models
     "TransportType",
-    "ConnectionState", 
+    "ConnectionState",
     "PeerMetadata",
     "ConnectionInfo",
-    "AgentConnection"
+    "AgentConnection",
 ]

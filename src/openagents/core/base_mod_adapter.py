@@ -6,16 +6,17 @@ from openagents.models.event import Event
 from openagents.models.tool import AgentAdapterTool
 from openagents.models.event_thread import EventThread
 
+
 class BaseModAdapter(ABC):
     """Base class for agent adapter level mods in OpenAgents.
-    
+
     Agent adapter mods define behaviors and capabilities for individual agents
     within the network.
     """
 
     def __init__(self, mod_name: str):
         """Initialize the mod adapter.
-        
+
         Args:
             name: The name of the mod adapter
         """
@@ -25,71 +26,69 @@ class BaseModAdapter(ABC):
 
     def bind_agent(self, agent_id: str) -> None:
         """Bind this mod adapter to an agent.
-        
+
         Args:
             agent_id: Unique identifier for the agent to bind to
         """
         self._agent_id = agent_id
-    
+
     def bind_connector(self, connector: GRPCNetworkConnector) -> None:
         """Bind this mod adapter to a connector.
-        
+
         Args:
             connector: The connector to bind to
         """
         self._connector = connector
-        
+
     @property
     def connector(self) -> GRPCNetworkConnector:
         """Get the connector for the mod adapter.
-        
+
         Returns:
             GRPCNetworkConnector: The connector for the mod adapter
         """
         return self._connector
-    
+
     @property
     def mod_name(self) -> str:
         """Get the name of the mod adapter.
-        
+
         Returns:
             str: The name of the mod adapter
         """
         return self._mod_name
-    
+
     @property
     def agent_id(self) -> Optional[str]:
         """Get the agent ID of the mod adapter.
-        
+
         Returns:
             Optional[str]: The agent ID of the mod adapter
         """
         return self._agent_id
-    
+
     def on_connect(self) -> None:
-        """Called when the mod adapter is connected to the network.
-        """
-    
+        """Called when the mod adapter is connected to the network."""
+
     def on_disconnect(self) -> None:
-        """Called when the mod adapter is disconnected from the network.
-        """
-    
+        """Called when the mod adapter is disconnected from the network."""
+
     def initialize(self) -> bool:
         """Initialize the mod.
-        
+
         Returns:
             bool: True if initialization was successful, False otherwise
         """
         return True
-    
+
     def shutdown(self) -> bool:
         """Shutdown the mod gracefully.
-        
+
         Returns:
             bool: True if shutdown was successful, False otherwise
         """
         return True
-    
+
     async def process_incoming_event(self, event: Event) -> Optional[Event]:
         """
         Process an incoming event.
@@ -117,7 +116,7 @@ class BaseModAdapter(ABC):
 
     def get_tools(self) -> List[AgentAdapterTool]:
         """Get the tools for the mod adapter.
-        
+
         Returns:
             List[AgentAdapterTool]: The tools for the mod adapter
         """

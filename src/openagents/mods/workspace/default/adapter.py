@@ -18,42 +18,44 @@ logger = logging.getLogger(__name__)
 class DefaultWorkspaceAgentAdapter(BaseModAdapter):
     """
     Agent adapter for the default workspace mod.
-    
+
     This adapter provides basic workspace functionality and integrates
     with thread messaging capabilities for agent communication.
     """
-    
+
     def __init__(self, agent_id: str, **kwargs):
         """Initialize the default workspace adapter."""
         super().__init__(agent_id, **kwargs)
         self.workspace_data: Dict[str, Any] = {}
-        
+
     def get_tools(self) -> List[AgentAdapterTool]:
         """
         Get available tools for the default workspace.
-        
+
         Returns:
             List of available tools (empty for now as requested)
         """
         # No tools for now as requested
         return []
-    
+
     def handle_message(self, message: Event) -> Optional[Event]:
         """
         Handle incoming messages for the workspace.
-        
+
         Args:
             message: The incoming mod message
-            
+
         Returns:
             Optional response message
         """
-        logger.info(f"Default workspace adapter received message: {message.message_type}")
-        
+        logger.info(
+            f"Default workspace adapter received message: {message.message_type}"
+        )
+
         # For now, just log the message
         # Future implementation will handle workspace-specific messages
         return None
-    
+
     def cleanup(self):
         """Clean up workspace resources."""
         logger.info(f"Cleaning up default workspace adapter for agent {self.agent_id}")

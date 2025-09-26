@@ -9,7 +9,9 @@ Key features:
 - Support for text and binary file attachments
 """
 
-from openagents.mods.communication.simple_messaging.adapter import SimpleMessagingAgentAdapter
+from openagents.mods.communication.simple_messaging.adapter import (
+    SimpleMessagingAgentAdapter,
+)
 from openagents.mods.communication.simple_messaging.mod import SimpleMessagingNetworkMod
 
-__all__ = ["SimpleMessagingAgentAdapter", "SimpleMessagingNetworkMod"] 
+__all__ = ["SimpleMessagingAgentAdapter", "SimpleMessagingNetworkMod"]

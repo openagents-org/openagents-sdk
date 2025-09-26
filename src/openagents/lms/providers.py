@@ -11,37 +11,41 @@ logger = logging.getLogger(__name__)
 
 class BaseModelProvider(ABC):
     """Abstract base class for model providers."""
-    
+
     @abstractmethod
     def __init__(self, model_name: str, **kwargs):
         """Initialize the model provider.
-        
+
         Args:
             model_name: Name of the model to use
             **kwargs: Provider-specific configuration
         """
         pass
-    
+
     @abstractmethod
-    async def chat_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    async def chat_completion(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
         """Generate a chat completion.
-        
+
         Args:
             messages: List of message dictionaries
             tools: Optional list of tool definitions
-            
+
         Returns:
             Response dictionary with standardized format
         """
         pass
-    
+
     @abstractmethod
     def format_tools(self, tools: List[Any]) -> List[Dict[str, Any]]:
         """Format tools for this provider.
-        
+
         Args:
             tools: List of tool objects
-            
+
         Returns:
             List of provider-specific tool definitions
         """
@@ -50,65 +54,77 @@ class BaseModelProvider(ABC):
 
 class OpenAIProvider(BaseModelProvider):
     """OpenAI provider supporting both OpenAI and Azure OpenAI."""
-    
-    def __init__(self, model_name: str, api_base: Optional[str] = None, api_key: Optional[str] = None, **kwargs):
+
+    def __init__(
+        self,
+        model_name: str,
+        api_base: Optional[str] = None,
+        api_key: Optional[str] = None,
+        **kwargs,
+    ):
         self.model_name = model_name
-        
+
         try:
-            from openai import AzureOpenAI, OpenAI
+            from openai import AsyncAzureOpenAI, AsyncOpenAI
         except ImportError:
-            raise ImportError("openai package is required for OpenAI provider. Install with: pip install openai")
-        
+            raise ImportError(
+                "openai package is required for OpenAI provider. Install with: pip install openai"
+            )
+
         # Determine API base URL and initialize client
         effective_api_base = api_base or os.getenv("OPENAI_BASE_URL")
         effective_api_key = api_key or os.getenv("OPENAI_API_KEY")
-        
+
         if effective_api_base and "azure.com" in effective_api_base:
             # Azure OpenAI
             azure_api_key = api_key or os.getenv("AZURE_OPENAI_API_KEY")
-            api_version = kwargs.get("api_version") or os.getenv("OPENAI_API_VERSION", "2024-07-01-preview")
-            self.client = AzureOpenAI(
+            api_version = kwargs.get("api_version") or os.getenv(
+                "OPENAI_API_VERSION", "2024-07-01-preview"
+            )
+            self.client = AsyncAzureOpenAI(
                 azure_endpoint=effective_api_base,
                 api_key=azure_api_key,
-                api_version=api_version
+                api_version=api_version,
             )
         elif effective_api_base:
             # Custom OpenAI-compatible endpoint
-            self.client = OpenAI(base_url=effective_api_base, api_key=effective_api_key)
+            self.client = AsyncOpenAI(
+                base_url=effective_api_base, api_key=effective_api_key
+            )
         else:
             # Standard OpenAI
-            self.client = OpenAI(api_key=effective_api_key)
-    
-    async def chat_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+            self.client = AsyncOpenAI(api_key=effective_api_key)
+
+    async def chat_completion(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
         """Generate chat completion using OpenAI API."""
-        kwargs = {
-            "model": self.model_name,
-            "messages": messages
-        }
-        
+        kwargs = {"model": self.model_name, "messages": messages}
+
         if tools:
             kwargs["tools"] = [{"type": "function", "function": tool} for tool in tools]
             kwargs["tool_choice"] = "auto"
-        
-        response = self.client.chat.completions.create(**kwargs)
-        
+
+        response = await self.client.chat.completions.create(**kwargs)
+
         # Standardize response format
         message = response.choices[0].message
-        result = {
-            "content": message.content,
-            "tool_calls": []
-        }
-        
-        if hasattr(message, 'tool_calls') and message.tool_calls:
+        result = {"content": message.content, "tool_calls": []}
+
+        if hasattr(message, "tool_calls") and message.tool_calls:
             for tool_call in message.tool_calls:
-                result["tool_calls"].append({
-                    "id": tool_call.id,
-                    "name": tool_call.function.name,
-                    "arguments": tool_call.function.arguments
-                })
-        
+                result["tool_calls"].append(
+                    {
+                        "id": tool_call.id,
+                        "name": tool_call.function.name,
+                        "arguments": tool_call.function.arguments,
+                    }
+                )
+
         return result
-    
+
     def format_tools(self, tools: List[Any]) -> List[Dict[str, Any]]:
         """Format tools for OpenAI function calling."""
         return [tool.to_openai_function() for tool in tools]
@@ -116,65 +132,69 @@ class OpenAIProvider(BaseModelProvider):
 
 class AnthropicProvider(BaseModelProvider):
     """Anthropic Claude provider."""
-    
+
     def __init__(self, model_name: str, api_key: Optional[str] = None, **kwargs):
         self.model_name = model_name
-        
+
         try:
             import anthropic
         except ImportError:
-            raise ImportError("anthropic package is required for Anthropic provider. Install with: pip install anthropic")
-        
+            raise ImportError(
+                "anthropic package is required for Anthropic provider. Install with: pip install anthropic"
+            )
+
         api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
-        self.client = anthropic.Anthropic(api_key=api_key)
-    
-    async def chat_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+        self.client = anthropic.AsyncAnthropic(api_key=api_key)
+
+    async def chat_completion(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
         """Generate chat completion using Anthropic API."""
         # Convert messages to Anthropic format
         anthropic_messages = []
         system_message = None
-        
+
         for msg in messages:
             if msg["role"] == "system":
                 system_message = msg["content"]
             else:
-                anthropic_messages.append({
-                    "role": msg["role"],
-                    "content": msg["content"]
-                })
-        
+                anthropic_messages.append(
+                    {"role": msg["role"], "content": msg["content"]}
+                )
+
         kwargs = {
             "model": self.model_name,
             "messages": anthropic_messages,
-            "max_tokens": 4096
+            "max_tokens": 4096,
         }
-        
+
         if system_message:
             kwargs["system"] = system_message
-        
+
         if tools:
             kwargs["tools"] = tools
-        
-        response = self.client.messages.create(**kwargs)
-        
+
+        response = await self.client.messages.create(**kwargs)
+
         # Standardize response format
-        result = {
-            "content": "",
-            "tool_calls": []
-        }
-        
+        result = {"content": "", "tool_calls": []}
+
         for content_block in response.content:
             if content_block.type == "text":
                 result["content"] += content_block.text
             elif content_block.type == "tool_use":
-                result["tool_calls"].append({
-                    "id": content_block.id,
-                    "name": content_block.name,
-                    "arguments": json.dumps(content_block.input)
-                })
-        
+                result["tool_calls"].append(
+                    {
+                        "id": content_block.id,
+                        "name": content_block.name,
+                        "arguments": json.dumps(content_block.input),
+                    }
+                )
+
         return result
-    
+
     def format_tools(self, tools: List[Any]) -> List[Dict[str, Any]]:
         """Format tools for Anthropic tool use."""
         formatted_tools = []
@@ -183,7 +203,7 @@ class AnthropicProvider(BaseModelProvider):
             anthropic_tool = {
                 "name": openai_format["name"],
                 "description": openai_format["description"],
-                "input_schema": openai_format["parameters"]
+                "input_schema": openai_format["parameters"],
             }
             formatted_tools.append(anthropic_tool)
         return formatted_tools
@@ -191,78 +211,88 @@ class AnthropicProvider(BaseModelProvider):
 
 class BedrockProvider(BaseModelProvider):
     """AWS Bedrock provider supporting Claude and other models."""
-    
+
     def __init__(self, model_name: str, region: Optional[str] = None, **kwargs):
         self.model_name = model_name
         self.region = region or os.getenv("AWS_DEFAULT_REGION", "us-east-1")
-        
+
         try:
-            import boto3
+            import aioboto3
         except ImportError:
-            raise ImportError("boto3 package is required for Bedrock provider. Install with: pip install boto3")
-        
-        self.client = boto3.client("bedrock-runtime", region_name=self.region)
-    
-    async def chat_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+            raise ImportError(
+                "aioboto3 package is required for async Bedrock provider. Install with: pip install aioboto3"
+            )
+
+        self.session = aioboto3.Session()
+
+    async def chat_completion(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
         """Generate chat completion using AWS Bedrock."""
         # Format depends on the specific model
         if "claude" in self.model_name.lower():
             return await self._claude_bedrock_completion(messages, tools)
         else:
-            raise NotImplementedError(f"Model {self.model_name} not yet supported in Bedrock provider")
-    
-    async def _claude_bedrock_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+            raise NotImplementedError(
+                f"Model {self.model_name} not yet supported in Bedrock provider"
+            )
+
+    async def _claude_bedrock_completion(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
         """Handle Claude models on Bedrock."""
         # Convert to Claude Bedrock format
         claude_messages = []
         system_message = None
-        
+
         for msg in messages:
             if msg["role"] == "system":
                 system_message = msg["content"]
             else:
-                claude_messages.append({
-                    "role": msg["role"],
-                    "content": msg["content"]
-                })
-        
+                claude_messages.append({"role": msg["role"], "content": msg["content"]})
+
         body = {
             "anthropic_version": "bedrock-2023-05-31",
             "max_tokens": 4096,
-            "messages": claude_messages
+            "messages": claude_messages,
         }
-        
+
         if system_message:
             body["system"] = system_message
-        
+
         if tools:
             body["tools"] = tools
-        
-        response = self.client.invoke_model(
-            modelId=self.model_name,
-            body=json.dumps(body)
-        )
-        
+
+        async with self.session.client(
+            "bedrock-runtime", region_name=self.region
+        ) as client:
+            response = await client.invoke_model(
+                modelId=self.model_name, body=json.dumps(body)
+            )
+
         response_body = json.loads(response["body"].read())
-        
+
         # Standardize response format
-        result = {
-            "content": "",
-            "tool_calls": []
-        }
-        
+        result = {"content": "", "tool_calls": []}
+
         for content_block in response_body.get("content", []):
             if content_block["type"] == "text":
                 result["content"] += content_block["text"]
             elif content_block["type"] == "tool_use":
-                result["tool_calls"].append({
-                    "id": content_block["id"],
-                    "name": content_block["name"],
-                    "arguments": json.dumps(content_block["input"])
-                })
-        
+                result["tool_calls"].append(
+                    {
+                        "id": content_block["id"],
+                        "name": content_block["name"],
+                        "arguments": json.dumps(content_block["input"]),
+                    }
+                )
+
         return result
-    
+
     def format_tools(self, tools: List[Any]) -> List[Dict[str, Any]]:
         """Format tools for Bedrock."""
         formatted_tools = []
@@ -271,7 +301,7 @@ class BedrockProvider(BaseModelProvider):
             bedrock_tool = {
                 "name": openai_format["name"],
                 "description": openai_format["description"],
-                "input_schema": openai_format["parameters"]
+                "input_schema": openai_format["parameters"],
             }
             formatted_tools.append(bedrock_tool)
         return formatted_tools
@@ -279,24 +309,30 @@ class BedrockProvider(BaseModelProvider):
 
 class GeminiProvider(BaseModelProvider):
     """Google Gemini provider."""
-    
+
     def __init__(self, model_name: str, api_key: Optional[str] = None, **kwargs):
         self.model_name = model_name
-        
+
         try:
             import google.generativeai as genai
         except ImportError:
-            raise ImportError("google-generativeai package is required for Gemini provider. Install with: pip install google-generativeai")
-        
+            raise ImportError(
+                "google-generativeai package is required for Gemini provider. Install with: pip install google-generativeai"
+            )
+
         api_key = api_key or os.getenv("GOOGLE_API_KEY")
         genai.configure(api_key=api_key)
         self.client = genai.GenerativeModel(model_name)
-    
-    async def chat_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+
+    async def chat_completion(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
         """Generate chat completion using Gemini API."""
         # Convert messages to Gemini format
         gemini_messages = []
-        
+
         for msg in messages:
             if msg["role"] == "system":
                 # Gemini handles system messages differently
@@ -305,20 +341,19 @@ class GeminiProvider(BaseModelProvider):
             elif msg["role"] == "user":
                 gemini_messages.append({"role": "user", "parts": [msg["content"]]})
             elif msg["role"] == "assistant":
-                gemini_messages.append({"role": "model", "parts": [msg["content"] or ""]})
-        
+                gemini_messages.append(
+                    {"role": "model", "parts": [msg["content"] or ""]}
+                )
+
         # For now, simple text completion (tool calling requires more complex setup)
         if gemini_messages:
             last_message = gemini_messages[-1]["parts"][0] if gemini_messages else ""
-            response = self.client.generate_content(last_message)
-            
-            return {
-                "content": response.text,
-                "tool_calls": []
-            }
+            response = await self.client.generate_content_async(last_message)
+
+            return {"content": response.text, "tool_calls": []}
         else:
             return {"content": "", "tool_calls": []}
-    
+
     def format_tools(self, tools: List[Any]) -> List[Dict[str, Any]]:
         """Format tools for Gemini (simplified for now)."""
         return []  # Tool calling implementation would go here
@@ -326,48 +361,52 @@ class GeminiProvider(BaseModelProvider):
 
 class SimpleGenericProvider(BaseModelProvider):
     """Generic provider for OpenAI-compatible APIs (DeepSeek, Qwen, Grok, etc.)."""
-    
-    def __init__(self, model_name: str, api_base: str, api_key: Optional[str] = None, **kwargs):
+
+    def __init__(
+        self, model_name: str, api_base: str, api_key: Optional[str] = None, **kwargs
+    ):
         self.model_name = model_name
         self.api_base = api_base
-        
+
         try:
-            from openai import OpenAI
+            from openai import AsyncOpenAI
         except ImportError:
-            raise ImportError("openai package is required for generic provider. Install with: pip install openai")
-        
-        self.client = OpenAI(base_url=api_base, api_key=api_key or "dummy")
-    
-    async def chat_completion(self, messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+            raise ImportError(
+                "openai package is required for generic provider. Install with: pip install openai"
+            )
+
+        self.client = AsyncOpenAI(base_url=api_base, api_key=api_key or "dummy")
+
+    async def chat_completion(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
         """Generate chat completion using OpenAI-compatible API."""
-        kwargs = {
-            "model": self.model_name,
-            "messages": messages
-        }
-        
+        kwargs = {"model": self.model_name, "messages": messages}
+
         if tools:
             kwargs["tools"] = [{"type": "function", "function": tool} for tool in tools]
             kwargs["tool_choice"] = "auto"
-        
-        response = self.client.chat.completions.create(**kwargs)
-        
+
+        response = await self.client.chat.completions.create(**kwargs)
+
         # Standardize response format
         message = response.choices[0].message
-        result = {
-            "content": message.content,
-            "tool_calls": []
-        }
-        
-        if hasattr(message, 'tool_calls') and message.tool_calls:
+        result = {"content": message.content, "tool_calls": []}
+
+        if hasattr(message, "tool_calls") and message.tool_calls:
             for tool_call in message.tool_calls:
-                result["tool_calls"].append({
-                    "id": tool_call.id,
-                    "name": tool_call.function.name,
-                    "arguments": tool_call.function.arguments
-                })
-        
+                result["tool_calls"].append(
+                    {
+                        "id": tool_call.id,
+                        "name": tool_call.function.name,
+                        "arguments": tool_call.function.arguments,
+                    }
+                )
+
         return result
-    
+
     def format_tools(self, tools: List[Any]) -> List[Dict[str, Any]]:
         """Format tools for OpenAI-compatible function calling."""
         return [tool.to_openai_function() for tool in tools]

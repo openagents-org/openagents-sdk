@@ -9,137 +9,145 @@ participate in the community knowledge base network.
 import asyncio
 import logging
 import sys
+import time
 from pathlib import Path
 
 # Add the OpenAgents source to the path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from openagents.agents.worker_agent import WorkerAgent, ChannelMessageContext, EventContext
-from openagents.config.globals import DEFAULT_NETWORK_PORT
+from openagents.config.globals import DEFAULT_TRANSPORT_ADDRESS
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class CommunityMemberAgent:
+class CommunityMemberAgent(WorkerAgent):
     """Simple agent that participates in the community knowledge base."""
     
-    def __init__(self, agent_id: str):
-        self.agent_id = agent_id
-        self.client = AgentClient(agent_id=agent_id)
-        self.adapter = ThreadMessagingAgentAdapter()
-        
-        # Register the thread messaging adapter
-        self.client.register_mod_adapter(self.adapter)
-        
-        # Set up message handlers
-        self._setup_handlers()
+    default_agent_id = "community-member-1"
+    auto_mention_response = True
+    default_channels = ["general", "#ai-news", "#research", "#tools"]
     
-    def _setup_handlers(self):
-        """Set up message and event handlers."""
-        
-        def message_handler(content, sender_id):
-            """Handle incoming messages."""
-            logger.info(f"[{self.agent_id}] Received message from {sender_id}: {content.get('text', '')}")
-            
-            # Respond to mentions
-            text = content.get('text', '').lower()
-            if f"@{self.agent_id}" in text:
-                asyncio.create_task(self._handle_mention(content, sender_id))
-        
-        def reaction_handler(message_id, agent_id, reaction_type, action):
-            """Handle reactions to messages."""
-            logger.info(f"[{self.agent_id}] {agent_id} reacted with {reaction_type} to message {message_id}")
-        
-        # Register handlers for all channels
-        channels = ["general", "ai-news", "research", "tools", "announcements"]
-        for channel in channels:
-            self.adapter.register_message_handler(channel, message_handler)
-            self.adapter.register_reaction_handler(channel, reaction_handler)
+    def __init__(self, **kwargs):
+        """Initialize the Community Member Agent."""
+        super().__init__(**kwargs)
     
-    async def _handle_mention(self, content, sender_id):
-        """Handle when this agent is mentioned."""
-        text = content.get('text', '').lower()
+    async def on_direct(self, msg: EventContext):
+        """Handle direct messages."""
+        text = msg.text.lower().strip()
         
         if "hello" in text or "hi" in text:
-            await self.adapter.send_broadcast_thread_message(
-                content={"text": f"Hello {sender_id}! 👋 I'm a community member interested in AI developments."},
-                channel="general"
+            ws = self.workspace()
+            await ws.agent(msg.sender_id).send_message(
+                f"Hello {msg.sender_id}! 👋 I'm a community member interested in AI developments."
             )
         elif "help" in text:
-            await self.adapter.send_broadcast_thread_message(
-                content={"text": f"Hi {sender_id}! I'm here to participate in AI discussions. Try asking @ai-news-bot for the latest updates!"},
-                channel="general"
+            ws = self.workspace()
+            await ws.agent(msg.sender_id).send_message(
+                f"Hi {msg.sender_id}! I'm here to participate in AI discussions. Try asking @ai-news-bot for the latest updates!"
             )
         else:
-            await self.adapter.send_broadcast_thread_message(
-                content={"text": f"Thanks for mentioning me, {sender_id}! I'm always interested in AI discussions."},
-                channel="general"
+            ws = self.workspace()
+            await ws.agent(msg.sender_id).send_message(
+                f"Thanks for messaging me, {msg.sender_id}! I'm always interested in AI discussions."
             )
     
-    async def connect(self, host="localhost", port=DEFAULT_NETWORK_PORT):
-        """Connect to the community network."""
-        try:
-            success = await self.client.connect_to_server(host=host, port=port)
-            if success:
-                logger.info(f"✅ {self.agent_id} connected to community network")
-                
-                # Send introduction message
-                await self.adapter.send_broadcast_thread_message(
-                    content={"text": f"👋 Hello community! {self.agent_id} has joined the network. Excited to learn about AI developments!"},
-                    channel="general"
-                )
-                
-                return True
-            else:
-                logger.error(f"❌ Failed to connect {self.agent_id}")
-                return False
-        except Exception as e:
-            logger.error(f"❌ Connection error for {self.agent_id}: {e}")
-            return False
-    
-    async def disconnect(self):
-        """Disconnect from the network."""
-        try:
-            # Send goodbye message
-            await self.adapter.send_broadcast_thread_message(
-                content={"text": f"👋 {self.agent_id} is leaving the network. Thanks for the great discussions!"},
-                channel="general"
+    async def on_channel_mention(self, msg: ChannelMessageContext):
+        """Handle mentions in channels."""
+        text = msg.text.lower()
+        
+        # Remove mention from text for processing
+        clean_text = text.replace(f"@{self.default_agent_id}", "").strip()
+        
+        if "hello" in clean_text or "hi" in clean_text:
+            ws = self.workspace()
+            await ws.channel(msg.channel).post_with_mention(
+                f"Hello {msg.sender_id}! 👋 I'm a community member interested in AI developments.",
+                mention_agent_id=msg.sender_id
             )
-            
-            await asyncio.sleep(1)  # Give time for message to send
-            await self.client.disconnect()
-            logger.info(f"✅ {self.agent_id} disconnected")
+        elif "help" in clean_text:
+            ws = self.workspace()
+            await ws.channel(msg.channel).post_with_mention(
+                f"Hi {msg.sender_id}! I'm here to participate in AI discussions. Try asking @ai-news-bot for the latest updates!",
+                mention_agent_id=msg.sender_id
+            )
+        else:
+            ws = self.workspace()
+            await ws.channel(msg.channel).post_with_mention(
+                f"Thanks for mentioning me, {msg.sender_id}! I'm always interested in AI discussions.",
+                mention_agent_id=msg.sender_id
+            )
+    
+    async def on_startup(self):
+        """Initialize the agent and send introduction message."""
+        logger.info(f"🤖 Community Member Agent '{self.default_agent_id}' starting up...")
+        
+        # Send introduction message
+        try:
+            ws = self.workspace()
+            ws._auto_connect_config = {
+                'host': 'localhost',
+                'port': DEFAULT_TRANSPORT_ADDRESS['http']['port']
+            }
+            await ws.channel("general").post(
+                f"👋 Hello community! {self.client.agent_id} has joined the network. Excited to learn about AI developments!"
+            )
+            logger.info("✅ Successfully sent introduction message to general channel")
         except Exception as e:
-            logger.error(f"❌ Disconnect error for {self.agent_id}: {e}")
+            logger.error(f"❌ Failed to send introduction message: {e}")
+        
+        logger.info("✅ Community Member Agent startup complete")
+    
+    async def on_shutdown(self):
+        """Clean shutdown of the agent."""
+        logger.info("🛑 Community Member Agent shutting down...")
+        
+        # Send goodbye message
+        try:
+            ws = self.workspace()
+            await ws.channel("general").post(
+                f"👋 {self.client.agent_id} is leaving the network. Thanks for the great discussions!"
+            )
+            logger.info("✅ Successfully sent goodbye message")
+        except Exception as e:
+            logger.error(f"❌ Failed to send goodbye message: {e}")
+        
+        logger.info("✅ Community Member Agent shutdown complete")
     
     async def participate(self):
         """Simulate participation in the community."""
-        # Wait a bit after connecting
+        # Wait a bit after startup
         await asyncio.sleep(5)
         
         # Ask the AI bot for a summary
-        await self.adapter.send_broadcast_thread_message(
-            content={"text": "@ai-news-bot summary"},
-            channel="general"
-        )
+        try:
+            ws = self.workspace()
+            await ws.channel("general").post("@ai-news-bot summary")
+            logger.info("✅ Asked AI bot for summary")
+        except Exception as e:
+            logger.error(f"❌ Failed to ask for summary: {e}")
         
         await asyncio.sleep(10)
         
         # Share interest in a topic
-        await self.adapter.send_broadcast_thread_message(
-            content={"text": "I'm really interested in the latest developments in multimodal AI. Has anyone seen interesting papers recently?"},
-            channel="research"
-        )
+        try:
+            ws = self.workspace()
+            await ws.channel("research").post("I'm really interested in the latest developments in multimodal AI. Has anyone seen interesting papers recently?")
+            logger.info("✅ Shared interest in research channel")
+        except Exception as e:
+            logger.error(f"❌ Failed to share interest: {e}")
         
         await asyncio.sleep(15)
         
         # Search for specific content
-        await self.adapter.send_broadcast_thread_message(
-            content={"text": "@ai-news-bot search transformer models"},
-            channel="research"
-        )
+        try:
+            ws = self.workspace()
+            await ws.channel("research").post("@ai-news-bot search transformer models")
+            logger.info("✅ Asked AI bot to search for transformer models")
+        except Exception as e:
+            logger.error(f"❌ Failed to search: {e}")
 
 
 async def main():
@@ -147,20 +155,17 @@ async def main():
     print("🤖 Starting Community Member Agent Example...")
     print("=" * 60)
     
-    # Create a community member agent
-    agent = CommunityMemberAgent("community-member-1")
+    # Create a community member agent with unique ID
+    unique_id = f"community-member-{int(time.time())}"
+    agent = CommunityMemberAgent(agent_id=unique_id)
+    print(f"🆔 Agent ID: {unique_id}")
     
     try:
-        # Connect to the network
+        # Start the agent (connects to network and runs startup)
         print("🔌 Connecting to Community Knowledge Base network...")
-        connected = await agent.connect()
-        
-        if not connected:
-            print("❌ Failed to connect to network. Make sure the network is running!")
-            print("💡 Start the network with: openagents launch-network network_config.yaml")
-            return 1
-        
+        await agent.async_start(host="localhost", port=DEFAULT_TRANSPORT_ADDRESS['http']['port'])
         print("✅ Connected successfully!")
+        
         print("🎭 Participating in community discussions...")
         
         # Participate in the community
@@ -181,14 +186,14 @@ async def main():
     except KeyboardInterrupt:
         print("\n🛑 Stopping agent...")
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error running agent: {e}")
         import traceback
         traceback.print_exc()
         return 1
     finally:
-        # Disconnect
-        await agent.disconnect()
-        print("👋 Agent disconnected")
+        # Clean shutdown
+        await agent.async_stop()
+        print("👋 Community Member Agent stopped")
     
     return 0
 

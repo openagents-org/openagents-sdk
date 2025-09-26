@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useWikiStore } from "@/stores/wikiStore";
+import { useRecentPagesStore } from "@/stores/recentPagesStore";
 import { useOpenAgentsService } from "@/contexts/OpenAgentsServiceContext";
 import useConnectedStatus from "@/hooks/useConnectedStatus";
 
@@ -51,9 +52,9 @@ const WikiPageItem: React.FC<{
               </div>
             </div>
           </div>
-          {isRecentlyUpdated && (
+          {/* {isRecentlyUpdated && (
             <span className="ml-2 w-2 h-2 bg-green-500 rounded-full flex-shrink-0 mt-1.5"></span>
-          )}
+          )} */}
         </div>
       </button>
     </li>
@@ -67,6 +68,7 @@ const WikiSidebar: React.FC = () => {
   const location = useLocation();
   const { service: openAgentsService } = useOpenAgentsService();
   const { isConnected } = useConnectedStatus();
+  const { recentPages: recentPagesData, addRecentPage } = useRecentPagesStore();
 
   const {
     pages,
@@ -76,12 +78,28 @@ const WikiSidebar: React.FC = () => {
     cleanupEventListeners
   } = useWikiStore();
 
-  // 获取最近页面（按最后修改时间排序，取前10个）
+  // 获取最近点击访问的页面（过滤后的有效页面）
   const recentPages = useMemo(() => {
-    const sortedPages = [...pages].sort((a, b) => b.last_modified - a.last_modified);
-    console.log('WikiSidebar: Recent pages recalculated. Total pages:', pages.length, 'Recent count:', Math.min(10, sortedPages.length));
-    return sortedPages.slice(0, 10);
-  }, [pages]);
+    const currentPagePaths = new Set(pages.map(p => p.page_path));
+    const validRecentPages = recentPagesData.filter(recentPage => currentPagePaths.has(recentPage.page_path));
+
+    // 将recent page data转换为WikiPage格式以保持组件兼容性
+    const recentWikiPages = validRecentPages.map(recentPage => {
+      const fullPageData = pages.find(p => p.page_path === recentPage.page_path);
+      return fullPageData || {
+        page_path: recentPage.page_path,
+        title: recentPage.title,
+        last_modified: recentPage.visited_at / 1000,
+        wiki_content: recentPage.preview_content || '',
+        creator_id: 'unknown',
+        created_at: recentPage.visited_at / 1000,
+        version: 1
+      };
+    });
+
+    console.log('WikiSidebar: Recent clicked pages recalculated. Total recent:', recentPagesData.length, 'Valid count:', recentWikiPages.length);
+    return recentWikiPages;
+  }, [recentPagesData, pages]);
 
   // 检查当前是否在某个页面详情页
   const currentPagePath = location.pathname.match(/^\/wiki\/detail\/(.+)$/)?.[1];
@@ -117,18 +135,25 @@ const WikiSidebar: React.FC = () => {
 
   // 页面选择处理
   const onPageSelect = (pagePath: string) => {
+    // 先找到对应的页面对象并记录到recent pages
+    const page = pages.find(p => p.page_path === pagePath);
+    if (page) {
+      console.log('WikiSidebar: Adding page to recent pages:', page.title);
+      addRecentPage(page);
+    }
+
     navigate(`/wiki/detail/${encodeURIComponent(pagePath)}`);
   };
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Recent Pages Section */}
-      <SectionHeader title="RECENT PAGES" />
+      <SectionHeader title="RECENT 10 PAGES" />
       <div className="flex-1 overflow-y-auto px-3 custom-scrollbar">
         {recentPages.length === 0 ? (
           <div className="text-center py-4">
             <p className="text-gray-500 dark:text-gray-400 text-sm">
-              No pages yet
+              No recent pages
             </p>
           </div>
         ) : (

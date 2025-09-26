@@ -8,12 +8,12 @@ from openagents.agents.orchestrator import orchestrate_agent
 
 logger = logging.getLogger(__name__)
 
+
 class SimpleAutoAgent(AgentRunner):
     """
     A simple agent that responds to all incoming messages automatically.
     """
-        
-        
+
     async def react(self, context: EventContext):
         """React to an incoming message using agent orchestrator."""
-        self.run_agent(context=context)
+        await self.run_agent(context=context)

@@ -7,17 +7,17 @@ from .project_messages import (
     ProjectStatusMessage,
     ProjectNotificationMessage,
     ProjectChannelMessage,
-    ProjectListMessage
+    ProjectListMessage,
 )
 
 __all__ = [
-    "Project", 
-    "ProjectStatus", 
+    "Project",
+    "ProjectStatus",
     "ProjectConfig",
     "ProjectMessage",
     "ProjectCreationMessage",
-    "ProjectStatusMessage", 
+    "ProjectStatusMessage",
     "ProjectNotificationMessage",
     "ProjectChannelMessage",
-    "ProjectListMessage"
+    "ProjectListMessage",
 ]

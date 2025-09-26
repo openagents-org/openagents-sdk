@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useWikiStore } from '@/stores/wikiStore';
+import { useToast } from '@/context/ToastContext';
 import WikiEditor from './WikiEditor';
 
 interface WikiCreateModalProps {
@@ -12,7 +13,8 @@ const WikiCreateModal: React.FC<WikiCreateModalProps> = ({ isOpen, onClose }) =>
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
 
-  const { createPage, pagesError, clearError } = useWikiStore();
+  const { createPage } = useWikiStore();
+  const { error: showErrorToast } = useToast();
 
   // 重置表单当模态框打开/关闭时
   useEffect(() => {
@@ -20,9 +22,8 @@ const WikiCreateModal: React.FC<WikiCreateModalProps> = ({ isOpen, onClose }) =>
       setPagePath('');
       setTitle('');
       setContent('');
-      clearError();
     }
-  }, [isOpen, clearError]);
+  }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,11 +32,13 @@ const WikiCreateModal: React.FC<WikiCreateModalProps> = ({ isOpen, onClose }) =>
     const success = await createPage(pagePath, title, content);
     if (success) {
       onClose();
+    } else {
+      // createPage会返回错误信息，通过toast显示
+      showErrorToast('Failed to create wiki page. Page may already exist.');
     }
   };
 
   const handleClose = () => {
-    clearError();
     onClose();
   };
 
@@ -63,12 +66,6 @@ const WikiCreateModal: React.FC<WikiCreateModalProps> = ({ isOpen, onClose }) =>
 
         {/* Content */}
         <div className="flex-1 px-6 py-4 overflow-hidden">
-
-        {pagesError && (
-          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-red-700 dark:text-red-300 text-sm">{pagesError}</p>
-          </div>
-        )}
 
         <form id="wiki-form" onSubmit={handleSubmit} className="flex-1 flex flex-col space-y-4">
           <div>
@@ -107,7 +104,7 @@ const WikiCreateModal: React.FC<WikiCreateModalProps> = ({ isOpen, onClose }) =>
               value={content}
               onChange={setContent}
               modes={['edit', 'preview']}
-              style={{ minHeight: '250px', height: '100%' }}
+              style={{ minHeight: '200px', maxHeight: '200px' }}
               placeholder="Enter page content in Markdown format..."
               textareaProps={{ required: true }}
             />

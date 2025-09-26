@@ -5,7 +5,8 @@
  * It provides immediate EventResponse feedback via HTTP transport.
  */
 
-import { Event, EventResponse, EventNames, AgentInfo } from "@/types/events";
+import { Event, EventResponse, EventNames, AgentInfo } from "../types/events";
+import { buildNetworkUrl, buildNetworkHeaders, networkFetch } from "../utils/httpClient";
 
 export interface ConnectionOptions {
   host: string;
@@ -23,6 +24,8 @@ export class HttpEventConnector {
   private agentId: string;
   private originalAgentId: string;
   private baseUrl: string;
+  private host: string;
+  private port: number;
   private connected = false;
   private isConnecting = false;
   private connectionAborted = false;
@@ -31,15 +34,17 @@ export class HttpEventConnector {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private timeout: number;
+  private secret: string | null = null;
 
   constructor(options: ConnectionOptions) {
     this.agentId = options.agentId;
     this.originalAgentId = options.agentId;
     this.timeout = options.timeout || 30000;
 
-    // Construct base URL for HTTP requests (user enters HTTP port directly)
-    const protocol = window.location.protocol === "https:" ? "https" : "http";
-    this.baseUrl = `${protocol}://${options.host}:${options.port}/api`;
+    // Store host and port for network requests
+    this.baseUrl = `http://${options.host}:${options.port}/api`;
+    this.host = options.host;
+    this.port = options.port;
   }
 
   /**
@@ -65,8 +70,8 @@ export class HttpEventConnector {
       console.log(`👤 Agent: ${this.agentId}`);
 
       // Health check
-      console.log(`📡 Sending health check to ${this.baseUrl}/health`);
-      const healthResponse = await this.sendHttpRequest("/health", "GET");
+      console.log(`📡 Sending health check to ${this.baseUrl}/api/health`);
+      const healthResponse = await this.sendHttpRequest("/api/health", "GET");
       console.log("📡 Health check response:", healthResponse);
       if (!healthResponse.success) {
         throw new Error(
@@ -75,8 +80,8 @@ export class HttpEventConnector {
       }
 
       // Register agent
-      console.log(`📡 Sending registration to ${this.baseUrl}/register`);
-      const registerResponse = await this.sendHttpRequest("/register", "POST", {
+      console.log(`📡 Sending registration to ${this.baseUrl}/api/register`);
+      const registerResponse = await this.sendHttpRequest("/api/register", "POST", {
         agent_id: this.agentId,
         metadata: {
           display_name: this.agentId,
@@ -90,6 +95,14 @@ export class HttpEventConnector {
         throw new Error(
           registerResponse.error_message || "Registration failed"
         );
+      }
+
+      // Store authentication secret from registration response
+      if (registerResponse.secret) {
+        this.secret = registerResponse.secret;
+        console.log("🔑 Authentication secret received and stored");
+      } else {
+        console.warn("⚠️ No authentication secret received from network");
       }
 
       this.connected = true;
@@ -129,6 +142,7 @@ export class HttpEventConnector {
 
     this.connectionAborted = true;
     this.connected = false;
+    this.secret = null; // Clear authentication secret
 
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);
@@ -136,7 +150,7 @@ export class HttpEventConnector {
     }
 
     try {
-      await this.sendHttpRequest("/unregister", "POST", {
+      await this.sendHttpRequest("/api/unregister", "POST", {
         agent_id: this.agentId,
       });
     } catch (error) {
@@ -180,11 +194,16 @@ export class HttpEventConnector {
         event.timestamp = Math.floor(Date.now() / 1000);
       }
 
+      // Add authentication secret
+      if (!event.secret && this.secret) {
+        event.secret = this.secret;
+      }
+
       console.log(
         `📤 Sending event: ${event.event_name} from ${event.source_id}`
       );
 
-      const response = await this.sendHttpRequest("/send_event", "POST", {
+      const response = await this.sendHttpRequest("/api/send_event", "POST", {
         event_id: event.event_id,
         event_name: event.event_name,
         source_id: event.source_id,
@@ -192,6 +211,7 @@ export class HttpEventConnector {
         payload: event.payload || {},
         metadata: event.metadata || {},
         visibility: event.visibility || "network",
+        secret: event.secret || "",
       });
 
       const eventResponse: EventResponse = {
@@ -235,7 +255,7 @@ export class HttpEventConnector {
       destination_id: `agent:${targetAgentId}`,
       payload: {
         target_agent_id: targetAgentId,
-        text: content,
+        content: { text: content },
         message_type: "direct_message",
       },
     });
@@ -248,7 +268,7 @@ export class HttpEventConnector {
   ): Promise<EventResponse> {
     const payload: any = {
       channel: channel,
-      text: content,  // Updated: use 'text' directly instead of nested 'content.text'
+      content: { text: content },
       message_type: "channel_message",
     };
 
@@ -346,7 +366,7 @@ export class HttpEventConnector {
 
   async getNetworkHealth(): Promise<any> {
     try {
-      const response = await this.sendHttpRequest("/health", "GET");
+      const response = await this.sendHttpRequest("/api/health", "GET");
       return response.data || {};
     } catch (error) {
       console.error("Failed to get network health:", error);
@@ -437,7 +457,7 @@ export class HttpEventConnector {
   private async pollEvents(): Promise<void> {
     try {
       const response = await this.sendHttpRequest(
-        `/poll?agent_id=${this.agentId}`,
+        `/api/poll?agent_id=${this.agentId}`,
         "GET"
       );
 
@@ -478,26 +498,22 @@ export class HttpEventConnector {
   }
 
   /**
-   * Send HTTP request helper
+   * Send HTTP request helper with proxy support
    */
   private async sendHttpRequest(
     endpoint: string,
     method: "GET" | "POST",
     data?: any
   ): Promise<any> {
-    const url = `${this.baseUrl}${endpoint}`;
-    const isPolling = endpoint.includes('/poll?agent_id=');
+    const isPolling = endpoint.includes('/api/poll?agent_id=');
     
     if (!isPolling) {
-      console.log(`🌐 ${method} ${url}`, data ? { body: data } : "");
+      console.log(`🌐 ${method} ${endpoint}`, data ? { body: data } : "");
     }
 
-    const options: RequestInit = {
+    const options: RequestInit & { timeout?: number } = {
       method,
-      headers: {
-        "Content-Type": "application/json",
-      },
-      signal: AbortSignal.timeout(this.timeout),
+      timeout: this.timeout,
     };
 
     if (data && method === "POST") {
@@ -505,7 +521,12 @@ export class HttpEventConnector {
     }
 
     try {
-      const response = await fetch(url, options);
+      const response = await networkFetch(
+        this.host,
+        this.port,
+        endpoint,
+        options
+      );
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -519,7 +540,7 @@ export class HttpEventConnector {
       if (isPolling) {
         const hasMessages = result.messages && result.messages.length > 0;
         if (hasMessages) {
-          console.log(`🌐 ${method} ${url}`);
+          console.log(`🌐 ${method} ${endpoint}`);
           console.log(`📡 Response ${response.status} for ${method} ${endpoint}`);
           console.log(`📦 Response data for ${endpoint}:`, result);
         }
@@ -530,7 +551,7 @@ export class HttpEventConnector {
       
       return result;
     } catch (error) {
-      console.error(`❌ Request failed for ${method} ${url}:`, error);
+      console.error(`❌ Request failed for ${method} ${endpoint}:`, error);
       throw error;
     }
   }

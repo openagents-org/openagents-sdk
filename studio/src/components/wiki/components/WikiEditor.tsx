@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import MDEditor from '@uiw/react-md-editor';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer';
 import DiffViewer from '@/components/common/DiffViewer';
+import { useThemeStore } from '@/stores/themeStore';
 import '@uiw/react-md-editor/markdown-editor.css';
 import '@uiw/react-markdown-preview/markdown.css';
 
@@ -33,6 +34,7 @@ const WikiEditor: React.FC<WikiEditorProps> = ({
   textareaProps
 }) => {
   const [currentMode, setCurrentMode] = useState<EditorMode>(modes[0] || 'edit');
+  const { theme } = useThemeStore();
 
   // 确保当前模式在可用模式列表中
   useEffect(() => {
@@ -58,7 +60,7 @@ const WikiEditor: React.FC<WikiEditorProps> = ({
     switch (currentMode) {
       case 'edit':
         return (
-          <div data-color-mode="auto" className="flex-1">
+          <div data-color-mode={theme} className="flex-1">
             <MDEditor
               value={value}
               onChange={(val) => onChange(val || '')}
@@ -81,7 +83,7 @@ const WikiEditor: React.FC<WikiEditorProps> = ({
 
       case 'preview':
         return (
-          <div className="flex-1 overflow-auto border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-800">
+          <div className="flex-1 max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-800">
             <div className="max-w-none">
               <MarkdownRenderer
                 content={value || 'Nothing to preview'}
@@ -117,6 +119,7 @@ const WikiEditor: React.FC<WikiEditorProps> = ({
             {modes.map((mode) => (
               <button
                 key={mode}
+                type="button"
                 onClick={() => setCurrentMode(mode)}
                 className={`px-3 py-1 text-sm ${
                   currentMode === mode

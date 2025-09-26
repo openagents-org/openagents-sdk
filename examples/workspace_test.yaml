@@ -34,6 +34,7 @@ network:
     
   # Security configuration
   encryption_enabled: false  # Disabled for local development
+  disable_agent_secret_verification: true  # Disabled for testing
   
   # Discovery configuration
   discovery_interval: 10
@@ -166,8 +167,8 @@ network_profile:
   discoverable: true
   name: "Work Test Workspace"
   description: "A test workspace for collaborative work and productivity features including messaging, documents, forum, and wiki"
-  icon: "https://openagents.io/icons/work-test.png"
-  website: "https://openagents.io"
+  icon: "https://openagents.org/icons/work-test.png"
+  website: "https://openagents.org"
   tags:
     - "work"
     - "test"
