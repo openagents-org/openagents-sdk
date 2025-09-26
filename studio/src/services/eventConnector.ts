@@ -5,7 +5,8 @@
  * It provides immediate EventResponse feedback via HTTP transport.
  */
 
-import { Event, EventResponse, EventNames, AgentInfo } from "@/types/events";
+import { Event, EventResponse, EventNames, AgentInfo } from "../types/events";
+import { buildNetworkUrl, buildNetworkHeaders, networkFetch } from "../utils/httpClient";
 
 export interface ConnectionOptions {
   host: string;
@@ -23,6 +24,8 @@ export class HttpEventConnector {
   private agentId: string;
   private originalAgentId: string;
   private baseUrl: string;
+  private host: string;
+  private port: number;
   private connected = false;
   private isConnecting = false;
   private connectionAborted = false;
@@ -37,9 +40,10 @@ export class HttpEventConnector {
     this.originalAgentId = options.agentId;
     this.timeout = options.timeout || 30000;
 
-    // Construct base URL for HTTP requests (user enters HTTP port directly)
-    const protocol = window.location.protocol === "https:" ? "https" : "http";
-    this.baseUrl = `${protocol}://${options.host}:${options.port}/api`;
+    // Store host and port for network requests
+    this.baseUrl = `http://${options.host}:${options.port}/api`;
+    this.host = options.host;
+    this.port = options.port;
   }
 
   /**
@@ -478,26 +482,22 @@ export class HttpEventConnector {
   }
 
   /**
-   * Send HTTP request helper
+   * Send HTTP request helper with proxy support
    */
   private async sendHttpRequest(
     endpoint: string,
     method: "GET" | "POST",
     data?: any
   ): Promise<any> {
-    const url = `${this.baseUrl}${endpoint}`;
     const isPolling = endpoint.includes('/poll?agent_id=');
     
     if (!isPolling) {
-      console.log(`🌐 ${method} ${url}`, data ? { body: data } : "");
+      console.log(`🌐 ${method} ${endpoint}`, data ? { body: data } : "");
     }
 
-    const options: RequestInit = {
+    const options: RequestInit & { timeout?: number } = {
       method,
-      headers: {
-        "Content-Type": "application/json",
-      },
-      signal: AbortSignal.timeout(this.timeout),
+      timeout: this.timeout,
     };
 
     if (data && method === "POST") {
@@ -505,7 +505,12 @@ export class HttpEventConnector {
     }
 
     try {
-      const response = await fetch(url, options);
+      const response = await networkFetch(
+        this.host,
+        this.port,
+        endpoint,
+        options
+      );
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -519,7 +524,7 @@ export class HttpEventConnector {
       if (isPolling) {
         const hasMessages = result.messages && result.messages.length > 0;
         if (hasMessages) {
-          console.log(`🌐 ${method} ${url}`);
+          console.log(`🌐 ${method} ${endpoint}`);
           console.log(`📡 Response ${response.status} for ${method} ${endpoint}`);
           console.log(`📦 Response data for ${endpoint}:`, result);
         }
@@ -530,7 +535,7 @@ export class HttpEventConnector {
       
       return result;
     } catch (error) {
-      console.error(`❌ Request failed for ${method} ${url}:`, error);
+      console.error(`❌ Request failed for ${method} ${endpoint}:`, error);
       throw error;
     }
   }

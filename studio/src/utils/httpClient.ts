@@ -1,0 +1,161 @@
+/**
+ * HTTP Client utility with automatic proxy support for HTTPS frontend
+ * 
+ * When the frontend is running on HTTPS, this utility automatically routes
+ * requests to HTTP-only OpenAgents networks through bridge.openagents.org proxy.
+ */
+
+const PROXY_BASE_URL = 'https://bridge.openagents.org';
+
+export interface HttpClientOptions {
+  timeout?: number;
+  headers?: Record<string, string>;
+  signal?: AbortSignal;
+}
+
+/**
+ * Check if the current frontend is running on HTTPS
+ */
+export const isHttps = (): boolean => {
+  return window.location.protocol === 'https:';
+};
+
+/**
+ * Check if a URL is an HTTP URL (not HTTPS)
+ */
+export const isHttpUrl = (url: string): boolean => {
+  return url.startsWith('http://');
+};
+
+/**
+ * Extract host and port from a URL
+ */
+export const extractHostPort = (url: string): { host: string; port?: string } => {
+  try {
+    const urlObj = new URL(url);
+    const host = urlObj.hostname;
+    const port = urlObj.port;
+    return { host, port };
+  } catch (error) {
+    console.error('Failed to parse URL:', url, error);
+    return { host: '', port: undefined };
+  }
+};
+
+/**
+ * Transform URL to use proxy when frontend is HTTPS and target is HTTP
+ */
+export const transformUrlForProxy = (originalUrl: string): { url: string; headers: Record<string, string> } => {
+  const frontendIsHttps = isHttps();
+  const targetIsHttp = isHttpUrl(originalUrl);
+  
+  // Only use proxy when frontend is HTTPS and target is HTTP
+  if (frontendIsHttps && targetIsHttp) {
+    const { host, port } = extractHostPort(originalUrl);
+    const targetHost = port ? `${host}:${port}` : host;
+    
+    // Replace the protocol and host with proxy URL, keep the path
+    const urlObj = new URL(originalUrl);
+    const proxyUrl = `${PROXY_BASE_URL}${urlObj.pathname}${urlObj.search}`;
+    
+    return {
+      url: proxyUrl,
+      headers: {
+        'X-Target-Host': targetHost
+      }
+    };
+  }
+  
+  // Direct connection for HTTP frontend or HTTPS targets
+  return {
+    url: originalUrl,
+    headers: {}
+  };
+};
+
+/**
+ * Enhanced fetch function with automatic proxy support
+ */
+export const httpFetch = async (
+  url: string, 
+  options: RequestInit & HttpClientOptions = {}
+): Promise<Response> => {
+  const { url: transformedUrl, headers: proxyHeaders } = transformUrlForProxy(url);
+  
+  // Merge headers
+  const mergedHeaders = {
+    ...options.headers,
+    ...proxyHeaders
+  };
+  
+  const fetchOptions: RequestInit = {
+    ...options,
+    headers: mergedHeaders
+  };
+  
+  // Add timeout if specified
+  if (options.timeout && !options.signal) {
+    fetchOptions.signal = AbortSignal.timeout(options.timeout);
+  }
+  
+  try {
+    console.log(`🌐 HTTP Request: ${options.method || 'GET'} ${transformedUrl}`);
+    if (proxyHeaders['X-Target-Host']) {
+      console.log(`🔄 Using proxy for target: ${proxyHeaders['X-Target-Host']}`);
+    }
+    
+    const response = await fetch(transformedUrl, fetchOptions);
+    
+    if (!response.ok) {
+      console.error(`❌ HTTP Error ${response.status}: ${response.statusText}`);
+    }
+    
+    return response;
+  } catch (error) {
+    console.error(`❌ Request failed for ${transformedUrl}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Build URL for OpenAgents network endpoint with automatic proxy support
+ */
+export const buildNetworkUrl = (host: string, port: number, endpoint: string): string => {
+  const baseUrl = `http://${host}:${port}`;
+  const fullUrl = `${baseUrl}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+  
+  const { url } = transformUrlForProxy(fullUrl);
+  return url;
+};
+
+/**
+ * Build headers for OpenAgents network request with automatic proxy support
+ */
+export const buildNetworkHeaders = (host: string, port: number, additionalHeaders: Record<string, string> = {}): Record<string, string> => {
+  const baseUrl = `http://${host}:${port}`;
+  const { headers: proxyHeaders } = transformUrlForProxy(baseUrl);
+  
+  return {
+    'Content-Type': 'application/json',
+    ...additionalHeaders,
+    ...proxyHeaders
+  };
+};
+
+/**
+ * Convenience method for OpenAgents network requests
+ */
+export const networkFetch = async (
+  host: string,
+  port: number,
+  endpoint: string,
+  options: RequestInit & HttpClientOptions = {}
+): Promise<Response> => {
+  const url = buildNetworkUrl(host, port, endpoint);
+  const headers = buildNetworkHeaders(host, port, options.headers as Record<string, string>);
+  
+  return httpFetch(url, {
+    ...options,
+    headers
+  });
+};
