@@ -64,7 +64,7 @@ def test_secret_manager_edge_cases(secret_manager):
 @pytest.fixture
 async def test_network():
     """Create and start a test network."""
-    config_path = Path(__file__).parent.parent / "examples" / "workspace_test.yaml"
+    config_path = Path(__file__).parent.parent.parent / "examples" / "workspace_test.yaml"
 
     # Load config and use random port to avoid conflicts
     config = load_network_config(str(config_path))
