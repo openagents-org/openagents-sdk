@@ -69,8 +69,8 @@ export class HttpEventConnector {
       console.log(`👤 Agent: ${this.agentId}`);
 
       // Health check
-      console.log(`📡 Sending health check to ${this.baseUrl}/health`);
-      const healthResponse = await this.sendHttpRequest("/health", "GET");
+      console.log(`📡 Sending health check to ${this.baseUrl}/api/health`);
+      const healthResponse = await this.sendHttpRequest("/api/health", "GET");
       console.log("📡 Health check response:", healthResponse);
       if (!healthResponse.success) {
         throw new Error(
@@ -350,7 +350,7 @@ export class HttpEventConnector {
 
   async getNetworkHealth(): Promise<any> {
     try {
-      const response = await this.sendHttpRequest("/health", "GET");
+      const response = await this.sendHttpRequest("/api/health", "GET");
       return response.data || {};
     } catch (error) {
       console.error("Failed to get network health:", error);
