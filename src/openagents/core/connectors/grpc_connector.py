@@ -199,11 +199,6 @@ class GRPCNetworkConnector(NetworkConnector):
         Returns:
             EventResponse: The response from the server
         """
-        if "poll" not in message.event_name:
-            print("🔧 GRPC: Sending event ================================")
-            print(message)
-            print("🔧 GRPC: Sending event ================================")
-
         if not self.is_connected:
             logger.debug(f"Agent {self.agent_id} is not connected to gRPC network")
             return self._create_error_response("Agent is not connected to gRPC network")
