@@ -1,1 +1,1 @@
-"""Core components of the OpenAgents framework.""" 
+"""Core components of the OpenAgents framework."""

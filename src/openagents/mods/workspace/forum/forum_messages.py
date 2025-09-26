@@ -7,7 +7,7 @@ from openagents.models.event import Event
 
 class ForumTopicMessage(Event):
     """Message for forum topic operations (create, edit, delete)."""
-    
+
     def __init__(
         self,
         source_id: str,
@@ -15,11 +15,11 @@ class ForumTopicMessage(Event):
         title: Optional[str] = None,
         content: Optional[str] = None,
         topic_id: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ):
         # Build event name based on action
         event_name = f"forum.topic.{action}"
-        
+
         # Build payload
         payload = {
             "action": action,
@@ -30,33 +30,30 @@ class ForumTopicMessage(Event):
             payload["content"] = content
         if topic_id is not None:
             payload["topic_id"] = topic_id
-        
+
         # Initialize parent Event
         super().__init__(
-            event_name=event_name,
-            source_id=source_id,
-            payload=payload,
-            **kwargs
+            event_name=event_name, source_id=source_id, payload=payload, **kwargs
         )
-        
+
         # Store values as custom attributes (avoid conflicts with Event properties)
         self._title = title
         self._content = content
         self._action = action
         self._topic_id = topic_id
-    
+
     @property
     def title(self) -> Optional[str]:
         return self._title
-    
+
     @property
     def topic_content(self) -> Optional[str]:
         return self._content
-    
+
     @property
     def action(self) -> str:
         return self._action
-    
+
     @property
     def topic_id(self) -> Optional[str]:
         return self._topic_id
@@ -64,7 +61,7 @@ class ForumTopicMessage(Event):
 
 class ForumCommentMessage(Event):
     """Message for forum comment operations (post, edit, delete)."""
-    
+
     def __init__(
         self,
         source_id: str,
@@ -73,11 +70,11 @@ class ForumCommentMessage(Event):
         content: Optional[str] = None,
         comment_id: Optional[str] = None,
         parent_comment_id: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ):
         # Build event name based on action
         event_name = f"forum.comment.{action}"
-        
+
         # Build payload
         payload = {
             "action": action,
@@ -89,38 +86,35 @@ class ForumCommentMessage(Event):
             payload["comment_id"] = comment_id
         if parent_comment_id is not None:
             payload["parent_comment_id"] = parent_comment_id
-        
+
         # Initialize parent Event
         super().__init__(
-            event_name=event_name,
-            source_id=source_id,
-            payload=payload,
-            **kwargs
+            event_name=event_name, source_id=source_id, payload=payload, **kwargs
         )
-        
+
         # Store values as custom attributes (avoid conflicts with Event properties)
         self._content = content
         self._action = action
         self._topic_id = topic_id
         self._comment_id = comment_id
         self._parent_comment_id = parent_comment_id
-    
+
     @property
     def comment_content(self) -> Optional[str]:
         return self._content
-    
+
     @property
     def action(self) -> str:
         return self._action
-    
+
     @property
     def topic_id(self) -> str:
         return self._topic_id
-    
+
     @property
     def comment_id(self) -> Optional[str]:
         return self._comment_id
-    
+
     @property
     def parent_comment_id(self) -> Optional[str]:
         return self._parent_comment_id
@@ -128,7 +122,7 @@ class ForumCommentMessage(Event):
 
 class ForumVoteMessage(Event):
     """Message for forum voting operations."""
-    
+
     def __init__(
         self,
         source_id: str,
@@ -136,11 +130,11 @@ class ForumVoteMessage(Event):
         target_id: str,
         vote_type: str = "upvote",
         action: str = "cast",
-        **kwargs
+        **kwargs,
     ):
         # Build event name based on action
         event_name = f"forum.vote.{action}"
-        
+
         # Build payload
         payload = {
             "action": action,
@@ -148,33 +142,30 @@ class ForumVoteMessage(Event):
             "target_type": target_type,
             "target_id": target_id,
         }
-        
+
         # Initialize parent Event
         super().__init__(
-            event_name=event_name,
-            source_id=source_id,
-            payload=payload,
-            **kwargs
+            event_name=event_name, source_id=source_id, payload=payload, **kwargs
         )
-        
+
         # Store values as custom attributes (avoid conflicts with Event properties)
         self._action = action
         self._vote_type = vote_type
         self._target_type = target_type
         self._vote_target_id = target_id
-    
+
     @property
     def action(self) -> str:
         return self._action
-    
+
     @property
     def vote_type(self) -> str:
         return self._vote_type
-    
+
     @property
     def target_type(self) -> str:
         return self._target_type
-    
+
     @property
     def vote_target_id(self) -> str:
         return self._vote_target_id
@@ -182,7 +173,7 @@ class ForumVoteMessage(Event):
 
 class ForumQueryMessage(Event):
     """Message for forum query operations (list, search, get)."""
-    
+
     def __init__(
         self,
         source_id: str,
@@ -192,7 +183,7 @@ class ForumQueryMessage(Event):
         offset: int = 0,
         sort_by: str = "recent",
         topic_id: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ):
         # Build event name based on query type
         if query_type in ["list", "list_topics"]:
@@ -219,7 +210,7 @@ class ForumQueryMessage(Event):
         else:
             event_name = f"forum.{query_type}"
             normalized_query_type = query_type
-        
+
         # Build payload
         payload = {
             "query_type": normalized_query_type,
@@ -231,15 +222,12 @@ class ForumQueryMessage(Event):
             payload["query"] = query
         if topic_id is not None:
             payload["topic_id"] = topic_id
-        
+
         # Initialize parent Event
         super().__init__(
-            event_name=event_name,
-            source_id=source_id,
-            payload=payload,
-            **kwargs
+            event_name=event_name, source_id=source_id, payload=payload, **kwargs
         )
-        
+
         # Store values as custom attributes
         self._query_type = query_type
         self._query = query
@@ -247,27 +235,27 @@ class ForumQueryMessage(Event):
         self._offset = offset
         self._sort_by = sort_by
         self._topic_id = topic_id
-    
+
     @property
     def query_type(self) -> str:
         return self._query_type
-    
+
     @property
     def query(self) -> Optional[str]:
         return self._query
-    
+
     @property
     def limit(self) -> int:
         return self._limit
-    
+
     @property
     def offset(self) -> int:
         return self._offset
-    
+
     @property
     def sort_by(self) -> str:
         return self._sort_by
-    
+
     @property
     def topic_id(self) -> Optional[str]:
         return self._topic_id

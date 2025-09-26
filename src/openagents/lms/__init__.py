@@ -9,14 +9,14 @@ from .providers import (
     AnthropicProvider,
     BedrockProvider,
     GeminiProvider,
-    SimpleGenericProvider
+    SimpleGenericProvider,
 )
 
 __all__ = [
     "BaseModelProvider",
-    "OpenAIProvider", 
+    "OpenAIProvider",
     "AnthropicProvider",
     "BedrockProvider",
     "GeminiProvider",
-    "SimpleGenericProvider"
+    "SimpleGenericProvider",
 ]

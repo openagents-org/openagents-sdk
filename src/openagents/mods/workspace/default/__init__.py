@@ -8,7 +8,4 @@ thread messaging capabilities for communication within the workspace.
 from openagents.mods.workspace.default.adapter import DefaultWorkspaceAgentAdapter
 from openagents.mods.workspace.default.mod import DefaultWorkspaceNetworkMod
 
-__all__ = [
-    "DefaultWorkspaceAgentAdapter",
-    "DefaultWorkspaceNetworkMod"
-]
+__all__ = ["DefaultWorkspaceAgentAdapter", "DefaultWorkspaceNetworkMod"]

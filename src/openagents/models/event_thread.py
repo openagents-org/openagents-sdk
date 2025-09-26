@@ -7,7 +7,10 @@ class EventThread(BaseModel):
     """
     A event thread maintains a list of events in a channel.
     """
-    events: List[Event] = Field(default_factory=list, description="The list of messages in the thread")
+
+    events: List[Event] = Field(
+        default_factory=list, description="The list of messages in the thread"
+    )
 
     def add_event(self, message: Event):
         """
@@ -21,4 +24,3 @@ class EventThread(BaseModel):
         """
         # sort the messages by timestamp
         return list(sorted(self.events, key=lambda x: x.timestamp))
-

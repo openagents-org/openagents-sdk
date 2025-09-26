@@ -9,13 +9,9 @@ from google.protobuf import descriptor_pool as _descriptor_pool
 from google.protobuf import runtime_version as _runtime_version
 from google.protobuf import symbol_database as _symbol_database
 from google.protobuf.internal import builder as _builder
+
 _runtime_version.ValidateProtobufRuntimeVersion(
-    _runtime_version.Domain.PUBLIC,
-    6,
-    31,
-    0,
-    '',
-    'agent_service.proto'
+    _runtime_version.Domain.PUBLIC, 6, 31, 0, "", "agent_service.proto"
 )
 # @@protoc_insertion_point(imports)
 
@@ -25,55 +21,57 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import any_pb2 as google_dot_protobuf_dot_any__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13\x61gent_service.proto\x12\nopenagents\x1a\x19google/protobuf/any.proto\"\xa1\x02\n\x05\x45vent\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12\x12\n\nevent_name\x18\x02 \x01(\t\x12\x11\n\tsource_id\x18\x03 \x01(\t\x12\x17\n\x0ftarget_agent_id\x18\x04 \x01(\t\x12%\n\x07payload\x18\x05 \x01(\x0b\x32\x14.google.protobuf.Any\x12\x11\n\ttimestamp\x18\x06 \x01(\x03\x12\x31\n\x08metadata\x18\x07 \x03(\x0b\x32\x1f.openagents.Event.MetadataEntry\x12\x12\n\nvisibility\x18\x08 \x01(\t\x12\x14\n\x0crelevant_mod\x18\t \x01(\t\x1a/\n\rMetadataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"i\n\rEventResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\"\n\x04\x64\x61ta\x18\x03 \x01(\x0b\x32\x14.google.protobuf.Any\x12\x12\n\nevent_name\x18\x04 \x01(\t\"\xdf\x01\n\x14RegisterAgentRequest\x12\x10\n\x08\x61gent_id\x18\x01 \x01(\t\x12@\n\x08metadata\x18\x02 \x03(\x0b\x32..openagents.RegisterAgentRequest.MetadataEntry\x12\x14\n\x0c\x63\x61pabilities\x18\x03 \x03(\t\x12\x17\n\x0f\x66orce_reconnect\x18\x04 \x01(\x08\x12\x13\n\x0b\x63\x65rtificate\x18\x05 \x01(\t\x1a/\n\rMetadataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"O\n\x15RegisterAgentResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x15\n\rerror_message\x18\x02 \x01(\t\x12\x0e\n\x06secret\x18\x03 \x01(\t\"*\n\x16UnregisterAgentRequest\x12\x10\n\x08\x61gent_id\x18\x01 \x01(\t\"A\n\x17UnregisterAgentResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x15\n\rerror_message\x18\x02 \x01(\t\"6\n\x15\x44iscoverAgentsRequest\x12\x1d\n\x15required_capabilities\x18\x01 \x03(\t\"?\n\x16\x44iscoverAgentsResponse\x12%\n\x06\x61gents\x18\x01 \x03(\x0b\x32\x15.openagents.AgentInfo\"\'\n\x13GetAgentInfoRequest\x12\x10\n\x08\x61gent_id\x18\x01 \x01(\t\"K\n\x14GetAgentInfoResponse\x12$\n\x05\x61gent\x18\x01 \x01(\x0b\x32\x15.openagents.AgentInfo\x12\r\n\x05\x66ound\x18\x02 \x01(\x08\"\xd7\x01\n\tAgentInfo\x12\x10\n\x08\x61gent_id\x18\x01 \x01(\t\x12\x35\n\x08metadata\x18\x02 \x03(\x0b\x32#.openagents.AgentInfo.MetadataEntry\x12\x14\n\x0c\x63\x61pabilities\x18\x03 \x03(\t\x12\x11\n\tlast_seen\x18\x04 \x01(\x03\x12\x16\n\x0etransport_type\x18\x05 \x01(\t\x12\x0f\n\x07\x61\x64\x64ress\x18\x06 \x01(\t\x1a/\n\rMetadataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"7\n\x10HeartbeatRequest\x12\x10\n\x08\x61gent_id\x18\x01 \x01(\t\x12\x11\n\ttimestamp\x18\x02 \x01(\x03\"7\n\x11HeartbeatResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x11\n\ttimestamp\x18\x02 \x01(\x03\"\x14\n\x12NetworkInfoRequest\"\xf2\x01\n\x13NetworkInfoResponse\x12\x12\n\nnetwork_id\x18\x01 \x01(\t\x12\x14\n\x0cnetwork_name\x18\x02 \x01(\t\x12\x12\n\nis_running\x18\x03 \x01(\x08\x12\x16\n\x0euptime_seconds\x18\x04 \x01(\x03\x12\x13\n\x0b\x61gent_count\x18\x05 \x01(\x05\x12%\n\x06\x61gents\x18\x06 \x03(\x0b\x32\x15.openagents.AgentInfo\x12\x15\n\rtopology_mode\x18\x07 \x01(\t\x12\x16\n\x0etransport_type\x18\x08 \x01(\t\x12\x0c\n\x04host\x18\t \x01(\t\x12\x0c\n\x04port\x18\n \x01(\x05\x32\xfe\x04\n\x0c\x41gentService\x12\x39\n\tSendEvent\x12\x11.openagents.Event\x1a\x19.openagents.EventResponse\x12\x38\n\x0cStreamEvents\x12\x11.openagents.Event\x1a\x11.openagents.Event(\x01\x30\x01\x12T\n\rRegisterAgent\x12 .openagents.RegisterAgentRequest\x1a!.openagents.RegisterAgentResponse\x12Z\n\x0fUnregisterAgent\x12\".openagents.UnregisterAgentRequest\x1a#.openagents.UnregisterAgentResponse\x12W\n\x0e\x44iscoverAgents\x12!.openagents.DiscoverAgentsRequest\x1a\".openagents.DiscoverAgentsResponse\x12Q\n\x0cGetAgentInfo\x12\x1f.openagents.GetAgentInfoRequest\x1a .openagents.GetAgentInfoResponse\x12H\n\tHeartbeat\x12\x1c.openagents.HeartbeatRequest\x1a\x1d.openagents.HeartbeatResponse\x12Q\n\x0eGetNetworkInfo\x12\x1e.openagents.NetworkInfoRequest\x1a\x1f.openagents.NetworkInfoResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
+    b'\n\x13\x61gent_service.proto\x12\nopenagents\x1a\x19google/protobuf/any.proto"\xa1\x02\n\x05\x45vent\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12\x12\n\nevent_name\x18\x02 \x01(\t\x12\x11\n\tsource_id\x18\x03 \x01(\t\x12\x17\n\x0ftarget_agent_id\x18\x04 \x01(\t\x12%\n\x07payload\x18\x05 \x01(\x0b\x32\x14.google.protobuf.Any\x12\x11\n\ttimestamp\x18\x06 \x01(\x03\x12\x31\n\x08metadata\x18\x07 \x03(\x0b\x32\x1f.openagents.Event.MetadataEntry\x12\x12\n\nvisibility\x18\x08 \x01(\t\x12\x14\n\x0crelevant_mod\x18\t \x01(\t\x1a/\n\rMetadataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01"i\n\rEventResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12"\n\x04\x64\x61ta\x18\x03 \x01(\x0b\x32\x14.google.protobuf.Any\x12\x12\n\nevent_name\x18\x04 \x01(\t"\xdf\x01\n\x14RegisterAgentRequest\x12\x10\n\x08\x61gent_id\x18\x01 \x01(\t\x12@\n\x08metadata\x18\x02 \x03(\x0b\x32..openagents.RegisterAgentRequest.MetadataEntry\x12\x14\n\x0c\x63\x61pabilities\x18\x03 \x03(\t\x12\x17\n\x0f\x66orce_reconnect\x18\x04 \x01(\x08\x12\x13\n\x0b\x63\x65rtificate\x18\x05 \x01(\t\x1a/\n\rMetadataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01"O\n\x15RegisterAgentResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x15\n\rerror_message\x18\x02 \x01(\t\x12\x0e\n\x06secret\x18\x03 \x01(\t"*\n\x16UnregisterAgentRequest\x12\x10\n\x08\x61gent_id\x18\x01 \x01(\t"A\n\x17UnregisterAgentResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x15\n\rerror_message\x18\x02 \x01(\t"6\n\x15\x44iscoverAgentsRequest\x12\x1d\n\x15required_capabilities\x18\x01 \x03(\t"?\n\x16\x44iscoverAgentsResponse\x12%\n\x06\x61gents\x18\x01 \x03(\x0b\x32\x15.openagents.AgentInfo"\'\n\x13GetAgentInfoRequest\x12\x10\n\x08\x61gent_id\x18\x01 \x01(\t"K\n\x14GetAgentInfoResponse\x12$\n\x05\x61gent\x18\x01 \x01(\x0b\x32\x15.openagents.AgentInfo\x12\r\n\x05\x66ound\x18\x02 \x01(\x08"\xd7\x01\n\tAgentInfo\x12\x10\n\x08\x61gent_id\x18\x01 \x01(\t\x12\x35\n\x08metadata\x18\x02 \x03(\x0b\x32#.openagents.AgentInfo.MetadataEntry\x12\x14\n\x0c\x63\x61pabilities\x18\x03 \x03(\t\x12\x11\n\tlast_seen\x18\x04 \x01(\x03\x12\x16\n\x0etransport_type\x18\x05 \x01(\t\x12\x0f\n\x07\x61\x64\x64ress\x18\x06 \x01(\t\x1a/\n\rMetadataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01"7\n\x10HeartbeatRequest\x12\x10\n\x08\x61gent_id\x18\x01 \x01(\t\x12\x11\n\ttimestamp\x18\x02 \x01(\x03"7\n\x11HeartbeatResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x11\n\ttimestamp\x18\x02 \x01(\x03"\x14\n\x12NetworkInfoRequest"\xf2\x01\n\x13NetworkInfoResponse\x12\x12\n\nnetwork_id\x18\x01 \x01(\t\x12\x14\n\x0cnetwork_name\x18\x02 \x01(\t\x12\x12\n\nis_running\x18\x03 \x01(\x08\x12\x16\n\x0euptime_seconds\x18\x04 \x01(\x03\x12\x13\n\x0b\x61gent_count\x18\x05 \x01(\x05\x12%\n\x06\x61gents\x18\x06 \x03(\x0b\x32\x15.openagents.AgentInfo\x12\x15\n\rtopology_mode\x18\x07 \x01(\t\x12\x16\n\x0etransport_type\x18\x08 \x01(\t\x12\x0c\n\x04host\x18\t \x01(\t\x12\x0c\n\x04port\x18\n \x01(\x05\x32\xfe\x04\n\x0c\x41gentService\x12\x39\n\tSendEvent\x12\x11.openagents.Event\x1a\x19.openagents.EventResponse\x12\x38\n\x0cStreamEvents\x12\x11.openagents.Event\x1a\x11.openagents.Event(\x01\x30\x01\x12T\n\rRegisterAgent\x12 .openagents.RegisterAgentRequest\x1a!.openagents.RegisterAgentResponse\x12Z\n\x0fUnregisterAgent\x12".openagents.UnregisterAgentRequest\x1a#.openagents.UnregisterAgentResponse\x12W\n\x0e\x44iscoverAgents\x12!.openagents.DiscoverAgentsRequest\x1a".openagents.DiscoverAgentsResponse\x12Q\n\x0cGetAgentInfo\x12\x1f.openagents.GetAgentInfoRequest\x1a .openagents.GetAgentInfoResponse\x12H\n\tHeartbeat\x12\x1c.openagents.HeartbeatRequest\x1a\x1d.openagents.HeartbeatResponse\x12Q\n\x0eGetNetworkInfo\x12\x1e.openagents.NetworkInfoRequest\x1a\x1f.openagents.NetworkInfoResponseb\x06proto3'
+)
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
-_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'agent_service_pb2', _globals)
+_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, "agent_service_pb2", _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
-  DESCRIPTOR._loaded_options = None
-  _globals['_EVENT_METADATAENTRY']._loaded_options = None
-  _globals['_EVENT_METADATAENTRY']._serialized_options = b'8\001'
-  _globals['_REGISTERAGENTREQUEST_METADATAENTRY']._loaded_options = None
-  _globals['_REGISTERAGENTREQUEST_METADATAENTRY']._serialized_options = b'8\001'
-  _globals['_AGENTINFO_METADATAENTRY']._loaded_options = None
-  _globals['_AGENTINFO_METADATAENTRY']._serialized_options = b'8\001'
-  _globals['_EVENT']._serialized_start=63
-  _globals['_EVENT']._serialized_end=352
-  _globals['_EVENT_METADATAENTRY']._serialized_start=305
-  _globals['_EVENT_METADATAENTRY']._serialized_end=352
-  _globals['_EVENTRESPONSE']._serialized_start=354
-  _globals['_EVENTRESPONSE']._serialized_end=459
-  _globals['_REGISTERAGENTREQUEST']._serialized_start=462
-  _globals['_REGISTERAGENTREQUEST']._serialized_end=685
-  _globals['_REGISTERAGENTREQUEST_METADATAENTRY']._serialized_start=305
-  _globals['_REGISTERAGENTREQUEST_METADATAENTRY']._serialized_end=352
-  _globals['_REGISTERAGENTRESPONSE']._serialized_start=687
-  _globals['_REGISTERAGENTRESPONSE']._serialized_end=766
-  _globals['_UNREGISTERAGENTREQUEST']._serialized_start=768
-  _globals['_UNREGISTERAGENTREQUEST']._serialized_end=810
-  _globals['_UNREGISTERAGENTRESPONSE']._serialized_start=812
-  _globals['_UNREGISTERAGENTRESPONSE']._serialized_end=877
-  _globals['_DISCOVERAGENTSREQUEST']._serialized_start=879
-  _globals['_DISCOVERAGENTSREQUEST']._serialized_end=933
-  _globals['_DISCOVERAGENTSRESPONSE']._serialized_start=935
-  _globals['_DISCOVERAGENTSRESPONSE']._serialized_end=998
-  _globals['_GETAGENTINFOREQUEST']._serialized_start=1000
-  _globals['_GETAGENTINFOREQUEST']._serialized_end=1039
-  _globals['_GETAGENTINFORESPONSE']._serialized_start=1041
-  _globals['_GETAGENTINFORESPONSE']._serialized_end=1116
-  _globals['_AGENTINFO']._serialized_start=1119
-  _globals['_AGENTINFO']._serialized_end=1334
-  _globals['_AGENTINFO_METADATAENTRY']._serialized_start=305
-  _globals['_AGENTINFO_METADATAENTRY']._serialized_end=352
-  _globals['_HEARTBEATREQUEST']._serialized_start=1336
-  _globals['_HEARTBEATREQUEST']._serialized_end=1391
-  _globals['_HEARTBEATRESPONSE']._serialized_start=1393
-  _globals['_HEARTBEATRESPONSE']._serialized_end=1448
-  _globals['_NETWORKINFOREQUEST']._serialized_start=1450
-  _globals['_NETWORKINFOREQUEST']._serialized_end=1470
-  _globals['_NETWORKINFORESPONSE']._serialized_start=1473
-  _globals['_NETWORKINFORESPONSE']._serialized_end=1715
-  _globals['_AGENTSERVICE']._serialized_start=1718
-  _globals['_AGENTSERVICE']._serialized_end=2356
+    DESCRIPTOR._loaded_options = None
+    _globals["_EVENT_METADATAENTRY"]._loaded_options = None
+    _globals["_EVENT_METADATAENTRY"]._serialized_options = b"8\001"
+    _globals["_REGISTERAGENTREQUEST_METADATAENTRY"]._loaded_options = None
+    _globals["_REGISTERAGENTREQUEST_METADATAENTRY"]._serialized_options = b"8\001"
+    _globals["_AGENTINFO_METADATAENTRY"]._loaded_options = None
+    _globals["_AGENTINFO_METADATAENTRY"]._serialized_options = b"8\001"
+    _globals["_EVENT"]._serialized_start = 63
+    _globals["_EVENT"]._serialized_end = 352
+    _globals["_EVENT_METADATAENTRY"]._serialized_start = 305
+    _globals["_EVENT_METADATAENTRY"]._serialized_end = 352
+    _globals["_EVENTRESPONSE"]._serialized_start = 354
+    _globals["_EVENTRESPONSE"]._serialized_end = 459
+    _globals["_REGISTERAGENTREQUEST"]._serialized_start = 462
+    _globals["_REGISTERAGENTREQUEST"]._serialized_end = 685
+    _globals["_REGISTERAGENTREQUEST_METADATAENTRY"]._serialized_start = 305
+    _globals["_REGISTERAGENTREQUEST_METADATAENTRY"]._serialized_end = 352
+    _globals["_REGISTERAGENTRESPONSE"]._serialized_start = 687
+    _globals["_REGISTERAGENTRESPONSE"]._serialized_end = 766
+    _globals["_UNREGISTERAGENTREQUEST"]._serialized_start = 768
+    _globals["_UNREGISTERAGENTREQUEST"]._serialized_end = 810
+    _globals["_UNREGISTERAGENTRESPONSE"]._serialized_start = 812
+    _globals["_UNREGISTERAGENTRESPONSE"]._serialized_end = 877
+    _globals["_DISCOVERAGENTSREQUEST"]._serialized_start = 879
+    _globals["_DISCOVERAGENTSREQUEST"]._serialized_end = 933
+    _globals["_DISCOVERAGENTSRESPONSE"]._serialized_start = 935
+    _globals["_DISCOVERAGENTSRESPONSE"]._serialized_end = 998
+    _globals["_GETAGENTINFOREQUEST"]._serialized_start = 1000
+    _globals["_GETAGENTINFOREQUEST"]._serialized_end = 1039
+    _globals["_GETAGENTINFORESPONSE"]._serialized_start = 1041
+    _globals["_GETAGENTINFORESPONSE"]._serialized_end = 1116
+    _globals["_AGENTINFO"]._serialized_start = 1119
+    _globals["_AGENTINFO"]._serialized_end = 1334
+    _globals["_AGENTINFO_METADATAENTRY"]._serialized_start = 305
+    _globals["_AGENTINFO_METADATAENTRY"]._serialized_end = 352
+    _globals["_HEARTBEATREQUEST"]._serialized_start = 1336
+    _globals["_HEARTBEATREQUEST"]._serialized_end = 1391
+    _globals["_HEARTBEATRESPONSE"]._serialized_start = 1393
+    _globals["_HEARTBEATRESPONSE"]._serialized_end = 1448
+    _globals["_NETWORKINFOREQUEST"]._serialized_start = 1450
+    _globals["_NETWORKINFOREQUEST"]._serialized_end = 1470
+    _globals["_NETWORKINFORESPONSE"]._serialized_start = 1473
+    _globals["_NETWORKINFORESPONSE"]._serialized_end = 1715
+    _globals["_AGENTSERVICE"]._serialized_start = 1718
+    _globals["_AGENTSERVICE"]._serialized_end = 2356
 # @@protoc_insertion_point(module_scope)

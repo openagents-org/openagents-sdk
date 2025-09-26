@@ -27,11 +27,11 @@ from openagents.mods.workspace.messaging.thread_messages import (
     FileOperationMessage,
     ChannelInfoMessage,
     MessageRetrievalMessage,
-    ReactionMessage
+    ReactionMessage,
 )
 
 __all__ = [
-    "ThreadMessagingAgentAdapter", 
+    "ThreadMessagingAgentAdapter",
     "ThreadMessagingNetworkMod",
     "Event",
     "ChannelMessage",
@@ -40,5 +40,5 @@ __all__ = [
     "FileOperationMessage",
     "ChannelInfoMessage",
     "MessageRetrievalMessage",
-    "ReactionMessage"
+    "ReactionMessage",
 ]

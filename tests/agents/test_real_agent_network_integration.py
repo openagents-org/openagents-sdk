@@ -37,19 +37,16 @@ def create_test_context(agent_id: str, message: str) -> ChannelMessageContext:
         target_id=agent_id,
         payload={
             "channel": "general",
-            "content": {
-                "text": f"@{agent_id} {message}",
-                "message_type": "text"
-            },
-            "mentioned_agent_id": agent_id
-        }
+            "content": {"text": f"@{agent_id} {message}", "message_type": "text"},
+            "mentioned_agent_id": agent_id,
+        },
     )
     return ChannelMessageContext(
         incoming_event=event,
         event_threads={},
         incoming_thread_id="test-event-123",  # Use same ID as event_id so reply_to_id is correct
         channel="general",
-        mentioned_agent_id=agent_id
+        mentioned_agent_id=agent_id,
     )
 
 
@@ -65,7 +62,7 @@ def agent_config():
         model_name="gpt-4o-mini",
         provider="openai",
         api_base="https://api.openai.com/v1",
-        api_key=api_key
+        api_key=api_key,
     )
 
 
@@ -75,7 +72,7 @@ async def test_network():
     network = AgentNetwork.load("examples/workspace_test.yaml")
     network.config.transports = [
         TransportConfigItem(type=TransportType.HTTP, config={"port": 35001}),
-        TransportConfigItem(type=TransportType.GRPC, config={"port": 36001})
+        TransportConfigItem(type=TransportType.GRPC, config={"port": 36001}),
     ]
     await network.initialize()
     yield network
@@ -86,10 +83,7 @@ async def test_network():
 async def test_agent(agent_config, test_network):
     """Create and start a test agent."""
     agent_id = f"test-agent-{int(asyncio.get_event_loop().time())}"
-    agent = ToolCallTestAgent(
-        agent_id=agent_id,
-        agent_config=agent_config
-    )
+    agent = ToolCallTestAgent(agent_id=agent_id, agent_config=agent_config)
     await agent.async_start(host="localhost", port=35001)
     yield agent
     await agent.async_stop()
@@ -110,13 +104,13 @@ async def test_agent_channel_reply_integration(test_agent):
 
     # Check that the reply was received by querying channel messages
     headers = {
-        'Accept': '*/*',
-        'Accept-Language': 'en,ja;q=0.9,en-US;q=0.8,zh-CN;q=0.7,zh;q=0.6,zh-TW;q=0.5,ko;q=0.4',
-        'Connection': 'keep-alive',
-        'Content-Type': 'application/json',
-        'Origin': 'http://localhost:35001',
-        'Referer': 'http://localhost:35001/',
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
+        "Accept": "*/*",
+        "Accept-Language": "en,ja;q=0.9,en-US;q=0.8,zh-CN;q=0.7,zh;q=0.6,zh-TW;q=0.5,ko;q=0.4",
+        "Connection": "keep-alive",
+        "Content-Type": "application/json",
+        "Origin": "http://localhost:35001",
+        "Referer": "http://localhost:35001/",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
     }
 
     data = {
@@ -128,26 +122,33 @@ async def test_agent_channel_reply_integration(test_agent):
             "channel": "general",
             "limit": 50,
             "offset": 0,
-            "include_threads": True
+            "include_threads": True,
         },
         "metadata": {},
-        "visibility": "network"
+        "visibility": "network",
     }
 
     async with aiohttp.ClientSession() as session:
-        async with session.post('http://localhost:35001/api/send_event', headers=headers, json=data) as response:
+        async with session.post(
+            "http://localhost:35001/api/send_event", headers=headers, json=data
+        ) as response:
             assert response.status == 200
             response_data = await response.json()
 
             # Verify successful response
             assert response_data["success"] is True
-            assert response_data["message"] == "Channel message retrieval completed successfully"
+            assert (
+                response_data["message"]
+                == "Channel message retrieval completed successfully"
+            )
 
             # Verify agent reply was received
             data = response_data["data"]
             assert data["success"] is True
             assert data["channel"] == "general"
-            assert data["total_count"] >= 1, "Agent's reply should be present in channel messages"
+            assert (
+                data["total_count"] >= 1
+            ), "Agent's reply should be present in channel messages"
 
             # Verify the reply message structure
             messages = data["messages"]
@@ -166,7 +167,9 @@ async def test_agent_channel_reply_integration(test_agent):
             assert agent_reply["thread_level"] == 1
             assert "content" in agent_reply
             assert "text" in agent_reply["content"]
-            assert len(agent_reply["content"]["text"]) > 0, "Reply should have non-empty text content"
+            assert (
+                len(agent_reply["content"]["text"]) > 0
+            ), "Reply should have non-empty text content"
 
 
 @pytest.mark.asyncio
@@ -187,12 +190,12 @@ async def test_agent_network_communication_timeout(test_agent):
 
     # Verify the entire operation completed within timeout
     elapsed_time = time.time() - start_time
-    assert elapsed_time < 30, f"Agent network communication took {elapsed_time:.2f}s, should be < 30s"
+    assert (
+        elapsed_time < 30
+    ), f"Agent network communication took {elapsed_time:.2f}s, should be < 30s"
 
     # Also verify the reply was actually sent
-    headers = {
-        'Content-Type': 'application/json'
-    }
+    headers = {"Content-Type": "application/json"}
 
     data = {
         "event_id": "test-timeout-123",
@@ -203,15 +206,19 @@ async def test_agent_network_communication_timeout(test_agent):
             "channel": "general",
             "limit": 10,
             "offset": 0,
-            "include_threads": True
+            "include_threads": True,
         },
         "metadata": {},
-        "visibility": "network"
+        "visibility": "network",
     }
 
     async with aiohttp.ClientSession() as session:
-        async with session.post('http://localhost:35001/api/send_event', headers=headers, json=data) as response:
+        async with session.post(
+            "http://localhost:35001/api/send_event", headers=headers, json=data
+        ) as response:
             response_data = await response.json()
 
             # Verify at least one message was sent (the agent's reply)
-            assert response_data["data"]["total_count"] >= 1, "Agent should have sent a reply within the timeout period"
+            assert (
+                response_data["data"]["total_count"] >= 1
+            ), "Agent should have sent a reply within the timeout period"

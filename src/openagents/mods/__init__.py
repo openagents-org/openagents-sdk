@@ -5,9 +5,4 @@ from . import discovery
 from . import work
 from . import project
 
-__all__ = [
-    "communication",
-    "discovery", 
-    "work",
-    "project"
-] 
+__all__ = ["communication", "discovery", "work", "project"]

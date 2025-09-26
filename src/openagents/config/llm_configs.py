@@ -10,6 +10,7 @@ from enum import Enum
 
 class LLMProviderType(str, Enum):
     """Supported model providers."""
+
     OPENAI = "openai"
     AZURE = "azure"
     CLAUDE = "claude"
@@ -23,85 +24,101 @@ class LLMProviderType(str, Enum):
     TOGETHER = "together"
     PERPLEXITY = "perplexity"
 
+
 # Model provider configurations
 # This mirrors the MODEL_CONFIGS from SimpleAgentRunner for consistency
 MODEL_CONFIGS: Dict[str, Dict[str, Any]] = {
     # OpenAI models
     "openai": {
         "provider": "openai",
-        "models": ["gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]
+        "models": ["gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"],
     },
     # Azure OpenAI
-    "azure": {
-        "provider": "openai",
-        "models": ["gpt-4", "gpt-4-turbo", "gpt-35-turbo"]
-    },
+    "azure": {"provider": "openai", "models": ["gpt-4", "gpt-4-turbo", "gpt-35-turbo"]},
     # Anthropic Claude
     "claude": {
         "provider": "anthropic",
-        "models": ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"]
+        "models": [
+            "claude-3-5-sonnet-20241022",
+            "claude-3-5-haiku-20241022",
+            "claude-3-opus-20240229",
+        ],
     },
     # AWS Bedrock
     "bedrock": {
         "provider": "bedrock",
-        "models": ["anthropic.claude-3-sonnet-20240229-v1:0", "anthropic.claude-3-haiku-20240307-v1:0"]
+        "models": [
+            "anthropic.claude-3-sonnet-20240229-v1:0",
+            "anthropic.claude-3-haiku-20240307-v1:0",
+        ],
     },
     # Google Gemini
     "gemini": {
         "provider": "gemini",
-        "models": ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro"]
+        "models": ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro"],
     },
     # DeepSeek
     "deepseek": {
         "provider": "generic",
         "api_base": "https://api.deepseek.com/v1",
-        "models": ["deepseek-chat", "deepseek-coder"]
+        "models": ["deepseek-chat", "deepseek-coder"],
     },
     # Qwen
     "qwen": {
-        "provider": "generic", 
+        "provider": "generic",
         "api_base": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        "models": ["qwen-turbo", "qwen-plus", "qwen-max"]
+        "models": ["qwen-turbo", "qwen-plus", "qwen-max"],
     },
     # Grok (xAI)
     "grok": {
         "provider": "generic",
         "api_base": "https://api.x.ai/v1",
-        "models": ["grok-beta"]
+        "models": ["grok-beta"],
     },
     # Mistral AI
     "mistral": {
         "provider": "generic",
         "api_base": "https://api.mistral.ai/v1",
-        "models": ["mistral-large-latest", "mistral-medium-latest", "mistral-small-latest", "mixtral-8x7b-instruct"]
+        "models": [
+            "mistral-large-latest",
+            "mistral-medium-latest",
+            "mistral-small-latest",
+            "mixtral-8x7b-instruct",
+        ],
     },
     # Cohere
     "cohere": {
         "provider": "generic",
         "api_base": "https://api.cohere.ai/v1",
-        "models": ["command-r-plus", "command-r", "command"]
+        "models": ["command-r-plus", "command-r", "command"],
     },
     # Together AI (hosts many open models)
     "together": {
         "provider": "generic",
         "api_base": "https://api.together.xyz/v1",
-        "models": ["meta-llama/Llama-2-70b-chat-hf", "mistralai/Mixtral-8x7B-Instruct-v0.1"]
+        "models": [
+            "meta-llama/Llama-2-70b-chat-hf",
+            "mistralai/Mixtral-8x7B-Instruct-v0.1",
+        ],
     },
     # Perplexity
     "perplexity": {
         "provider": "generic",
         "api_base": "https://api.perplexity.ai",
-        "models": ["llama-3.1-sonar-huge-128k-online", "llama-3.1-sonar-large-128k-online"]
-    }
+        "models": [
+            "llama-3.1-sonar-huge-128k-online",
+            "llama-3.1-sonar-large-128k-online",
+        ],
+    },
 }
 
 
 def get_supported_models(provider: str) -> List[str]:
     """Get list of supported models for a provider.
-    
+
     Args:
         provider: Provider name
-        
+
     Returns:
         List of supported model names
     """
@@ -111,10 +128,10 @@ def get_supported_models(provider: str) -> List[str]:
 
 def get_default_api_base(provider: str) -> str:
     """Get default API base URL for a provider.
-    
+
     Args:
         provider: Provider name
-        
+
     Returns:
         Default API base URL or None
     """
@@ -124,10 +141,10 @@ def get_default_api_base(provider: str) -> str:
 
 def get_provider_type(provider: str) -> str:
     """Get the provider type for a given provider.
-    
+
     Args:
         provider: Provider name
-        
+
     Returns:
         Provider type (e.g., 'openai', 'anthropic', 'bedrock', 'gemini', 'generic')
     """
@@ -137,10 +154,10 @@ def get_provider_type(provider: str) -> str:
 
 def is_supported_provider(provider: str) -> bool:
     """Check if a provider is supported.
-    
+
     Args:
         provider: Provider name
-        
+
     Returns:
         True if provider is supported
     """
@@ -149,7 +166,7 @@ def is_supported_provider(provider: str) -> bool:
 
 def list_all_providers() -> List[str]:
     """Get list of all supported providers.
-    
+
     Returns:
         List of provider names
     """
@@ -158,27 +175,31 @@ def list_all_providers() -> List[str]:
 
 def get_all_models() -> Dict[str, List[str]]:
     """Get all models organized by provider.
-    
+
     Returns:
         Dictionary mapping provider names to their supported models
     """
-    return {provider: config.get("models", []) for provider, config in MODEL_CONFIGS.items()}
+    return {
+        provider: config.get("models", []) for provider, config in MODEL_CONFIGS.items()
+    }
 
 
-def determine_provider(provider: Optional[str], model_name: str, api_base: Optional[str]) -> str:
+def determine_provider(
+    provider: Optional[str], model_name: str, api_base: Optional[str]
+) -> str:
     """Determine the model provider based on configuration.
-    
+
     Args:
         provider: Explicitly specified provider (takes precedence)
         model_name: Name of the model to analyze
         api_base: API base URL to analyze
-        
+
     Returns:
         Determined provider name
     """
     if provider:
         return provider.lower()
-    
+
     # Auto-detect provider based on API base
     if api_base:
         if "azure.com" in api_base:
@@ -193,7 +214,7 @@ def determine_provider(provider: Optional[str], model_name: str, api_base: Optio
             return "claude"
         elif "googleapis.com" in api_base:
             return "gemini"
-    
+
     # Auto-detect based on model name
     model_lower = model_name.lower()
     if any(name in model_lower for name in ["gpt", "openai"]):
@@ -218,7 +239,7 @@ def determine_provider(provider: Optional[str], model_name: str, api_base: Optio
         return "perplexity"
     elif "anthropic." in model_name:
         return "bedrock"
-    
+
     # Default to OpenAI
     return "openai"
 
@@ -228,20 +249,20 @@ def create_model_provider(
     model_name: str,
     api_base: Optional[str] = None,
     api_key: Optional[str] = None,
-    **kwargs
+    **kwargs,
 ):
     """Create the appropriate model provider instance.
-    
+
     Args:
         provider: Provider name (e.g., "openai", "claude", etc.)
         model_name: Name of the model
         api_base: Optional API base URL
         api_key: Optional API key
         **kwargs: Additional provider-specific configuration
-        
+
     Returns:
         Model provider instance
-        
+
     Raises:
         ValueError: If provider is unsupported or required parameters missing
     """
@@ -251,46 +272,37 @@ def create_model_provider(
         AnthropicProvider,
         BedrockProvider,
         GeminiProvider,
-        SimpleGenericProvider
+        SimpleGenericProvider,
     )
-    
+
     if provider == "openai" or provider == "azure":
         return OpenAIProvider(
-            model_name=model_name,
-            api_base=api_base,
-            api_key=api_key,
-            **kwargs
+            model_name=model_name, api_base=api_base, api_key=api_key, **kwargs
         )
     elif provider == "claude":
-        return AnthropicProvider(
-            model_name=model_name,
-            api_key=api_key,
-            **kwargs
-        )
+        return AnthropicProvider(model_name=model_name, api_key=api_key, **kwargs)
     elif provider == "bedrock":
-        return BedrockProvider(
-            model_name=model_name,
-            **kwargs
-        )
+        return BedrockProvider(model_name=model_name, **kwargs)
     elif provider == "gemini":
-        return GeminiProvider(
-            model_name=model_name,
-            api_key=api_key,
-            **kwargs
-        )
-    elif provider in ["deepseek", "qwen", "grok", "mistral", "cohere", "together", "perplexity"]:
+        return GeminiProvider(model_name=model_name, api_key=api_key, **kwargs)
+    elif provider in [
+        "deepseek",
+        "qwen",
+        "grok",
+        "mistral",
+        "cohere",
+        "together",
+        "perplexity",
+    ]:
         # Use predefined API base if not provided
         if not api_base and provider in MODEL_CONFIGS:
             api_base = MODEL_CONFIGS[provider]["api_base"]
-        
+
         if not api_base:
             raise ValueError(f"API base URL required for provider: {provider}")
-        
+
         return SimpleGenericProvider(
-            model_name=model_name,
-            api_base=api_base,
-            api_key=api_key,
-            **kwargs
+            model_name=model_name, api_base=api_base, api_key=api_key, **kwargs
         )
     else:
         raise ValueError(f"Unsupported provider: {provider}")

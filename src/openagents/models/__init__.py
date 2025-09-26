@@ -1,31 +1,23 @@
-"""Data models for OpenAgents.""" 
+"""Data models for OpenAgents."""
 
 from .transport import (
     TransportType,
     ConnectionState,
     PeerMetadata,
     ConnectionInfo,
-    AgentConnection
+    AgentConnection,
 )
 
-from .messages import (
-    Event,
-    EventVisibility,
-    EventNames
-)
+from .messages import Event, EventVisibility, EventNames
 
-from .network_config import (
-    NetworkConfig,
-    OpenAgentsConfig,
-    NetworkMode
-)
+from .network_config import NetworkConfig, OpenAgentsConfig, NetworkMode
 
 from .network_role import NetworkRole
 
 __all__ = [
     # Transport models
     "TransportType",
-    "ConnectionState", 
+    "ConnectionState",
     "PeerMetadata",
     "ConnectionInfo",
     "AgentConnection",
@@ -37,5 +29,5 @@ __all__ = [
     "NetworkConfig",
     "OpenAgentsConfig",
     "NetworkMode",
-    "NetworkRole"
-] 
+    "NetworkRole",
+]

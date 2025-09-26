@@ -6,7 +6,7 @@ from .document_messages import *
 
 __all__ = [
     "SharedDocumentAgentAdapter",
-    "SharedDocumentNetworkMod", 
+    "SharedDocumentNetworkMod",
     "SharedDocument",
     # Document messages
     "CreateDocumentMessage",
@@ -29,5 +29,5 @@ __all__ = [
     "AgentPresenceResponse",
     "CursorPosition",
     "DocumentComment",
-    "AgentPresence"
+    "AgentPresence",
 ]

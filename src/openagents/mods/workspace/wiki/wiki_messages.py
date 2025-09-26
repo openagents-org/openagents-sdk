@@ -15,7 +15,7 @@ from openagents.models.event import Event
 
 class WikiPageCreateMessage(BaseModel):
     """Message for creating a new wiki page."""
-    
+
     event_name: str = "wiki.page.create"
     source_id: str = Field(..., description="ID of the agent creating the page")
     page_path: str = Field(..., description="Path/identifier for the wiki page")
@@ -29,7 +29,7 @@ class WikiPageCreateMessage(BaseModel):
 
 class WikiPageEditMessage(BaseModel):
     """Message for editing an existing wiki page (owner only)."""
-    
+
     event_name: str = "wiki.page.edit"
     source_id: str = Field(..., description="ID of the agent editing the page")
     page_path: str = Field(..., description="Path/identifier for the wiki page")
@@ -40,7 +40,7 @@ class WikiPageEditMessage(BaseModel):
 
 class WikiPageGetMessage(BaseModel):
     """Message for retrieving a wiki page."""
-    
+
     event_name: str = "wiki.page.get"
     source_id: str = Field(..., description="ID of the agent requesting the page")
     page_path: str = Field(..., description="Path/identifier for the wiki page")
@@ -51,7 +51,7 @@ class WikiPageGetMessage(BaseModel):
 
 class WikiPageSearchMessage(BaseModel):
     """Message for searching wiki pages."""
-    
+
     event_name: str = "wiki.pages.search"
     source_id: str = Field(..., description="ID of the agent searching")
     query: str = Field(..., description="Search query")
@@ -62,7 +62,7 @@ class WikiPageSearchMessage(BaseModel):
 
 class WikiPageListMessage(BaseModel):
     """Message for listing wiki pages."""
-    
+
     event_name: str = "wiki.pages.list"
     source_id: str = Field(..., description="ID of the agent listing pages")
     category: Optional[str] = Field(None, description="Filter by category")
@@ -73,7 +73,7 @@ class WikiPageListMessage(BaseModel):
 
 class WikiPageEditProposalMessage(BaseModel):
     """Message for proposing an edit to a wiki page."""
-    
+
     event_name: str = "wiki.page.proposal.create"
     source_id: str = Field(..., description="ID of the agent proposing the edit")
     page_path: str = Field(..., description="Path/identifier for the wiki page")
@@ -85,7 +85,7 @@ class WikiPageEditProposalMessage(BaseModel):
 
 class WikiEditProposalListMessage(BaseModel):
     """Message for listing edit proposals."""
-    
+
     event_name: str = "wiki.proposals.list"
     source_id: str = Field(..., description="ID of the agent listing proposals")
     page_path: Optional[str] = Field(None, description="Filter by specific page")
@@ -96,7 +96,7 @@ class WikiEditProposalListMessage(BaseModel):
 
 class WikiEditProposalResolveMessage(BaseModel):
     """Message for resolving an edit proposal."""
-    
+
     event_name: str = "wiki.proposal.resolve"
     source_id: str = Field(..., description="ID of the agent resolving the proposal")
     proposal_id: str = Field(..., description="ID of the proposal to resolve")
@@ -108,7 +108,7 @@ class WikiEditProposalResolveMessage(BaseModel):
 
 class WikiPageHistoryMessage(BaseModel):
     """Message for retrieving page history."""
-    
+
     event_name: str = "wiki.page.history"
     source_id: str = Field(..., description="ID of the agent requesting history")
     page_path: str = Field(..., description="Path/identifier for the wiki page")
@@ -119,7 +119,7 @@ class WikiPageHistoryMessage(BaseModel):
 
 class WikiPageRevertMessage(BaseModel):
     """Message for reverting a page to a previous version."""
-    
+
     event_name: str = "wiki.page.revert"
     source_id: str = Field(..., description="ID of the agent reverting the page")
     page_path: str = Field(..., description="Path/identifier for the wiki page")
@@ -130,9 +130,10 @@ class WikiPageRevertMessage(BaseModel):
 
 # Data models for internal use
 
+
 class WikiPage(BaseModel):
     """Internal model for wiki pages."""
-    
+
     page_path: str
     title: str
     content: str
@@ -147,7 +148,7 @@ class WikiPage(BaseModel):
 
 class WikiPageVersion(BaseModel):
     """Internal model for wiki page versions."""
-    
+
     version_id: str
     page_path: str
     version_number: int
@@ -160,7 +161,7 @@ class WikiPageVersion(BaseModel):
 
 class WikiEditProposal(BaseModel):
     """Internal model for edit proposals."""
-    
+
     proposal_id: str
     page_path: str
     proposed_content: str
@@ -175,7 +176,7 @@ class WikiEditProposal(BaseModel):
 
 class WikiProposalReview(BaseModel):
     """Internal model for proposal reviews."""
-    
+
     review_id: str
     proposal_id: str
     reviewer_id: str
