@@ -133,6 +133,13 @@ class HTTPNetworkConnector(NetworkConnector):
                             f"Agent registration failed: {register_response.get('error_message', 'Unknown error')}"
                         )
                         return False
+                    
+                    # Store authentication secret
+                    if register_response.get("secret"):
+                        self.secret = register_response["secret"]
+                        logger.debug(f"Stored authentication secret for agent {self.agent_id}")
+                    else:
+                        logger.warning(f"No secret received from network for agent {self.agent_id}")
 
             except Exception as e:
                 logger.error(f"Failed to register with HTTP server: {e}")
@@ -213,6 +220,10 @@ class HTTPNetworkConnector(NetworkConnector):
             if not self._validate_event(message):
                 return self._create_error_response("Event validation failed")
 
+            # Add authentication secret to the message
+            if self.secret and not message.secret:
+                message.secret = self.secret
+
             # Prepare HTTP request data
             event_data = {
                 "event_id": message.event_id,
@@ -222,6 +233,7 @@ class HTTPNetworkConnector(NetworkConnector):
                 "payload": message.payload or {},
                 "metadata": message.metadata or {},
                 "visibility": getattr(message, "visibility", "network"),
+                "secret": getattr(message, "secret", "") or "",
             }
 
             # Send the event to the server

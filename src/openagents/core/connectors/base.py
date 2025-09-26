@@ -48,6 +48,9 @@ class NetworkConnector(ABC):
         self.is_polling = (
             False  # Whether this connector uses polling for message retrieval
         )
+        
+        # Authentication
+        self.secret: Optional[str] = None
 
         # Message handling
         self.event_handlers: List[Callable[[Any], Awaitable[None]]] = []

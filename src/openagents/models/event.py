@@ -122,6 +122,9 @@ class Event(BaseModel):
     allowed_agents: Optional[Set[str]] = (
         None  # Specific agents allowed (if visibility=RESTRICTED)
     )
+    
+    # Authentication
+    secret: Optional[str] = None  # Authentication secret for the source agent
 
     model_config = {"use_enum_values": True, "arbitrary_types_allowed": True}
 

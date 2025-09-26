@@ -31,6 +31,7 @@ export class HttpEventConnector {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private timeout: number;
+  private secret: string | null = null;
 
   constructor(options: ConnectionOptions) {
     this.agentId = options.agentId;
@@ -92,6 +93,14 @@ export class HttpEventConnector {
         );
       }
 
+      // Store authentication secret from registration response
+      if (registerResponse.secret) {
+        this.secret = registerResponse.secret;
+        console.log("🔑 Authentication secret received and stored");
+      } else {
+        console.warn("⚠️ No authentication secret received from network");
+      }
+
       this.connected = true;
       this.reconnectAttempts = 0;
       this.isConnecting = false;
@@ -129,6 +138,7 @@ export class HttpEventConnector {
 
     this.connectionAborted = true;
     this.connected = false;
+    this.secret = null; // Clear authentication secret
 
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);
@@ -180,6 +190,11 @@ export class HttpEventConnector {
         event.timestamp = Math.floor(Date.now() / 1000);
       }
 
+      // Add authentication secret
+      if (!event.secret && this.secret) {
+        event.secret = this.secret;
+      }
+
       console.log(
         `📤 Sending event: ${event.event_name} from ${event.source_id}`
       );
@@ -192,6 +207,7 @@ export class HttpEventConnector {
         payload: event.payload || {},
         metadata: event.metadata || {},
         visibility: event.visibility || "network",
+        secret: event.secret || "",
       });
 
       const eventResponse: EventResponse = {

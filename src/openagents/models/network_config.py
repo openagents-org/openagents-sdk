@@ -101,6 +101,9 @@ class NetworkConfig(BaseModel):
     # Security configuration
     encryption_enabled: bool = Field(True, description="Whether encryption is enabled")
     encryption_type: str = Field("noise", description="Type of encryption to use")
+    disable_agent_secret_verification: bool = Field(
+        False, description="Disable agent secret verification (for testing only)"
+    )
 
     # Discovery configuration
     discovery_interval: int = Field(5, description="Discovery interval in seconds")

@@ -182,11 +182,18 @@ class HttpTransport(Transport):
                 logger.info(
                     f"✅ Successfully registered HTTP agent {agent_id} with network {network_name}"
                 )
+                
+                # Extract secret from response data
+                secret = ""
+                if event_response.data and isinstance(event_response.data, dict):
+                    secret = event_response.data.get("secret", "")
+                
                 return web.json_response(
                     {
                         "success": True,
                         "network_name": network_name,
                         "network_id": network_id,
+                        "secret": secret,
                     }
                 )
             else:
@@ -427,6 +434,7 @@ class HttpTransport(Transport):
             event_id = data.get("event_id")
             metadata = data.get("metadata", {})
             visibility = data.get("visibility", "network")
+            secret = data.get("secret")
 
             if not event_name or not source_id:
                 return web.json_response(
@@ -449,6 +457,7 @@ class HttpTransport(Transport):
                 timestamp=int(time.time()),
                 metadata=metadata,
                 visibility=visibility,
+                secret=secret,
             )
 
             # Route through unified handler (similar to gRPC)

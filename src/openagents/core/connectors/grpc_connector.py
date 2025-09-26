@@ -148,6 +148,13 @@ class GRPCNetworkConnector(NetworkConnector):
                 )
                 return False
 
+            # Store authentication secret
+            if hasattr(register_response, 'secret') and register_response.secret:
+                self.secret = register_response.secret
+                logger.debug(f"Stored authentication secret for agent {self.agent_id}")
+            else:
+                logger.warning(f"No secret received from network for agent {self.agent_id}")
+
             logger.info(f"Connected to gRPC network successfully")
 
             # For now, skip bidirectional streaming and use unary calls
@@ -230,6 +237,10 @@ class GRPCNetworkConnector(NetworkConnector):
             # Validate event using base class method
             if not self._validate_event(message):
                 return self._create_error_response("Event validation failed")
+
+            # Add authentication secret to the message
+            if self.secret and not message.secret:
+                message.secret = self.secret
 
             # Send event via unified gRPC SendEvent
             grpc_event = self._to_grpc_event(message)
@@ -422,6 +433,7 @@ class GRPCNetworkConnector(NetworkConnector):
             timestamp=int(event.timestamp),
             visibility=event.visibility if hasattr(event, "visibility") else "network",
             relevant_mod=event.relevant_mod or "",
+            secret=getattr(event, 'secret', '') or '',
         )
 
         # Add metadata

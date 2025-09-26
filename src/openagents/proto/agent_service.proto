@@ -36,6 +36,7 @@ message Event {
   map<string, string> metadata = 7;
   string visibility = 8;         // "local", "network", "external"
   string relevant_mod = 9;       // Specific mod to process this event (for MOD_ONLY visibility)
+  string secret = 10;            // Authentication secret for the source agent
 }
 
 // Unified event response

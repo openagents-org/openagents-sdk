@@ -53,6 +53,7 @@ class OpenAgentsGRPCServicer(agent_service_pb2_grpc.AgentServiceServicer):
                 timestamp=request.timestamp if request.timestamp else int(time.time()),
                 metadata=dict(request.metadata) if request.metadata else {},
                 visibility=request.visibility if request.visibility else "network",
+                secret=request.secret if hasattr(request, 'secret') else None,
             )
 
             # Route through unified handler
@@ -140,9 +141,16 @@ class OpenAgentsGRPCServicer(agent_service_pb2_grpc.AgentServiceServicer):
             logger.info(
                 f"✅ Successfully registered agent {request.agent_id} with network"
             )
+            
+            # Extract secret from response data
+            secret = ""
+            if return_data.success and return_data.data and isinstance(return_data.data, dict):
+                secret = return_data.data.get("secret", "")
+            
             return agent_service_pb2.RegisterAgentResponse(
                 success=return_data.success,
                 error_message=return_data.message if not return_data.success else "",
+                secret=secret,
             )
         except Exception as e:
             logger.error(f"Error calling event handler: {e}")

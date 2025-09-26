@@ -45,6 +45,7 @@ from openagents.models.network_config import (
 from openagents.core.agent_identity import AgentIdentityManager
 from openagents.models.event import Event, EventNames, EventVisibility
 from openagents.core.event_gateway import EventGateway
+from openagents.core.secret_manager import SecretManager
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +99,9 @@ class AgentNetwork:
 
         # Agent identity management
         self.identity_manager = AgentIdentityManager()
+
+
+        self.secret_manager = SecretManager()
 
         # Event gateway
         self.event_gateway = EventGateway(self)
@@ -280,7 +284,7 @@ class AgentNetwork:
     def _register_internal_handlers(self):
         """Register internal message handlers."""
         assert self.topology is not None
-        self.topology.register_event_handler(self.event_gateway.process_event)
+        self.topology.register_event_handler(self.process_event)
 
     async def _log_event(self, event: Event):
         """Global event handler for logging and routing."""
@@ -390,6 +394,9 @@ class AgentNetwork:
         success = await self.topology.register_agent(agent_info)
 
         if success:
+            # Generate and store authentication secret
+            secret = self.secret_manager.generate_secret(agent_id)
+
             # Register agent with event gateway to create event queue
             self.event_gateway.register_agent(agent_id)
 
@@ -402,7 +409,9 @@ class AgentNetwork:
             await self.process_event(registration_notification)
             logger.info(f"Registered agent {agent_id} with network")
             return EventResponse(
-                success=True, message=f"Registered agent {agent_id} with network"
+                success=True,
+                message=f"Registered agent {agent_id} with network",
+                data={"secret": secret},
             )
         else:
             logger.error(f"Failed to register agent {agent_id} with network")
@@ -423,6 +432,9 @@ class AgentNetwork:
         success = await self.topology.unregister_agent(agent_id)
 
         if success:
+            # Remove authentication secret
+            self.secret_manager.remove_secret(agent_id)
+
             await self.event_gateway.cleanup_agent(agent_id)
             logger.info(f"Unregistered agent {agent_id} from network")
             await self.process_event(
@@ -504,7 +516,37 @@ class AgentNetwork:
         Args:
             event: Transport event to handle
         """
+        # Skip authentication for system events (by source_id or event name pattern)
+        if event.source_id == SYSTEM_AGENT_ID or event.event_name.startswith("system."):
+            return await self.event_gateway.process_event(event)
+
+        # Validate authentication secret for user events (unless disabled for testing)
+        if not self.config.disable_agent_secret_verification and not self._validate_event_authentication(
+            event
+        ):
+            logger.warning(f"Authentication failed for event from {event.source_id}")
+            return EventResponse(
+                success=False,
+                message="Authentication failed: Invalid or missing secret",
+            )
+
         return await self.event_gateway.process_event(event)
+
+    def _validate_event_authentication(self, event: Event) -> bool:
+        """Validate the authentication secret for an event.
+
+        Args:
+            event: The event to validate
+
+        Returns:
+            bool: True if authentication is valid, False otherwise
+        """
+        # Check if secret is provided
+        if not hasattr(event, "secret") or not event.secret:
+            return False
+
+        # Validate the secret
+        return self.secret_manager.validate_secret(event.source_id, event.secret)
 
     def workspace(self, client_id: Optional[str] = None) -> "Workspace":
         """Create a workspace instance for this network.

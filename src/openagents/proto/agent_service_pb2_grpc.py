@@ -5,31 +5,29 @@ import warnings
 
 from . import agent_service_pb2 as agent__service__pb2
 
-GRPC_GENERATED_VERSION = "1.73.1"
+GRPC_GENERATED_VERSION = '1.74.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
 try:
     from grpc._utilities import first_version_is_lower
-
-    _version_not_supported = first_version_is_lower(
-        GRPC_VERSION, GRPC_GENERATED_VERSION
-    )
+    _version_not_supported = first_version_is_lower(GRPC_VERSION, GRPC_GENERATED_VERSION)
 except ImportError:
     _version_not_supported = True
 
 if _version_not_supported:
     raise RuntimeError(
-        f"The grpc package installed is at version {GRPC_VERSION},"
-        + f" but the generated code in agent_service_pb2_grpc.py depends on"
-        + f" grpcio>={GRPC_GENERATED_VERSION}."
-        + f" Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}"
-        + f" or downgrade your generated code using grpcio-tools<={GRPC_VERSION}."
+        f'The grpc package installed is at version {GRPC_VERSION},'
+        + f' but the generated code in agent_service_pb2_grpc.py depends on'
+        + f' grpcio>={GRPC_GENERATED_VERSION}.'
+        + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
+        + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
     )
 
 
 class AgentServiceStub(object):
-    """Agent service for OpenAgents gRPC transport"""
+    """Agent service for OpenAgents gRPC transport
+    """
 
     def __init__(self, channel):
         """Constructor.
@@ -38,180 +36,174 @@ class AgentServiceStub(object):
             channel: A grpc.Channel.
         """
         self.SendEvent = channel.unary_unary(
-            "/openagents.AgentService/SendEvent",
-            request_serializer=agent__service__pb2.Event.SerializeToString,
-            response_deserializer=agent__service__pb2.EventResponse.FromString,
-            _registered_method=True,
-        )
+                '/openagents.AgentService/SendEvent',
+                request_serializer=agent__service__pb2.Event.SerializeToString,
+                response_deserializer=agent__service__pb2.EventResponse.FromString,
+                _registered_method=True)
         self.StreamEvents = channel.stream_stream(
-            "/openagents.AgentService/StreamEvents",
-            request_serializer=agent__service__pb2.Event.SerializeToString,
-            response_deserializer=agent__service__pb2.Event.FromString,
-            _registered_method=True,
-        )
+                '/openagents.AgentService/StreamEvents',
+                request_serializer=agent__service__pb2.Event.SerializeToString,
+                response_deserializer=agent__service__pb2.Event.FromString,
+                _registered_method=True)
         self.RegisterAgent = channel.unary_unary(
-            "/openagents.AgentService/RegisterAgent",
-            request_serializer=agent__service__pb2.RegisterAgentRequest.SerializeToString,
-            response_deserializer=agent__service__pb2.RegisterAgentResponse.FromString,
-            _registered_method=True,
-        )
+                '/openagents.AgentService/RegisterAgent',
+                request_serializer=agent__service__pb2.RegisterAgentRequest.SerializeToString,
+                response_deserializer=agent__service__pb2.RegisterAgentResponse.FromString,
+                _registered_method=True)
         self.UnregisterAgent = channel.unary_unary(
-            "/openagents.AgentService/UnregisterAgent",
-            request_serializer=agent__service__pb2.UnregisterAgentRequest.SerializeToString,
-            response_deserializer=agent__service__pb2.UnregisterAgentResponse.FromString,
-            _registered_method=True,
-        )
+                '/openagents.AgentService/UnregisterAgent',
+                request_serializer=agent__service__pb2.UnregisterAgentRequest.SerializeToString,
+                response_deserializer=agent__service__pb2.UnregisterAgentResponse.FromString,
+                _registered_method=True)
         self.DiscoverAgents = channel.unary_unary(
-            "/openagents.AgentService/DiscoverAgents",
-            request_serializer=agent__service__pb2.DiscoverAgentsRequest.SerializeToString,
-            response_deserializer=agent__service__pb2.DiscoverAgentsResponse.FromString,
-            _registered_method=True,
-        )
+                '/openagents.AgentService/DiscoverAgents',
+                request_serializer=agent__service__pb2.DiscoverAgentsRequest.SerializeToString,
+                response_deserializer=agent__service__pb2.DiscoverAgentsResponse.FromString,
+                _registered_method=True)
         self.GetAgentInfo = channel.unary_unary(
-            "/openagents.AgentService/GetAgentInfo",
-            request_serializer=agent__service__pb2.GetAgentInfoRequest.SerializeToString,
-            response_deserializer=agent__service__pb2.GetAgentInfoResponse.FromString,
-            _registered_method=True,
-        )
+                '/openagents.AgentService/GetAgentInfo',
+                request_serializer=agent__service__pb2.GetAgentInfoRequest.SerializeToString,
+                response_deserializer=agent__service__pb2.GetAgentInfoResponse.FromString,
+                _registered_method=True)
         self.Heartbeat = channel.unary_unary(
-            "/openagents.AgentService/Heartbeat",
-            request_serializer=agent__service__pb2.HeartbeatRequest.SerializeToString,
-            response_deserializer=agent__service__pb2.HeartbeatResponse.FromString,
-            _registered_method=True,
-        )
+                '/openagents.AgentService/Heartbeat',
+                request_serializer=agent__service__pb2.HeartbeatRequest.SerializeToString,
+                response_deserializer=agent__service__pb2.HeartbeatResponse.FromString,
+                _registered_method=True)
         self.GetNetworkInfo = channel.unary_unary(
-            "/openagents.AgentService/GetNetworkInfo",
-            request_serializer=agent__service__pb2.NetworkInfoRequest.SerializeToString,
-            response_deserializer=agent__service__pb2.NetworkInfoResponse.FromString,
-            _registered_method=True,
-        )
+                '/openagents.AgentService/GetNetworkInfo',
+                request_serializer=agent__service__pb2.NetworkInfoRequest.SerializeToString,
+                response_deserializer=agent__service__pb2.NetworkInfoResponse.FromString,
+                _registered_method=True)
 
 
 class AgentServiceServicer(object):
-    """Agent service for OpenAgents gRPC transport"""
+    """Agent service for OpenAgents gRPC transport
+    """
 
     def SendEvent(self, request, context):
-        """Unified event handling for all message and system command types"""
+        """Unified event handling for all message and system command types
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def StreamEvents(self, request_iterator, context):
-        """Bidirectional streaming for events"""
+        """Bidirectional streaming for events
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def RegisterAgent(self, request, context):
-        """Agent registration and management"""
+        """Agent registration and management
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def UnregisterAgent(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def DiscoverAgents(self, request, context):
-        """Agent discovery"""
+        """Agent discovery
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def GetAgentInfo(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def Heartbeat(self, request, context):
-        """Heartbeat and health checks"""
+        """Heartbeat and health checks
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def GetNetworkInfo(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
 
 def add_AgentServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-        "SendEvent": grpc.unary_unary_rpc_method_handler(
-            servicer.SendEvent,
-            request_deserializer=agent__service__pb2.Event.FromString,
-            response_serializer=agent__service__pb2.EventResponse.SerializeToString,
-        ),
-        "StreamEvents": grpc.stream_stream_rpc_method_handler(
-            servicer.StreamEvents,
-            request_deserializer=agent__service__pb2.Event.FromString,
-            response_serializer=agent__service__pb2.Event.SerializeToString,
-        ),
-        "RegisterAgent": grpc.unary_unary_rpc_method_handler(
-            servicer.RegisterAgent,
-            request_deserializer=agent__service__pb2.RegisterAgentRequest.FromString,
-            response_serializer=agent__service__pb2.RegisterAgentResponse.SerializeToString,
-        ),
-        "UnregisterAgent": grpc.unary_unary_rpc_method_handler(
-            servicer.UnregisterAgent,
-            request_deserializer=agent__service__pb2.UnregisterAgentRequest.FromString,
-            response_serializer=agent__service__pb2.UnregisterAgentResponse.SerializeToString,
-        ),
-        "DiscoverAgents": grpc.unary_unary_rpc_method_handler(
-            servicer.DiscoverAgents,
-            request_deserializer=agent__service__pb2.DiscoverAgentsRequest.FromString,
-            response_serializer=agent__service__pb2.DiscoverAgentsResponse.SerializeToString,
-        ),
-        "GetAgentInfo": grpc.unary_unary_rpc_method_handler(
-            servicer.GetAgentInfo,
-            request_deserializer=agent__service__pb2.GetAgentInfoRequest.FromString,
-            response_serializer=agent__service__pb2.GetAgentInfoResponse.SerializeToString,
-        ),
-        "Heartbeat": grpc.unary_unary_rpc_method_handler(
-            servicer.Heartbeat,
-            request_deserializer=agent__service__pb2.HeartbeatRequest.FromString,
-            response_serializer=agent__service__pb2.HeartbeatResponse.SerializeToString,
-        ),
-        "GetNetworkInfo": grpc.unary_unary_rpc_method_handler(
-            servicer.GetNetworkInfo,
-            request_deserializer=agent__service__pb2.NetworkInfoRequest.FromString,
-            response_serializer=agent__service__pb2.NetworkInfoResponse.SerializeToString,
-        ),
+            'SendEvent': grpc.unary_unary_rpc_method_handler(
+                    servicer.SendEvent,
+                    request_deserializer=agent__service__pb2.Event.FromString,
+                    response_serializer=agent__service__pb2.EventResponse.SerializeToString,
+            ),
+            'StreamEvents': grpc.stream_stream_rpc_method_handler(
+                    servicer.StreamEvents,
+                    request_deserializer=agent__service__pb2.Event.FromString,
+                    response_serializer=agent__service__pb2.Event.SerializeToString,
+            ),
+            'RegisterAgent': grpc.unary_unary_rpc_method_handler(
+                    servicer.RegisterAgent,
+                    request_deserializer=agent__service__pb2.RegisterAgentRequest.FromString,
+                    response_serializer=agent__service__pb2.RegisterAgentResponse.SerializeToString,
+            ),
+            'UnregisterAgent': grpc.unary_unary_rpc_method_handler(
+                    servicer.UnregisterAgent,
+                    request_deserializer=agent__service__pb2.UnregisterAgentRequest.FromString,
+                    response_serializer=agent__service__pb2.UnregisterAgentResponse.SerializeToString,
+            ),
+            'DiscoverAgents': grpc.unary_unary_rpc_method_handler(
+                    servicer.DiscoverAgents,
+                    request_deserializer=agent__service__pb2.DiscoverAgentsRequest.FromString,
+                    response_serializer=agent__service__pb2.DiscoverAgentsResponse.SerializeToString,
+            ),
+            'GetAgentInfo': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetAgentInfo,
+                    request_deserializer=agent__service__pb2.GetAgentInfoRequest.FromString,
+                    response_serializer=agent__service__pb2.GetAgentInfoResponse.SerializeToString,
+            ),
+            'Heartbeat': grpc.unary_unary_rpc_method_handler(
+                    servicer.Heartbeat,
+                    request_deserializer=agent__service__pb2.HeartbeatRequest.FromString,
+                    response_serializer=agent__service__pb2.HeartbeatResponse.SerializeToString,
+            ),
+            'GetNetworkInfo': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetNetworkInfo,
+                    request_deserializer=agent__service__pb2.NetworkInfoRequest.FromString,
+                    response_serializer=agent__service__pb2.NetworkInfoResponse.SerializeToString,
+            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-        "openagents.AgentService", rpc_method_handlers
-    )
+            'openagents.AgentService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers(
-        "openagents.AgentService", rpc_method_handlers
-    )
+    server.add_registered_method_handlers('openagents.AgentService', rpc_method_handlers)
 
 
-# This class is part of an EXPERIMENTAL API.
+ # This class is part of an EXPERIMENTAL API.
 class AgentService(object):
-    """Agent service for OpenAgents gRPC transport"""
+    """Agent service for OpenAgents gRPC transport
+    """
 
     @staticmethod
-    def SendEvent(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
-    ):
+    def SendEvent(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
         return grpc.experimental.unary_unary(
             request,
             target,
-            "/openagents.AgentService/SendEvent",
+            '/openagents.AgentService/SendEvent',
             agent__service__pb2.Event.SerializeToString,
             agent__service__pb2.EventResponse.FromString,
             options,
@@ -222,26 +214,23 @@ class AgentService(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
-        )
+            _registered_method=True)
 
     @staticmethod
-    def StreamEvents(
-        request_iterator,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
-    ):
+    def StreamEvents(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
         return grpc.experimental.stream_stream(
             request_iterator,
             target,
-            "/openagents.AgentService/StreamEvents",
+            '/openagents.AgentService/StreamEvents',
             agent__service__pb2.Event.SerializeToString,
             agent__service__pb2.Event.FromString,
             options,
@@ -252,26 +241,23 @@ class AgentService(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
-        )
+            _registered_method=True)
 
     @staticmethod
-    def RegisterAgent(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
-    ):
+    def RegisterAgent(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
         return grpc.experimental.unary_unary(
             request,
             target,
-            "/openagents.AgentService/RegisterAgent",
+            '/openagents.AgentService/RegisterAgent',
             agent__service__pb2.RegisterAgentRequest.SerializeToString,
             agent__service__pb2.RegisterAgentResponse.FromString,
             options,
@@ -282,26 +268,23 @@ class AgentService(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
-        )
+            _registered_method=True)
 
     @staticmethod
-    def UnregisterAgent(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
-    ):
+    def UnregisterAgent(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
         return grpc.experimental.unary_unary(
             request,
             target,
-            "/openagents.AgentService/UnregisterAgent",
+            '/openagents.AgentService/UnregisterAgent',
             agent__service__pb2.UnregisterAgentRequest.SerializeToString,
             agent__service__pb2.UnregisterAgentResponse.FromString,
             options,
@@ -312,26 +295,23 @@ class AgentService(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
-        )
+            _registered_method=True)
 
     @staticmethod
-    def DiscoverAgents(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
-    ):
+    def DiscoverAgents(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
         return grpc.experimental.unary_unary(
             request,
             target,
-            "/openagents.AgentService/DiscoverAgents",
+            '/openagents.AgentService/DiscoverAgents',
             agent__service__pb2.DiscoverAgentsRequest.SerializeToString,
             agent__service__pb2.DiscoverAgentsResponse.FromString,
             options,
@@ -342,26 +322,23 @@ class AgentService(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
-        )
+            _registered_method=True)
 
     @staticmethod
-    def GetAgentInfo(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
-    ):
+    def GetAgentInfo(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
         return grpc.experimental.unary_unary(
             request,
             target,
-            "/openagents.AgentService/GetAgentInfo",
+            '/openagents.AgentService/GetAgentInfo',
             agent__service__pb2.GetAgentInfoRequest.SerializeToString,
             agent__service__pb2.GetAgentInfoResponse.FromString,
             options,
@@ -372,26 +349,23 @@ class AgentService(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
-        )
+            _registered_method=True)
 
     @staticmethod
-    def Heartbeat(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
-    ):
+    def Heartbeat(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
         return grpc.experimental.unary_unary(
             request,
             target,
-            "/openagents.AgentService/Heartbeat",
+            '/openagents.AgentService/Heartbeat',
             agent__service__pb2.HeartbeatRequest.SerializeToString,
             agent__service__pb2.HeartbeatResponse.FromString,
             options,
@@ -402,26 +376,23 @@ class AgentService(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
-        )
+            _registered_method=True)
 
     @staticmethod
-    def GetNetworkInfo(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
-    ):
+    def GetNetworkInfo(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
         return grpc.experimental.unary_unary(
             request,
             target,
-            "/openagents.AgentService/GetNetworkInfo",
+            '/openagents.AgentService/GetNetworkInfo',
             agent__service__pb2.NetworkInfoRequest.SerializeToString,
             agent__service__pb2.NetworkInfoResponse.FromString,
             options,
@@ -432,5 +403,4 @@ class AgentService(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
-        )
+            _registered_method=True)

@@ -18,6 +18,7 @@ export interface Event {
   metadata?: any;
   timestamp?: number;
   visibility?: 'public' | 'network' | 'channel' | 'direct' | 'restricted' | 'mod_only';
+  secret?: string;
 }
 
 export enum EventNames {
