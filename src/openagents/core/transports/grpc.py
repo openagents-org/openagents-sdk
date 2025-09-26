@@ -165,9 +165,23 @@ class OpenAgentsGRPCServicer(agent_service_pb2_grpc.AgentServiceServicer):
             event_name=SYSTEM_EVENT_UNREGISTER_AGENT,
             source_id=request.agent_id,
             payload={"agent_id": request.agent_id},
+            secret=getattr(request, 'secret', None),
         )
-        await self.transport.call_event_handler(unregister_event)
-        return agent_service_pb2.UnregisterAgentResponse(success=True)
+        
+        # Process the unregistration event through the event handler
+        event_response = await self.transport.call_event_handler(unregister_event)
+        
+        if event_response and event_response.success:
+            return agent_service_pb2.UnregisterAgentResponse(success=True)
+        else:
+            error_message = (
+                event_response.message
+                if event_response
+                else "No response from event handler"
+            )
+            return agent_service_pb2.UnregisterAgentResponse(
+                success=False, error_message=error_message
+            )
 
     def _extract_payload_from_protobuf(self, protobuf_payload):
         """Extract payload from protobuf Any field with various fallback strategies."""

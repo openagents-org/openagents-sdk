@@ -24,6 +24,8 @@ from typing import (
 from openagents.config.globals import (
     SYSTEM_AGENT_ID,
     SYSTEM_EVENT_REGISTER_AGENT,
+    SYSTEM_EVENT_UNREGISTER_AGENT,
+    SYSTEM_EVENT_POLL_MESSAGES,
     SYSTEM_NOTIFICAITON_REGISTER_AGENT,
     SYSTEM_NOTIFICAITON_UNREGISTER_AGENT,
     WORKSPACE_DEFAULT_MOD_NAME,
@@ -284,7 +286,7 @@ class AgentNetwork:
     def _register_internal_handlers(self):
         """Register internal message handlers."""
         assert self.topology is not None
-        self.topology.register_event_handler(self.process_event)
+        self.topology.register_event_handler(self.process_external_event)
 
     async def _log_event(self, event: Event):
         """Global event handler for logging and routing."""
@@ -406,7 +408,7 @@ class AgentNetwork:
                 source_id=SYSTEM_AGENT_ID,
                 payload={"agent_id": agent_id, "metadata": metadata},
             )
-            await self.process_event(registration_notification)
+            await self.process_external_event(registration_notification)
             logger.info(f"Registered agent {agent_id} with network")
             return EventResponse(
                 success=True,
@@ -437,7 +439,7 @@ class AgentNetwork:
 
             await self.event_gateway.cleanup_agent(agent_id)
             logger.info(f"Unregistered agent {agent_id} from network")
-            await self.process_event(
+            await self.process_external_event(
                 Event(
                     event_name=SYSTEM_NOTIFICAITON_UNREGISTER_AGENT,
                     source_id=SYSTEM_AGENT_ID,
@@ -510,17 +512,26 @@ class AgentNetwork:
             "max_connections": self.config.max_connections,
         }
 
-    async def process_event(self, event: Event) -> EventResponse:
+    async def process_external_event(self, event: Event) -> EventResponse:
         """Handle incoming transport messages.
 
         Args:
             event: Transport event to handle
         """
-        # Skip authentication for system events (by source_id or event name pattern)
-        if event.source_id == SYSTEM_AGENT_ID or event.event_name.startswith("system."):
+        # Skip authentication for system events that don't have secrets
+        # But authenticate system events that do include secrets (like authenticated polling/unregistration)
+        # Special cases: polling and unregistration always require authentication
+        is_system_event = event.source_id == SYSTEM_AGENT_ID or event.event_name.startswith("system.")
+        has_secret = hasattr(event, "secret") and event.secret
+        is_polling_event = event.event_name == SYSTEM_EVENT_POLL_MESSAGES
+        is_unregister_event = event.event_name == SYSTEM_EVENT_UNREGISTER_AGENT
+        
+        if is_system_event and not has_secret and not is_polling_event and not is_unregister_event:
+            # System events without secrets bypass authentication (registration, etc.)
+            # But polling and unregistration always require authentication
             return await self.event_gateway.process_event(event)
 
-        # Validate authentication secret for user events (unless disabled for testing)
+        # Validate authentication secret for all other events (unless disabled for testing)
         if not self.config.disable_agent_secret_verification and not self._validate_event_authentication(
             event
         ):
@@ -530,6 +541,18 @@ class AgentNetwork:
                 message="Authentication failed: Invalid or missing secret",
             )
 
+        return await self.event_gateway.process_event(event)
+
+    async def process_event(self, event: Event) -> EventResponse:
+        """Handle internal events from mods that bypass authentication.
+        
+        This method should be used by mods when sending internal notifications
+        or events that don't need authentication validation.
+        
+        Args:
+            event: Internal event to handle
+        """
+        logger.debug(f"Processing internal event: {event.event_name} from {event.source_id}")
         return await self.event_gateway.process_event(event)
 
     def _validate_event_authentication(self, event: Event) -> bool:

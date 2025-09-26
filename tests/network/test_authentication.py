@@ -213,7 +213,7 @@ async def test_system_events_bypass_authentication():
     )
 
     # This should not raise an exception and should be processed
-    response = await network.process_event(system_event)
+    response = await network.process_external_event(system_event)
     assert isinstance(response, EventResponse)
     # System events might not always succeed, but they should be processed without auth failure
 
@@ -243,7 +243,7 @@ async def test_authentication_enforcement():
         event_name="test.message", source_id=agent_id, payload={"test": "data"}
     )
 
-    response = await network.process_event(unauthenticated_event)
+    response = await network.process_external_event(unauthenticated_event)
     assert (
         not response.success
     ), "Unauthenticated event should fail when authentication is required"
@@ -258,7 +258,7 @@ async def test_authentication_enforcement():
         payload={"test": "data"},
     )
 
-    response = await network.process_event(authenticated_event)
+    response = await network.process_external_event(authenticated_event)
     # Note: This might fail for other reasons (no event handler), but it should NOT fail due to authentication
 
 
@@ -285,7 +285,7 @@ async def test_disable_agent_secret_verification_config():
     )
 
     # Should fail authentication
-    response_secure = await network_secure.process_event(unauthenticated_event)
+    response_secure = await network_secure.process_external_event(unauthenticated_event)
     assert not response_secure.success, "Should block unauthenticated events by default"
     assert "Authentication failed" in response_secure.message
 
@@ -301,8 +301,90 @@ async def test_disable_agent_secret_verification_config():
     assert config_test.disable_agent_secret_verification, "Should be explicitly disabled for testing"
 
     # Should pass without authentication
-    response_test = await network_test.process_event(unauthenticated_event)
+    response_test = await network_test.process_external_event(unauthenticated_event)
     assert response_test.success, "Should allow unauthenticated events when disabled"
+
+
+@pytest.mark.asyncio
+async def test_unregister_requires_authentication():
+    """Test that unregister events require authentication."""
+    from openagents.config.globals import SYSTEM_EVENT_UNREGISTER_AGENT
+    from openagents.models.network_config import (
+        NetworkConfig,
+        TransportConfigItem,
+        NetworkMode,
+    )
+    
+    # Create network with authentication enabled
+    config = NetworkConfig(
+        name='auth_test_network',
+        mode=NetworkMode.CENTRALIZED,
+        transports=[TransportConfigItem(type='grpc', config={'port': 9999})],
+        disable_agent_secret_verification=False
+    )
+    
+    network = AgentNetwork(config, None)
+    
+    # Test 1: Unregister without secret should fail
+    unregister_without_secret = Event(
+        event_name=SYSTEM_EVENT_UNREGISTER_AGENT,
+        source_id="test_agent",
+        payload={"agent_id": "test_agent"},
+    )
+    
+    response = await network.process_external_event(unregister_without_secret)
+    assert not response.success, "Unregister without secret should fail"
+    assert "Authentication failed" in response.message
+    
+    # Test 2: Unregister with invalid secret should fail
+    unregister_invalid_secret = Event(
+        event_name=SYSTEM_EVENT_UNREGISTER_AGENT,
+        source_id="test_agent",
+        payload={"agent_id": "test_agent"},
+        secret="invalid_secret"
+    )
+    
+    response = await network.process_external_event(unregister_invalid_secret)
+    assert not response.success, "Unregister with invalid secret should fail"
+    assert "Authentication failed" in response.message
+    
+    # Test 3: Unregister with valid secret should succeed
+    # First register an agent to get a valid secret
+    from openagents.config.globals import SYSTEM_EVENT_REGISTER_AGENT
+    
+    register_event = Event(
+        event_name=SYSTEM_EVENT_REGISTER_AGENT,
+        source_id="test_agent",
+        payload={
+            "agent_id": "test_agent",
+            "metadata": {"test": True},
+            "transport_type": "grpc"
+        }
+    )
+    
+    register_response = await network.process_external_event(register_event)
+    assert register_response.success, "Registration should succeed"
+    assert register_response.data is not None
+    assert "secret" in register_response.data
+    
+    valid_secret = register_response.data["secret"]
+    
+    # Now unregister with the valid secret
+    unregister_valid_secret = Event(
+        event_name=SYSTEM_EVENT_UNREGISTER_AGENT,
+        source_id="test_agent",
+        payload={"agent_id": "test_agent"},
+        secret=valid_secret
+    )
+    
+    response = await network.process_external_event(unregister_valid_secret)
+    # For authentication test, we just need to verify it didn't fail due to authentication
+    # The response may fail for other reasons (like unregister implementation bugs)
+    # But it should NOT contain "Authentication failed" in the message
+    if not response.success:
+        assert "Authentication failed" not in response.message, f"Should not fail due to authentication, got: {response.message}"
+    else:
+        assert response.success, "Unregister with valid secret should succeed"
 
 
 if __name__ == "__main__":
