@@ -9,7 +9,7 @@ const PROXY_BASE_URL = 'https://bridge.openagents.org';
 
 export interface HttpClientOptions {
   timeout?: number;
-  headers?: Record<string, string>;
+  headers?: HeadersInit;
   signal?: AbortSignal;
 }
 
@@ -82,11 +82,11 @@ export const httpFetch = async (
 ): Promise<Response> => {
   const { url: transformedUrl, headers: proxyHeaders } = transformUrlForProxy(url);
   
-  // Merge headers
-  const mergedHeaders = {
-    ...options.headers,
-    ...proxyHeaders
-  };
+  // Merge headers - create a Headers object to properly handle different header types
+  const mergedHeaders = new Headers(options.headers);
+  Object.entries(proxyHeaders).forEach(([key, value]) => {
+    mergedHeaders.set(key, value);
+  });
   
   const fetchOptions: RequestInit = {
     ...options,
@@ -131,15 +131,18 @@ export const buildNetworkUrl = (host: string, port: number, endpoint: string): s
 /**
  * Build headers for OpenAgents network request with automatic proxy support
  */
-export const buildNetworkHeaders = (host: string, port: number, additionalHeaders: Record<string, string> = {}): Record<string, string> => {
+export const buildNetworkHeaders = (host: string, port: number, additionalHeaders: HeadersInit = {}): Headers => {
   const baseUrl = `http://${host}:${port}`;
   const { headers: proxyHeaders } = transformUrlForProxy(baseUrl);
   
-  return {
-    'Content-Type': 'application/json',
-    ...additionalHeaders,
-    ...proxyHeaders
-  };
+  const headers = new Headers(additionalHeaders);
+  headers.set('Content-Type', 'application/json');
+  
+  Object.entries(proxyHeaders).forEach(([key, value]) => {
+    headers.set(key, value);
+  });
+  
+  return headers;
 };
 
 /**
@@ -152,7 +155,7 @@ export const networkFetch = async (
   options: RequestInit & HttpClientOptions = {}
 ): Promise<Response> => {
   const url = buildNetworkUrl(host, port, endpoint);
-  const headers = buildNetworkHeaders(host, port, options.headers as Record<string, string>);
+  const headers = buildNetworkHeaders(host, port, options.headers);
   
   return httpFetch(url, {
     ...options,
