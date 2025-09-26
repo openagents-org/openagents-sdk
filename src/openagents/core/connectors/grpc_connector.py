@@ -105,7 +105,7 @@ class GRPCNetworkConnector(NetworkConnector):
             # Test connection with heartbeat
             heartbeat_request = self.agent_service_pb2.HeartbeatRequest(
                 agent_id=self.agent_id,
-                timestamp=self._to_timestamp(time.time())
+                timestamp=int(time.time())
             )
             
             try:
@@ -199,6 +199,11 @@ class GRPCNetworkConnector(NetworkConnector):
         Returns:
             EventResponse: The response from the server
         """
+        if "poll" not in message.event_name:
+            print("🔧 GRPC: Sending event ================================")
+            print(message)
+            print("🔧 GRPC: Sending event ================================")
+
         if not self.is_connected:
             logger.debug(f"Agent {self.agent_id} is not connected to gRPC network")
             return self._create_error_response("Agent is not connected to gRPC network")
@@ -360,7 +365,7 @@ class GRPCNetworkConnector(NetworkConnector):
             event_name=event.event_name,
             source_id=event.source_id,
             target_agent_id=event.destination_id or '',
-            timestamp=self._to_timestamp(event.timestamp),
+            timestamp=int(event.timestamp),
             visibility=event.visibility if hasattr(event, 'visibility') else 'network',
             relevant_mod=event.relevant_mod or ''
         )
@@ -456,27 +461,7 @@ class GRPCNetworkConnector(NetworkConnector):
                 "target_id": grpc_message.target_id,
                 "message_type": grpc_message.message_type,
                 "content": content,
-                "timestamp": self._from_timestamp(grpc_message.timestamp)
+                "timestamp": grpc_message.timestamp
             }
         }
     
-    def _to_timestamp(self, timestamp: float):
-        """Convert Python timestamp to protobuf timestamp."""
-        from google.protobuf.timestamp_pb2 import Timestamp
-        ts = Timestamp()
-        try:
-            # Ensure timestamp is in valid range (Unix epoch)
-            if timestamp > 1e10:  # Likely milliseconds, convert to seconds
-                timestamp = timestamp / 1000.0
-            ts.FromSeconds(int(timestamp))
-            # Set nanoseconds for the fractional part
-            nanos = int((timestamp - int(timestamp)) * 1e9)
-            ts.nanos = nanos
-        except Exception as e:
-            logger.warning(f"Invalid timestamp {timestamp}, using current time: {e}")
-            ts.GetCurrentTime()
-        return ts
-    
-    def _from_timestamp(self, timestamp) -> float:
-        """Convert protobuf timestamp to Python timestamp."""
-        return timestamp.ToSeconds()

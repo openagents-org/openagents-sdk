@@ -535,7 +535,7 @@ class DecentralizedTopology(NetworkTopology):
                 "capabilities": agent_info.capabilities,
                 "address": agent_info.address
             },
-            timestamp=int(time.time() * 1000)
+            timestamp=int(time.time())
         )
         
         # Broadcast to all transports
@@ -555,7 +555,7 @@ class DecentralizedTopology(NetworkTopology):
             target_id=None,  # Broadcast
             message_type="agent_removal",
             payload={"agent_id": agent_id},
-            timestamp=int(time.time() * 1000)
+            timestamp=int(time.time())
         )
         
         # Broadcast to all transports
@@ -586,8 +586,8 @@ class DecentralizedTopology(NetworkTopology):
                         sender_id=self.node_id,
                         target_id=None,  # Broadcast
                         message_type="heartbeat",
-                        payload={"timestamp": int(time.time() * 1000)},
-                        timestamp=int(time.time() * 1000)
+                        payload={"timestamp": int(time.time())},
+                        timestamp=int(time.time())
                     )
                     
                     # Send heartbeat via all transports

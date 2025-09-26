@@ -125,9 +125,7 @@ class WorkerAgent(CollaboratorAgent):
     
     # Class attributes that can be overridden
     default_agent_id: str = None
-    auto_mention_response: bool = True
     ignore_own_messages: bool = True
-    default_channels: List[str] = []
     
     # Project-related configuration (only effective when project mod is enabled)
     auto_join_projects: bool = False

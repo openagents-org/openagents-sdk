@@ -44,7 +44,7 @@ class OpenAgentsGRPCServicer(agent_service_pb2_grpc.AgentServiceServicer):
                 destination_id=request.target_agent_id or None,
                 payload=payload,
                 event_id=request.event_id,
-                timestamp=int(request.timestamp.ToDatetime().timestamp()) if request.timestamp else time.time(),
+                timestamp=request.timestamp if request.timestamp else int(time.time()),
                 metadata=dict(request.metadata) if request.metadata else {},
                 visibility=request.visibility if request.visibility else "network"
             )
@@ -89,21 +89,19 @@ class OpenAgentsGRPCServicer(agent_service_pb2_grpc.AgentServiceServicer):
     async def Heartbeat(self, request, context):
         """Handle heartbeat requests."""
         logger.debug(f"gRPC Heartbeat received from {request.agent_id}")
-        from google.protobuf.timestamp_pb2 import Timestamp
-        timestamp = Timestamp()
-        timestamp.GetCurrentTime()
+        current_timestamp = int(time.time())
         heartbeat_event = Event(
             event_name=SYSTEM_EVENT_HEARTBEAT,
             source_id=request.agent_id,
             payload={
                 "agent_id": request.agent_id,
-                "timestamp": timestamp
+                "timestamp": current_timestamp
             }
         )
         await self.transport.call_event_handler(heartbeat_event)
         return agent_service_pb2.HeartbeatResponse(
             success=True,
-            timestamp=timestamp
+            timestamp=current_timestamp
         )
     
     async def RegisterAgent(self, request, context):

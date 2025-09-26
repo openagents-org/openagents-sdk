@@ -119,6 +119,10 @@ class Event(BaseModel):
         "use_enum_values": True,
         "arbitrary_types_allowed": True
     }
+
+    @property
+    def id(self) -> str:
+        return self.event_id
         
     @field_validator('event_name')
     @classmethod

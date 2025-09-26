@@ -364,16 +364,16 @@ class ChannelConnection:
             
             # Create mod message for thread messaging
             mod_message = Event(
-                event_name="thread.reply_message",
+                event_name="thread.reply.post", 
                 source_id=self._client.agent_id,
                 relevant_mod=WORKSPACE_MESSAGING_MOD_NAME,
-                destination_id=self._client.agent_id,
+                destination_id=f"channel:{self.name.lstrip('#')}",
                 payload={
                     "message_type": "reply_message",
                     "sender_id": self._client.agent_id,
-                    "channel": self.name,
+                    "channel": self.name.lstrip('#'),
                     "reply_to_id": message_id,
-                    "text": reply_content.get("text", str(reply_content)),
+                    "content": reply_content,
                     **kwargs
                 }
             )
@@ -985,8 +985,7 @@ class Workspace:
             ChannelConnection instance
         """
         # Normalize channel name
-        if not channel_name.startswith('#'):
-            channel_name = f"#{channel_name}"
+        channel_name = channel_name.lstrip('#')
         
         # Return cached channel or create new one
         if channel_name not in self._channels_cache:

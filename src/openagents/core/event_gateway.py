@@ -1,3 +1,4 @@
+import time
 from typing import Dict, List, Set
 import asyncio
 import logging
@@ -148,6 +149,8 @@ class EventGateway:
         Returns:
             EventResponse: The event response
         """
+        # Override the timestamp to the current time
+        event.timestamp = int(time.time())
         # Process the event through the pipeline
         response = None
         if event.event_name.startswith('system.'):

@@ -477,9 +477,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         if self.connector is None:
             logger.error(f"Cannot send reply: connector is None for agent {self.agent_id}")
             return
-        
-        content = {"text": text}
-        
+
         # Handle quoting if specified
         quoted_message_id = None
         quoted_text = None
@@ -487,7 +485,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             quoted_message_id = quote
             quoted_text = f"[Quoted message {quote}]"
         
-        # Create reply message
+        # Create reply message - this returns an Event object, don't double-wrap it
         reply_msg = ReplyMessage.create(
             reply_to_id=reply_to_id,
             text=text,
@@ -496,23 +494,17 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             quoted_message_id=quoted_message_id,
             quoted_text=quoted_text
         )
-        
-        # Wrap in Event for proper transport
-        message = Event(
-            event_name="thread.reply.sent", 
-            source_id=self.agent_id, 
-            relevant_mod="openagents.mods.workspace.messaging",
-            visibility=EventVisibility.MOD_ONLY,
-            relevant_agent_id=self.agent_id,
-            payload=reply_msg.model_dump()
-        )
+
+        # Use the reply message Event directly, just update the metadata
+        message = reply_msg
+        message.relevant_mod = "openagents.mods.workspace.messaging"
         
         await self.connector.send_event(message)
         logger.debug(f"Sent reply to message {reply_to_id} in channel {channel}")
     
     async def reply_direct_message(self, target_agent_id: str, reply_to_id: str, text: str, quote: Optional[str] = None) -> None:
         """Reply to a direct message (creates/continues thread).
-        
+
         Args:
             target_agent_id: ID of the target agent
             reply_to_id: ID of message being replied to
@@ -522,9 +514,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         if self.connector is None:
             logger.error(f"Cannot send reply: connector is None for agent {self.agent_id}")
             return
-        
-        content = {"text": text}
-        
+
         # Handle quoting if specified
         quoted_message_id = None
         quoted_text = None
@@ -532,7 +522,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             quoted_message_id = quote
             quoted_text = f"[Quoted message {quote}]"
         
-        # Create reply message
+        # Create reply message - this returns an Event object, don't double-wrap it
         reply_msg = ReplyMessage.create(
             reply_to_id=reply_to_id,
             text=text,
@@ -541,16 +531,11 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             quoted_message_id=quoted_message_id,
             quoted_text=quoted_text
         )
-        
-        # Wrap in Event for proper transport
-        message = Event(
-            event_name="thread.reply.sent", 
-            source_id=self.agent_id, 
-            relevant_mod="openagents.mods.workspace.messaging",
-            visibility=EventVisibility.MOD_ONLY,
-            relevant_agent_id=self.agent_id,
-            payload=reply_msg.model_dump()
-        )
+
+        # Use the reply message Event directly, just update the metadata
+        message = reply_msg
+        message.relevant_mod = "openagents.mods.workspace.messaging"
+        message.visibility = EventVisibility.MOD_ONLY
         
         await self.connector.send_event(message)
         logger.debug(f"Sent reply to message {reply_to_id} for agent {target_agent_id}")

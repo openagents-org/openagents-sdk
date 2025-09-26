@@ -245,8 +245,8 @@ class ReplyMessage:
         payload = {
             "reply_to_id": reply_to_id,
             "content": {"text": text},
-            "message_type": "reply",
-            "thread_level": thread_level
+            "message_type": "reply_message",
+            "sender_id": source_id
         }
         
         # Add optional fields if provided

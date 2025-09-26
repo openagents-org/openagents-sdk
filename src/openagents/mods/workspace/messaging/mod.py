@@ -201,7 +201,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             self.channels[channel_name] = {
                 'name': channel_name,
                 'description': description,
-                'created_timestamp': int(time.time() * 1000),
+                'created_timestamp': int(time.time()),
                 'message_count': 0,
                 'thread_count': 0
             }
@@ -224,7 +224,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             self.channels[channel_name] = {
                 'name': channel_name,
                 'description': description,
-                'created_timestamp': int(time.time() * 1000),
+                'created_timestamp': int(time.time()),
                 'message_count': 0,
                 'thread_count': 0
             }
