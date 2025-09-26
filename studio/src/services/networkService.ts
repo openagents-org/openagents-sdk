@@ -1,4 +1,5 @@
-import { ConnectionStatusEnum, NetworkConnection } from "@/types/connection";
+import { ConnectionStatusEnum, NetworkConnection } from "../types/connection";
+import { networkFetch } from "../utils/httpClient";
 
 export interface NetworkProfile {
   name: string;
@@ -35,11 +36,13 @@ export const detectLocalNetwork =
 
     for (const httpPort of commonPorts) {
       try {
-        const response = await fetch(
-          `http://localhost:${httpPort}/api/health`,
+        const response = await networkFetch(
+          "localhost",
+          httpPort,
+          "/api/health",
           {
             method: "GET",
-            signal: AbortSignal.timeout(3000), // 3 second timeout
+            timeout: 3000, // 3 second timeout
           }
         );
 
@@ -71,22 +74,21 @@ export const ManualNetworkConnection = async (
   const startTime = Date.now();
 
   try {
-    // Connect directly to the HTTP port
-    const protocol = window.location.protocol === "https:" ? "https" : "http";
-    const testUrl = `${protocol}://${host}:${port}/api/health`;
-
-    console.log(`Testing connection to HTTP endpoint: ${testUrl}`);
+    console.log(`Testing connection to network: ${host}:${port}`);
 
     // Use health check endpoint to test connectivity
-    const response = await fetch(testUrl, {
-      method: "GET",
-      mode: "cors", // Enable CORS
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      signal: AbortSignal.timeout(5000), // 5 second timeout
-    });
+    const response = await networkFetch(
+      host,
+      port,
+      "/api/health",
+      {
+        method: "GET",
+        timeout: 5000, // 5 second timeout
+        headers: {
+          Accept: "application/json",
+        },
+      }
+    );
 
     const latency = Date.now() - startTime;
 

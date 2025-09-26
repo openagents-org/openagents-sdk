@@ -3,6 +3,7 @@ import OpenAgentsLogo from "../icons/OpenAgentsLogo";
 import LocalNetwork from "./LocalNetwork";
 import ManualNetwork from "./ManualNetwork";
 import PublicNetwork from "./PublicNetwork";
+import { isHttps } from "../../utils/httpClient";
 
 const NetworkSelectionView: React.FC = () => {
   const Header = React.memo(() => {
@@ -25,7 +26,7 @@ const NetworkSelectionView: React.FC = () => {
         <Header />
 
         <div className="p-8">
-          <LocalNetwork />
+          {!isHttps() && <LocalNetwork />}
 
           <ManualNetwork />
 

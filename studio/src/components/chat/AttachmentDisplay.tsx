@@ -1,4 +1,5 @@
 import React from 'react';
+import { buildNetworkUrl } from '../../utils/httpClient';
 
 interface AttachmentDisplayProps {
   // 新的统一附件格式
@@ -32,7 +33,13 @@ const AttachmentDisplay: React.FC<AttachmentDisplayProps> = ({
   const handleDownload = (fileId: string, filename: string) => {
     // Use a dummy agent_id for now - in a real implementation, this would come from context
     const agentId = 'file-uploader-agent';
-    const downloadUrl = `${window.location.protocol}//${window.location.hostname}:9572/api/workspace/download/${fileId}?agent_id=${agentId}`;
+    
+    // Build download URL with automatic proxy support for HTTPS frontend
+    const downloadUrl = buildNetworkUrl(
+      window.location.hostname,
+      9572,
+      `/api/workspace/download/${fileId}?agent_id=${agentId}`
+    );
     
     // Create a temporary anchor element to trigger download
     const link = document.createElement('a');
