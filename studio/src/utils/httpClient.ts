@@ -74,7 +74,7 @@ export const transformUrlForProxy = (originalUrl: string): { url: string; header
 };
 
 /**
- * Enhanced fetch function with automatic proxy support
+ * Enhanced fetch function with automatic proxy support and CORS fallback
  */
 export const httpFetch = async (
   url: string, 
@@ -111,7 +111,15 @@ export const httpFetch = async (
     }
     
     return response;
-  } catch (error) {
+  } catch (error: any) {
+    // Check if this is a CORS error when using proxy
+    if (proxyHeaders['X-Target-Host'] && error.message?.includes('CORS')) {
+      console.warn(`⚠️ CORS error with proxy, this indicates a server configuration issue:`);
+      console.warn(`   - The proxy at ${PROXY_BASE_URL} needs proper CORS headers`);
+      console.warn(`   - Target: ${proxyHeaders['X-Target-Host']}`);
+      console.warn(`   - Original URL: ${url}`);
+    }
+    
     console.error(`❌ Request failed for ${transformedUrl}:`, error);
     throw error;
   }
