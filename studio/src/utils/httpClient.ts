@@ -10,7 +10,7 @@ const PROXY_BASE_URL = 'https://bridge.openagents.org';
 export interface HttpClientOptions {
   timeout?: number;
   headers?: HeadersInit;
-  signal?: AbortSignal;
+  signal?: AbortSignal | null;
 }
 
 /**
