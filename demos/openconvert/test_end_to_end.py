@@ -61,8 +61,8 @@ class MockOpenConvertServiceAgent:
         
         # Connect to network
         success = await self.client.connect_to_server(
-            host=host,
-            port=port,
+            network_host=host,
+            network_port=port,
             metadata={
                 "name": f"OpenConvert-DocAgent-Mock",
                 "type": "conversion_service",
@@ -169,8 +169,8 @@ class DiscoveryTestClient:
         
         # Connect to network
         success = await self.client.connect_to_server(
-            host=host,
-            port=port,
+            network_host=host,
+            network_port=port,
             metadata={
                 "name": "OpenConvert Test Client",
                 "type": "test_client",

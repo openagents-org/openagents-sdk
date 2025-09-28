@@ -68,7 +68,7 @@ class DemoAgent:
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                success = await self.client.connect_to_server(host=host, port=port)
+                success = await self.client.connect_to_server(network_host=host, network_port=port)
                 if success:
                     logger.info(f"{self.name} connected to network")
                     break

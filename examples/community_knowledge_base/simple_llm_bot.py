@@ -67,7 +67,7 @@ def main():
     agent = SimpleLLMBot(agent_id="simple", agent_config=agent_config)
     
 
-    agent.start(host="localhost", port=DEFAULT_TRANSPORT_ADDRESS['http']['port'])
+    agent.start(network_host="localhost", network_port=DEFAULT_TRANSPORT_ADDRESS['http']['port'])
     agent.wait_for_stop()
 
 

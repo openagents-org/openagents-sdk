@@ -42,8 +42,8 @@ async def test_discovery():
         # Connect to network
         logger.info(f"🌐 Connecting to network at {server_host}:{server_port}...")
         success = await client.connect_to_server(
-            host=server_host,
-            port=server_port,
+            network_host=server_host,
+            network_port=server_port,
             metadata={
                 "name": "OpenConvert Tester",
                 "type": "test_client",

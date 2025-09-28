@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 import asyncio
 import json
 import logging
-import os
 from typing import Any, Dict, List, Optional
 
 from openagents.agents.orchestrator import orchestrate_agent
@@ -221,9 +220,8 @@ class AgentRunner(ABC):
 
         This method should be called when the agent runner is ready to stop receiving messages.
         """
-        # Cleanup MCP clients if connector exists
-        if self._mcp_connector:
-            await self._mcp_connector.cleanup_mcp_clients()
+        # Cleanup MCP clients
+        await self._mcp_connector.cleanup_mcp_clients()
 
     async def _setup_mcp_clients(self):
         """Setup MCP (Model Context Protocol) clients based on configuration."""
@@ -527,8 +525,8 @@ class AgentRunner(ABC):
 
     async def async_start(
         self,
-        host: Optional[str] = None,
-        port: Optional[int] = None,
+        network_host: Optional[str] = None,
+        network_port: Optional[int] = None,
         network_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ):
@@ -545,7 +543,7 @@ class AgentRunner(ABC):
         Raises:
             Exception: If the agent fails to start or connect
         """
-        await self._async_start(host, port, network_id, metadata)
+        await self._async_start(network_host, network_port, network_id, metadata)
 
     async def _async_stop(self):
         """Async implementation of stopping the agent runner.
@@ -575,8 +573,8 @@ class AgentRunner(ABC):
 
     def start(
         self,
-        host: Optional[str] = None,
-        port: Optional[int] = None,
+        network_host: Optional[str] = None,
+        network_port: Optional[int] = None,
         network_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ):
@@ -601,7 +599,7 @@ class AgentRunner(ABC):
 
         # Run the async start method in the event loop
         try:
-            loop.run_until_complete(self._async_start(host, port, network_id, metadata))
+            loop.run_until_complete(self._async_start(network_host, network_port, network_id, metadata))
         except Exception as e:
             raise Exception(f"Failed to start agent: {str(e)}")
 

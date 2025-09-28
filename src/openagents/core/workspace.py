@@ -360,6 +360,16 @@ class ChannelConnection:
         except Exception as e:
             logger.error(f"Failed to retrieve messages from channel {self.name}: {e}")
             return []
+    
+    async def reply(
+        self, message_id: str, content: Union[str, Dict[str, Any]], **kwargs
+    ) -> bool:
+        """
+        Reply to a specific message in this channel.
+
+        Alias for reply_to_message.
+        """
+        return await self.reply_to_message(message_id, content, **kwargs)
 
     async def reply_to_message(
         self, message_id: str, content: Union[str, Dict[str, Any]], **kwargs

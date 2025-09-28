@@ -37,7 +37,7 @@ async def main():
         else:
             # Fallback to default connection
             logger.info("Starting agent with default connection settings")
-            await agent.async_start(host="localhost", port=8570)
+            await agent.async_start(network_host="localhost", network_port=8570)
         
         logger.info("Agent started successfully!")
         

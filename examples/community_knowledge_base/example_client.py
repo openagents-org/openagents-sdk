@@ -163,7 +163,7 @@ async def main():
     try:
         # Start the agent (connects to network and runs startup)
         print("🔌 Connecting to Community Knowledge Base network...")
-        await agent.async_start(host="localhost", port=DEFAULT_TRANSPORT_ADDRESS['http']['port'])
+        await agent.async_start(network_host="localhost", network_port=DEFAULT_TRANSPORT_ADDRESS['http']['port'])
         print("✅ Connected successfully!")
         
         print("🎭 Participating in community discussions...")

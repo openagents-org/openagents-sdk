@@ -219,7 +219,7 @@ async def workspace_agent(test_network):
 
     try:
         # Connect to the network
-        await agent.async_start(host="localhost", port=http_port)
+        await agent.async_start(network_host="localhost", network_port=http_port)
         await asyncio.sleep(2)  # Give agent time to fully connect
 
         yield agent
@@ -685,7 +685,7 @@ def run_standalone_tests():
 
             try:
                 # Connect workspace agent
-                await workspace_agent.async_start(host="localhost", port=http_port)
+                await workspace_agent.async_start(network_host="localhost", network_port=http_port)
                 await asyncio.sleep(2)
 
                 print(

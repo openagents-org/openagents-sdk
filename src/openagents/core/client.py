@@ -28,6 +28,7 @@ from openagents.core.base_mod_adapter import BaseModAdapter
 from openagents.models.messages import Event, EventNames
 from openagents.config.globals import (
     AGENT_EVENT_MESSAGE,
+    DEFAULT_HTTP_TRANSPORT_PORT,
     SYSTEM_EVENT_LIST_AGENTS,
     SYSTEM_EVENT_LIST_MODS,
     SYSTEM_EVENT_GET_MOD_MANIFEST,
@@ -144,8 +145,8 @@ class AgentClient:
 
     async def connect_to_server(
         self,
-        host: Optional[str] = None,
-        port: Optional[int] = None,
+        network_host: Optional[str] = None,
+        network_port: Optional[int] = None,
         network_id: Optional[str] = None,
         enforce_transport_type: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
@@ -163,16 +164,19 @@ class AgentClient:
 
         Returns:
             bool: True if connection successful
+
+        Warning:
+            This method will be deprecated. Use the connect_to_server method instead.
         """
         # Validate connection parameters
-        if network_id is None and (host is None or port is None):
+        if network_id is None and network_host is None:
             logger.error(
-                "Either network_id or both host and port must be provided to connect to a server"
+                "Either network_id or host must be provided to connect to a server"
             )
             return False
 
         # If network_id is provided, retrieve network details to find out host and port
-        if network_id and (not host or not port):
+        if network_id and not network_host:
             network_details = retrieve_network_details(network_id)
             if not network_details:
                 logger.error(
@@ -180,11 +184,15 @@ class AgentClient:
                 )
                 return False
             network_profile = network_details.get("network_profile", {})
-            host = network_profile.get("host", host)
-            port = network_profile.get("port", port)
+            network_host = network_profile.get("host", network_host)
+            network_port = network_profile.get("port", network_port)
             logger.info(
-                f"Retrieved network details for network_id: {network_id}, host: {host}, port: {port}"
+                f"Retrieved network details for network_id: {network_id}, host: {network_host}, port: {network_port}"
             )
+
+        # If port is not provided, use the default HTTP transport port
+        if network_port is None:
+            network_port = DEFAULT_HTTP_TRANSPORT_PORT
 
         if self.connector is not None:
             logger.info(
@@ -194,10 +202,10 @@ class AgentClient:
             self.connector = None
 
         # Detect transport type and create appropriate connector
-        detected_profile = await self._detect_network_profile(host, port)
+        detected_profile = await self._detect_network_profile(network_host, network_port)
 
         if detected_profile is None:
-            logger.error(f"Failed to detect network at {host}:{port}")
+            logger.error(f"Failed to detect network at {network_host}:{network_port}")
             return False
 
         assert isinstance(detected_profile, DetectedNetworkProfile)
@@ -230,8 +238,8 @@ class AgentClient:
             return False
 
         # Extract host and port from transport config
-        optimal_transport_host = optimal_transport.config.get("host", host)
-        optimal_transport_port = optimal_transport.config.get("port", port)
+        optimal_transport_host = optimal_transport.config.get("host", network_host)
+        optimal_transport_port = optimal_transport.config.get("port", network_port)
 
         logger.info(
             f"Detected network: {detected_profile.network_name} ({detected_profile.network_id})"
@@ -298,8 +306,8 @@ class AgentClient:
 
     async def connect(
         self,
-        host: Optional[str] = None,
-        port: Optional[int] = None,
+        network_host: Optional[str] = None,
+        network_port: Optional[int] = None,
         network_id: Optional[str] = None,
         enforce_transport_type: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
@@ -321,7 +329,7 @@ class AgentClient:
             bool: True if connection successful
         """
         return await self.connect_to_server(
-            host, port, network_id, enforce_transport_type, metadata, max_message_size
+            network_host, network_port, network_id, enforce_transport_type, metadata, max_message_size
         )
 
     async def disconnect(self) -> bool:

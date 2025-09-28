@@ -39,8 +39,8 @@ async def main():
         print(f"Connecting agent {agent_id} to network at {host}:{port}...")
         
         success = await client.connect_to_server(
-            host=host,
-            port=port,
+            network_host=host,
+            network_port=port,
             metadata=metadata
         )
         
@@ -115,6 +115,7 @@ async def handle_broadcast_message(message_data):
     text = content.get("text", str(content))
     
     print(f"Broadcast message from {sender_id}: {text}")
+
 
 
 if __name__ == "__main__":

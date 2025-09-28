@@ -102,8 +102,8 @@ class InteractiveClient:
         }
         
         success = await self.client.connect(
-            host=host,
-            port=port,
+            network_host=host,
+            network_port=port,
             metadata=metadata
         )
         
@@ -249,8 +249,8 @@ async def start_echo_agent():
         
         # Start the agent
         await echo_agent.async_start(
-            host=host,
-            port=port,
+            network_host=host,
+            network_port=port,
             metadata={
                 "name": "Simple Echo Agent",
                 "type": "echo_agent", 
