@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useWikiStore } from "@/stores/wikiStore";
 import { useRecentPagesStore } from "@/stores/recentPagesStore";
-import { OpenAgentsContext } from "@/contexts/OpenAgentsProvider";
+import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
 
 // Section Header Component
 const SectionHeader: React.FC<{ title: string }> = React.memo(({ title }) => (
@@ -27,9 +27,6 @@ const WikiPageItem: React.FC<{
   isActive: boolean;
   onClick: () => void;
 }> = React.memo(({ page, isActive, onClick }) => {
-  const isRecentlyUpdated =
-    Date.now() - page.last_modified * 1000 < 7 * 24 * 60 * 60 * 1000;
-
   return (
     <li>
       <button
@@ -54,9 +51,6 @@ const WikiPageItem: React.FC<{
               </div>
             </div>
           </div>
-          {/* {isRecentlyUpdated && (
-            <span className="ml-2 w-2 h-2 bg-green-500 rounded-full flex-shrink-0 mt-1.5"></span>
-          )} */}
         </div>
       </button>
     </li>

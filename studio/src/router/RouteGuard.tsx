@@ -2,6 +2,8 @@ import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { routes } from "./routeConfig";
+import { useDynamicRoutes } from "@/hooks/useDynamicRoutes";
+import { isRouteAvailable } from "@/utils/moduleUtils";
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -14,17 +16,18 @@ interface RouteGuardProps {
 const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   const location = useLocation();
   const { selectedNetwork, agentName } = useAuthStore();
+  const { isModulesLoaded, defaultRoute, enabledModules } = useDynamicRoutes();
   const currentPath = location.pathname;
 
   console.log(
-    `🛡️ RouteGuard: path=${currentPath}, network=${!!selectedNetwork}, agent=${!!agentName}`
+    `🛡️ RouteGuard: path=${currentPath}, network=${!!selectedNetwork}, agent=${!!agentName}, modulesLoaded=${isModulesLoaded}`
   );
 
   // 处理根路径 "/" 的重定向
   if (currentPath === "/") {
     if (selectedNetwork && agentName) {
-      console.log("🔄 Root path: User setup complete, redirecting to /chat");
-      return <Navigate to="/chat" replace />;
+      console.log(`🔄 Root path: User setup complete, redirecting to ${defaultRoute}`);
+      return <Navigate to={defaultRoute} replace />;
     } else {
       console.log("🔄 Root path: No setup, redirecting to /network-selection");
       return <Navigate to="/network-selection" replace />;
@@ -47,9 +50,9 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   if (currentPath === "/network-selection") {
     if (selectedNetwork && agentName) {
       console.log(
-        "🔄 Network selection accessed after complete setup, redirecting to /chat"
+        `🔄 Network selection accessed after complete setup, redirecting to ${defaultRoute}`
       );
-      return <Navigate to="/chat" replace />;
+      return <Navigate to={defaultRoute} replace />;
     }
     // 没有完成设置，允许访问 network-selection
     return <>{children}</>;
@@ -85,6 +88,14 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
       return <Navigate to="/agent-setup" replace />;
     }
 
+    // 检查路由是否在启用的模块中可用
+    if (isModulesLoaded && !isRouteAvailable(currentPath, enabledModules)) {
+      console.log(
+        `🔄 Route ${currentPath} not available in enabled modules, redirecting to ${defaultRoute}`
+      );
+      return <Navigate to={defaultRoute} replace />;
+    }
+
     // 设置完成，允许访问认证路由
     return <>{children}</>;
   }
@@ -92,9 +103,9 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   // 处理无效路径 - 重定向到合适的页面
   if (selectedNetwork && agentName) {
     console.log(
-      `🔄 Invalid route ${currentPath} with complete setup, redirecting to /chat`
+      `🔄 Invalid route ${currentPath} with complete setup, redirecting to ${defaultRoute}`
     );
-    return <Navigate to="/chat" replace />;
+    return <Navigate to={defaultRoute} replace />;
   } else {
     console.log(
       `🔄 Invalid route ${currentPath} without setup, redirecting to /network-selection`

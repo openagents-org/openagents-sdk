@@ -1,11 +1,11 @@
 import React, { ReactNode, useContext } from "react";
 import ModSidebar from "./ModSidebar";
 import Sidebar from "./Sidebar";
-import ConnectionLoadingOverlay from "@/components/common/ConnectionLoadingOverlay";
+import ConnectionLoadingOverlay from "./ConnectionLoadingOverlay";
 import {
   OpenAgentsProvider,
   OpenAgentsContext,
-} from "@/contexts/OpenAgentsProvider";
+} from "@/context/OpenAgentsProvider";
 import { useAuthStore } from "@/stores/authStore";
 import { Navigate } from "react-router-dom";
 
@@ -59,19 +59,23 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
       {/* 连接状态覆盖层 - 只有在有 OpenAgentsProvider 且未连接时显示 */}
       {context && !isConnected && <ConnectionLoadingOverlay />}
 
-      {/* 左侧模块导航栏 */}
-      <ModSidebar />
+      {context && isConnected && (
+        <>
+          {/* 左侧模块导航栏 */}
+          <ModSidebar />
 
-      {/* 中间内容区域：侧边栏 + 主内容 */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* 功能侧边栏 - 现在是自管理的，会根据路由自动显示相应内容 */}
-        <Sidebar />
+          {/* 中间内容区域：侧边栏 + 主内容 */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* 功能侧边栏 - 现在是自管理的，会根据路由自动显示相应内容 */}
+            <Sidebar />
 
-        {/* 主内容区域 */}
-        <main className="flex-1 flex flex-col overflow-hidden m-1 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-white via-blue-50 to-purple-50 dark:bg-gray-800">
-          {children}
-        </main>
-      </div>
+            {/* 主内容区域 */}
+            <main className="flex-1 flex flex-col overflow-hidden m-1 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-white via-blue-50 to-purple-50 dark:bg-gray-800">
+              {children}
+            </main>
+          </div>
+        </>
+      )}
     </div>
   );
 };

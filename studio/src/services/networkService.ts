@@ -1,5 +1,6 @@
 import { ConnectionStatusEnum, NetworkConnection } from "../types/connection";
 import { networkFetch } from "../utils/httpClient";
+import { HealthResponse } from "../utils/moduleUtils";
 
 export interface NetworkProfile {
   name: string;
@@ -284,4 +285,91 @@ export const fetchNetworksList = async (
     total: filteredNetworks.length,
     items: paginatedNetworks,
   };
+};
+
+/**
+ * Fetch network health information including available modules
+ * @param connection Network connection information
+ * @returns Health response with module information
+ */
+export const fetchNetworkHealth = async (
+  connection: NetworkConnection
+): Promise<{
+  success: boolean;
+  data?: HealthResponse;
+  error?: string;
+}> => {
+  try {
+    console.log(`Fetching health information from ${connection.host}:${connection.port}`);
+
+    const response = await networkFetch(
+      connection.host,
+      connection.port,
+      "/api/health",
+      {
+        method: "GET",
+        timeout: 10000, // 10 second timeout
+        headers: {
+          Accept: "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: `HTTP ${response.status}: ${response.statusText}`,
+      };
+    }
+
+    const healthData = await response.json();
+
+    // Validate response structure
+    if (!healthData.success || !healthData.data) {
+      return {
+        success: false,
+        error: "Invalid health response format",
+      };
+    }
+
+    console.log(`Health check successful for ${connection.host}:${connection.port}`, {
+      networkId: healthData.data.network_id,
+      moduleCount: healthData.data.mods?.length || 0,
+    });
+
+    return {
+      success: true,
+      data: healthData as HealthResponse,
+    };
+  } catch (error: any) {
+    console.error(
+      `Failed to fetch health from ${connection.host}:${connection.port}:`,
+      error
+    );
+    return {
+      success: false,
+      error: error.message || "Network health check failed",
+    };
+  }
+};
+
+/**
+ * Get health information for the current network connection
+ * Uses the most recently connected network from auth store
+ */
+export const getCurrentNetworkHealth = async (
+  selectedNetwork: NetworkConnection | null
+): Promise<{
+  success: boolean;
+  data?: HealthResponse;
+  error?: string;
+}> => {
+  if (!selectedNetwork) {
+    return {
+      success: false,
+      error: "No network connection available",
+    };
+  }
+
+  return fetchNetworkHealth(selectedNetwork);
 };

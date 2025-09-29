@@ -4,7 +4,7 @@ import { useForumStore } from "@/stores/forumStore";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 import ForumCommentThread from "./components/ForumCommentThread";
 import { useToast } from "@/context/ToastContext";
-import { OpenAgentsContext } from "@/contexts/OpenAgentsProvider";
+import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
 
 interface ForumTopicDetailProps {}
 

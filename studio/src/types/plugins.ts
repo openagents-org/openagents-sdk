@@ -1,5 +1,5 @@
 export enum PLUGIN_NAME_ENUM {
-  CHAT = "chat",
+  MESSAGING = "messaging",
   FORUM = "forum",
   WIKI = "wiki",
   DOCUMENTS = "documents",

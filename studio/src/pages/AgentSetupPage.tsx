@@ -58,7 +58,7 @@ const AgentNamePicker: React.FC = () => {
     // Set agent name in store - RouteGuard will handle navigation automatically
     setAgentName(agentNameTrimmed);
 
-    navigate("/chat");
+    navigate("/messaging");
   };
 
   return (

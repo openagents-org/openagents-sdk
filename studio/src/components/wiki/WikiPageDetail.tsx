@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useWikiStore } from "@/stores/wikiStore";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 import WikiEditor from "./components/WikiEditor";
-import { OpenAgentsContext } from "@/contexts/OpenAgentsProvider";
+import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
 
 const WikiPageDetail: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);

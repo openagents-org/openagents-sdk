@@ -1,7 +1,7 @@
 import React from "react";
 import { DocumentInfo } from "@/types";
 import { formatRelativeDate } from "@/utils/utils";
-import { useThreadStore } from "@/stores/threadStore";
+import { useDocumentStore } from "@/stores/documentStore";
 
 // Section Header Component
 const SectionHeader: React.FC<{ title: string }> = React.memo(({ title }) => (
@@ -80,9 +80,9 @@ export interface DocumentsSidebarProps {}
 
 // Documents Sidebar Content Component - 自己管理数据
 const DocumentsSidebar: React.FC<DocumentsSidebarProps> = () => {
-  // 使用 threadStore 获取实际数据
+  // 使用  获取实际数据
   const { documents, selectedDocumentId, setSelectedDocument } =
-    useThreadStore();
+    useDocumentStore();
 
   // 文档选择处理
   const onDocumentSelect = (documentId: string | null) => {

@@ -45,20 +45,10 @@ export interface Message {
   }>;
 }
 
-export interface Conversation {
-  id: string;
-  title: string;
-  isActive: boolean;
-}
-
-export interface ConversationMessages {
-  [key: string]: Message[];
-}
+// Conversation types removed - not needed for chat module
 
 export interface ChatViewProps {
-  conversationId: string;
-  onMessagesUpdate?: (messages: ConversationMessages) => void;
-  onDeleteConversation?: () => void;
+  // ChatView props - simplified without conversation
 }
 
 export interface SidebarProps {
@@ -66,10 +56,6 @@ export interface SidebarProps {
   toggleSidebar: () => void;
   onSettingsClick: () => void;
   onProfileClick: () => void;
-  onConversationChange: (conversationId: string) => void;
-  activeConversationId: string;
-  conversations: Conversation[];
-  createNewConversation: () => void;
 }
 
 export interface SettingsViewProps {

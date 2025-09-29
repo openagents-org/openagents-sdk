@@ -1,8 +1,10 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
-import { ChatSidebar, DocumentsSidebar, DefaultSidebar } from "./sidebars";
-import ForumSidebar from "./sidebars/ForumSidebar";
-import WikiSidebar from "./sidebars/WikiSidebar";
+import DefaultSidebar from "./DefaultSidebar";
+import MessagingSidebar from "@/pages/messaging/MessagingSidebar";
+import DocumentsSidebar from "@/pages/documents/DocumentsSidebar";
+import ForumSidebar from "@/pages/forum/ForumSidebar";
+import WikiSidebar from "@/pages/wiki/WikiSidebar";
 
 // SidebarContent 组件 - 根据路由动态显示不同的侧边栏内容
 // 每个具体的侧边栏组件会自己管理数据，不需要从外部传递
@@ -13,9 +15,8 @@ const SidebarContent: React.FC = () => {
   const renderContent = () => {
     const pathname = location.pathname;
 
-    if (pathname.startsWith("/chat")) {
-      // ChatSidebar 会自己通过 hooks 获取需要的数据
-      return <ChatSidebar />;
+    if (pathname.startsWith("/messaging")) {
+      return <MessagingSidebar />;
     }
 
     if (pathname.startsWith("/forum")) {

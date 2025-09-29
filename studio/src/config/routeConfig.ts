@@ -5,13 +5,13 @@ import { PLUGIN_NAME_ENUM } from "@/types/plugins";
 // Pages
 import NetworkSelectionPage from "@/pages/NetworkSelectionPage";
 import AgentSetupPage from "@/pages/AgentSetupPage";
-import ChatMainPage from "@/pages/chat/ChatMainPage";
+import MessagingMainPage from "@/pages/messaging/MessagingMainPage";
 import ForumMainPage from "@/pages/forum/ForumMainPage";
 import WikiMainPage from "@/pages/wiki/WikiMainPage";
 import DocumentsMainPage from "@/pages/documents/DocumentsMainPage";
-import SettingsMainPage from "@/pages/settings/SettingsMainPage";
+// import SettingsMainPage from "@/pages/settings/SettingsMainPage";
 import ProfileMainPage from "@/pages/profile/ProfileMainPage";
-import McpMainPage from "@/pages/mcp/McpMainPage";
+// import McpMainPage from "@/pages/mcp/McpMainPage";
 
 // 导航图标组件
 export const NavigationIcons = {
@@ -79,28 +79,28 @@ export const NavigationIcons = {
       })
     )
   ),
-  Settings: React.memo(() =>
-    React.createElement("svg",
-      {
-        className: "w-5 h-5",
-        fill: "none",
-        stroke: "currentColor",
-        viewBox: "0 0 24 24"
-      },
-      React.createElement("path", {
-        strokeLinecap: "round",
-        strokeLinejoin: "round",
-        strokeWidth: 2,
-        d: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-      }),
-      React.createElement("path", {
-        strokeLinecap: "round",
-        strokeLinejoin: "round",
-        strokeWidth: 2,
-        d: "M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-      })
-    )
-  ),
+  // Settings: React.memo(() =>
+  //   React.createElement("svg",
+  //     {
+  //       className: "w-5 h-5",
+  //       fill: "none",
+  //       stroke: "currentColor",
+  //       viewBox: "0 0 24 24"
+  //     },
+  //     React.createElement("path", {
+  //       strokeLinecap: "round",
+  //       strokeLinejoin: "round",
+  //       strokeWidth: 2,
+  //       d: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+  //     }),
+  //     React.createElement("path", {
+  //       strokeLinecap: "round",
+  //       strokeLinejoin: "round",
+  //       strokeWidth: 2,
+  //       d: "M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+  //     })
+  //   )
+  // ),
   Profile: React.memo(() =>
     React.createElement("svg",
       {
@@ -117,22 +117,22 @@ export const NavigationIcons = {
       })
     )
   ),
-  MCP: React.memo(() =>
-    React.createElement("svg",
-      {
-        className: "w-5 h-5",
-        fill: "none",
-        stroke: "currentColor",
-        viewBox: "0 0 24 24"
-      },
-      React.createElement("path", {
-        strokeLinecap: "round",
-        strokeLinejoin: "round",
-        strokeWidth: 2,
-        d: "M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
-      })
-    )
-  ),
+  // MCP: React.memo(() =>
+  //   React.createElement("svg",
+  //     {
+  //       className: "w-5 h-5",
+  //       fill: "none",
+  //       stroke: "currentColor",
+  //       viewBox: "0 0 24 24"
+  //     },
+  //     React.createElement("path", {
+  //       strokeLinecap: "round",
+  //       strokeLinejoin: "round",
+  //       strokeWidth: 2,
+  //       d: "M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+  //     })
+  //   )
+  // ),
 };
 
 // 路由配置接口
@@ -171,13 +171,13 @@ export const dynamicRouteConfig: RouteConfig[] = [
 
   // 主功能路由 - 这些页面需要完整的 sidebar 布局
   {
-    path: "/chat/*",
-    element: ChatMainPage,
-    title: "Chat",
+    path: "/messaging/*",
+    element: MessagingMainPage,
+    title: "Messaging",
     requiresAuth: true,
     requiresLayout: true,
     navigationConfig: {
-      key: PLUGIN_NAME_ENUM.CHAT,
+      key: PLUGIN_NAME_ENUM.MESSAGING,
       label: "Messages",
       icon: "Messages",
       visible: true,
@@ -232,21 +232,21 @@ export const dynamicRouteConfig: RouteConfig[] = [
   },
 
   // 设置相关路由 - 这些页面需要完整的 sidebar 布局
-  {
-    path: "/settings/*",
-    element: SettingsMainPage,
-    title: "Settings",
-    requiresAuth: true,
-    requiresLayout: true,
-    navigationConfig: {
-      key: PLUGIN_NAME_ENUM.SETTINGS,
-      label: "Settings",
-      icon: "Settings",
-      visible: true,
-      order: 4,
-      group: 'secondary',
-    },
-  },
+  // {
+  //   path: "/settings/*",
+  //   element: SettingsMainPage,
+  //   title: "Settings",
+  //   requiresAuth: true,
+  //   requiresLayout: true,
+  //   navigationConfig: {
+  //     key: PLUGIN_NAME_ENUM.SETTINGS,
+  //     label: "Settings",
+  //     icon: "Settings",
+  //     visible: true,
+  //     order: 4,
+  //     group: 'secondary',
+  //   },
+  // },
   {
     path: "/profile/*",
     element: ProfileMainPage,
@@ -262,21 +262,21 @@ export const dynamicRouteConfig: RouteConfig[] = [
       group: 'secondary',
     },
   },
-  {
-    path: "/mcp/*",
-    element: McpMainPage,
-    title: "MCP",
-    requiresAuth: true,
-    requiresLayout: true,
-    navigationConfig: {
-      key: PLUGIN_NAME_ENUM.MCP,
-      label: "MCP",
-      icon: "MCP",
-      visible: true,
-      order: 6,
-      group: 'secondary',
-    },
-  },
+  // {
+  //   path: "/mcp/*",
+  //   element: McpMainPage,
+  //   title: "MCP",
+  //   requiresAuth: true,
+  //   requiresLayout: true,
+  //   navigationConfig: {
+  //     key: PLUGIN_NAME_ENUM.MCP,
+  //     label: "MCP",
+  //     icon: "MCP",
+  //     visible: true,
+  //     order: 6,
+  //     group: 'secondary',
+  //   },
+  // },
 ];
 
 // // 快捷操作配置 - 独立于路由的快速操作
@@ -381,11 +381,11 @@ export const getAllRoutes = () => {
 export const specialRoutes = [
   {
     path: "/",
-    element: () => React.createElement(Navigate, { to: "/chat", replace: true }),
+    element: () => React.createElement(Navigate, { to: "/messaging", replace: true }),
   },
   {
     path: "*",
-    element: () => React.createElement(Navigate, { to: "/chat", replace: true }),
+    element: () => React.createElement(Navigate, { to: "/messaging", replace: true }),
   },
 ];
 

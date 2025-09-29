@@ -47,6 +47,20 @@ interface MessageRendererProps {
   isDMChat?: boolean;
 }
 
+// 检查用户是否已经对该消息添加了特定的reaction
+const checkIfUserReacted = (reactions: any, reactionType: string, userId: string): boolean => {
+  // 如果没有reactions数据，用户肯定没有添加过
+  if (!reactions || typeof reactions !== 'object') {
+    return false;
+  }
+
+  // 检查该reaction类型是否存在且计数大于0
+  // 注意：这里假设如果reaction存在就表示当前用户添加过
+  // 在实际应用中，可能需要更复杂的逻辑来跟踪具体是哪些用户添加的reaction
+  const reactionCount = reactions[reactionType];
+  return reactionCount && reactionCount > 0;
+};
+
 const MessageRenderer: React.FC<MessageRendererProps> = ({
   messages = [],
   currentUserId,
@@ -143,6 +157,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
   const handleReaction = (
     messageId: string,
     reactionType: string,
+    messageReactions: any,
     event?: React.MouseEvent,
     action?: "add" | "remove"
   ) => {
@@ -150,6 +165,15 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
       event.preventDefault();
       event.stopPropagation();
     }
+
+    // 检查用户是否已经添加过该reaction，如果是则直接返回
+    // if (checkIfUserReacted(messageReactions, reactionType, currentUserId)) {
+    //   console.log(`🚫 User ${currentUserId} already reacted with ${reactionType} to message ${messageId}`);
+    //   setShowReactionPicker(null);
+    //   return; // 防止重复添加
+    // }
+
+    console.log(`✅ Adding reaction ${reactionType} for user ${currentUserId} to message ${messageId}`);
     onReaction(messageId, reactionType, action);
     setShowReactionPicker(null);
   };
@@ -277,7 +301,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
                 <div
                   key={type}
                   className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs cursor-pointer transition-all duration-150 border bg-slate-100 border-slate-200 hover:bg-slate-200 hover:border-slate-300 dark:bg-slate-600 dark:border-slate-500 dark:text-gray-200 dark:hover:bg-slate-500 dark:hover:border-slate-400"
-                  onClick={(event) => handleReaction(messageId, type, event, "add")}
+                  onClick={(event) => handleReaction(messageId, type, messageProps.reactions, event, "add")}
                 >
                   <span>{getReactionEmoji(type)}</span>
                   <span>{count}</span>
@@ -330,7 +354,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
                 <div
                   key={type}
                   className="p-1 rounded cursor-pointer transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  onClick={(event) => handleReaction(messageId, type, event, "add")}
+                  onClick={(event) => handleReaction(messageId, type, messageProps.reactions, event, "add")}
                 >
                   {emoji}
                 </div>
@@ -417,7 +441,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
                 <div
                   key={type}
                   className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs cursor-pointer transition-all duration-150 border bg-slate-100 border-slate-200 hover:bg-slate-200 hover:border-slate-300 dark:bg-slate-600 dark:border-slate-500 dark:text-gray-200 dark:hover:bg-slate-500 dark:hover:border-slate-400"
-                  onClick={(event) => handleReaction(message.id, type, event, "add")}
+                  onClick={(event) => handleReaction(message.id, type, message.reactions, event, "add")}
                 >
                   <span>{getReactionEmoji(type)}</span>
                   <span>{count}</span>
@@ -470,7 +494,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
                 <div
                   key={type}
                   className="p-1 rounded cursor-pointer transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  onClick={(event) => handleReaction(message.id, type, event, "add")}
+                  onClick={(event) => handleReaction(message.id, type, message.reactions, event, "add")}
                 >
                   {emoji}
                 </div>

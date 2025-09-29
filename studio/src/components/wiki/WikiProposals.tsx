@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useWikiStore } from "@/stores/wikiStore";
 import DiffViewer from "@/components/common/DiffViewer";
 import { formatDateTime } from "@/utils/utils";
-import { OpenAgentsContext } from "@/contexts/OpenAgentsProvider";
+import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
 
 const WikiProposals: React.FC = () => {
   const navigate = useNavigate();

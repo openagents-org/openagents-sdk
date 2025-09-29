@@ -139,6 +139,13 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
           maxReconnectAttempts: data.maxAttempts,
           error: undefined,
         }));
+        if (data.attempt === data.maxAttempts) {
+          setConnectionStatus((prev) => ({
+            ...prev,
+            state: ConnectionState.ERROR,
+            error: "Failed to reconnect",
+          }));
+        }
       });
 
       // 重连成功

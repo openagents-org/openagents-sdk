@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 import { DocumentInfo } from "@/types";
 import { ThreadState } from "@/types/thread";
 
-interface ThreadStoreState {
+interface DocumentStoreState {
   // 简化的线程状态 - 只存储当前选择
   threadState: ThreadState | null;
 
@@ -21,16 +21,9 @@ interface ThreadStoreState {
   updateDocument: (documentId: string, updates: Partial<DocumentInfo>) => void;
   removeDocument: (documentId: string) => void;
   setSelectedDocument: (documentId: string | null) => void;
-
-  // 便捷方法
-  getCurrentChannel: () => string | null;
-  getCurrentDirectMessage: () => string | null;
-  // 兼容方法 - 返回空数组，实际数据由hooks管理
-  getChannels: () => any[];
-  getAgents: () => any[];
 }
 
-export const useThreadStore = create<ThreadStoreState>()(
+export const useDocumentStore = create<DocumentStoreState>()(
   persist(
     (set, get) => ({
       // 初始状态
@@ -94,26 +87,6 @@ export const useThreadStore = create<ThreadStoreState>()(
       // 设置选中的文档
       setSelectedDocument: (documentId: string | null) => {
         set({ selectedDocumentId: documentId });
-      },
-
-      // 便捷方法：获取当前频道
-      getCurrentChannel: () => {
-        return get().threadState?.currentChannel || null;
-      },
-
-      // 便捷方法：获取当前私信对象
-      getCurrentDirectMessage: () => {
-        return get().threadState?.currentDirectMessage || null;
-      },
-
-      // 兼容方法：获取频道列表（现在返回空数组，实际数据由hooks管理）
-      getChannels: () => {
-        return [];
-      },
-
-      // 兼容方法：获取代理列表（现在返回空数组，实际数据由hooks管理）
-      getAgents: () => {
-        return [];
       },
     }),
     {

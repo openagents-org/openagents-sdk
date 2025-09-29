@@ -1,8 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 // import OpenAgentsLogo from "@/components/icons/OpenAgentsLogo";
-import { useThreadStore } from "@/stores/threadStore";
-import { useConversationStore } from "@/stores/conversationStore";
+import { useChatStore } from "@/stores/chatStore";
 import { clearAllOpenAgentsDataForLogout } from "@/utils/cookies";
 import { useConfirm } from "@/context/ConfirmContext";
 // import { getVisibleQuickActions } from "@/config/routeConfig";
@@ -86,8 +85,7 @@ const SidebarFooter: React.FC<{
   const navigate = useNavigate();
   const { agentName, selectedNetwork, clearNetwork, clearAgentName } =
     useAuthStore();
-  const { setThreadState } = useThreadStore();
-  const { clearAllConversations } = useConversationStore();
+  const { clearAllChatData } = useChatStore();
   const { confirm } = useConfirm();
 
   // 登出处理函数
@@ -118,13 +116,9 @@ const SidebarFooter: React.FC<{
       clearAgentName();
       console.log("🧹 Network state cleared");
 
-      // 重置 ThreadStore 的内存状态（这是关键！）
-      setThreadState(null);
-      console.log("🧹 Thread store memory state reset");
-
-      // 清空对话 store
-      clearAllConversations();
-      console.log("🧹 Conversations store cleared");
+      // 清空 chat store 数据
+      clearAllChatData();
+      console.log("🧹 Chat store data cleared");
 
       // 清空 OpenAgents 相关的所有数据（保留主题设置）
       clearAllOpenAgentsDataForLogout();

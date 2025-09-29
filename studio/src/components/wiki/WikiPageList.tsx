@@ -5,7 +5,7 @@ import { useRecentPagesStore } from "@/stores/recentPagesStore";
 import WikiCreateModal from "./components/WikiCreateModal";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 import { formatDateTime } from "@/utils/utils";
-import { OpenAgentsContext } from "@/contexts/OpenAgentsProvider";
+import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
 
 const WikiPageList: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);

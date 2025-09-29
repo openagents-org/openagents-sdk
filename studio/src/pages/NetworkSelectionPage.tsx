@@ -32,7 +32,7 @@ const NetworkSelectionView: React.FC = () => {
 
           <ManualNetwork />
 
-          <div className="flex items-center justify-between">
+          {/* <div className="flex items-center justify-between">
             <h2 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-200">
               Public Networks
             </h2>
@@ -42,7 +42,7 @@ const NetworkSelectionView: React.FC = () => {
             >
               Go To Public Networks
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

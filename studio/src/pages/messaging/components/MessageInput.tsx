@@ -6,7 +6,7 @@ interface AgentInfo {
   status?: string;
 }
 
-interface ThreadMessageInputProps {
+interface MessageInputProps {
   onSendMessage: (
     text: string,
     replyTo?: string,
@@ -524,7 +524,7 @@ const styles = `
 
 const MAX_MESSAGE_LENGTH = 2000;
 
-const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
+const MessageInput: React.FC<MessageInputProps> = ({
   onSendMessage,
   currentTheme,
   placeholder = "Type a message...",
@@ -1053,4 +1053,4 @@ const ThreadMessageInput: React.FC<ThreadMessageInputProps> = ({
   );
 };
 
-export default ThreadMessageInput;
+export default MessageInput;

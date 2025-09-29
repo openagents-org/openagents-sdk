@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   saveManualConnection,
   getSavedManualConnection,
@@ -11,17 +11,23 @@ import {
   fetchNetworkById,
 } from "@/services/networkService";
 import { ConnectionStatusEnum } from "@/types/connection";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 const DEFAULT_PORT = "8700";
 
-type ConnectionTab = "host-port" | "network-id" | "quick-connect";
+const HOST_PORT_TAB = "host-port";
+const NETWORK_ID_TAB = "network-id";
+const QUICK_CONNECT_TAB = "quick-connect";
+
+type ConnectionTab = typeof HOST_PORT_TAB | typeof NETWORK_ID_TAB | typeof QUICK_CONNECT_TAB;
 
 export default function ManualNetwork() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const { handleNetworkSelected } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<ConnectionTab>("host-port");
+  const [activeTab, setActiveTab] = useState<ConnectionTab>(HOST_PORT_TAB);
+  const [tabList, setTabList] = useState<{ key: ConnectionTab; label: string }[]>([]);
   const [manualHost, setManualHost] = useState("");
   const [manualPort, setManualPort] = useState(DEFAULT_PORT);
   const [networkId, setNetworkId] = useState("");
@@ -32,23 +38,65 @@ export default function ManualNetwork() {
   } | null>(null);
   const [savedAgentName, setSavedAgentName] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadSavedInfoAndSetTab = useCallback(() => {
+    // Check for network_id in URL parameters first
+    const urlNetworkId = searchParams.get("network_id");
+    const tabList = []
+
+    if (urlNetworkId) {
+      // If network_id exists in URL, set to network-id tab and populate the field
+      setNetworkId(urlNetworkId);
+      setActiveTab(NETWORK_ID_TAB);
+    }
+
     // Load saved manual connection
-    loadSavedInfo();
-  }, []);
-
-  const loadSavedInfo = () => {
     const saved = getSavedManualConnection();
-    if (!saved) return;
-    const { host, port } = saved;
-    setSavedConnection(saved);
-    setManualHost(host);
-    setManualPort(port);
+    if (saved) {
+      const { host, port } = saved;
+      setSavedConnection(saved);
+      setManualHost(host);
+      setManualPort(port);
 
-    // Also load saved agent name for this network
-    const agentName = getSavedAgentNameForNetwork(host, port);
-    setSavedAgentName(agentName);
-  };
+      // Also load saved agent name for this network
+      const agentName = getSavedAgentNameForNetwork(host, port);
+      setSavedAgentName(agentName);
+
+      // If no URL parameter but saved connection exists, set to quick-connect tab
+      if (!urlNetworkId) {
+        setActiveTab(QUICK_CONNECT_TAB);
+      }
+    } else {
+      // No URL parameter and no saved connection, default to host-port
+      if (!urlNetworkId) {
+        setActiveTab(HOST_PORT_TAB);
+      }
+    }
+    if (saved) {
+      tabList.push({
+        key: QUICK_CONNECT_TAB,
+        label: "Quick Connect Host + Port"
+      });
+    }
+    const NetworkIdTab = {
+      key: NETWORK_ID_TAB,
+      label: "Network ID"
+    };
+    if (urlNetworkId) {
+      tabList.unshift(NetworkIdTab);
+    } else {
+      tabList.push(NetworkIdTab);
+    }
+    tabList.push({
+      key: HOST_PORT_TAB,
+      label: "Host + Port"
+    });
+    setTabList(tabList as { key: ConnectionTab; label: string }[]);
+  }, [searchParams]);
+
+  useEffect(() => {
+    // Load saved manual connection and determine initial tab
+    loadSavedInfoAndSetTab();
+  }, [loadSavedInfoAndSetTab]);
 
   const handleConnect = async (
     isQuickConnect: boolean,
@@ -82,14 +130,14 @@ export default function ManualNetwork() {
   };
 
   const handleManualConnect = async () => {
-    if (activeTab === "host-port") {
+    if (activeTab === HOST_PORT_TAB) {
       handleConnect(false, {
         host: manualHost,
         port: manualPort,
       });
-    } else if (activeTab === "network-id") {
+    } else if (activeTab === NETWORK_ID_TAB) {
       await handleNetworkIdConnect();
-    } else if (activeTab === "quick-connect" && savedConnection) {
+    } else if (activeTab === QUICK_CONNECT_TAB && savedConnection) {
       handleConnect(true, savedConnection);
     }
   };
@@ -170,6 +218,7 @@ export default function ManualNetwork() {
 
   const handleClearSaved = () => {
     setActiveTab("host-port");
+    setTabList((prev) => prev.filter((tab) => tab.key !== QUICK_CONNECT_TAB));
     clearSavedManualConnection();
     setManualHost("");
     setManualPort(DEFAULT_PORT);
@@ -180,11 +229,11 @@ export default function ManualNetwork() {
   const manualConnectButtonDisabled = useMemo(() => {
     if (isLoadingConnection) return true;
 
-    if (activeTab === "host-port") {
+    if (activeTab === HOST_PORT_TAB) {
       return !manualHost || !manualPort;
-    } else if (activeTab === "network-id") {
+    } else if (activeTab === NETWORK_ID_TAB) {
       return !networkId;
-    } else if (activeTab === "quick-connect" && savedConnection) {
+    } else if (activeTab === QUICK_CONNECT_TAB && savedConnection) {
       return false;
     }
     return true;
@@ -206,42 +255,52 @@ export default function ManualNetwork() {
       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
         {/* Tab 切换按钮 */}
         <div className="flex border-b border-gray-300 dark:border-gray-600 mb-4">
-          <button
-            onClick={() => setActiveTab("host-port")}
-            className={`px-4 py-2 font-medium text-base transition-colors ${
-              activeTab === "host-port"
-                ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400"
-                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-            }`}
-          >
-            Host + Port
-          </button>
-          <button
-            onClick={() => setActiveTab("network-id")}
-            className={`px-4 py-2 font-medium text-base transition-colors ${
-              activeTab === "network-id"
-                ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400"
-                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-            }`}
-          >
-            Network ID
-          </button>
-          {savedConnection && (
+          {tabList.map((tab) => (
             <button
-              onClick={() => setActiveTab("quick-connect")}
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
               className={`px-4 py-2 font-medium text-base transition-colors ${
-                activeTab === "quick-connect"
+                activeTab === tab.key
                   ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400"
                   : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               }`}
             >
-              Quick Connect Host + Port
+              {tab.label}
             </button>
-          )}
+          ))}
         </div>
 
         {/* Tab 内容 */}
-        {activeTab === "host-port" ? (
+        {activeTab === "quick-connect" && savedConnection ? (
+          <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-4">
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-400">
+                Last Connected Server
+              </h3>
+              <p className="text-blue-600 dark:text-blue-500">
+                {savedConnection.host}:{savedConnection.port}
+              </p>
+              {savedAgentName && (
+                <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
+                  {/* 👤  */}
+                  Last used as: <strong>{savedAgentName}</strong>
+                </p>
+              )}
+              <p className="text-sm text-blue-600 dark:text-blue-500 mt-1">
+                Cached from previous successful connection
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleClearSaved}
+                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 px-3 py-2 rounded-lg font-medium transition-colors"
+                title="Clear saved connection"
+              >
+                Clear Saved
+              </button>
+            </div>
+          </div>
+        ) : activeTab === "host-port" ? (
           <div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2">
@@ -291,34 +350,6 @@ export default function ManualNetwork() {
               Enter a network ID to connect via the OpenAgents directory service
             </p>
           </div>
-        ) : activeTab === "quick-connect" && savedConnection ? (
-          <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-4">
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-400">
-                Last Connected Server
-              </h3>
-              <p className="text-blue-600 dark:text-blue-500">
-                {savedConnection.host}:{savedConnection.port}
-              </p>
-              {savedAgentName && (
-                <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
-                  👤 Last used as: <strong>{savedAgentName}</strong>
-                </p>
-              )}
-              <p className="text-sm text-blue-600 dark:text-blue-500 mt-1">
-                Cached from previous successful connection
-              </p>
-            </div>
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={handleClearSaved}
-                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 px-3 py-2 rounded-lg font-medium transition-colors"
-                title="Clear saved connection"
-              >
-                Clear Saved
-              </button>
-            </div>
-          </div>
         ) : null}
 
         <div className="flex gap-3 mt-4">
@@ -332,7 +363,8 @@ export default function ManualNetwork() {
         </div>
 
         <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-          💾 Successful connections will be automatically saved for quick access
+          {/* 💾  */}
+          Successful connections will be automatically saved for quick access
         </p>
       </div>
     </div>

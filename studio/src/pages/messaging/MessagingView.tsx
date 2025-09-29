@@ -1,7 +1,7 @@
 /**
- * Thread Messaging View using the New Event System
+ * Messaging View using the New Event System
  *
- * This component provides the same UI as the original ThreadMessagingView
+ * This component provides the same UI as the original MessagingView
  * and uses the new event-based services with HTTP transport.
  */
 
@@ -9,52 +9,32 @@ import React, {
   useState,
   useEffect,
   useRef,
-  useImperativeHandle,
-  forwardRef,
   useCallback,
   useMemo,
 } from "react";
-import { AgentInfo } from "../../types/events";
-import { UnifiedMessage } from "../../types/message";
-import { useOpenAgents } from "@/contexts/OpenAgentsProvider";
-import { useChatStore } from "@/stores/chatStore";
-import { ThreadState } from "@/types/thread";
-import MessageRenderer from "./MessageRenderer";
-import ThreadMessageInput from "./ThreadMessageInput";
-import DocumentsView from "../documents/DocumentsView";
-import { ReadMessageStore } from "../../utils/readMessageStore";
+import { useOpenAgents } from "@/context/OpenAgentsProvider";
+import { useChatStore, setChatStoreContext } from "@/stores/chatStore";
+import MessageRenderer from "./components/MessageRenderer";
+import MessageInput from "./components/MessageInput";
 import { useThemeStore } from "@/stores/themeStore";
-import { useThreadStore } from "@/stores/threadStore";
 import { CONNECTED_STATUS_COLOR } from "@/constants/chatConstants";
+import { useToast } from "@/context/ToastContext";
+import { useAuthStore } from "@/stores/authStore";
 
-interface ThreadMessagingViewEventBasedProps {
-  agentName: string;
-  onThreadStateChange?: (state: ThreadState) => void;
-}
-
-export interface ThreadMessagingViewEventBasedRef {
-  getState: () => ThreadState;
-  selectChannel: (channel: string) => void;
-  selectDirectMessage: (agentId: string) => void;
-}
-
-
-const ThreadMessagingViewEventBased = forwardRef<
-  ThreadMessagingViewEventBasedRef,
-  ThreadMessagingViewEventBasedProps
->(({ agentName, onThreadStateChange }, ref) => {
+const ThreadMessagingViewEventBased: React.FC = () => {
+  const { agentName } = useAuthStore();
   // Use theme from store
   const { theme: currentTheme } = useThemeStore();
+  // Use toast for error notifications
+  const { error: showError } = useToast();
 
-  // 从 threadStore 获取当前状态，而不是使用本地状态
-  const { threadState } = useThreadStore();
-  const currentChannel = threadState?.currentChannel || "";
-  const currentDirectMessage = threadState?.currentDirectMessage || "";
+  // 从 chatStore 获取当前选择状态和选择方法
+  const { currentChannel, currentDirectMessage, selectChannel, selectDirectMessage } = useChatStore();
 
-  // 调试日志：监听 threadState 变化
+  // 调试日志：监听选择状态变化
   useEffect(() => {
     console.log(
-      `📋 ThreadState changed: channel="${currentChannel}", direct="${currentDirectMessage}"`
+      `📋 Selection changed: channel="${currentChannel || ""}", direct="${currentDirectMessage || ""}"`
     );
   }, [currentChannel, currentDirectMessage]);
 
@@ -70,17 +50,26 @@ const ThreadMessagingViewEventBased = forwardRef<
   // 使用新的 OpenAgents context
   const { connector, connectionStatus, isConnected } = useOpenAgents();
 
+  // 设置 chatStore 的 context 引用
+  useEffect(() => {
+    setChatStoreContext({ connector, connectionStatus, isConnected });
+  }, [connector, connectionStatus, isConnected]);
+
   // 使用新的 Chat Store
   const {
     channels,
     channelsLoading,
+    channelsLoaded,
     channelsError,
     agents,
     agentsLoading,
+    agentsLoaded,
     agentsError,
     messagesLoading,
     messagesError,
-    setConnection,
+    // 直接获取消息数据而不是getter方法，以便 React 可以检测到变化
+    channelMessages,
+    directMessages,
     loadChannels,
     loadChannelMessages,
     loadDirectMessages,
@@ -89,8 +78,6 @@ const ThreadMessagingViewEventBased = forwardRef<
     sendDirectMessage,
     addReaction,
     removeReaction,
-    getChannelMessages,
-    getDirectMessagesForAgent,
     setupEventListeners,
     cleanupEventListeners,
     clearChannelsError,
@@ -98,7 +85,6 @@ const ThreadMessagingViewEventBased = forwardRef<
     clearAgentsError,
   } = useChatStore();
   const [sendingMessage, setSendingMessage] = useState<boolean>(false);
-  const [showDocuments, setShowDocuments] = useState<boolean>(false);
   const [replyingTo, setReplyingTo] = useState<{
     messageId: string;
     text: string;
@@ -112,35 +98,40 @@ const ThreadMessagingViewEventBased = forwardRef<
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const readMessageStore = useRef(
-    new ReadMessageStore(
-      connectionStatus.agentId?.split("@")[1] || "localhost", // extract host from agentId
-      8700, // default port
-      agentName
-    )
-  );
 
   // 获取当前频道或私信的消息
   const messages = useMemo(() => {
     if (currentChannel) {
-      return getChannelMessages(currentChannel);
+      // 直接从 Map 中获取数据
+      const msgs = channelMessages.get(currentChannel) || [];
+      console.log(`MessagingView: Channel #${currentChannel} has ${msgs.length} messages`);
+      return msgs;
     } else if (currentDirectMessage) {
       const currentAgentId = connectionStatus.agentId || agentName;
-      return getDirectMessagesForAgent(currentDirectMessage, currentAgentId);
+      const directMsgs = directMessages.get(currentDirectMessage) || [];
+
+      // 过滤属于当前会话的消息
+      const filteredMsgs = directMsgs.filter(message =>
+        (message.type === 'direct_message') &&
+        ((message.senderId === currentAgentId && message.targetUserId === currentDirectMessage) ||
+        (message.senderId === currentDirectMessage && message.targetUserId === currentAgentId) ||
+        (message.senderId === currentDirectMessage))  // 兼容旧格式
+      );
+      console.log(`MessagingView: Direct messages with ${currentDirectMessage}: ${filteredMsgs.length} messages`);
+      return filteredMsgs;
     }
     return [];
-  }, [currentChannel, currentDirectMessage, getChannelMessages, getDirectMessagesForAgent, connectionStatus.agentId, agentName]);
+  }, [currentChannel, currentDirectMessage, channelMessages, directMessages, connectionStatus.agentId, agentName]);
 
-  // 设置 chatStore 连接
+  // 设置事件监听器
   useEffect(() => {
-    if (connector) {
-      setConnection(connector);
+    if (isConnected) {
       setupEventListeners();
     }
     return () => {
       cleanupEventListeners();
     };
-  }, [connector, setConnection, setupEventListeners, cleanupEventListeners]);
+  }, [isConnected, setupEventListeners, cleanupEventListeners]);
 
 
   // Auto-scroll to bottom when new messages arrive
@@ -150,67 +141,40 @@ const ThreadMessagingViewEventBased = forwardRef<
     }
   }, [messages]);
 
-  // Handle channel selection
-  const handleChannelSelect = useCallback(
-    async (channelName: string) => {
-      if (channelName === currentChannel) return;
-
-      console.log(`📂 Switching to channel #${channelName}`);
-
-      // Clear reply and quote states when switching channels
-      setReplyingTo(null);
-      setQuotingMessage(null);
-
-      // 通过 store 更新状态而不是本地状态
-      if (onThreadStateChange) {
-        onThreadStateChange({
-          currentChannel: channelName,
-          currentDirectMessage: null,
-        });
-      }
-
-      setShowDocuments(false);
-
-      // Load messages for the selected channel
-      try {
-        await loadChannelMessages(channelName);
-        readMessageStore.current?.markChannelAsRead(
-          channelName,
-          messages.map((m) => m.message_id)
-        );
-      } catch (error) {
-        console.error(`Failed to load messages for #${channelName}:`, error);
-      }
-    },
-    [currentChannel, loadChannelMessages, messages, onThreadStateChange]
-  );
 
   // 获取过滤后的 agents（排除当前用户）
   const filteredAgents = useMemo(() => {
-    const currentUserId = connectionStatus.agentId || agentName;
+    const currentUserId = connectionStatus.agentId || agentName || "";
     return agents.filter(agent => agent.agent_id !== currentUserId);
   }, [agents, connectionStatus.agentId, agentName]);
 
   // Load initial data function
   const loadInitialData = useCallback(async () => {
     try {
-      // Load channels and agents
-      await Promise.all([
-        loadChannels(),
-        loadAgents()
-      ]);
+      // Load channels and agents only if not loaded yet
+      const promises = [];
+      if (!channelsLoaded && !channelsLoading) {
+        promises.push(loadChannels());
+      }
+      if (!agentsLoaded && !agentsLoading) {
+        promises.push(loadAgents());
+      }
+
+      if (promises.length > 0) {
+        await Promise.all(promises);
+      }
 
       console.log(`📋 Loaded ${channels.length} channels`);
       console.log(`👥 Loaded ${filteredAgents.length} agents (excluding current user)`);
 
       // 智能频道选择逻辑
-      if (channels.length > 0 && onThreadStateChange) {
+      if (channels.length > 0) {
         console.log(`🔍 Channel selection logic:`, {
           currentChannel,
           currentDirectMessage,
           availableChannels: channels.map((c) => c.name),
           availableAgents: filteredAgents.map((a) => a.agent_id),
-          threadStateFromStore: threadState,
+          selectionStateFromChatStore: { currentChannel, currentDirectMessage },
         });
 
         let selectedChannel = null;
@@ -267,10 +231,7 @@ const ThreadMessagingViewEventBased = forwardRef<
           // Clear reply and quote states when automatically switching channels
           setReplyingTo(null);
           setQuotingMessage(null);
-          onThreadStateChange({
-            currentChannel: selectedChannel,
-            currentDirectMessage: null,
-          });
+          selectChannel(selectedChannel);
         } else if (selectedChannel === currentChannel) {
           console.log(`✅ 保持当前频道选择: ${selectedChannel}`);
         } else if (currentDirectMessage && filteredAgents.some(agent => agent.agent_id === currentDirectMessage)) {
@@ -283,23 +244,27 @@ const ThreadMessagingViewEventBased = forwardRef<
   }, [
     loadChannels,
     loadAgents,
+    channelsLoaded,
+    channelsLoading,
+    agentsLoaded,
+    agentsLoading,
     channels,
     filteredAgents,
     currentChannel,
     currentDirectMessage,
-    onThreadStateChange,
-    threadState,
+    selectChannel,
+    selectDirectMessage,
     connectionStatus.agentId,
     agentName,
   ]);
 
   // Load initial data when connected
   useEffect(() => {
-    if (isConnected && channels.length === 0) {
+    if (isConnected && (!channelsLoaded || !agentsLoaded)) {
       console.log("🔧 Loading initial data...");
       loadInitialData();
     }
-  }, [isConnected, channels.length, loadInitialData]);
+  }, [isConnected, channelsLoaded, agentsLoaded, loadInitialData]);
 
   // Periodic refresh of agents list
   useEffect(() => {
@@ -314,7 +279,7 @@ const ThreadMessagingViewEventBased = forwardRef<
     }
   }, [isConnected, loadAgents]);
 
-  // 当 threadStore 状态恢复后，加载对应的消息
+  // 当 chatStore 选择状态变化后，加载对应的消息
   useEffect(() => {
     if (isConnected && channels.length > 0) {
       if (currentChannel) {
@@ -338,48 +303,14 @@ const ThreadMessagingViewEventBased = forwardRef<
     loadDirectMessages,
   ]);
 
-  // Handle direct message selection
-  const handleDirectMessageSelect = useCallback(
-    async (agentId: string) => {
-      if (agentId === currentDirectMessage) return;
-
-      console.log(`📨 Switching to DM with ${agentId}`);
-
-      // Clear reply and quote states when switching to direct messages
-      setReplyingTo(null);
-      setQuotingMessage(null);
-
-      // 通过 store 更新状态而不是本地状态
-      if (onThreadStateChange) {
-        onThreadStateChange({
-          currentChannel: null,
-          currentDirectMessage: agentId,
-        });
-      }
-
-      setShowDocuments(false);
-
-      // Load direct messages
-      try {
-        await loadDirectMessages(agentId);
-        readMessageStore.current?.markDirectMessageAsRead(
-          agentId,
-          messages.map((m) => m.message_id)
-        );
-      } catch (error) {
-        console.error(`Failed to load DMs with ${agentId}:`, error);
-      }
-    },
-    [currentDirectMessage, loadDirectMessages, messages, onThreadStateChange]
-  );
 
   // Handle sending messages
   const handleSendMessage = useCallback(
     async (
       content: string,
       replyToId?: string,
-      quotedMessageId?: string,
-      quotedText?: string
+      _quotedMessageId?: string,
+      _quotedText?: string
     ) => {
       if (!content.trim() || sendingMessage) return;
 
@@ -457,8 +388,8 @@ const ThreadMessagingViewEventBased = forwardRef<
     ) => {
       try {
         const success = action === "add"
-          ? await addReaction(messageId, reactionType, currentChannel)
-          : await removeReaction(messageId, reactionType, currentChannel);
+          ? await addReaction(messageId, reactionType, currentChannel || undefined)
+          : await removeReaction(messageId, reactionType, currentChannel || undefined);
 
         if (success) {
           console.log(
@@ -467,43 +398,21 @@ const ThreadMessagingViewEventBased = forwardRef<
           // 反应更新会通过事件监听器自动同步到 store 中
         } else {
           console.error(`Failed to ${action} reaction`);
+          // 显示错误toast
+          showError(`Failed to ${action} reaction "${reactionType}". Please try again.`);
         }
       } catch (error) {
         console.error(`Failed to ${action} reaction:`, error);
+        // 显示网络错误toast
+        showError(`Network error while ${action}ing reaction "${reactionType}". Please check your connection and try again.`);
       }
     },
-    [addReaction, removeReaction, currentChannel]
+    [addReaction, removeReaction, currentChannel, showError]
   );
 
-  // Expose methods to parent via ref
-  useImperativeHandle(ref, () => ({
-    getState: () => ({
-      channels: channels,
-      agents: filteredAgents,
-      currentChannel,
-      currentDirectMessage,
-    }),
-    selectChannel: handleChannelSelect,
-    selectDirectMessage: handleDirectMessageSelect,
-  }));
+  // Methods are managed through chatStore state, no ref needed
 
-  // Notify parent of state changes
-  useEffect(() => {
-    if (onThreadStateChange) {
-      onThreadStateChange({
-        channels: channels,
-        agents: filteredAgents,
-        currentChannel,
-        currentDirectMessage,
-      });
-    }
-  }, [
-    channels,
-    filteredAgents,
-    currentChannel,
-    currentDirectMessage,
-    onThreadStateChange,
-  ]);
+  // State changes are managed by chatStore - no need to notify parent
 
   // Get connection status color
   const getConnectionStatusColor = useMemo(() => {
@@ -528,11 +437,10 @@ const ThreadMessagingViewEventBased = forwardRef<
 
   // Get current view title
   const getCurrentViewTitle = useMemo(() => {
-    if (showDocuments) return "Documents";
     if (currentChannel) return `#${currentChannel}`;
     if (currentDirectMessage) return `@${currentDirectMessage}`;
     return "Select a channel";
-  }, [showDocuments, currentChannel, currentDirectMessage]);
+  }, [currentChannel, currentDirectMessage]);
 
   return (
     <div className="thread-messaging-view h-full flex flex-col bg-white dark:bg-gray-900">
@@ -568,9 +476,6 @@ const ThreadMessagingViewEventBased = forwardRef<
 
       {/* Content Area */}
       <div className="flex-1 flex flex-col min-h-0">
-        {showDocuments ? (
-          <DocumentsView onBackClick={() => setShowDocuments(false)} />
-        ) : (
           <>
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4">
@@ -606,7 +511,7 @@ const ThreadMessagingViewEventBased = forwardRef<
 
                     // For direct messages, match the target agent or sender
                     // Include messages where current user is sender or receiver
-                    const currentUserId = connectionStatus.agentId || agentName;
+                    const currentUserId = connectionStatus.agentId || agentName || "";
                     console.log('🔧 Filtering direct message:', {
                       messageId: message.id,
                       messageType,
@@ -679,7 +584,7 @@ const ThreadMessagingViewEventBased = forwardRef<
                   <MessageRenderer
                     key="all-messages"
                     messages={sortedMessages}
-                    currentUserId={connectionStatus.agentId || agentName}
+                    currentUserId={connectionStatus.agentId || agentName || ""}
                     onReaction={(messageId: string, reactionType: string, action?: "add" | "remove") => {
                       // 如果MessageRenderer没有指定action，则默认为add
                       const finalAction = action || "add";
@@ -697,13 +602,13 @@ const ThreadMessagingViewEventBased = forwardRef<
 
             {/* Message Input */}
             {(currentChannel || currentDirectMessage) && (
-              <ThreadMessageInput
+              <MessageInput
                 onSendMessage={(
                   text: string,
                   replyTo?: string,
                   quotedMessageId?: string
                 ) => {
-                  console.log("🔧 ThreadMessageInput onSendMessage called:", {
+                  console.log("🔧 MessageInput onSendMessage called:", {
                     text,
                     replyTo,
                     quotedMessageId,
@@ -711,7 +616,7 @@ const ThreadMessagingViewEventBased = forwardRef<
                     quotingMessage,
                   });
 
-                  // Use the replyTo parameter passed from ThreadMessageInput
+                  // Use the replyTo parameter passed from MessageInput
                   if (replyTo) {
                     // This is a reply (comment)
                     handleSendMessage(text, replyTo);
@@ -743,8 +648,8 @@ const ThreadMessagingViewEventBased = forwardRef<
                     : "Select a channel to start typing..."
                 }
                 currentTheme={currentTheme}
-                currentChannel={currentChannel}
-                currentAgentId={connectionStatus.agentId || agentName}
+                currentChannel={currentChannel || undefined}
+                currentAgentId={connectionStatus.agentId || agentName || ""}
                 replyingTo={replyingTo}
                 quotingMessage={quotingMessage}
                 onCancelReply={cancelReply}
@@ -752,11 +657,10 @@ const ThreadMessagingViewEventBased = forwardRef<
               />
             )}
           </>
-        )}
       </div>
     </div>
   );
-});
+};
 
 ThreadMessagingViewEventBased.displayName = "ThreadMessagingViewEventBased";
 

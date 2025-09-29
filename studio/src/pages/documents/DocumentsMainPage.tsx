@@ -1,7 +1,7 @@
 import React, { useCallback } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { DocumentsView } from "@/components";
-import { useThreadStore } from "@/stores/threadStore";
+import { useDocumentStore } from "@/stores/documentStore";
 
 /**
  * 文档主页面 - 处理文档相关的所有功能
@@ -10,7 +10,7 @@ const DocumentsMainPage: React.FC = () => {
   const navigate = useNavigate();
 
   const { documents, selectedDocumentId, setSelectedDocument, setDocuments } =
-    useThreadStore();
+    useDocumentStore();
 
   // 文档选择处理器
   const handleDocumentSelect = useCallback(

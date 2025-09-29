@@ -1,5 +1,5 @@
 import React from 'react';
-import { buildNetworkUrl } from '../../utils/httpClient';
+import { buildNetworkUrl } from '@/utils/httpClient';
 
 interface AttachmentDisplayProps {
   // 新的统一附件格式

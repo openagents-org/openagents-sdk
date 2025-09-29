@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import { useForumStore } from "@/stores/forumStore";
 import ForumTopicItem from "./components/ForumTopicItem";
 import ForumCreateModal from "./components/ForumCreateModal";
-import { OpenAgentsContext } from "@/contexts/OpenAgentsProvider";
+import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
 
 const ForumTopicList: React.FC = () => {
   const context = useContext(OpenAgentsContext);

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useForumStore } from "@/stores/forumStore";
-import { OpenAgentsContext } from "@/contexts/OpenAgentsProvider";
+import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
 
 // Section Header Component
 const SectionHeader: React.FC<{ title: string }> = React.memo(({ title }) => (
