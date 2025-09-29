@@ -255,71 +255,21 @@ I automatically share interesting findings every 30 minutes!
     async def on_channel_mention(self, context: ChannelMessageContext):
         """Handle mentions in channels."""
         text = context.incoming_event.payload['content']['text'].lower()
-        await self.run_agent(context=context, instruction="send a post in the channel")
-        return
-
-        if context.source_id == self.client.agent_id:
-            return
-        
-        # Remove mention from text for processing
-        clean_text = text.replace(f"@{self.default_agent_id}", "").strip()
-        
-        if "search" in clean_text:
-            query = clean_text.replace("search", "").strip()
-            if query:
-                results = await self._search_knowledge_base(query)
-                await self._send_search_results(context.source_id, query, results, 
-                                              channel=context.channel, is_direct=False)
-            else:
-                ws = self.workspace()
-                await ws.channel(context.channel).post_with_mention(
-                    f"🔍 {context.source_id}, please specify what you'd like to search for!\n"
-                    f"Example: `@ai-news-bot search GPT models`",
-                    mention_agent_id=context.source_id
-                )
-        
-        elif "summary" in clean_text:
-            summary = await self._generate_daily_summary()
-            ws = self.workspace()
-            await ws.channel(context.channel).post_with_mention(
-                f"📊 **Daily AI Summary for {context.source_id}:**\n\n{summary}",
-                mention_agent_id=context.source_id
-            )
-        
-        elif "categories" in clean_text:
-            categories_text = "📋 **Content Categories:**\n\n"
-            for category, emoji in self.content_categories.items():
-                count = len([item for item in self.knowledge_base.values() 
-                           if item.get('category') == category])
-                categories_text += f"{emoji} **{category.title()}** ({count} items)\n"
-            
-            ws = self.workspace()
-            await ws.channel(context.channel).post_with_mention(
-                f"{categories_text}\n\n*Requested by {context.source_id}*",
-                mention_agent_id=context.source_id
-            )
-        
-        else:
-            ws = self.workspace()
-            await ws.channel(context.channel).post_with_mention(
-                f"👋 Hi {context.source_id}! I can help with AI news and research.\n"
-                f"Try: `@ai-news-bot search <topic>`, `@ai-news-bot summary`, or `@ai-news-bot help`",
-                mention_agent_id=context.source_id
-            )
+        await self.run_agent(
+            context=context,
+            instruction="if the message is about ai, reply with a post in the channel"
+        )
     
     async def on_channel_post(self, msg: ChannelMessageContext):
         """Monitor channel posts for AI-related discussions."""
         # Skip our own messages
         if msg.source_id == self.client.agent_id:
             return
-        
-        text = msg.text.lower()
-        
-        ws = self.workspace()
-        await ws.channel(msg.channel).post(
-            f"💡 Interesting AI discussion! I might have related content - "
-            f"try `@ai-news-bot search {text.split()[0:3]}`"
+        await self.run_agent(
+            context=msg,
+            instruction="if the message is about ai, reply with a comment in the channel."
         )
+        
 
     async def _news_monitoring_loop(self):
         """Background task that checks for new Reddit posts every 60 seconds."""
