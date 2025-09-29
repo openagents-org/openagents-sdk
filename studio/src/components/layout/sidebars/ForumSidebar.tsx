@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useForumStore } from "@/stores/forumStore";
-import { useOpenAgentsService } from "@/contexts/OpenAgentsServiceContext";
-import useConnectedStatus from "@/hooks/useConnectedStatus";
+import { OpenAgentsContext } from "@/contexts/OpenAgentsProvider";
 
 // Section Header Component
 const SectionHeader: React.FC<{ title: string }> = React.memo(({ title }) => (
@@ -75,9 +74,13 @@ const PopularTopicItem: React.FC<{
           <div className="flex items-start min-w-0 flex-1">
             <div className="min-w-0 flex-1">
               <div className="flex items-center truncate font-medium overflow-hidden">
-                <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{topic.title}</div>
+                <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                  {topic.title}
+                </div>
                 <span className="mr-2 text-gray-400">🔥</span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">{totalVotes}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {totalVotes}
+                </span>
               </div>
               {/* <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
                 <span className="flex items-center space-x-1">💬{topic.comment_count}</span>
@@ -93,10 +96,11 @@ PopularTopicItem.displayName = "PopularTopicItem";
 
 // Forum Sidebar Content Component
 const ForumSidebar: React.FC = () => {
+  const context = useContext(OpenAgentsContext);
+  const openAgentsService = context?.connector;
+  const isConnected = context?.isConnected;
   const navigate = useNavigate();
   const location = useLocation();
-  const { service: openAgentsService } = useOpenAgentsService();
-  const { isConnected } = useConnectedStatus();
 
   const {
     topics,
@@ -104,14 +108,26 @@ const ForumSidebar: React.FC = () => {
     loadTopics,
     getPopularTopics,
     setupEventListeners,
-    cleanupEventListeners
+    cleanupEventListeners,
   } = useForumStore();
 
   // 获取热门话题（缓存计算结果）
   const popularTopics = useMemo(() => {
     const popular = getPopularTopics();
-    console.log('ForumSidebar: Popular topics recalculated. Total topics:', topics.length, 'Popular count:', popular.length);
-    console.log('ForumSidebar: Popular topics:', popular.map(t => ({ id: t.topic_id, title: t.title, score: t.upvotes - t.downvotes })));
+    console.log(
+      "ForumSidebar: Popular topics recalculated. Total topics:",
+      topics.length,
+      "Popular count:",
+      popular.length
+    );
+    console.log(
+      "ForumSidebar: Popular topics:",
+      popular.map((t) => ({
+        id: t.topic_id,
+        title: t.title,
+        score: t.upvotes - t.downvotes,
+      }))
+    );
     return popular;
   }, [topics, getPopularTopics]);
 
@@ -128,7 +144,7 @@ const ForumSidebar: React.FC = () => {
   // 加载话题（等待连接建立）
   useEffect(() => {
     if (openAgentsService && isConnected && topics.length === 0) {
-      console.log('ForumSidebar: Connection ready, loading topics');
+      console.log("ForumSidebar: Connection ready, loading topics");
       loadTopics();
     }
   }, [openAgentsService, isConnected, loadTopics, topics.length]);
@@ -136,11 +152,11 @@ const ForumSidebar: React.FC = () => {
   // 设置forum事件监听器
   useEffect(() => {
     if (openAgentsService) {
-      console.log('ForumSidebar: Setting up forum event listeners');
+      console.log("ForumSidebar: Setting up forum event listeners");
       setupEventListeners();
 
       return () => {
-        console.log('ForumSidebar: Cleaning up forum event listeners');
+        console.log("ForumSidebar: Cleaning up forum event listeners");
         cleanupEventListeners();
       };
     }

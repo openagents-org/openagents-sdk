@@ -2,12 +2,17 @@
  * Forum notifications hook for real-time forum updates
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useOpenAgentsService } from '@/contexts/OpenAgentsServiceContext';
+import { useState, useEffect, useRef, useCallback, useContext } from "react";
+import { OpenAgentsContext } from "@/contexts/OpenAgentsProvider";
 
 export interface ForumNotification {
   id: string;
-  type: 'topic_created' | 'topic_updated' | 'comment_posted' | 'comment_replied' | 'vote_cast';
+  type:
+    | "topic_created"
+    | "topic_updated"
+    | "comment_posted"
+    | "comment_replied"
+    | "vote_cast";
   title: string;
   message: string;
   timestamp: number;
@@ -22,11 +27,12 @@ interface UseForumNotificationsProps {
 
 export const useForumNotifications = ({
   enabled = true,
-  currentUserId
+  currentUserId,
 }: UseForumNotificationsProps = {}) => {
+  const context = useContext(OpenAgentsContext);
+  const openAgentsService = context?.connector;
   const [notifications, setNotifications] = useState<ForumNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const { service: openAgentsService } = useOpenAgentsService();
   const eventHandlersRef = useRef<{ [key: string]: (event: any) => void }>({});
 
   // Handle forum topic notifications
@@ -36,15 +42,15 @@ export const useForumNotifications = ({
     const topic = event.payload.topic;
     const notification: ForumNotification = {
       id: `topic_created_${topic.topic_id}_${Date.now()}`,
-      type: 'topic_created',
-      title: 'New Topic Created',
+      type: "topic_created",
+      title: "New Topic Created",
       message: `"${topic.title}" by ${topic.owner_id}`,
       timestamp: Date.now(),
       data: { topic },
       read: false,
     };
 
-    setNotifications(prev => [notification, ...prev.slice(0, 49)]); // Keep max 50 notifications
+    setNotifications((prev) => [notification, ...prev.slice(0, 49)]); // Keep max 50 notifications
   }, []);
 
   const handleTopicUpdated = useCallback((event: any) => {
@@ -53,99 +59,113 @@ export const useForumNotifications = ({
     const topic = event.payload.topic;
     const notification: ForumNotification = {
       id: `topic_updated_${topic.topic_id}_${Date.now()}`,
-      type: 'topic_updated',
-      title: 'Topic Updated',
+      type: "topic_updated",
+      title: "Topic Updated",
       message: `"${topic.title}" was edited`,
       timestamp: Date.now(),
       data: { topic },
       read: false,
     };
 
-    setNotifications(prev => [notification, ...prev.slice(0, 49)]);
+    setNotifications((prev) => [notification, ...prev.slice(0, 49)]);
   }, []);
 
   // Handle forum comment notifications
-  const handleCommentPosted = useCallback((event: any) => {
-    if (!event.payload?.comment) return;
+  const handleCommentPosted = useCallback(
+    (event: any) => {
+      if (!event.payload?.comment) return;
 
-    const comment = event.payload.comment;
-    // Don't notify user about their own comments
-    if (comment.author_id === currentUserId) return;
+      const comment = event.payload.comment;
+      // Don't notify user about their own comments
+      if (comment.author_id === currentUserId) return;
 
-    const notification: ForumNotification = {
-      id: `comment_posted_${comment.comment_id}_${Date.now()}`,
-      type: 'comment_posted',
-      title: 'New Comment',
-      message: `${comment.author_id} commented on a topic`,
-      timestamp: Date.now(),
-      data: { comment },
-      read: false,
-    };
+      const notification: ForumNotification = {
+        id: `comment_posted_${comment.comment_id}_${Date.now()}`,
+        type: "comment_posted",
+        title: "New Comment",
+        message: `${comment.author_id} commented on a topic`,
+        timestamp: Date.now(),
+        data: { comment },
+        read: false,
+      };
 
-    setNotifications(prev => [notification, ...prev.slice(0, 49)]);
-  }, [currentUserId]);
+      setNotifications((prev) => [notification, ...prev.slice(0, 49)]);
+    },
+    [currentUserId]
+  );
 
-  const handleCommentReplied = useCallback((event: any) => {
-    if (!event.payload?.comment) return;
+  const handleCommentReplied = useCallback(
+    (event: any) => {
+      if (!event.payload?.comment) return;
 
-    const comment = event.payload.comment;
-    // Don't notify user about their own replies
-    if (comment.author_id === currentUserId) return;
+      const comment = event.payload.comment;
+      // Don't notify user about their own replies
+      if (comment.author_id === currentUserId) return;
 
-    const notification: ForumNotification = {
-      id: `comment_replied_${comment.comment_id}_${Date.now()}`,
-      type: 'comment_replied',
-      title: 'New Reply',
-      message: `${comment.author_id} replied to a comment`,
-      timestamp: Date.now(),
-      data: { comment },
-      read: false,
-    };
+      const notification: ForumNotification = {
+        id: `comment_replied_${comment.comment_id}_${Date.now()}`,
+        type: "comment_replied",
+        title: "New Reply",
+        message: `${comment.author_id} replied to a comment`,
+        timestamp: Date.now(),
+        data: { comment },
+        read: false,
+      };
 
-    setNotifications(prev => [notification, ...prev.slice(0, 49)]);
-  }, [currentUserId]);
+      setNotifications((prev) => [notification, ...prev.slice(0, 49)]);
+    },
+    [currentUserId]
+  );
 
   // Handle forum vote notifications
-  const handleVoteCast = useCallback((event: any) => {
-    // if (!event.payload) return;
-    console.log('Forum notifications: Received forum.vote.cast event:', event);
+  const handleVoteCast = useCallback(
+    (event: any) => {
+      // if (!event.payload) return;
+      console.log(
+        "Forum notifications: Received forum.vote.cast event:",
+        event
+      );
 
-    const { target_type, target_id, vote_type, voter_id } = event.payload;
+      const { target_type, target_id, vote_type, voter_id } = event.payload;
 
-    // Don't notify user about their own votes
-    if (voter_id === currentUserId) return;
+      // Don't notify user about their own votes
+      if (voter_id === currentUserId) return;
 
-    const isUpvote = vote_type === 'upvote';
-    const targetTypeDisplay = target_type === 'topic' ? 'Topic' : 'Comment';
+      const isUpvote = vote_type === "upvote";
+      const targetTypeDisplay = target_type === "topic" ? "Topic" : "Comment";
 
-    const notification: ForumNotification = {
-      id: `vote_cast_${target_type}_${target_id}_${Date.now()}`,
-      type: 'vote_cast',
-      title: `${targetTypeDisplay} ${isUpvote ? 'Upvoted' : 'Downvoted'}`,
-      message: `${voter_id} ${isUpvote ? 'upvoted' : 'downvoted'} a ${target_type}`,
-      timestamp: Date.now(),
-      data: {
-        target_type,
-        target_id,
-        vote_type,
-        voter_id
-      },
-      read: false,
-    };
+      const notification: ForumNotification = {
+        id: `vote_cast_${target_type}_${target_id}_${Date.now()}`,
+        type: "vote_cast",
+        title: `${targetTypeDisplay} ${isUpvote ? "Upvoted" : "Downvoted"}`,
+        message: `${voter_id} ${
+          isUpvote ? "upvoted" : "downvoted"
+        } a ${target_type}`,
+        timestamp: Date.now(),
+        data: {
+          target_type,
+          target_id,
+          vote_type,
+          voter_id,
+        },
+        read: false,
+      };
 
-    setNotifications(prev => [notification, ...prev.slice(0, 49)]);
-  }, [currentUserId]);
+      setNotifications((prev) => [notification, ...prev.slice(0, 49)]);
+    },
+    [currentUserId]
+  );
 
   // Set up event handlers
   useEffect(() => {
     if (!enabled || !openAgentsService || !currentUserId) return;
 
     const handlers = {
-      'forum.topic.created': handleTopicCreated,
-      'forum.topic.edited': handleTopicUpdated,
-      'forum.comment.posted': handleCommentPosted,
-      'forum.comment.replied': handleCommentReplied,
-      'forum.vote.cast': handleVoteCast,
+      "forum.topic.created": handleTopicCreated,
+      "forum.topic.edited": handleTopicUpdated,
+      "forum.comment.posted": handleCommentPosted,
+      "forum.comment.replied": handleCommentReplied,
+      "forum.vote.cast": handleVoteCast,
     };
 
     eventHandlersRef.current = handlers;
@@ -155,35 +175,46 @@ export const useForumNotifications = ({
       openAgentsService.on(eventName, handler);
     });
 
-    console.log('Forum notifications: Event handlers registered');
+    console.log("Forum notifications: Event handlers registered");
 
     return () => {
       // Clean up event handlers
       if (eventHandlersRef.current) {
-        Object.entries(eventHandlersRef.current).forEach(([eventName, handler]) => {
-          openAgentsService.off(eventName, handler);
-        });
+        Object.entries(eventHandlersRef.current).forEach(
+          ([eventName, handler]) => {
+            openAgentsService.off(eventName, handler);
+          }
+        );
       }
-      console.log('Forum notifications: Event handlers cleaned up');
+      console.log("Forum notifications: Event handlers cleaned up");
     };
-  }, [enabled, openAgentsService, currentUserId, handleTopicCreated, handleTopicUpdated, handleCommentPosted, handleCommentReplied, handleVoteCast]);
+  }, [
+    enabled,
+    openAgentsService,
+    currentUserId,
+    handleTopicCreated,
+    handleTopicUpdated,
+    handleCommentPosted,
+    handleCommentReplied,
+    handleVoteCast,
+  ]);
 
   // Update unread count when notifications change
   useEffect(() => {
-    const unread = notifications.filter(n => !n.read).length;
+    const unread = notifications.filter((n) => !n.read).length;
     setUnreadCount(unread);
   }, [notifications]);
 
   // Mark notification as read
   const markAsRead = useCallback((notificationId: string) => {
-    setNotifications(prev =>
-      prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
     );
   }, []);
 
   // Mark all notifications as read
   const markAllAsRead = useCallback(() => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   }, []);
 
   // Clear all notifications
@@ -193,7 +224,7 @@ export const useForumNotifications = ({
 
   // Remove specific notification
   const removeNotification = useCallback((notificationId: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== notificationId));
+    setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
   }, []);
 
   return {

@@ -8,11 +8,19 @@
  * 4. 作为事件总线，让组件可以订阅事件
  */
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from 'react';
-import { OpenAgentsService } from '@/services/openAgentsService';
-import { ConnectionStatus, ConnectionStatusEnum } from '@/types/connection';
-import { useNetworkStore } from '@/stores/networkStore';
-import { ThreadMessage, ThreadChannel, AgentInfo } from '@/types/events';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  ReactNode,
+} from "react";
+import { OpenAgentsService } from "@/services/openAgentsService";
+import { ConnectionStatus, ConnectionStatusEnum } from "@/types/connection";
+import { useAuthStore } from "@/stores/authStore";
+import { ThreadMessage, ThreadChannel, AgentInfo } from "@/types/events";
 
 interface OpenAgentsServiceContextType {
   // 服务实例（作为事件总线）
@@ -25,15 +33,35 @@ interface OpenAgentsServiceContextType {
   disconnect: () => Promise<void>;
 
   // 基础 API
-  sendChannelMessage: (channel: string, content: string, replyToId?: string) => Promise<any>;
+  sendChannelMessage: (
+    channel: string,
+    content: string,
+    replyToId?: string
+  ) => Promise<any>;
   sendDirectMessage: (targetAgentId: string, content: string) => Promise<any>;
-  addReaction: (messageId: string, reactionType: string, channel?: string) => Promise<any>;
-  removeReaction: (messageId: string, reactionType: string, channel?: string) => Promise<any>;
+  addReaction: (
+    messageId: string,
+    reactionType: string,
+    channel?: string
+  ) => Promise<any>;
+  removeReaction: (
+    messageId: string,
+    reactionType: string,
+    channel?: string
+  ) => Promise<any>;
 
   // 数据加载 API
   loadChannels: () => Promise<ThreadChannel[]>;
-  loadChannelMessages: (channel: string, limit?: number, offset?: number) => Promise<ThreadMessage[]>;
-  loadDirectMessages: (targetAgentId: string, limit?: number, offset?: number) => Promise<ThreadMessage[]>;
+  loadChannelMessages: (
+    channel: string,
+    limit?: number,
+    offset?: number
+  ) => Promise<ThreadMessage[]>;
+  loadDirectMessages: (
+    targetAgentId: string,
+    limit?: number,
+    offset?: number
+  ) => Promise<ThreadMessage[]>;
   loadConnectedAgents: () => Promise<AgentInfo[]>;
 
   // 错误处理
@@ -41,14 +69,18 @@ interface OpenAgentsServiceContextType {
   clearError: () => void;
 }
 
-const OpenAgentsServiceContext = createContext<OpenAgentsServiceContextType | undefined>(undefined);
+const OpenAgentsServiceContext = createContext<
+  OpenAgentsServiceContextType | undefined
+>(undefined);
 
 interface OpenAgentsServiceProviderProps {
   children: ReactNode;
 }
 
-export const OpenAgentsServiceProvider: React.FC<OpenAgentsServiceProviderProps> = ({ children }) => {
-  const { agentName, selectedNetwork } = useNetworkStore();
+export const OpenAgentsServiceProvider: React.FC<
+  OpenAgentsServiceProviderProps
+> = ({ children }) => {
+  const { agentName, selectedNetwork } = useAuthStore();
   const [service, setService] = useState<OpenAgentsService | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
     status: ConnectionStatusEnum.DISCONNECTED,
@@ -60,12 +92,12 @@ export const OpenAgentsServiceProvider: React.FC<OpenAgentsServiceProviderProps>
   // 清理服务
   const cleanUpService = useCallback(() => {
     if (serviceRef.current) {
-      console.log('🔧 Cleaning up global OpenAgents service');
+      console.log("🔧 Cleaning up global OpenAgents service");
       const serviceTemp = serviceRef.current;
       serviceRef.current = null;
       setService(null);
       serviceTemp.disconnect().catch((error) => {
-        console.warn('Error during service cleanup:', error);
+        console.warn("Error during service cleanup:", error);
       });
     }
   }, []);
@@ -76,7 +108,7 @@ export const OpenAgentsServiceProvider: React.FC<OpenAgentsServiceProviderProps>
       return;
     }
 
-    console.log('🔧 Initializing global OpenAgents service...', {
+    console.log("🔧 Initializing global OpenAgents service...", {
       agentId: agentName,
       host: selectedNetwork.host,
       port: selectedNetwork.port,
@@ -89,12 +121,12 @@ export const OpenAgentsServiceProvider: React.FC<OpenAgentsServiceProviderProps>
     });
 
     // 设置连接状态监听
-    newService.on('connectionStatusChanged', (status: ConnectionStatus) => {
+    newService.on("connectionStatusChanged", (status: ConnectionStatus) => {
       setConnectionStatus(status);
     });
 
-    newService.on('connectionError', (data: any) => {
-      setLastError(data.error || 'Connection error');
+    newService.on("connectionError", (data: any) => {
+      setLastError(data.error || "Connection error");
     });
 
     // 注意：这里不处理消息事件，让组件层自己订阅
@@ -130,11 +162,11 @@ export const OpenAgentsServiceProvider: React.FC<OpenAgentsServiceProviderProps>
     try {
       const success = await service.connect();
       if (!success) {
-        setLastError('Failed to connect to OpenAgents network');
+        setLastError("Failed to connect to OpenAgents network");
       }
       return success;
     } catch (error: any) {
-      setLastError(error.message || 'Connection error');
+      setLastError(error.message || "Connection error");
       return false;
     }
   }, [service]);
@@ -145,98 +177,107 @@ export const OpenAgentsServiceProvider: React.FC<OpenAgentsServiceProviderProps>
     try {
       await service.disconnect();
     } catch (error: any) {
-      console.error('Disconnect error:', error);
+      console.error("Disconnect error:", error);
     }
   }, [service]);
 
-  const sendChannelMessage = useCallback(async (
-    channel: string,
-    content: string,
-    replyToId?: string
-  ) => {
-    if (!service) {
-      throw new Error('Not connected to service');
-    }
-
-    setLastError(null);
-    try {
-      const result = await service.sendChannelMessage(channel, content, replyToId);
-      if (!result.success && result.message) {
-        setLastError(result.message);
+  const sendChannelMessage = useCallback(
+    async (channel: string, content: string, replyToId?: string) => {
+      if (!service) {
+        throw new Error("Not connected to service");
       }
-      return result;
-    } catch (error: any) {
-      const errorMsg = error.message || 'Failed to send message';
-      setLastError(errorMsg);
-      throw error;
-    }
-  }, [service]);
 
-  const sendDirectMessage = useCallback(async (
-    targetAgentId: string,
-    content: string
-  ) => {
-    if (!service) {
-      throw new Error('Not connected to service');
-    }
-
-    setLastError(null);
-    try {
-      const result = await service.sendDirectMessage(targetAgentId, content);
-      if (!result.success && result.message) {
-        setLastError(result.message);
+      setLastError(null);
+      try {
+        const result = await service.sendChannelMessage(
+          channel,
+          content,
+          replyToId
+        );
+        if (!result.success && result.message) {
+          setLastError(result.message);
+        }
+        return result;
+      } catch (error: any) {
+        const errorMsg = error.message || "Failed to send message";
+        setLastError(errorMsg);
+        throw error;
       }
-      return result;
-    } catch (error: any) {
-      const errorMsg = error.message || 'Failed to send direct message';
-      setLastError(errorMsg);
-      throw error;
-    }
-  }, [service]);
+    },
+    [service]
+  );
 
-  const addReaction = useCallback(async (
-    messageId: string,
-    reactionType: string,
-    channel?: string
-  ) => {
-    if (!service) {
-      throw new Error('Not connected to service');
-    }
-
-    try {
-      const result = await service.addReaction(messageId, reactionType, channel);
-      if (!result.success && result.message) {
-        setLastError(result.message);
+  const sendDirectMessage = useCallback(
+    async (targetAgentId: string, content: string) => {
+      if (!service) {
+        throw new Error("Not connected to service");
       }
-      return result;
-    } catch (error: any) {
-      const errorMsg = error.message || 'Failed to add reaction';
-      setLastError(errorMsg);
-      throw error;
-    }
-  }, [service]);
 
-  const removeReaction = useCallback(async (
-    messageId: string,
-    reactionType: string,
-    channel?: string
-  ) => {
-    if (!service) {
-      throw new Error('Not connected to service');
-    }
-
-    try {
-      const result = await service.removeReaction(messageId, reactionType, channel);
-      if (!result.success && result.message) {
-        setLastError(result.message);
+      setLastError(null);
+      try {
+        const result = await service.sendDirectMessage(targetAgentId, content);
+        if (!result.success && result.message) {
+          setLastError(result.message);
+        }
+        return result;
+      } catch (error: any) {
+        const errorMsg = error.message || "Failed to send direct message";
+        setLastError(errorMsg);
+        throw error;
       }
-      return result;
-    } catch (error: any) {
-      const errorMsg = error.message || 'Failed to remove reaction';
-      setLastError(errorMsg);
-      throw error;
-    }
-  }, [service]);
+    },
+    [service]
+  );
+
+  const addReaction = useCallback(
+    async (messageId: string, reactionType: string, channel?: string) => {
+      if (!service) {
+        throw new Error("Not connected to service");
+      }
+
+      try {
+        const result = await service.addReaction(
+          messageId,
+          reactionType,
+          channel
+        );
+        if (!result.success && result.message) {
+          setLastError(result.message);
+        }
+        return result;
+      } catch (error: any) {
+        const errorMsg = error.message || "Failed to add reaction";
+        setLastError(errorMsg);
+        throw error;
+      }
+    },
+    [service]
+  );
+
+  const removeReaction = useCallback(
+    async (messageId: string, reactionType: string, channel?: string) => {
+      if (!service) {
+        throw new Error("Not connected to service");
+      }
+
+      try {
+        const result = await service.removeReaction(
+          messageId,
+          reactionType,
+          channel
+        );
+        if (!result.success && result.message) {
+          setLastError(result.message);
+        }
+        return result;
+      } catch (error: any) {
+        const errorMsg = error.message || "Failed to remove reaction";
+        setLastError(errorMsg);
+        throw error;
+      }
+    },
+    [service]
+  );
 
   const loadChannels = useCallback(async (): Promise<ThreadChannel[]> => {
     if (!service) return [];
@@ -245,45 +286,51 @@ export const OpenAgentsServiceProvider: React.FC<OpenAgentsServiceProviderProps>
     try {
       return await service.getChannels();
     } catch (error: any) {
-      const errorMsg = error.message || 'Failed to load channels';
+      const errorMsg = error.message || "Failed to load channels";
       setLastError(errorMsg);
       return [];
     }
   }, [service]);
 
-  const loadChannelMessages = useCallback(async (
-    channel: string,
-    limit?: number,
-    offset?: number
-  ): Promise<ThreadMessage[]> => {
-    if (!service) return [];
+  const loadChannelMessages = useCallback(
+    async (
+      channel: string,
+      limit?: number,
+      offset?: number
+    ): Promise<ThreadMessage[]> => {
+      if (!service) return [];
 
-    setLastError(null);
-    try {
-      return await service.getChannelMessages(channel, limit, offset);
-    } catch (error: any) {
-      const errorMsg = error.message || 'Failed to load messages';
-      setLastError(errorMsg);
-      return [];
-    }
-  }, [service]);
+      setLastError(null);
+      try {
+        return await service.getChannelMessages(channel, limit, offset);
+      } catch (error: any) {
+        const errorMsg = error.message || "Failed to load messages";
+        setLastError(errorMsg);
+        return [];
+      }
+    },
+    [service]
+  );
 
-  const loadDirectMessages = useCallback(async (
-    targetAgentId: string,
-    limit?: number,
-    offset?: number
-  ): Promise<ThreadMessage[]> => {
-    if (!service) return [];
+  const loadDirectMessages = useCallback(
+    async (
+      targetAgentId: string,
+      limit?: number,
+      offset?: number
+    ): Promise<ThreadMessage[]> => {
+      if (!service) return [];
 
-    setLastError(null);
-    try {
-      return await service.getDirectMessages(targetAgentId, limit, offset);
-    } catch (error: any) {
-      const errorMsg = error.message || 'Failed to load direct messages';
-      setLastError(errorMsg);
-      return [];
-    }
-  }, [service]);
+      setLastError(null);
+      try {
+        return await service.getDirectMessages(targetAgentId, limit, offset);
+      } catch (error: any) {
+        const errorMsg = error.message || "Failed to load direct messages";
+        setLastError(errorMsg);
+        return [];
+      }
+    },
+    [service]
+  );
 
   const loadConnectedAgents = useCallback(async (): Promise<AgentInfo[]> => {
     if (!service) return [];
@@ -292,7 +339,7 @@ export const OpenAgentsServiceProvider: React.FC<OpenAgentsServiceProviderProps>
     try {
       return await service.getConnectedAgents();
     } catch (error: any) {
-      const errorMsg = error.message || 'Failed to load connected agents';
+      const errorMsg = error.message || "Failed to load connected agents";
       setLastError(errorMsg);
       return [];
     }
@@ -302,7 +349,8 @@ export const OpenAgentsServiceProvider: React.FC<OpenAgentsServiceProviderProps>
     setLastError(null);
   }, []);
 
-  const isConnected = connectionStatus.status === ConnectionStatusEnum.CONNECTED;
+  const isConnected =
+    connectionStatus.status === ConnectionStatusEnum.CONNECTED;
 
   const value: OpenAgentsServiceContextType = {
     service,
@@ -332,7 +380,9 @@ export const OpenAgentsServiceProvider: React.FC<OpenAgentsServiceProviderProps>
 export const useOpenAgentsService = (): OpenAgentsServiceContextType => {
   const context = useContext(OpenAgentsServiceContext);
   if (context === undefined) {
-    throw new Error('useOpenAgentsService must be used within an OpenAgentsServiceProvider');
+    throw new Error(
+      "useOpenAgentsService must be used within an OpenAgentsServiceProvider"
+    );
   }
   return context;
 };

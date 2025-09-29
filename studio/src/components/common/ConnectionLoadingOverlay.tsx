@@ -1,22 +1,31 @@
-import React, { useCallback, useMemo } from "react";
-import { ConnectionStatusEnum } from "@/types/connection";
-import { useNetworkStore } from "@/stores/networkStore";
-import useConnectedStatus from "@/hooks/useConnectedStatus";
+import React, { useCallback, useMemo, useContext } from "react";
+import {
+  ConnectionState,
+  OpenAgentsContext,
+} from "@/contexts/OpenAgentsProvider";
+import { useAuthStore } from "../../stores/authStore";
 
 const ConnectionLoadingOverlay: React.FC = () => {
-  const { connectionStatus } = useConnectedStatus();
-  const { agentName } = useNetworkStore();
+  const context = useContext(OpenAgentsContext);
+  const { agentName } = useAuthStore();
+
   const currentStatus = useMemo(
-    () => connectionStatus.status,
-    [connectionStatus.status]
+    () => context?.connectionStatus.state || ConnectionState.DISCONNECTED,
+    [context?.connectionStatus.state]
   );
+
   const isError = useMemo(
-    () => currentStatus === ConnectionStatusEnum.ERROR,
+    () => currentStatus === ConnectionState.ERROR,
     [currentStatus]
   );
-  const onRetry = useCallback(() => {
-    window.location.reload();
-  }, []);
+
+  const onRetry = useCallback(async () => {
+    if (context?.connect) {
+      await context.connect();
+    } else {
+      window.location.reload();
+    }
+  }, [context]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-50 dark:bg-gray-900">

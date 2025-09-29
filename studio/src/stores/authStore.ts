@@ -4,14 +4,14 @@ import { NetworkConnection } from "@/types/connection";
 
 interface NetworkState {
   selectedNetwork: NetworkConnection | null;
-  agentName: string | null;
   handleNetworkSelected: (network: NetworkConnection | null) => void;
+  clearNetwork: () => void;
+  agentName: string | null;
   setAgentName: (name: string | null) => void;
   clearAgentName: () => void;
-  clearNetwork: () => void;
 }
 
-export const useNetworkStore = create<NetworkState>()(
+export const useAuthStore = create<NetworkState>()(
   persist(
     (set) => ({
       selectedNetwork: null,
@@ -34,7 +34,7 @@ export const useNetworkStore = create<NetworkState>()(
       },
     }),
     {
-      name: "network-storage", // 持久化存储的 key
+      name: "auth-storage", // 持久化存储的 key
       partialize: (state) => ({
         selectedNetwork: state.selectedNetwork,
         agentName: state.agentName,

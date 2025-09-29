@@ -2,13 +2,13 @@ import React, { useCallback, useRef, useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
 import ThreadMessagingView from "@/components/chat/ThreadMessagingView";
 import { useThreadStore } from "@/stores/threadStore";
-import { useNetworkStore } from "@/stores/networkStore";
+import { useAuthStore } from "@/stores/authStore";
 import { ThreadState } from "@/types/thread";
 /**
  * 聊天主页面 - 处理聊天相关的所有功能
  */
 const ChatMainPage: React.FC = () => {
-  const { agentName } = useNetworkStore();
+  const { agentName } = useAuthStore();
 
   const { threadState, setThreadState } = useThreadStore();
 

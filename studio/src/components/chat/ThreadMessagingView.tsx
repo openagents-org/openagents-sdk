@@ -14,11 +14,11 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import { AgentInfo, ThreadMessage } from "../../types/events";
-import { useOpenAgentsService } from "@/contexts/OpenAgentsServiceContext";
-import { useOpenAgentsData } from "@/hooks/useOpenAgentsData";
+import { AgentInfo } from "../../types/events";
+import { UnifiedMessage } from "../../types/message";
+import { useOpenAgents } from "@/contexts/OpenAgentsProvider";
+import { useChatStore } from "@/stores/chatStore";
 import { ThreadState } from "@/types/thread";
-import { MessageSendResult } from "../../services/openAgentsService";
 import MessageRenderer from "./MessageRenderer";
 import ThreadMessageInput from "./ThreadMessageInput";
 import DocumentsView from "../documents/DocumentsView";
@@ -67,35 +67,38 @@ const ThreadMessagingViewEventBased = forwardRef<
 
   // 这些本地状态用于 UI 控制，不影响频道选择逻辑
 
-  // 使用全局服务层
+  // 使用新的 OpenAgents context
+  const { connector, connectionStatus, isConnected } = useOpenAgents();
+
+  // 使用新的 Chat Store
   const {
-    connectionStatus,
+    channels,
+    channelsLoading,
+    channelsError,
+    agents,
+    agentsLoading,
+    agentsError,
+    messagesLoading,
+    messagesError,
+    setConnection,
+    loadChannels,
+    loadChannelMessages,
+    loadDirectMessages,
+    loadAgents,
     sendChannelMessage,
     sendDirectMessage,
     addReaction,
     removeReaction,
-    lastError,
-    clearError,
-  } = useOpenAgentsService();
-
-  // 使用组件数据层，传入当前关注的频道/私信
-  const {
-    channels,
-    messages,
-    setMessages,
-    loadChannels,
-    loadChannelMessages,
-    loadDirectMessages,
-    loadConnectedAgents,
-    isLoading,
-  } = useOpenAgentsData({
-    autoLoadChannels: true,
-    currentChannel: currentChannel || undefined,
-    currentDirectTarget: currentDirectMessage || undefined,
-  });
+    getChannelMessages,
+    getDirectMessagesForAgent,
+    setupEventListeners,
+    cleanupEventListeners,
+    clearChannelsError,
+    clearMessagesError,
+    clearAgentsError,
+  } = useChatStore();
   const [sendingMessage, setSendingMessage] = useState<boolean>(false);
   const [showDocuments, setShowDocuments] = useState<boolean>(false);
-  const [agents, setAgents] = useState<AgentInfo[]>([]);
   const [replyingTo, setReplyingTo] = useState<{
     messageId: string;
     text: string;
@@ -109,7 +112,6 @@ const ThreadMessagingViewEventBased = forwardRef<
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesRef = useRef<ThreadMessage[]>([]);
   const readMessageStore = useRef(
     new ReadMessageStore(
       connectionStatus.agentId?.split("@")[1] || "localhost", // extract host from agentId
@@ -118,10 +120,28 @@ const ThreadMessagingViewEventBased = forwardRef<
     )
   );
 
-  // Keep messagesRef synchronized with messages state
+  // 获取当前频道或私信的消息
+  const messages = useMemo(() => {
+    if (currentChannel) {
+      return getChannelMessages(currentChannel);
+    } else if (currentDirectMessage) {
+      const currentAgentId = connectionStatus.agentId || agentName;
+      return getDirectMessagesForAgent(currentDirectMessage, currentAgentId);
+    }
+    return [];
+  }, [currentChannel, currentDirectMessage, getChannelMessages, getDirectMessagesForAgent, connectionStatus.agentId, agentName]);
+
+  // 设置 chatStore 连接
   useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
+    if (connector) {
+      setConnection(connector);
+      setupEventListeners();
+    }
+    return () => {
+      cleanupEventListeners();
+    };
+  }, [connector, setConnection, setupEventListeners, cleanupEventListeners]);
+
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -165,50 +185,31 @@ const ThreadMessagingViewEventBased = forwardRef<
     [currentChannel, loadChannelMessages, messages, onThreadStateChange]
   );
 
-  // Load connected agents
-  const loadAgents = useCallback(async () => {
-    try {
-      const agentList = await loadConnectedAgents();
-      const currentUserId = connectionStatus.agentId || agentName;
-
-      // 过滤掉当前用户，避免用户在 DM 列表中看到自己
-      const filteredAgentList = agentList.filter(
-        (agent) => agent.agent_id !== currentUserId
-      );
-
-      console.log(`👥 Loaded ${agentList.length} connected agents, filtered to ${filteredAgentList.length} (excluded current user: ${currentUserId})`);
-      setAgents(filteredAgentList);
-    } catch (error) {
-      console.error("Failed to load connected agents:", error);
-    }
-  }, [loadConnectedAgents, connectionStatus.agentId, agentName]);
+  // 获取过滤后的 agents（排除当前用户）
+  const filteredAgents = useMemo(() => {
+    const currentUserId = connectionStatus.agentId || agentName;
+    return agents.filter(agent => agent.agent_id !== currentUserId);
+  }, [agents, connectionStatus.agentId, agentName]);
 
   // Load initial data function
   const loadInitialData = useCallback(async () => {
     try {
-      // Load channels first
-      const channelList = await loadChannels();
-      console.log(`📋 Loaded ${channelList.length} channels`);
+      // Load channels and agents
+      await Promise.all([
+        loadChannels(),
+        loadAgents()
+      ]);
 
-      // Load connected agents
-      const agentList = await loadConnectedAgents();
-      const currentUserId = connectionStatus.agentId || agentName;
-
-      // 过滤掉当前用户，避免用户在 DM 列表中看到自己
-      const filteredAgentList = agentList.filter(
-        (agent) => agent.agent_id !== currentUserId
-      );
-
-      console.log(`👥 Loaded ${agentList.length} connected agents, filtered to ${filteredAgentList.length} (excluded current user: ${currentUserId})`);
-      setAgents(filteredAgentList);
+      console.log(`📋 Loaded ${channels.length} channels`);
+      console.log(`👥 Loaded ${filteredAgents.length} agents (excluding current user)`);
 
       // 智能频道选择逻辑
-      if (channelList.length > 0 && onThreadStateChange) {
+      if (channels.length > 0 && onThreadStateChange) {
         console.log(`🔍 Channel selection logic:`, {
           currentChannel,
           currentDirectMessage,
-          availableChannels: channelList.map((c) => c.name),
-          availableAgents: filteredAgentList.map((a) => a.agent_id),
+          availableChannels: channels.map((c) => c.name),
+          availableAgents: filteredAgents.map((a) => a.agent_id),
           threadStateFromStore: threadState,
         });
 
@@ -217,7 +218,7 @@ const ThreadMessagingViewEventBased = forwardRef<
 
         if (currentChannel) {
           // 检查当前选择的频道是否仍然存在
-          const channelExists = channelList.some(
+          const channelExists = channels.some(
             (channel) => channel.name === currentChannel
           );
           console.log(
@@ -228,7 +229,7 @@ const ThreadMessagingViewEventBased = forwardRef<
             selectedChannel = currentChannel;
             selectionReason = "恢复上次选择";
           } else {
-            selectedChannel = channelList[0].name;
+            selectedChannel = channels[0].name;
             selectionReason = "上次频道不存在，回退到首个频道";
             console.warn(
               `⚠️ Previously selected channel "${currentChannel}" no longer exists, falling back to first channel`
@@ -236,7 +237,7 @@ const ThreadMessagingViewEventBased = forwardRef<
           }
         } else if (currentDirectMessage) {
           // 检查当前选择的直接消息对象是否仍然在连接的代理列表中
-          const agentExists = filteredAgentList.some(
+          const agentExists = filteredAgents.some(
             (agent) => agent.agent_id === currentDirectMessage
           );
           console.log(
@@ -245,7 +246,7 @@ const ThreadMessagingViewEventBased = forwardRef<
 
           if (!agentExists) {
             // 如果直接消息的代理不再可用，回退到第一个频道
-            selectedChannel = channelList[0].name;
+            selectedChannel = channels[0].name;
             selectionReason = "直接消息代理不可用，回退到首个频道";
             console.warn(
               `⚠️ DM agent "${currentDirectMessage}" is no longer available, falling back to first channel`
@@ -254,7 +255,7 @@ const ThreadMessagingViewEventBased = forwardRef<
           // 如果代理存在，不设置selectedChannel，保持当前直接消息状态
         } else {
           // 没有任何选择，选择第一个频道
-          selectedChannel = channelList[0].name;
+          selectedChannel = channels[0].name;
           selectionReason = "首次选择第一个频道";
           console.log(
             `🎯 No current selection, choosing first channel: ${selectedChannel}`
@@ -272,7 +273,7 @@ const ThreadMessagingViewEventBased = forwardRef<
           });
         } else if (selectedChannel === currentChannel) {
           console.log(`✅ 保持当前频道选择: ${selectedChannel}`);
-        } else if (currentDirectMessage && filteredAgentList.some(agent => agent.agent_id === currentDirectMessage)) {
+        } else if (currentDirectMessage && filteredAgents.some(agent => agent.agent_id === currentDirectMessage)) {
           console.log(`✅ 保持当前直接消息选择: ${currentDirectMessage}`);
         }
       }
@@ -281,7 +282,9 @@ const ThreadMessagingViewEventBased = forwardRef<
     }
   }, [
     loadChannels,
-    loadConnectedAgents,
+    loadAgents,
+    channels,
+    filteredAgents,
     currentChannel,
     currentDirectMessage,
     onThreadStateChange,
@@ -292,15 +295,15 @@ const ThreadMessagingViewEventBased = forwardRef<
 
   // Load initial data when connected
   useEffect(() => {
-    if (connectionStatus.status === "connected" && channels.length === 0) {
+    if (isConnected && channels.length === 0) {
       console.log("🔧 Loading initial data...");
       loadInitialData();
     }
-  }, [connectionStatus.status, channels.length, loadInitialData]);
+  }, [isConnected, channels.length, loadInitialData]);
 
   // Periodic refresh of agents list
   useEffect(() => {
-    if (connectionStatus.status === "connected") {
+    if (isConnected) {
       // Refresh agents list every 30 seconds
       const interval = setInterval(() => {
         console.log("🔄 Refreshing agents list...");
@@ -309,11 +312,11 @@ const ThreadMessagingViewEventBased = forwardRef<
 
       return () => clearInterval(interval);
     }
-  }, [connectionStatus.status, loadAgents]);
+  }, [isConnected, loadAgents]);
 
   // 当 threadStore 状态恢复后，加载对应的消息
   useEffect(() => {
-    if (connectionStatus.status === "connected" && channels.length > 0) {
+    if (isConnected && channels.length > 0) {
       if (currentChannel) {
         console.log(
           `🔄 Loading messages for restored channel: ${currentChannel}`
@@ -327,7 +330,7 @@ const ThreadMessagingViewEventBased = forwardRef<
       }
     }
   }, [
-    connectionStatus.status,
+    isConnected,
     channels.length,
     currentChannel,
     currentDirectMessage,
@@ -380,7 +383,7 @@ const ThreadMessagingViewEventBased = forwardRef<
     ) => {
       if (!content.trim() || sendingMessage) return;
 
-      console.log("🔧 HandleSendMessage called:", {
+      console.log("📤 Sending message:", {
         content,
         replyToId,
         currentChannel,
@@ -388,91 +391,25 @@ const ThreadMessagingViewEventBased = forwardRef<
       });
       setSendingMessage(true);
 
-      // Create optimistic message
-      const optimisticMessage: ThreadMessage = {
-        message_id: `temp_${Date.now()}_${Math.random()
-          .toString(36)
-          .slice(2, 11)}`,
-        sender_id: connectionStatus.agentId || agentName,
-        timestamp: Date.now().toString(),
-        content: { text: content },
-        message_type: replyToId
-          ? "reply_message"
-          : currentChannel
-          ? "channel_message"
-          : "direct_message",
-        channel: currentChannel || undefined,
-        target_agent_id: currentDirectMessage || undefined,
-        reply_to_id: replyToId,
-        quoted_message_id: quotedMessageId,
-        quoted_text: quotedText,
-        thread_level: replyToId ? 2 : 1,
-        reactions: {},
-      };
-
-      // Add optimistic message to UI immediately
-      console.log("🔧 Adding optimistic message:", optimisticMessage);
-      const currentMessages = messagesRef.current || [];
-      console.log("🔧 Previous messages count:", currentMessages.length);
-      const newMessages = [...currentMessages, optimisticMessage];
-      console.log("🔧 New messages count:", newMessages.length);
-      console.log("🔧 Setting messages with optimistic update");
-      setMessages(newMessages);
-
-      // Force a re-render by updating a dummy state if needed
-      console.log("🔧 Messages state should update now");
-
       try {
-        let result: MessageSendResult;
+        let success = false;
         if (currentChannel) {
-          result = await sendChannelMessage(currentChannel, content, replyToId);
+          success = await sendChannelMessage(currentChannel, content, replyToId);
         } else if (currentDirectMessage) {
-          result = await sendDirectMessage(currentDirectMessage, content);
+          success = await sendDirectMessage(currentDirectMessage, content);
         } else {
           console.error("No channel or direct message selected");
-          // Remove optimistic message on error
-          const filteredMessages = (messagesRef.current || []).filter(
-            (msg: ThreadMessage) =>
-              msg.message_id !== optimisticMessage.message_id
-          );
-          setMessages(filteredMessages);
           return;
         }
 
-        if (result.success) {
-          console.log("✅ Message sent successfully", result);
-
-          // If the server returns a real message ID, update the optimistic message
-          if (result.messageId) {
-            const updatedMessages = (messagesRef.current || []).map(
-              (msg: ThreadMessage) =>
-                msg.message_id === optimisticMessage.message_id
-                  ? { ...msg, message_id: result.messageId! }
-                  : msg
-            );
-            console.log(
-              "✅ Message updatedMessages successfully",
-              updatedMessages
-            );
-            setMessages(updatedMessages);
-          }
+        if (success) {
+          console.log("✅ Message sent successfully");
+          // 消息会通过事件监听器自动添加到 store 中
         } else {
-          console.error("❌ Failed to send message:", result.message);
-          // Remove optimistic message on failure
-          const filteredMessages = (messagesRef.current || []).filter(
-            (msg: ThreadMessage) =>
-              msg.message_id !== optimisticMessage.message_id
-          );
-          setMessages(filteredMessages);
+          console.error("❌ Failed to send message");
         }
       } catch (error) {
         console.error("Failed to send message:", error);
-        // Remove optimistic message on error
-        const filteredMessages = (messagesRef.current || []).filter(
-          (msg: ThreadMessage) =>
-            msg.message_id !== optimisticMessage.message_id
-        );
-        setMessages(filteredMessages);
       } finally {
         setSendingMessage(false);
       }
@@ -483,9 +420,6 @@ const ThreadMessagingViewEventBased = forwardRef<
       sendingMessage,
       sendChannelMessage,
       sendDirectMessage,
-      connectionStatus.agentId,
-      agentName,
-      setMessages,
     ]
   );
 
@@ -521,68 +455,31 @@ const ThreadMessagingViewEventBased = forwardRef<
       reactionType: string,
       action: "add" | "remove" = "add"
     ) => {
-      // 乐观更新：立即更新本地状态
-      const currentMessages = messagesRef.current || [];
-      const optimisticMessages = currentMessages.map((msg) => {
-        if (msg.message_id === messageId) {
-          const reactions = { ...(msg.reactions || {}) };
-          const currentCount = reactions[reactionType] || 0;
-
-          if (action === "add") {
-            reactions[reactionType] = currentCount + 1;
-          } else {
-            reactions[reactionType] = Math.max(currentCount - 1, 0);
-            // 如果计数为0，从reactions对象中删除这个属性
-            if (reactions[reactionType] === 0) {
-              delete reactions[reactionType];
-            }
-          }
-
-          return { ...msg, reactions };
-        }
-        return msg;
-      });
-
-      console.log(
-        `🔧 Optimistic reaction update: ${action} ${reactionType} on message ${messageId}`
-      );
-      setMessages(optimisticMessages);
-
       try {
-        const result =
-          action === "add"
-            ? await addReaction(messageId, reactionType, currentChannel)
-            : await removeReaction(messageId, reactionType, currentChannel);
+        const success = action === "add"
+          ? await addReaction(messageId, reactionType, currentChannel)
+          : await removeReaction(messageId, reactionType, currentChannel);
 
-        if (result.success) {
+        if (success) {
           console.log(
-            `${
-              action === "add" ? "➕" : "➖"
-            } Reaction ${reactionType} ${action}ed to message ${messageId}`
+            `${action === "add" ? "➕" : "➖"} Reaction ${reactionType} ${action}ed to message ${messageId}`
           );
+          // 反应更新会通过事件监听器自动同步到 store 中
         } else {
-          console.error(`Failed to ${action} reaction:`, result.message);
-
-          // 如果服务器请求失败，回滚乐观更新
-          console.log(`🔄 Rolling back optimistic reaction update`);
-          setMessages(currentMessages);
+          console.error(`Failed to ${action} reaction`);
         }
       } catch (error) {
         console.error(`Failed to ${action} reaction:`, error);
-
-        // 如果请求出错，回滚乐观更新
-        console.log(`🔄 Rolling back optimistic reaction update due to error`);
-        setMessages(currentMessages);
       }
     },
-    [addReaction, removeReaction, currentChannel, setMessages]
+    [addReaction, removeReaction, currentChannel]
   );
 
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
     getState: () => ({
       channels: channels,
-      agents: agents,
+      agents: filteredAgents,
       currentChannel,
       currentDirectMessage,
     }),
@@ -595,14 +492,14 @@ const ThreadMessagingViewEventBased = forwardRef<
     if (onThreadStateChange) {
       onThreadStateChange({
         channels: channels,
-        agents: agents,
+        agents: filteredAgents,
         currentChannel,
         currentDirectMessage,
       });
     }
   }, [
     channels,
-    agents,
+    filteredAgents,
     currentChannel,
     currentDirectMessage,
     onThreadStateChange,
@@ -611,10 +508,23 @@ const ThreadMessagingViewEventBased = forwardRef<
   // Get connection status color
   const getConnectionStatusColor = useMemo(() => {
     return (
-      CONNECTED_STATUS_COLOR[connectionStatus.status] ||
+      CONNECTED_STATUS_COLOR[connectionStatus.state] ||
       CONNECTED_STATUS_COLOR["default"]
     );
-  }, [connectionStatus.status]);
+  }, [connectionStatus.state]);
+
+  // 合并所有的加载状态
+  const isLoading = channelsLoading || messagesLoading || agentsLoading;
+
+  // 合并所有的错误信息
+  const lastError = channelsError || messagesError || agentsError;
+
+  // 清除错误的函数
+  const clearError = useCallback(() => {
+    clearChannelsError();
+    clearMessagesError();
+    clearAgentsError();
+  }, [clearChannelsError, clearMessagesError, clearAgentsError]);
 
   // Get current view title
   const getCurrentViewTitle = useMemo(() => {
@@ -632,7 +542,7 @@ const ThreadMessagingViewEventBased = forwardRef<
           <div
             className="w-3 h-3 rounded-full"
             style={{ backgroundColor: getConnectionStatusColor }}
-            title={`Connection: ${connectionStatus.status}`}
+            title={`Connection: ${connectionStatus.state}`}
           />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {getCurrentViewTitle}
@@ -682,26 +592,25 @@ const ThreadMessagingViewEventBased = forwardRef<
 
                   if (currentChannel) {
                     // For channel messages, match the channel
-                    // Also include optimistic messages that are being sent to this channel
                     return (
-                      (message.message_type === "channel_message" &&
+                      (message.type === "channel_message" &&
                         message.channel === currentChannel) ||
-                      (message.message_type === "reply_message" &&
+                      (message.type === "reply_message" &&
                         message.channel === currentChannel)
                     );
                   } else if (currentDirectMessage) {
                     // 安全获取字段，支持多种数据格式（standardized 和 原始格式）
-                    const messageType = message.message_type;
-                    const targetAgentId = message.target_agent_id;
-                    const senderId = message.sender_id;
+                    const messageType = message.type;
+                    const targetUserId = message.targetUserId;
+                    const senderId = message.senderId;
 
                     // For direct messages, match the target agent or sender
                     // Include messages where current user is sender or receiver
                     const currentUserId = connectionStatus.agentId || agentName;
                     console.log('🔧 Filtering direct message:', {
-                      messageId: message.message_id,
+                      messageId: message.id,
                       messageType,
-                      targetAgentId,
+                      targetUserId,
                       senderId,
                       currentDirectMessage,
                       currentUserId,
@@ -710,10 +619,10 @@ const ThreadMessagingViewEventBased = forwardRef<
 
                     return (
                       messageType === "direct_message" &&
-                      (targetAgentId === currentDirectMessage ||
+                      (targetUserId === currentDirectMessage ||
                         senderId === currentDirectMessage ||
                         (senderId === currentUserId &&
-                          targetAgentId === currentDirectMessage))
+                          targetUserId === currentDirectMessage))
                     );
                   }
                   return false;
@@ -822,7 +731,7 @@ const ThreadMessagingViewEventBased = forwardRef<
                   }
                 }}
                 disabled={
-                  sendingMessage || connectionStatus.status !== "connected"
+                  sendingMessage || !isConnected
                 }
                 placeholder={
                   sendingMessage

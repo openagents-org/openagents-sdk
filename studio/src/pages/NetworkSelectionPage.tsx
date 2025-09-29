@@ -1,15 +1,18 @@
 import React from "react";
-import OpenAgentsLogo from "@/components/icons/OpenAgentsLogo";
+import OpenAgentsLogo from "@/assets/images/openagents-logo-trans-white.png";
 import LocalNetwork from "@/components/network/LocalNetwork";
 import ManualNetwork from "@/components/network/ManualNetwork";
-import PublicNetwork from "@/components/network/PublicNetwork";
 
 const NetworkSelectionView: React.FC = () => {
   const Header = React.memo(() => {
     return (
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-8 text-white">
         <div className="flex items-center justify-center mb-4">
-          <OpenAgentsLogo className="w-16 h-16 mr-4" />
+          <img
+            src={OpenAgentsLogo}
+            alt="OpenAgents Logo"
+            className="w-16 h-16 mr-4"
+          />
           <h1 className="text-4xl font-bold">OpenAgents Studio</h1>
         </div>
         <p className="text-center text-lg opacity-90">
@@ -29,7 +32,17 @@ const NetworkSelectionView: React.FC = () => {
 
           <ManualNetwork />
 
-          <PublicNetwork />
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-200">
+              Public Networks
+            </h2>
+            <button
+              onClick={() => {}}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              Go To Public Networks
+            </button>
+          </div>
         </div>
       </div>
     </div>

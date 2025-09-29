@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useWikiStore } from "@/stores/wikiStore";
 import { useRecentPagesStore } from "@/stores/recentPagesStore";
-import { useOpenAgentsService } from "@/contexts/OpenAgentsServiceContext";
-import useConnectedStatus from "@/hooks/useConnectedStatus";
+import { OpenAgentsContext } from "@/contexts/OpenAgentsProvider";
 
 // Section Header Component
 const SectionHeader: React.FC<{ title: string }> = React.memo(({ title }) => (
@@ -28,7 +27,8 @@ const WikiPageItem: React.FC<{
   isActive: boolean;
   onClick: () => void;
 }> = React.memo(({ page, isActive, onClick }) => {
-  const isRecentlyUpdated = Date.now() - page.last_modified * 1000 < 7 * 24 * 60 * 60 * 1000;
+  const isRecentlyUpdated =
+    Date.now() - page.last_modified * 1000 < 7 * 24 * 60 * 60 * 1000;
 
   return (
     <li>
@@ -48,7 +48,9 @@ const WikiPageItem: React.FC<{
             <span className="mr-2 text-gray-400 mt-0.5">📄</span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center truncate font-medium overflow-hidden">
-                <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{page.title}</div>
+                <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                  {page.title}
+                </div>
               </div>
             </div>
           </div>
@@ -66,8 +68,9 @@ WikiPageItem.displayName = "WikiPageItem";
 const WikiSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { service: openAgentsService } = useOpenAgentsService();
-  const { isConnected } = useConnectedStatus();
+  const context = useContext(OpenAgentsContext);
+  const openAgentsService = context?.connector;
+  const isConnected = context?.isConnected;
   const { recentPages: recentPagesData, addRecentPage } = useRecentPagesStore();
 
   const {
@@ -75,35 +78,50 @@ const WikiSidebar: React.FC = () => {
     setConnection,
     loadPages,
     setupEventListeners,
-    cleanupEventListeners
+    cleanupEventListeners,
   } = useWikiStore();
 
   // 获取最近点击访问的页面（过滤后的有效页面）
   const recentPages = useMemo(() => {
-    const currentPagePaths = new Set(pages.map(p => p.page_path));
-    const validRecentPages = recentPagesData.filter(recentPage => currentPagePaths.has(recentPage.page_path));
+    const currentPagePaths = new Set(pages.map((p) => p.page_path));
+    const validRecentPages = recentPagesData.filter((recentPage) =>
+      currentPagePaths.has(recentPage.page_path)
+    );
 
     // 将recent page data转换为WikiPage格式以保持组件兼容性
-    const recentWikiPages = validRecentPages.map(recentPage => {
-      const fullPageData = pages.find(p => p.page_path === recentPage.page_path);
-      return fullPageData || {
-        page_path: recentPage.page_path,
-        title: recentPage.title,
-        last_modified: recentPage.visited_at / 1000,
-        wiki_content: recentPage.preview_content || '',
-        creator_id: 'unknown',
-        created_at: recentPage.visited_at / 1000,
-        version: 1
-      };
+    const recentWikiPages = validRecentPages.map((recentPage) => {
+      const fullPageData = pages.find(
+        (p) => p.page_path === recentPage.page_path
+      );
+      return (
+        fullPageData || {
+          page_path: recentPage.page_path,
+          title: recentPage.title,
+          last_modified: recentPage.visited_at / 1000,
+          wiki_content: recentPage.preview_content || "",
+          creator_id: "unknown",
+          created_at: recentPage.visited_at / 1000,
+          version: 1,
+        }
+      );
     });
 
-    console.log('WikiSidebar: Recent clicked pages recalculated. Total recent:', recentPagesData.length, 'Valid count:', recentWikiPages.length);
+    console.log(
+      "WikiSidebar: Recent clicked pages recalculated. Total recent:",
+      recentPagesData.length,
+      "Valid count:",
+      recentWikiPages.length
+    );
     return recentWikiPages;
   }, [recentPagesData, pages]);
 
   // 检查当前是否在某个页面详情页
-  const currentPagePath = location.pathname.match(/^\/wiki\/detail\/(.+)$/)?.[1];
-  const decodedCurrentPagePath = currentPagePath ? decodeURIComponent(currentPagePath) : null;
+  const currentPagePath = location.pathname.match(
+    /^\/wiki\/detail\/(.+)$/
+  )?.[1];
+  const decodedCurrentPagePath = currentPagePath
+    ? decodeURIComponent(currentPagePath)
+    : null;
 
   // 设置连接
   useEffect(() => {
@@ -115,7 +133,7 @@ const WikiSidebar: React.FC = () => {
   // 加载页面（等待连接建立）
   useEffect(() => {
     if (openAgentsService && isConnected && pages.length === 0) {
-      console.log('WikiSidebar: Connection ready, loading pages');
+      console.log("WikiSidebar: Connection ready, loading pages");
       loadPages();
     }
   }, [openAgentsService, isConnected, loadPages, pages.length]);
@@ -123,11 +141,11 @@ const WikiSidebar: React.FC = () => {
   // 设置wiki事件监听器
   useEffect(() => {
     if (openAgentsService) {
-      console.log('WikiSidebar: Setting up wiki event listeners');
+      console.log("WikiSidebar: Setting up wiki event listeners");
       setupEventListeners();
 
       return () => {
-        console.log('WikiSidebar: Cleaning up wiki event listeners');
+        console.log("WikiSidebar: Cleaning up wiki event listeners");
         cleanupEventListeners();
       };
     }
@@ -136,9 +154,9 @@ const WikiSidebar: React.FC = () => {
   // 页面选择处理
   const onPageSelect = (pagePath: string) => {
     // 先找到对应的页面对象并记录到recent pages
-    const page = pages.find(p => p.page_path === pagePath);
+    const page = pages.find((p) => p.page_path === pagePath);
     if (page) {
-      console.log('WikiSidebar: Adding page to recent pages:', page.title);
+      console.log("WikiSidebar: Adding page to recent pages:", page.title);
       addRecentPage(page);
     }
 

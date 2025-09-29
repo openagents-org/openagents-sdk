@@ -1,5 +1,4 @@
 import { useOpenAgentsService } from "@/contexts/OpenAgentsServiceContext";
-import { ConnectionStatusEnum } from "@/types/connection";
 
 export default function useConnectedStatus() {
   const {

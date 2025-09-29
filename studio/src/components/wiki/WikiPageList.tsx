@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useWikiStore } from '@/stores/wikiStore';
-import { useRecentPagesStore } from '@/stores/recentPagesStore';
-import { useOpenAgentsService } from '@/contexts/OpenAgentsServiceContext';
-import useConnectedStatus from '@/hooks/useConnectedStatus';
-import WikiCreateModal from './components/WikiCreateModal';
-import MarkdownRenderer from '@/components/common/MarkdownRenderer';
-import { formatDateTime } from '@/utils/utils';
+import React, { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import { useWikiStore } from "@/stores/wikiStore";
+import { useRecentPagesStore } from "@/stores/recentPagesStore";
+import WikiCreateModal from "./components/WikiCreateModal";
+import MarkdownRenderer from "@/components/common/MarkdownRenderer";
+import { formatDateTime } from "@/utils/utils";
+import { OpenAgentsContext } from "@/contexts/OpenAgentsProvider";
 
 const WikiPageList: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
 
-  const { service: openAgentsService } = useOpenAgentsService();
-  const { isConnected } = useConnectedStatus();
+  const context = useContext(OpenAgentsContext);
+  const openAgentsService = context?.connector;
+  const isConnected = context?.isConnected;
   const { addRecentPage } = useRecentPagesStore();
 
   const {
@@ -27,7 +27,7 @@ const WikiPageList: React.FC = () => {
     loadProposals,
     searchPages,
     setupEventListeners,
-    cleanupEventListeners
+    cleanupEventListeners,
   } = useWikiStore();
 
   // 设置连接
@@ -40,7 +40,7 @@ const WikiPageList: React.FC = () => {
   // 加载页面（等待连接建立）
   useEffect(() => {
     if (openAgentsService && isConnected) {
-      console.log('WikiPageList: Connection ready, loading pages');
+      console.log("WikiPageList: Connection ready, loading pages");
       loadPages();
       loadProposals();
     }
@@ -49,11 +49,11 @@ const WikiPageList: React.FC = () => {
   // 设置wiki事件监听器
   useEffect(() => {
     if (openAgentsService) {
-      console.log('WikiPageList: Setting up wiki event listeners');
+      console.log("WikiPageList: Setting up wiki event listeners");
       setupEventListeners();
 
       return () => {
-        console.log('WikiPageList: Cleaning up wiki event listeners');
+        console.log("WikiPageList: Cleaning up wiki event listeners");
         cleanupEventListeners();
       };
     }
@@ -70,15 +70,20 @@ const WikiPageList: React.FC = () => {
 
   const handlePageClick = (pagePath: string) => {
     // 先找到对应的页面对象
-    const page = pages.find(p => p.page_path === pagePath);
+    const page = pages.find((p) => p.page_path === pagePath);
 
     // 如果找到页面，记录到recent pages
     if (page) {
-      console.log('WikiPageList: Adding page to recent pages:', page.title);
+      console.log("WikiPageList: Adding page to recent pages:", page.title);
       addRecentPage(page);
     }
 
-    console.log('WikiPageList: Navigating to page:', pagePath, 'URL:', `/wiki/detail/${encodeURIComponent(pagePath)}`);
+    console.log(
+      "WikiPageList: Navigating to page:",
+      pagePath,
+      "URL:",
+      `/wiki/detail/${encodeURIComponent(pagePath)}`
+    );
     navigate(`/wiki/detail/${encodeURIComponent(pagePath)}`);
   };
 
@@ -100,13 +105,21 @@ const WikiPageList: React.FC = () => {
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
           <div className={`text-red-500 mb-4`}>
-            <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              className="w-12 h-12 mx-auto"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
           </div>
-          <p className="mb-4 text-gray-700 dark:text-gray-300">
-            {pagesError}
-          </p>
+          <p className="mb-4 text-gray-700 dark:text-gray-300">{pagesError}</p>
           <button
             onClick={loadPages}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
@@ -133,15 +146,28 @@ const WikiPageList: React.FC = () => {
 
         <div className="flex items-center space-x-3">
           {/* 待审核提案按钮 */}
-          {proposals.filter(p => p.status === 'pending').length > 0 && (
+          {proposals.filter((p) => p.status === "pending").length > 0 && (
             <button
-              onClick={() => navigate('/wiki/proposals')}
+              onClick={() => navigate("/wiki/proposals")}
               className="flex items-center space-x-2 px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
-              <span>Proposals ({proposals.filter(p => p.status === 'pending').length})</span>
+              <span>
+                Proposals (
+                {proposals.filter((p) => p.status === "pending").length})
+              </span>
             </button>
           )}
 
@@ -150,8 +176,18 @@ const WikiPageList: React.FC = () => {
             onClick={() => setShowCreateModal(true)}
             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
             </svg>
             <span>New Page</span>
           </button>
@@ -168,8 +204,18 @@ const WikiPageList: React.FC = () => {
             placeholder="Search wiki pages..."
             className="w-full pl-10 pr-4 py-2 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
           />
-          <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          <svg
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
           </svg>
         </div>
       </div>
@@ -179,15 +225,27 @@ const WikiPageList: React.FC = () => {
         {pages.length === 0 ? (
           <div className="text-center py-12 h-full flex flex-col items-center justify-center">
             <div className="mb-4 text-gray-500 dark:text-gray-400">
-              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg
+                className="w-16 h-16 mx-auto"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
               </svg>
             </div>
             <h3 className="text-lg font-medium mb-2 text-gray-700 dark:text-gray-300">
-              {searchQuery ? 'No pages found' : 'No pages yet'}
+              {searchQuery ? "No pages found" : "No pages yet"}
             </h3>
             <p className="mb-4 text-gray-600 dark:text-gray-400">
-              {searchQuery ? 'No pages found matching your search' : 'Create your first wiki page to get started!'}
+              {searchQuery
+                ? "No pages found matching your search"
+                : "Create your first wiki page to get started!"}
             </p>
             {!searchQuery && (
               <button
@@ -209,17 +267,17 @@ const WikiPageList: React.FC = () => {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold mb-2 line-clamp-2 text-gray-900 dark:text-gray-100">
-                      {page.title || 'Untitled'}
+                      {page.title || "Untitled"}
                     </h3>
                     <div className="text-sm mb-3 line-clamp-3 text-gray-600 dark:text-gray-400 wiki-list-preview">
                       <MarkdownRenderer
-                        content={page.wiki_content || 'No content'}
+                        content={page.wiki_content || "No content"}
                         className="prose-sm max-w-none"
                       />
                     </div>
                     <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
-                      <span>{page.page_path || 'Unknown path'}</span>
-                      <span>by {page.creator_id || 'Unknown'}</span>
+                      <span>{page.page_path || "Unknown path"}</span>
+                      <span>by {page.creator_id || "Unknown"}</span>
                       <span>v{page.version || 1}</span>
                       <span>{formatDateTime(page.last_modified)}</span>
                     </div>

@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { detectLocalNetwork } from "@/services/networkService";
 import { NetworkConnection } from "@/types/connection";
-import useLocalNetwork from "@/hooks/useLocalNetwork";
-import { useNetworkStore } from "@/stores/networkStore";
+import { useAuthStore } from "@/stores/authStore";
+import { useNavigate } from "react-router-dom";
 
 const LocalNetworkLoading = React.memo(() => {
   return (
@@ -26,36 +27,28 @@ const LocalNetworkNotFound = React.memo(() => {
 
 const LocalNetworkShow = React.memo(
   ({ localNetwork }: { localNetwork: NetworkConnection }) => {
-    const { host, port, latency, networkInfo } = localNetwork;
-    const { name = "Local OpenAgents Network", workspace_path } =
-      networkInfo || {};
-    const { handleNetworkSelected } = useNetworkStore();
+    const navigate = useNavigate();
+    const { host, port } = localNetwork;
+    const { handleNetworkSelected } = useAuthStore();
+
+    const handleConnect = () => {
+      handleNetworkSelected(localNetwork);
+      navigate("/agent-setup");
+    };
+
     return (
       <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-green-800 dark:text-green-400">
-              {name}
+              Local OpenAgents Network
             </h3>
             <p className="text-green-600 dark:text-green-500">
               Running on {host}:{port}
             </p>
-            {workspace_path && (
-              <p className="text-sm text-green-700 dark:text-green-400 mt-1">
-                📁 Workspace:{" "}
-                <span className="font-mono text-xs bg-green-100 dark:bg-green-800 px-2 py-1 rounded">
-                  {workspace_path}
-                </span>
-              </p>
-            )}
-            {latency && (
-              <p className="text-sm text-green-600 dark:text-green-500">
-                Latency: {latency}ms
-              </p>
-            )}
           </div>
           <button
-            onClick={() => handleNetworkSelected(localNetwork)}
+            onClick={() => handleConnect()}
             className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
           >
             Connect
@@ -67,7 +60,27 @@ const LocalNetworkShow = React.memo(
 );
 
 const LocalNetwork: React.FC = () => {
-  const { localNetwork, isLoadingLocal } = useLocalNetwork();
+  const [localNetwork, setLocalNetwork] = useState<NetworkConnection | null>(
+    null
+  );
+  const [isLoadingLocal, setIsLoadingLocal] = useState(true);
+
+  useEffect(() => {
+    const checkLocal = async () => {
+      setIsLoadingLocal(true);
+      try {
+        const local = await detectLocalNetwork();
+        setLocalNetwork(local);
+      } catch (error) {
+        console.error("Error detecting local network:", error);
+      } finally {
+        setIsLoadingLocal(false);
+      }
+    };
+
+    checkLocal();
+  }, []);
+
   return (
     <div className="mb-8">
       <h2 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-200">
@@ -75,10 +88,10 @@ const LocalNetwork: React.FC = () => {
       </h2>
       {isLoadingLocal ? (
         <LocalNetworkLoading />
-      ) : localNetwork ? (
-        <LocalNetworkShow localNetwork={localNetwork} />
-      ) : (
+      ) : !localNetwork ? (
         <LocalNetworkNotFound />
+      ) : (
+        <LocalNetworkShow localNetwork={localNetwork} />
       )}
     </div>
   );

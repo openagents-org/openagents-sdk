@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { Network, fetchNetworksList } from "@/services/networkService";
 import { NetworkConnection, ConnectionStatusEnum } from "@/types/connection";
-import { useNetworkStore } from "@/stores/networkStore";
+import { useAuthStore } from "@/stores/authStore";
 
 export default function PublicNetwork() {
-  const { handleNetworkSelected } = useNetworkStore();
+  const { handleNetworkSelected } = useAuthStore();
   const [isLoadingPublic, setIsLoadingPublic] = useState(true);
   const [publicNetworks, setPublicNetworks] = useState<Network[]>([]);
   const [searchQuery, setSearchQuery] = useState("");

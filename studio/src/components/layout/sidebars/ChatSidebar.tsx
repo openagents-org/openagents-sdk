@@ -4,7 +4,7 @@ import { useThreadStore } from "@/stores/threadStore";
 import { useChannelMessages } from "@/hooks/useChannelMessages";
 import { useDirectMessages } from "@/hooks/useDirectMessages";
 import { useOpenAgentsService } from "@/contexts/OpenAgentsServiceContext";
-import { useNetworkStore } from "@/stores/networkStore";
+import { useAuthStore } from "@/stores/authStore";
 
 // Section Header Component
 const SectionHeader: React.FC<{ title: string }> = React.memo(({ title }) => (
@@ -99,14 +99,11 @@ AgentItem.displayName = "AgentItem";
 
 // Chat Sidebar Content Component - 使用新的hooks获取数据
 const ChatSidebar: React.FC = () => {
-  const {
-    getCurrentChannel,
-    getCurrentDirectMessage,
-    updateThreadState,
-  } = useThreadStore();
+  const { getCurrentChannel, getCurrentDirectMessage, updateThreadState } =
+    useThreadStore();
 
   const { connectionStatus, isConnected } = useOpenAgentsService();
-  const { agentName } = useNetworkStore();
+  const { agentName } = useAuthStore();
 
   // 使用agentName作为fallback，如果connectionStatus.agentId不可用
   const currentUserId = connectionStatus.agentId || agentName || undefined;
@@ -123,7 +120,7 @@ const ChatSidebar: React.FC = () => {
   });
 
   // 调试信息
-  console.log('ChatSidebar Debug:', {
+  console.log("ChatSidebar Debug:", {
     connectionStatus: connectionStatus.status,
     connectionAgentId: connectionStatus.agentId,
     networkAgentName: agentName,
@@ -170,7 +167,9 @@ const ChatSidebar: React.FC = () => {
       <SectionHeader title="CHANNELS" />
       <div className="px-3">
         {channelMessages.isLoading && channels.length === 0 ? (
-          <div className="text-gray-500 text-sm px-2 py-2 text-center">Loading channels...</div>
+          <div className="text-gray-500 text-sm px-2 py-2 text-center">
+            Loading channels...
+          </div>
         ) : (
           <ul className="flex flex-col gap-1">
             {channels.map((channel) => (
@@ -183,7 +182,9 @@ const ChatSidebar: React.FC = () => {
               />
             ))}
             {channels.length === 0 && !channelMessages.isLoading && (
-              <div className="text-gray-500 text-sm px-2 py-2 text-center">No channels available</div>
+              <div className="text-gray-500 text-sm px-2 py-2 text-center">
+                No channels available
+              </div>
             )}
           </ul>
         )}
@@ -193,7 +194,9 @@ const ChatSidebar: React.FC = () => {
       <SectionHeader title="DIRECT MESSAGES" />
       <div className="flex-1 overflow-y-auto px-3 custom-scrollbar">
         {directMessages.isLoading && agents.length === 0 ? (
-          <div className="text-gray-500 text-sm px-2 py-2 text-center">Loading agents...</div>
+          <div className="text-gray-500 text-sm px-2 py-2 text-center">
+            Loading agents...
+          </div>
         ) : (
           <ul className="flex flex-col gap-1">
             {agents.map((agent) => (
@@ -206,7 +209,9 @@ const ChatSidebar: React.FC = () => {
               />
             ))}
             {agents.length === 0 && !directMessages.isLoading && (
-              <div className="text-gray-500 text-sm px-2 py-2 text-center">No agents online</div>
+              <div className="text-gray-500 text-sm px-2 py-2 text-center">
+                No agents online
+              </div>
             )}
           </ul>
         )}

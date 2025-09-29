@@ -1,7 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 // import OpenAgentsLogo from "@/components/icons/OpenAgentsLogo";
-import { useNetworkStore } from "@/stores/networkStore";
 import { useThreadStore } from "@/stores/threadStore";
 import { useConversationStore } from "@/stores/conversationStore";
 import { clearAllOpenAgentsDataForLogout } from "@/utils/cookies";
@@ -9,6 +8,7 @@ import { useConfirm } from "@/context/ConfirmContext";
 // import { getVisibleQuickActions } from "@/config/routeConfig";
 import { useThemeStore } from "@/stores/themeStore";
 import SidebarContent from "./SidebarContent";
+import { useAuthStore } from "@/stores/authStore";
 
 // Header Component - 缓存组件，因为内容是静态的
 const SidebarHeader: React.FC = React.memo(() => (
@@ -85,7 +85,7 @@ const SidebarFooter: React.FC<{
 }> = React.memo(({ toggleTheme, theme }) => {
   const navigate = useNavigate();
   const { agentName, selectedNetwork, clearNetwork, clearAgentName } =
-    useNetworkStore();
+    useAuthStore();
   const { setThreadState } = useThreadStore();
   const { clearAllConversations } = useConversationStore();
   const { confirm } = useConfirm();
@@ -97,12 +97,12 @@ const SidebarFooter: React.FC<{
     try {
       // 显示确认对话框
       const confirmed = await confirm(
-        'Logout Confirmation',
-        'Are you sure you want to logout? You will need to reconnect to continue using the application.',
+        "Logout Confirmation",
+        "Are you sure you want to logout? You will need to reconnect to continue using the application.",
         {
-          confirmText: 'Logout',
-          cancelText: 'Cancel',
-          type: 'warning'
+          confirmText: "Logout",
+          cancelText: "Cancel",
+          type: "warning",
         }
       );
 
@@ -132,7 +132,6 @@ const SidebarFooter: React.FC<{
       // 跳转到网络选择页面
       console.log("🔄 Navigating to network selection");
       navigate("/network-selection", { replace: true });
-
     } catch (error) {
       console.error("❌ Error during logout:", error);
     }
