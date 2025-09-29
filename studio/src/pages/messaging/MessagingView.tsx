@@ -603,6 +603,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
             {/* Message Input */}
             {(currentChannel || currentDirectMessage) && (
               <MessageInput
+                agents={filteredAgents}
                 onSendMessage={(
                   text: string,
                   replyTo?: string,
@@ -649,6 +650,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
                 }
                 currentTheme={currentTheme}
                 currentChannel={currentChannel || undefined}
+                currentDirectMessage={currentDirectMessage || undefined}
                 currentAgentId={connectionStatus.agentId || agentName || ""}
                 replyingTo={replyingTo}
                 quotingMessage={quotingMessage}

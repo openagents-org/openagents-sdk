@@ -383,10 +383,6 @@ export const specialRoutes = [
     path: "/",
     element: () => React.createElement(Navigate, { to: "/messaging", replace: true }),
   },
-  {
-    path: "*",
-    element: () => React.createElement(Navigate, { to: "/messaging", replace: true }),
-  },
 ];
 
 // 动态配置更新函数 - 可以通过接口调用来更新配置

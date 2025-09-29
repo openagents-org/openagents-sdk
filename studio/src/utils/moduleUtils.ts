@@ -103,8 +103,8 @@ export const isModuleEnabled = (moduleName: string, enabledModules: string[]): b
  * 验证路由是否在启用的模块中可用
  */
 export const isRouteAvailable = (route: string, enabledModules: string[]): boolean => {
-  // 移除开头的 '/' 和结尾的通配符
-  const routeName = route.replace(/^\//, '').replace(/\/\*?$/, '');
+  // 提取路径的第一段作为模块名称
+  const routeName = route.replace(/^\//, '').split('/')[0];
 
   // 检查特殊路由（总是可用）
   const alwaysAvailableRoutes = ['profile', 'settings', 'network-selection', 'agent-setup'];

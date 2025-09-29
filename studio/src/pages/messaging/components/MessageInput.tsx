@@ -33,6 +33,7 @@ interface MessageInputProps {
   } | null;
   onCancelReply?: () => void;
   currentChannel?: string;
+  currentDirectMessage?: string;
   currentAgentId?: string;
   onCancelQuote?: () => void;
 }
@@ -534,6 +535,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   quotingMessage,
   onCancelReply,
   currentChannel,
+  currentDirectMessage,
   currentAgentId,
   onCancelQuote,
 }) => {
@@ -549,6 +551,22 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Clear input content when switching between channels or direct messages
+  useEffect(() => {
+    console.log('🧹 MessageInput: Channel/DM changed, clearing input content');
+    setMessage("");
+    setPendingAttachment(null);
+    setShowMentions(false);
+    setMentionFilter("");
+    setSelectedMentionIndex(0);
+    setShowEmojiPicker(false);
+
+    // Reset textarea height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
+  }, [currentChannel, currentDirectMessage]);
 
   // Common emojis organized by category
   const emojiCategories = {
