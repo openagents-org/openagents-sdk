@@ -12,10 +12,12 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
+// useNavigate 和 useLocation 已移至全局处理，这里不再需要
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
 import { useChatStore, setChatStoreContext } from "@/stores/chatStore";
 import MessageRenderer from "./components/MessageRenderer";
 import MessageInput from "./components/MessageInput";
+import NotificationPermissionOverlay from "./components/NotificationPermissionOverlay";
 import { useThemeStore } from "@/stores/themeStore";
 import { CONNECTED_STATUS_COLOR } from "@/constants/chatConstants";
 import { useToast } from "@/context/ToastContext";
@@ -132,6 +134,8 @@ const ThreadMessagingViewEventBased: React.FC = () => {
       cleanupEventListeners();
     };
   }, [isConnected, setupEventListeners, cleanupEventListeners]);
+
+  // 通知点击处理已移至全局（OpenAgentsProvider），这里不再需要重复监听
 
 
   // Auto-scroll to bottom when new messages arrive
@@ -444,6 +448,9 @@ const ThreadMessagingViewEventBased: React.FC = () => {
 
   return (
     <div className="thread-messaging-view h-full flex flex-col bg-white dark:bg-gray-900">
+      {/* Notification Permission Overlay */}
+      <NotificationPermissionOverlay />
+
       {/* Header */}
       <div className="thread-header flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
         <div className="flex items-center space-x-3">
@@ -603,7 +610,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
             {/* Message Input */}
             {(currentChannel || currentDirectMessage) && (
               <MessageInput
-                agents={filteredAgents}
+                agents={currentDirectMessage ? [] : filteredAgents}
                 onSendMessage={(
                   text: string,
                   replyTo?: string,

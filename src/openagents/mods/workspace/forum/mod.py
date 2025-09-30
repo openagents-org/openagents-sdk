@@ -1081,7 +1081,7 @@ class ForumNetworkMod(BaseMod):
 
         logger.info(f"Cast {vote_type} on {target_type} {target_id} by {voter_id}")
 
-        self.send_event(
+        await self.send_event(
             Event(
                 event_name="forum.vote.notification",
                 source_id=voter_id,

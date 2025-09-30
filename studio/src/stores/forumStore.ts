@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { eventRouter } from "@/services/eventRouter";
 // import { HttpEventConnector } from "@/services/openAgentsService";
 
 // Types
@@ -46,6 +47,9 @@ interface ForumState {
   // 连接服务
   connection: any | null;
 
+  // Event handler reference for cleanup
+  eventHandler?: ((event: any) => void) | null;
+
   // Actions
   setConnection: (connection: any | null) => void;
   loadTopics: () => Promise<void>;
@@ -90,6 +94,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
   commentsLoading: false,
   commentsError: null,
   connection: null,
+  eventHandler: null,
 
   // Actions
   setConnection: (connection) => set({ connection }),
@@ -312,12 +317,12 @@ export const useForumStore = create<ForumState>((set, get) => ({
         // 构造新话题对象并直接添加到列表
         const newTopic: ForumTopic = {
           topic_id:
-            response.data?.topic?.topic_id ||
+            response.data?.topic_id ||
             `temp_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
           title: data.title.trim(),
           content: data.content.trim(),
           owner_id: connection.getAgentId() || "unknown",
-          timestamp: Date.now() / 1000,
+          timestamp: response.data?.timestamp || Date.now() / 1000,
           upvotes: 0,
           downvotes: 0,
           comment_count: 0,
@@ -493,9 +498,10 @@ export const useForumStore = create<ForumState>((set, get) => ({
 
     console.log("ForumStore: Setting up forum event listeners");
 
-    // 监听forum相关事件
-    connection.on("rawEvent", (event: any) => {
-      console.log("ForumStore: Received raw event:", event);
+    // 使用事件路由器监听forum相关事件
+    const forumEventHandler = (event: any) => {
+      console.log("ForumStore: Received forum event:", event);
+
       // 处理topic创建事件
       if (event.event_name === "forum.topic.created" && event.payload?.topic) {
         console.log("ForumStore: Received forum.topic.created event:", event);
@@ -604,8 +610,46 @@ export const useForumStore = create<ForumState>((set, get) => ({
             get().loadTopicDetail(selectedTopic.topic_id);
           }
         }
+      } else if (event.event_name === "forum.vote.notification") {
+        console.log("ForumStore: Received forum.vote.notification event:", event);
+        const { target_type, target_id, upvotes, downvotes } = event.payload;
+
+        if (target_type === "topic") {
+          // Update topic in topics list
+          set((state) => ({
+            topics: state.topics.map((topic) =>
+              topic.topic_id === target_id
+                ? { ...topic, upvotes, downvotes }
+                : topic
+            )
+          }));
+
+          // Update currently selected topic if it matches
+          const { selectedTopic } = get();
+          if (selectedTopic && selectedTopic.topic_id === target_id) {
+            set((state) => ({
+              ...state,
+              selectedTopic: { ...selectedTopic, upvotes, downvotes }
+            }));
+          }
+        } else if (target_type === "comment") {
+          // Update comment in the current topic's comments
+          set((state) => ({
+            comments: state.comments.map((comment) =>
+              comment.comment_id === target_id
+                ? { ...comment, upvotes, downvotes }
+                : comment
+            )
+          }));
+        }
       }
-    });
+    };
+
+    // 注册到事件路由器
+    eventRouter.onForumEvent(forumEventHandler);
+
+    // 保存handler引用以便清理
+    set({ eventHandler: forumEventHandler });
   },
 
   // 递归计算所有评论数量（包括嵌套的回复）
@@ -697,11 +741,13 @@ export const useForumStore = create<ForumState>((set, get) => ({
 
   // 清理事件监听
   cleanupEventListeners: () => {
-    const { connection } = get();
-    if (!connection) return;
+    const { eventHandler } = get();
 
     console.log("ForumStore: Cleaning up forum event listeners");
-    // 这里可以添加具体的事件清理逻辑，但由于使用rawEvent
-    // 我们可能需要在组件层面管理事件监听的清理
+
+    if (eventHandler) {
+      eventRouter.offForumEvent(eventHandler);
+      set({ eventHandler: null });
+    }
   },
 }));

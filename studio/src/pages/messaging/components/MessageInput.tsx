@@ -457,6 +457,7 @@ const styles = `
   .mention-name {
     font-weight: 500;
     color: #374151;
+    font-size: 14px;
   }
   
   .mention-name.dark {

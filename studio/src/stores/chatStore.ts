@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { ThreadChannel, AgentInfo, EventNames } from "../types/events";
 import { UnifiedMessage, RawThreadMessage, MessageAdapter } from "../types/message";
+import { eventRouter } from "@/services/eventRouter";
+import { notificationService } from "@/services/notificationService";
 
 // 消息发送状态
 export type MessageStatus = 'sending' | 'sent' | 'failed';
@@ -100,6 +102,9 @@ interface ChatState {
   setupEventListeners: () => void;
   cleanupEventListeners: () => void;
 
+  // Event handler reference for cleanup
+  eventHandler?: ((event: any) => void) | null;
+
   // Helper functions
   getChannelMessages: (channel: string) => OptimisticMessage[];
   getDirectMessagesForAgent: (targetAgentId: string, currentAgentId: string) => OptimisticMessage[];
@@ -195,6 +200,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   agentsLoading: false,
   agentsError: null,
   agentsLoaded: false,
+
+  // Event handler reference
+  eventHandler: null,
 
   // Connection helpers
   getConnection: () => {
@@ -1676,15 +1684,31 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     console.log("ChatStore: Setting up chat event listeners");
 
-    // 监听 chat 相关事件
-    connection.on("rawEvent", (event: any) => {
-      console.log("ChatStore: Received raw event:", event.event_name, event);
+    // 使用事件路由器监听chat相关事件
+    const chatEventHandler = (event: any) => {
+      console.log("ChatStore: Received chat event:", event.event_name, event);
 
       // 处理频道消息通知
       if (event.event_name === "thread.channel_message.notification" && event.payload) {
         console.log("ChatStore: Received channel message notification:", event);
 
         const messageData = event.payload;
+
+        // 显示系统通知
+        if (messageData.channel && messageData.content) {
+          const senderName = event.sender_id || event.source_id || "未知用户";
+          const content = typeof messageData.content === 'string'
+            ? messageData.content
+            : messageData.content.text || "";
+
+          notificationService.showChatNotification(
+            senderName,
+            messageData.channel,
+            content,
+            messageData.message_type
+          );
+        }
+
         if (messageData.channel && messageData.content) {
           // 构造统一消息格式
           const unifiedMessage: UnifiedMessage = {
@@ -1774,8 +1798,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
           });
 
           // 检查是否是自己发送的回复消息
-          // const connection = get().getConnection();
-          // const currentUserId = connection?.getAgentId();
+          const myUserId = get().getConnection()?.getAgentId();
+
+          // 显示系统通知
+          if (messageData.channel && messageData.content) {
+            const senderName = event.sender_id || event.source_id || "未知用户";
+            const content = typeof messageData.content === 'string'
+              ? messageData.content
+              : messageData.content.text || "";
+
+            notificationService.showChatNotification(
+              senderName,
+              messageData.channel,
+              content,
+              messageData.message_type
+            );
+          }
 
           // if (unifiedMessage.senderId === currentUserId) {
           //   // 这是自己发送的回复消息，查找并替换对应的乐观更新消息
@@ -1811,6 +1849,30 @@ export const useChatStore = create<ChatState>((set, get) => ({
           //   }
           // }
 
+          // 检查是否是回复当前用户的消息
+          const connection = get().getConnection();
+          const currentUserId = connection?.getAgentId();
+
+          if (unifiedMessage.replyToId && currentUserId && unifiedMessage.senderId !== currentUserId) {
+            // 查找被回复的原始消息
+            const state = get();
+            const channelMessages = state.channelMessages.get(messageData.channel) || [];
+            const originalMessage = channelMessages.find(msg => msg.id === unifiedMessage.replyToId);
+
+            // 如果找到原始消息且是当前用户发送的，显示回复通知
+            if (originalMessage && originalMessage.senderId === currentUserId) {
+              console.log(`ChatStore: Detected reply to current user's message. Showing notification.`);
+              const senderName = unifiedMessage.senderId || "未知用户";
+              const content = unifiedMessage.content || "";
+
+              notificationService.showReplyNotification(
+                senderName,
+                messageData.channel,
+                content
+              );
+            }
+          }
+
           get().addMessageToChannel(messageData.channel, unifiedMessage);
         }
       }
@@ -1820,6 +1882,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
         console.log("ChatStore: Received direct message notification:", event);
 
         const messageData = event.payload;
+
+        // 显示系统通知 - 私信
+        if (messageData.content) {
+          const senderName = event.source_id || messageData.sender_id || "未知用户";
+          const content = typeof messageData.content === 'string'
+            ? messageData.content
+            : messageData.content.text || "";
+
+          notificationService.showChatNotification(
+            senderName,
+            "",
+            content,
+            messageData.message_type
+          );
+        }
+
         if (messageData.content) {
           // 构造统一消息格式
           const unifiedMessage: UnifiedMessage = {
@@ -2101,16 +2179,24 @@ export const useChatStore = create<ChatState>((set, get) => ({
         console.log("ChatStore: Received file upload response:", event);
         // 可以在这里处理文件上传成功的逻辑
       }
-    });
+    };
+
+    // 注册到事件路由器
+    eventRouter.onChatEvent(chatEventHandler);
+
+    // 保存handler引用以便清理
+    set({ eventHandler: chatEventHandler });
   },
 
   cleanupEventListeners: () => {
-    const connection = get().getConnection();
-    if (!connection) return;
+    const { eventHandler } = get();
 
     console.log("ChatStore: Cleaning up chat event listeners");
-    // 由于使用 rawEvent，事件清理在组件层面管理
-    // 这里可以添加特定的清理逻辑，如果需要的话
+
+    if (eventHandler) {
+      eventRouter.offChatEvent(eventHandler);
+      set({ eventHandler: null });
+    }
   },
 
   // Persistence methods

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { OpenAgentsService } from "../services/openAgentsService";
+import { eventRouter } from "@/services/eventRouter";
 
 // 时间戳格式检测和转换函数
 const normalizeTimestamp = (timestamp: number | undefined): number => {
@@ -88,6 +89,9 @@ interface WikiState {
   // Event handling
   setupEventListeners: () => void;
   cleanupEventListeners: () => void;
+
+  // Event handler reference for cleanup
+  eventHandler?: ((event: any) => void) | null;
 }
 
 export const useWikiStore = create<WikiState>((set, get) => ({
@@ -97,6 +101,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
   pagesLoading: false,
   pagesError: null,
   connection: null,
+  eventHandler: null,
 
   setConnection: (connection: OpenAgentsService) => {
     set({ connection });
@@ -476,8 +481,8 @@ export const useWikiStore = create<WikiState>((set, get) => ({
 
     console.log("WikiStore: Setting up wiki event listeners");
 
-    // 监听wiki相关事件
-    connection.on("rawEvent", (event: any) => {
+    // 使用事件路由器监听wiki相关事件
+    const wikiEventHandler = (event: any) => {
       // 处理页面创建事件
       if (event.event_name === "wiki.page.created" && event.payload?.page) {
         console.log("WikiStore: Received wiki.page.created event:", event);
@@ -638,14 +643,23 @@ export const useWikiStore = create<WikiState>((set, get) => ({
           );
         }
       }
-    });
+    };
+
+    // 注册到事件路由器
+    eventRouter.onWikiEvent(wikiEventHandler);
+
+    // 保存handler引用以便清理
+    set({ eventHandler: wikiEventHandler });
   },
 
   cleanupEventListeners: () => {
-    const { connection } = get();
-    if (!connection) return;
+    const { eventHandler } = get();
 
     console.log("WikiStore: Cleaning up wiki event listeners");
-    // 由于使用rawEvent，事件清理在组件层面管理
+
+    if (eventHandler) {
+      eventRouter.offWikiEvent(eventHandler);
+      set({ eventHandler: null });
+    }
   },
 }));
