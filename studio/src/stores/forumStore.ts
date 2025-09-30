@@ -32,6 +32,30 @@ export interface CreateTopicData {
   content: string;
 }
 
+// 递归更新评论 votes 的辅助函数
+const updateCommentVotesRecursively = (
+  comments: ForumComment[],
+  targetId: string,
+  upvotes: number,
+  downvotes: number
+): ForumComment[] => {
+  return comments.map(comment => {
+    if (comment.comment_id === targetId) {
+      // 找到目标评论，更新 votes
+      console.log(`ForumStore: Updating votes for comment ${targetId}: upvotes=${upvotes}, downvotes=${downvotes}`);
+      return { ...comment, upvotes, downvotes };
+    } else if (comment.replies && comment.replies.length > 0) {
+      // 递归更新 replies 中的评论
+      const updatedReplies = updateCommentVotesRecursively(comment.replies, targetId, upvotes, downvotes);
+      // 只有当 replies 发生变化时才返回新对象
+      if (updatedReplies !== comment.replies) {
+        return { ...comment, replies: updatedReplies };
+      }
+    }
+    return comment;
+  });
+};
+
 interface ForumState {
   // 话题列表
   topics: ForumTopic[];
@@ -71,6 +95,7 @@ interface ForumState {
   addTopicToList: (topic: ForumTopic) => void;
   addCommentToTopic: (topicId: string, comment: ForumComment) => void;
   countAllComments: (comments: ForumComment[]) => number;
+  refreshTopicInList: (topicId: string) => Promise<void>;
 
   // Computed
   getPopularTopics: () => ForumTopic[];
@@ -491,6 +516,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
     });
   },
 
+
   // Event handling - 设置事件监听
   setupEventListeners: () => {
     const { connection } = get();
@@ -531,10 +557,9 @@ export const useForumStore = create<ForumState>((set, get) => ({
         const comment = event.payload.comment;
         const topicId = comment.topic_id;
 
-        // 只有在当前查看的topic是这个comment所属的topic时才更新
         const { selectedTopic } = get();
         if (selectedTopic && selectedTopic.topic_id === topicId) {
-          // 将后端数据转换为ForumComment格式
+          // 当前在详情页面 - 添加评论到详情页面
           const forumComment: ForumComment = {
             comment_id: comment.comment_id,
             topic_id: comment.topic_id,
@@ -549,6 +574,11 @@ export const useForumStore = create<ForumState>((set, get) => ({
           };
 
           get().addCommentToTopic(topicId, forumComment);
+          console.log(`ForumStore: Added comment to detail view for topic ${topicId}`);
+        } else {
+          // 当前在列表页面 - 重新获取主题信息以更新评论数量
+          console.log(`ForumStore: Not viewing topic ${topicId}, refreshing topic in list`);
+          get().refreshTopicInList(topicId);
         }
       }
 
@@ -561,9 +591,9 @@ export const useForumStore = create<ForumState>((set, get) => ({
         const comment = event.payload.comment;
         const topicId = comment.topic_id;
 
-        // 只有在当前查看的topic是这个comment所属的topic时才更新
         const { selectedTopic } = get();
         if (selectedTopic && selectedTopic.topic_id === topicId) {
+          // 当前在详情页面 - 添加回复到详情页面
           const forumComment: ForumComment = {
             comment_id: comment.comment_id,
             topic_id: comment.topic_id,
@@ -578,13 +608,18 @@ export const useForumStore = create<ForumState>((set, get) => ({
           };
 
           get().addCommentToTopic(topicId, forumComment);
+          console.log(`ForumStore: Added reply to detail view for topic ${topicId}`);
+        } else {
+          // 当前在列表页面 - 重新获取主题信息以更新评论数量
+          console.log(`ForumStore: Not viewing topic ${topicId}, refreshing topic in list`);
+          get().refreshTopicInList(topicId);
         }
       }
 
       // 处理投票事件
       else if (event.event_name === "forum.vote.cast" && event.payload) {
         console.log("ForumStore: Received forum.vote.cast event:", event);
-        const { target_type, target_id, vote_type, voter_id } = event.payload;
+        const { target_type, target_id } = event.payload;
 
         // 根据投票目标类型刷新相应的数据
         if (target_type === "topic") {
@@ -633,13 +668,9 @@ export const useForumStore = create<ForumState>((set, get) => ({
             }));
           }
         } else if (target_type === "comment") {
-          // Update comment in the current topic's comments
+          // Update comment in the current topic's comments (including nested replies)
           set((state) => ({
-            comments: state.comments.map((comment) =>
-              comment.comment_id === target_id
-                ? { ...comment, upvotes, downvotes }
-                : comment
-            )
+            comments: updateCommentVotesRecursively(state.comments, target_id, upvotes, downvotes)
           }));
         }
       }
@@ -662,6 +693,61 @@ export const useForumStore = create<ForumState>((set, get) => ({
       }
     }
     return total;
+  },
+
+  // 重新获取并更新列表中的特定主题信息
+  refreshTopicInList: async (topicId: string) => {
+    const { connection } = get();
+    if (!connection) {
+      console.warn("ForumStore: No connection available for refreshTopicInList");
+      return;
+    }
+
+    try {
+      console.log(`ForumStore: Refreshing topic ${topicId} in list`);
+      const response = await connection.sendEvent({
+        event_name: "forum.topic.get",
+        destination_id: "mod:openagents.mods.workspace.forum",
+        payload: {
+          query_type: "get_topic",
+          topic_id: topicId,
+        },
+      });
+
+      if (response.success && response.data) {
+        // 检查数据结构 - API可能返回 response.data 就是topic，或者 response.data.topic
+        const topic = response.data.topic_id ? response.data : response.data.topic;
+
+        if (topic) {
+          console.log(`ForumStore: Updating topic ${topicId} with fresh data:`, {
+            comment_count: topic.comment_count,
+            upvotes: topic.upvotes,
+            downvotes: topic.downvotes
+          });
+
+          // 更新 topics 列表中的对应主题
+          set((state) => ({
+            topics: state.topics.map((t) =>
+              t.topic_id === topicId
+                ? {
+                    ...t,
+                    comment_count: topic.comment_count || 0,
+                    upvotes: topic.upvotes || 0,
+                    downvotes: topic.downvotes || 0,
+                    // 保持其他字段不变，只更新需要的统计数据
+                  }
+                : t
+            )
+          }));
+        } else {
+          console.warn(`ForumStore: No topic data in response for ${topicId}`);
+        }
+      } else {
+        console.warn(`ForumStore: Failed to refresh topic ${topicId}:`, response);
+      }
+    } catch (error) {
+      console.error(`ForumStore: Error refreshing topic ${topicId}:`, error);
+    }
   },
 
   // 增量更新comment到当前topic
@@ -751,3 +837,9 @@ export const useForumStore = create<ForumState>((set, get) => ({
     }
   },
 }));
+
+// 在开发环境中绑定测试工具到全局对象
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  (window as any).useForumStore = useForumStore;
+  console.log("🧪 Forum store and test utils available globally for development testing");
+}
