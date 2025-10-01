@@ -39,7 +39,7 @@ class AgentConnection:
         self.workspace = workspace
         self._client = workspace.client
 
-    async def send_message(
+    async def send(
         self, content: Union[str, Dict[str, Any]], **kwargs
     ) -> EventResponse:
         """Send a direct message to this agent.
@@ -175,7 +175,7 @@ class AgentConnection:
             Dict containing the reply message content, or None if timeout or send failed
         """
         # Send the message first
-        success = await self.send_message(content, **kwargs)
+        success = await self.send(content, **kwargs)
         if not success:
             logger.error(f"Failed to send message to agent {self.agent_id}")
             return None
@@ -317,7 +317,7 @@ class ChannelConnection:
             )
             return False
 
-    def get_messages(self, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+    async def get_messages(self, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
         """Retrieve messages from this channel synchronously.
 
         Args:
@@ -343,7 +343,7 @@ class ChannelConnection:
             )
 
             # Send request synchronously and get immediate response
-            response = self.workspace.send_event_sync(mod_message)
+            response = await self.workspace.send_event(mod_message)
 
             if not response.success:
                 logger.error(
@@ -763,7 +763,7 @@ class Workspace:
         if not self._client.connector:
             raise ValueError("No connector available for sending event")
 
-        response = await self._client.connector.send_event(mod_message)
+        response = await self._client.send_event(mod_message)
         logger.debug(f"🔧 WORKSPACE: Connector send result: {response}")
         return response
 
