@@ -228,6 +228,7 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
         payload = {
             "target_agent_id": target_agent_id,
             "content": content,
+            "message_type": "direct_message"
         }
         if quoted_message_id:
             payload["quoted_message_id"] = quoted_message_id
@@ -236,24 +237,13 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
 
         # Create direct message
         direct_msg = Event(
-            event_name="agent.message",
+            event_name="thread.direct_message.send",
             source_id=self.agent_id,
             destination_id=target_agent_id,
             payload=payload,
         )
 
-        # Wrap in Event for proper transport
-        wrapper_payload = direct_msg.model_dump()
-        wrapper_payload["relevant_agent_id"] = target_agent_id
-        message = Event(
-            event_name="thread.direct_message.send",
-            source_id=self.agent_id,
-            payload=wrapper_payload,
-            relevant_mod="openagents.mods.workspace.messaging",
-            visibility=EventVisibility.MOD_ONLY,
-        )
-
-        await self.connector.send_event(message)
+        await self.connector.send_event(direct_msg)
         logger.debug(f"Sent direct message to {target_agent_id}")
 
     async def send_channel_message(
@@ -582,52 +572,6 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
 
         await self.connector.send_event(message)
         logger.debug(f"Sent reply to message {reply_to_id} in channel {channel}")
-
-    async def reply_direct_message(
-        self,
-        target_agent_id: str,
-        reply_to_id: str,
-        text: str,
-        quote: Optional[str] = None,
-    ) -> None:
-        """Reply to a direct message (creates/continues thread).
-
-        Args:
-            target_agent_id: ID of the target agent
-            reply_to_id: ID of message being replied to
-            text: Reply text content
-            quote: Optional message ID to quote
-        """
-        if self.connector is None:
-            logger.error(
-                f"Cannot send reply: connector is None for agent {self.agent_id}"
-            )
-            return
-
-        # Handle quoting if specified
-        quoted_message_id = None
-        quoted_text = None
-        if quote:
-            quoted_message_id = quote
-            quoted_text = f"[Quoted message {quote}]"
-
-        # Create reply message - this returns an Event object, don't double-wrap it
-        reply_msg = ReplyMessage.create(
-            reply_to_id=reply_to_id,
-            text=text,
-            source_id=self.agent_id,
-            target_agent_id=target_agent_id,
-            quoted_message_id=quoted_message_id,
-            quoted_text=quoted_text,
-        )
-
-        # Use the reply message Event directly, just update the metadata
-        message = reply_msg
-        message.relevant_mod = "openagents.mods.workspace.messaging"
-        message.visibility = EventVisibility.MOD_ONLY
-
-        await self.connector.send_event(message)
-        logger.debug(f"Sent reply to message {reply_to_id} for agent {target_agent_id}")
 
     async def retrieve_channel_messages(
         self,
@@ -1422,33 +1366,6 @@ class ThreadMessagingAgentAdapter(BaseModAdapter):
             func=self.reply_channel_message,
         )
         tools.append(reply_channel_tool)
-
-        # Tool 5: Reply to direct message
-        reply_direct_tool = AgentAdapterTool(
-            name="reply_direct_message",
-            description="Reply to a direct message (creates/continues thread, max 5 levels)",
-            input_schema={
-                "type": "object",
-                "properties": {
-                    "target_agent_id": {
-                        "type": "string",
-                        "description": "ID of the target agent",
-                    },
-                    "reply_to_id": {
-                        "type": "string",
-                        "description": "ID of the message being replied to",
-                    },
-                    "text": {"type": "string", "description": "Reply text content"},
-                    "quote": {
-                        "type": "string",
-                        "description": "Optional message ID to quote",
-                    },
-                },
-                "required": ["target_agent_id", "reply_to_id", "text"],
-            },
-            func=self.reply_direct_message,
-        )
-        tools.append(reply_direct_tool)
 
         # Tool 6: List channels
         list_channels_tool = AgentAdapterTool(
