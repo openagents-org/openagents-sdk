@@ -50,3 +50,5 @@ next-env.d.ts
 # generated files
 *.js.map
 *.css.map 
+
+settings.local.json
