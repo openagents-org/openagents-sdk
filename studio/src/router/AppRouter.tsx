@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ToastProvider } from "@/context/ToastContext";
 import { ConfirmProvider } from "@/context/ConfirmContext";
 import RouteGuard from "./RouteGuard";
-import { routes, specialRoutes } from "./routeConfig";
+import { routes } from "./routeConfig";
 import RootLayout from "@/components/layout/RootLayout";
 
 // 创建受保护路由的包装器组件
@@ -64,11 +64,6 @@ const AppRouter: React.FC = () => {
             )}
 
             <Route path="/*" element={<ProtectedRoutes />} />
-
-            {/* 特殊路由（重定向等） */}
-            {specialRoutes.map(({ path, element: Element }) => (
-              <Route key={path} path={path} element={<Element />} />
-            ))}
           </Routes>
         </ConfirmProvider>
       </ToastProvider>

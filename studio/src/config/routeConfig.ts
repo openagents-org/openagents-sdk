@@ -157,7 +157,7 @@ export interface RouteConfig {
 export const dynamicRouteConfig: RouteConfig[] = [
   // 认证相关路由 - 这些页面不需要 sidebar 和完整布局
   {
-    path: "/network-selection",
+    path: "/",
     element: NetworkSelectionPage,
     title: "Network Selection",
     requiresLayout: false,
@@ -379,10 +379,7 @@ export const getAllRoutes = () => {
 
 // 特殊路由（重定向等）
 export const specialRoutes = [
-  {
-    path: "/",
-    element: () => React.createElement(Navigate, { to: "/messaging", replace: true }),
-  },
+  // No special routes needed - NetworkSelectionPage is served directly under /
 ];
 
 // 动态配置更新函数 - 可以通过接口调用来更新配置
