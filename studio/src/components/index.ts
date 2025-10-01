@@ -1,9 +1,5 @@
-// Layout components
-
-// Chat components
-export { default as MessageInput } from "./chat/MessageInput";
-// export { default as MessageList } from "./chat/MessageList"; // 已删除
-export { default as CodeBlock } from "./chat/CodeBlock";
+// export { default as MessageInput } from "./chat/MessageInput";
+// export { default as CodeBlock } from "./chat/CodeBlock";
 
 // Documents components
 export { default as DocumentsView } from "./documents/DocumentsView";

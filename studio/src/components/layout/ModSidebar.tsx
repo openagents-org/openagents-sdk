@@ -40,8 +40,8 @@ const ModSidebar: React.FC = () => {
 
   // 判断当前路由是否激活
   const isRouteActive = (route: string) => {
-    if (route === "/chat") {
-      return location.pathname === "/chat" || location.pathname === "/chat/";
+    if (route === "/messaging") {
+      return location.pathname === "/messaging" || location.pathname === "/messaging/";
     }
     return location.pathname.startsWith(route);
   };

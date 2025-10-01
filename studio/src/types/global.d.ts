@@ -9,17 +9,7 @@ declare global {
     timestamp: string;
   }
 
-  // Conversation type definition
-  interface Conversation {
-    id: string;
-    title: string;
-    isActive: boolean;
-  }
-
-  // Keyed messages by conversation ID
-  interface ConversationMessages {
-    [conversationId: string]: Message[];
-  }
+  // Conversation types removed - not needed for chat module
 
   // Settings interface
   interface Settings {

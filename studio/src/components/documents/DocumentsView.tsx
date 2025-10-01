@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { DocumentsViewProps, DocumentInfo } from "../../types";
 import { useThemeStore } from "@/stores/themeStore";
-// TODO: Implement documents with new HTTP event system
+import { useDocumentStore } from "@/stores/documentStore";
 import DocumentList from "./DocumentList";
 import DocumentViewer from "./DocumentViewer";
 import CreateDocumentModal from "./CreateDocumentModal";
@@ -16,156 +16,63 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
 }) => {
   // Use theme from store
   const { theme: currentTheme } = useThemeStore();
-  // TODO: Connect to HTTP event system for documents
-  const currentNetwork = null;
-  const [connection, setConnection] = useState<any | null>(null);
+
+  // Use document store
+  const {
+    documents: storeDocuments,
+    createDocument,
+    setDocuments: setStoreDocuments,
+  } = useDocumentStore();
+
   const [documents, setDocuments] = useState<DocumentInfo[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  // Use shared state if available, otherwise use local state
-  const effectiveDocuments = sharedDocuments || documents;
+  // Use shared state if available, otherwise use store state
+  const effectiveDocuments = sharedDocuments || storeDocuments;
   const effectiveSelectedDocument =
     sharedSelectedDocumentId || selectedDocument;
-  const effectiveConnection = connection;
 
-  // Initialize connection
+  // Initialize public shared document if empty
   useEffect(() => {
-    let isMounted = true;
-    let currentConnection: any = null;
+    if (effectiveDocuments.length === 0) {
+      // Create a fixed public document that all users can see and collaborate on
+      const publicDocument: DocumentInfo[] = [
+        {
+          document_id: "shared-public-doc",
+          name: "🌐 公共协作文档",
+          creator: "System",
+          created: new Date().toISOString(),
+          last_modified: new Date().toISOString(),
+          version: 1,
+          active_agents: [],
+          permission: "read_write",
+        },
+      ];
 
-    const initConnection = async () => {
-      if (!currentNetwork || !isMounted) return;
+      setStoreDocuments(publicDocument);
+    }
+  }, [effectiveDocuments.length, setStoreDocuments]);
 
-      try {
-        // TODO: Initialize HTTP event connector for documents
-        const conn = null;
-        currentConnection = conn;
-        const connected = false;
-        if (connected && isMounted) {
-          setConnection(conn);
-          setError(null);
-          console.log("📄 Connected for documents management");
-        } else if (isMounted) {
-          setError("Failed to connect to the network");
-        }
-      } catch (err) {
-        console.error("Failed to initialize documents connection:", err);
-        if (isMounted) {
-          setError("Failed to initialize documents connection");
-        }
-      }
-    };
-
-    initConnection();
-
-    return () => {
-      isMounted = false;
-      if (currentConnection) {
-        try {
-          currentConnection.disconnect();
-          console.log("📄 Documents connection cleaned up");
-        } catch (e) {
-          console.warn("⚠️ Error cleaning up documents connection:", e);
-        }
-      }
-    };
-  }, [currentNetwork]);
-
-  // Handle documents received from HTTP event service
-  const handleDocumentsReceived = useCallback(
-    (docs: DocumentInfo[]) => {
-      console.log("📋 Documents received via event:", docs);
-
-      // Update shared state if available, otherwise local state
-      if (sharedOnDocumentsChange) {
-        sharedOnDocumentsChange(docs || []);
-      } else {
-        setDocuments(docs || []);
-      }
-
-      setIsLoading(false);
-      setError(null);
-    },
-    [sharedOnDocumentsChange]
-  );
-
-  // Load documents by requesting them (triggers events)
+  // Load documents (no-op for now, using store)
   const loadDocuments = useCallback(async () => {
-    if (!effectiveConnection) return;
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Request documents list using the public API
-      const docs = await effectiveConnection.listDocuments(false);
-      console.log("📤 Received documents list:", docs);
-      handleDocumentsReceived(docs || []);
-      setIsLoading(false);
-    } catch (err) {
-      console.error("Failed to request documents:", err);
-      setError("Failed to load documents");
-      setIsLoading(false);
-    }
-  }, [effectiveConnection]);
-
-  // Handle document creation events
-  const handleDocumentCreated = useCallback(
-    (data: any) => {
-      console.log("📄 Document created event received:", data);
-      // Refresh the document list
-      loadDocuments();
-    },
-    [loadDocuments]
-  );
-
-  // Set up event listeners
-  useEffect(() => {
-    if (effectiveConnection) {
-      // Listen for documents events
-      effectiveConnection.on("documents", handleDocumentsReceived);
-      effectiveConnection.on("document_created", handleDocumentCreated);
-
-      // Load initial documents
-      loadDocuments();
-
-      // Cleanup event listeners
-      return () => {
-        effectiveConnection.off("documents", handleDocumentsReceived);
-        effectiveConnection.off("document_created", handleDocumentCreated);
-      };
-    }
-  }, [
-    effectiveConnection,
-    loadDocuments,
-    handleDocumentsReceived,
-    handleDocumentCreated,
-  ]);
+    console.log("📤 Documents loaded from store:", effectiveDocuments.length);
+  }, [effectiveDocuments]);
 
   const handleCreateDocument = async (
     name: string,
     content: string,
     permissions: Record<string, string>
   ) => {
-    if (!effectiveConnection) return;
-
     try {
-      const documentId = await effectiveConnection.createDocument(
-        name,
-        content,
-        permissions
-      );
-      console.log("📄 Document creation initiated:", documentId);
+      const documentId = await createDocument(name, content);
+      console.log("📄 Document created:", documentId);
 
-      // Request updated document list (will trigger 'documents' event)
-      await loadDocuments();
       setShowCreateModal(false);
     } catch (err) {
       console.error("Failed to create document:", err);
-      // Handle error in modal
     }
   };
 
@@ -250,12 +157,20 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
 
   if (effectiveSelectedDocument) {
     return (
-      <DocumentViewer
-        documentId={effectiveSelectedDocument}
-        connection={effectiveConnection!}
-        currentTheme={currentTheme}
-        onBack={handleBackToList}
-      />
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+          Document Details
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          Document ID: {effectiveSelectedDocument}
+        </p>
+        <button
+          onClick={handleBackToList}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Back to List
+        </button>
+      </div>
     );
   }
 
@@ -268,45 +183,21 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
         } p-6`}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={onBackClick}
-              className={`p-2 rounded-lg transition-colors ${
-                currentTheme === "dark"
-                  ? "hover:bg-gray-700 text-gray-400 hover:text-gray-200"
-                  : "hover:bg-gray-100 text-gray-600 hover:text-gray-800"
+          <div className="flex flex-col">
+            <h1
+              className={`text-2xl font-bold ${
+                currentTheme === "dark" ? "text-gray-200" : "text-gray-800"
               }`}
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </button>
-            <div>
-              <h1
-                className={`text-2xl font-bold ${
-                  currentTheme === "dark" ? "text-gray-200" : "text-gray-800"
-                }`}
-              >
-                Shared Documents
-              </h1>
-              <p
-                className={`text-sm ${
-                  currentTheme === "dark" ? "text-gray-400" : "text-gray-600"
-                }`}
-              >
-                Collaborate on documents with other agents in real-time
-              </p>
-            </div>
+              Shared Documents
+            </h1>
+            <p
+              className={`text-sm ${
+                currentTheme === "dark" ? "text-gray-400" : "text-gray-600"
+              }`}
+            >
+              在不同浏览器窗口打开同一个文档即可开始实时协作编辑
+            </p>
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -336,7 +227,6 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           documents={effectiveDocuments}
           currentTheme={currentTheme}
           onDocumentSelect={handleDocumentSelect}
-          onRefresh={loadDocuments}
         />
       </div>
 

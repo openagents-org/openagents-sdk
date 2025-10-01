@@ -8,11 +8,13 @@ import {
   isValidName,
   getAvatarInitials,
 } from "@/utils/utils";
-import { useNetworkStore } from "@/stores/networkStore";
+import { useAuthStore } from "@/stores/authStore";
+import { useNavigate } from "react-router-dom";
 
 const AgentNamePicker: React.FC = () => {
+  const navigate = useNavigate();
   const { selectedNetwork, setAgentName, clearAgentName, clearNetwork } =
-    useNetworkStore();
+    useAuthStore();
 
   const [pageAgentName, setPageAgentName] = useState<string | null>(null);
   const [savedAgentName, setSavedAgentName] = useState<string | null>(null);
@@ -23,7 +25,6 @@ const AgentNamePicker: React.FC = () => {
 
   useEffect(() => {
     if (!selectedNetwork) return;
-    // Check for saved agent name for this network
     const savedName = getSavedAgentNameForNetwork(
       selectedNetwork.host,
       selectedNetwork.port
@@ -56,6 +57,8 @@ const AgentNamePicker: React.FC = () => {
 
     // Set agent name in store - RouteGuard will handle navigation automatically
     setAgentName(agentNameTrimmed);
+
+    navigate("/messaging");
   };
 
   return (
@@ -79,7 +82,7 @@ const AgentNamePicker: React.FC = () => {
 
         {/* Network Info */}
         <div className="rounded-xl p-4 my-6 text-left bg-gray-100 dark:bg-gray-700">
-          <div className="text-xs font-semibold uppercase tracking-wide mb-1 text-gray-500 dark:text-gray-400">
+          <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
             Connecting to
           </div>
           {selectedNetwork && (

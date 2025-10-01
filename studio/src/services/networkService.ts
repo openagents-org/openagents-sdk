@@ -1,5 +1,6 @@
 import { ConnectionStatusEnum, NetworkConnection } from "../types/connection";
 import { networkFetch } from "../utils/httpClient";
+import { HealthResponse } from "../utils/moduleUtils";
 
 export interface NetworkProfile {
   name: string;
@@ -77,18 +78,13 @@ export const ManualNetworkConnection = async (
     console.log(`Testing connection to network: ${host}:${port}`);
 
     // Use health check endpoint to test connectivity
-    const response = await networkFetch(
-      host,
-      port,
-      "/api/health",
-      {
-        method: "GET",
-        timeout: 5000, // 5 second timeout
-        headers: {
-          Accept: "application/json",
-        },
-      }
-    );
+    const response = await networkFetch(host, port, "/api/health", {
+      method: "GET",
+      timeout: 5000, // 5 second timeout
+      headers: {
+        Accept: "application/json",
+      },
+    });
 
     const latency = Date.now() - startTime;
 
@@ -118,6 +114,65 @@ export const ManualNetworkConnection = async (
       port,
       status: ConnectionStatusEnum.ERROR,
       latency: Date.now() - startTime,
+    };
+  }
+};
+
+// Fetch network details by network ID from OpenAgents directory
+export const fetchNetworkById = async (
+  networkId: string
+): Promise<{
+  success: boolean;
+  network?: any;
+  error?: string;
+}> => {
+  try {
+    // Clean network ID - remove protocol prefix if present
+    const cleanNetworkId = networkId.replace(/^openagents:\/\//, "");
+
+    const response = await fetch(
+      `https://endpoint.openagents.org/v1/networks/${cleanNetworkId}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        signal: AbortSignal.timeout(10000), // 10 second timeout
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return {
+          success: false,
+          error: `Network '${networkId}' not found`,
+        };
+      }
+      return {
+        success: false,
+        error: `HTTP ${response.status}: ${response.statusText}`,
+      };
+    }
+
+    const result = await response.json();
+
+    if (result.code === 200 && result.data) {
+      return {
+        success: true,
+        network: result.data,
+      };
+    } else {
+      return {
+        success: false,
+        error: result.message || "Failed to fetch network information",
+      };
+    }
+  } catch (error: any) {
+    console.error(`Error fetching network ${networkId}:`, error);
+    return {
+      success: false,
+      error: error.message || "Network request failed",
     };
   }
 };
@@ -230,4 +285,91 @@ export const fetchNetworksList = async (
     total: filteredNetworks.length,
     items: paginatedNetworks,
   };
+};
+
+/**
+ * Fetch network health information including available modules
+ * @param connection Network connection information
+ * @returns Health response with module information
+ */
+export const fetchNetworkHealth = async (
+  connection: NetworkConnection
+): Promise<{
+  success: boolean;
+  data?: HealthResponse;
+  error?: string;
+}> => {
+  try {
+    console.log(`Fetching health information from ${connection.host}:${connection.port}`);
+
+    const response = await networkFetch(
+      connection.host,
+      connection.port,
+      "/api/health",
+      {
+        method: "GET",
+        timeout: 10000, // 10 second timeout
+        headers: {
+          Accept: "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: `HTTP ${response.status}: ${response.statusText}`,
+      };
+    }
+
+    const healthData = await response.json();
+
+    // Validate response structure
+    if (!healthData.success || !healthData.data) {
+      return {
+        success: false,
+        error: "Invalid health response format",
+      };
+    }
+
+    console.log(`Health check successful for ${connection.host}:${connection.port}`, {
+      networkId: healthData.data.network_id,
+      moduleCount: healthData.data.mods?.length || 0,
+    });
+
+    return {
+      success: true,
+      data: healthData as HealthResponse,
+    };
+  } catch (error: any) {
+    console.error(
+      `Failed to fetch health from ${connection.host}:${connection.port}:`,
+      error
+    );
+    return {
+      success: false,
+      error: error.message || "Network health check failed",
+    };
+  }
+};
+
+/**
+ * Get health information for the current network connection
+ * Uses the most recently connected network from auth store
+ */
+export const getCurrentNetworkHealth = async (
+  selectedNetwork: NetworkConnection | null
+): Promise<{
+  success: boolean;
+  data?: HealthResponse;
+  error?: string;
+}> => {
+  if (!selectedNetwork) {
+    return {
+      success: false,
+      error: "No network connection available",
+    };
+  }
+
+  return fetchNetworkHealth(selectedNetwork);
 };

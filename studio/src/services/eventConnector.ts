@@ -6,7 +6,11 @@
  */
 
 import { Event, EventResponse, EventNames, AgentInfo } from "../types/events";
-import { buildNetworkUrl, buildNetworkHeaders, networkFetch } from "../utils/httpClient";
+import {
+  buildNetworkUrl,
+  buildNetworkHeaders,
+  networkFetch,
+} from "../utils/httpClient";
 
 export interface ConnectionOptions {
   host: string;
@@ -81,14 +85,18 @@ export class HttpEventConnector {
 
       // Register agent
       console.log(`📡 Sending registration to ${this.baseUrl}/api/register`);
-      const registerResponse = await this.sendHttpRequest("/api/register", "POST", {
-        agent_id: this.agentId,
-        metadata: {
-          display_name: this.agentId,
-          user_agent: navigator.userAgent,
-          platform: "web",
-        },
-      });
+      const registerResponse = await this.sendHttpRequest(
+        "/api/register",
+        "POST",
+        {
+          agent_id: this.agentId,
+          metadata: {
+            display_name: this.agentId,
+            user_agent: navigator.userAgent,
+            platform: "web",
+          },
+        }
+      );
 
       console.log("📡 Registration response:", registerResponse);
       if (!registerResponse.success) {
@@ -458,7 +466,9 @@ export class HttpEventConnector {
   private async pollEvents(): Promise<void> {
     try {
       // Include secret in polling request if available
-      const secretParam = this.secret ? `&secret=${encodeURIComponent(this.secret)}` : '';
+      const secretParam = this.secret
+        ? `&secret=${encodeURIComponent(this.secret)}`
+        : "";
       const response = await this.sendHttpRequest(
         `/api/poll?agent_id=${this.agentId}${secretParam}`,
         "GET"
@@ -490,6 +500,8 @@ export class HttpEventConnector {
       // Emit specific event
       this.emit(event.event_name, event);
 
+      this.emit("rawEvent", event);
+
       // Emit generic 'event' for all events
       this.emit("event", event);
 
@@ -508,8 +520,8 @@ export class HttpEventConnector {
     method: "GET" | "POST",
     data?: any
   ): Promise<any> {
-    const isPolling = endpoint.includes('/api/poll?agent_id=');
-    
+    const isPolling = endpoint.includes("/api/poll?agent_id=");
+
     if (!isPolling) {
       console.log(`🌐 ${method} ${endpoint}`, data ? { body: data } : "");
     }
@@ -530,7 +542,7 @@ export class HttpEventConnector {
         endpoint,
         options
       );
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`❌ HTTP Error ${response.status}:`, errorText);
@@ -538,20 +550,22 @@ export class HttpEventConnector {
       }
 
       const result = await response.json();
-      
+
       // For polling, only log when there are messages
       if (isPolling) {
         const hasMessages = result.messages && result.messages.length > 0;
         if (hasMessages) {
           console.log(`🌐 ${method} ${endpoint}`);
-          console.log(`📡 Response ${response.status} for ${method} ${endpoint}`);
+          console.log(
+            `📡 Response ${response.status} for ${method} ${endpoint}`
+          );
           console.log(`📦 Response data for ${endpoint}:`, result);
         }
       } else {
         console.log(`📡 Response ${response.status} for ${method} ${endpoint}`);
         console.log(`📦 Response data for ${endpoint}:`, result);
       }
-      
+
       return result;
     } catch (error) {
       console.error(`❌ Request failed for ${method} ${endpoint}:`, error);
