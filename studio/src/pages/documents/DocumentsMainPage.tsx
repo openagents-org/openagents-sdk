@@ -2,6 +2,7 @@ import React, { useCallback } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { DocumentsView } from "@/components";
 import { useDocumentStore } from "@/stores/documentStore";
+import DocumentEditor from "@/components/documents/DocumentEditor";
 
 /**
  * 文档主页面 - 处理文档相关的所有功能
@@ -36,19 +37,10 @@ const DocumentsMainPage: React.FC = () => {
         }
       />
 
-      {/* 文档详情页面 */}
+      {/* 文档编辑页面 */}
       <Route
         path=":documentId"
-        element={
-          <div className="p-6">
-            <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-              Document Details
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Document detail view coming soon...
-            </p>
-          </div>
-        }
+        element={<DocumentEditor />}
       />
     </Routes>
   );
