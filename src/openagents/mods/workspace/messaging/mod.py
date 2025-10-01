@@ -1217,7 +1217,6 @@ class ThreadMessagingNetworkMod(BaseMod):
         Args:
             message: The direct message to process
         """
-
         # Get target agent ID from the message
         target_agent_id = None
         if message.destination_id:
@@ -1248,10 +1247,7 @@ class ThreadMessagingNetworkMod(BaseMod):
             notification = EventModel(
                 event_name="thread.direct_message.notification",
                 source_id=message.source_id,  # Keep original sender
-                event_id=message.event_id,  # Keep original event ID
-                timestamp=message.timestamp,  # Keep original timestamp
                 payload=notification_payload,
-                direction="inbound",
                 destination_id=target_agent_id,
             )
 

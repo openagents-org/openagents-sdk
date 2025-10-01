@@ -55,4 +55,4 @@ If you don't need to use any tools, use the finish tool directly.
 {% if user_instruction %}{{ user_instruction }}{% endif %}
 """
 
-DEFAULT_SYSTEM_PROMPT_TEMPLATE = f"""{{instruction}}"""
+DEFAULT_SYSTEM_PROMPT_TEMPLATE = """{{ instruction }}"""
