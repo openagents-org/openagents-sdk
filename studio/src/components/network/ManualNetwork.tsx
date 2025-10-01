@@ -39,8 +39,8 @@ export default function ManualNetwork() {
   const [savedAgentName, setSavedAgentName] = useState<string | null>(null);
 
   const loadSavedInfoAndSetTab = useCallback(() => {
-    // Check for network_id in URL parameters first
-    const urlNetworkId = searchParams.get("network_id");
+    // Check for network-id in URL parameters first
+    const urlNetworkId = searchParams.get("network-id");
     const tabList = []
 
     if (urlNetworkId) {

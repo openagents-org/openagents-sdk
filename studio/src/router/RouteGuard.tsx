@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { routes } from "./routeConfig";
 import { useDynamicRoutes } from "@/hooks/useDynamicRoutes";
 import { isRouteAvailable } from "@/utils/moduleUtils";
+import { fetchNetworkById } from "@/services/networkService";
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -18,45 +19,131 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   const { selectedNetwork, agentName } = useAuthStore();
   const { isModulesLoaded, defaultRoute, enabledModules } = useDynamicRoutes();
   const currentPath = location.pathname;
+  
+  const [networkIdChecking, setNetworkIdChecking] = useState(false);
+  const [shouldRedirectToNetworkSelection, setShouldRedirectToNetworkSelection] = useState(false);
+
+  // Check for network-id URL parameter
+  const urlParams = new URLSearchParams(location.search);
+  const networkIdParam = urlParams.get('network-id');
 
   console.log(
-    `🛡️ RouteGuard: path=${currentPath}, network=${!!selectedNetwork}, agent=${!!agentName}, modulesLoaded=${isModulesLoaded}`
+    `🛡️ RouteGuard: path=${currentPath}, network=${!!selectedNetwork}, agent=${!!agentName}, modulesLoaded=${isModulesLoaded}, networkIdParam=${networkIdParam}`
   );
 
-  // 处理根路径 "/" 的重定向
-  if (currentPath === "/") {
-    if (selectedNetwork && agentName) {
-      console.log(`🔄 Root path: User setup complete, redirecting to ${defaultRoute}`);
-      return <Navigate to={defaultRoute} replace />;
-    } else {
-      console.log("🔄 Root path: No setup, redirecting to /network-selection");
-      return <Navigate to="/network-selection" replace />;
+  // Helper function to check if current network matches the requested network ID
+  const checkNetworkIdMatch = async (networkId: string): Promise<boolean> => {
+    if (!selectedNetwork) return false;
+    
+    try {
+      const networkResult = await fetchNetworkById(networkId);
+      if (!networkResult.success) return false;
+      
+      const network = networkResult.network;
+      let targetHost = network.profile?.host;
+      let targetPort = network.profile?.port;
+      
+      // Extract host/port from connection endpoint if not directly available
+      if (!targetHost || !targetPort) {
+        if (network.profile?.connection?.endpoint) {
+          const endpoint = network.profile.connection.endpoint;
+          
+          if (endpoint.startsWith("modbus://")) {
+            const url = new URL(endpoint);
+            targetHost = url.hostname;
+            targetPort = parseInt(url.port);
+          } else if (endpoint.startsWith("http://") || endpoint.startsWith("https://")) {
+            const url = new URL(endpoint);
+            targetHost = url.hostname;
+            targetPort = parseInt(url.port) || (endpoint.startsWith("https://") ? 443 : 80);
+          } else {
+            const parts = endpoint.split(":");
+            if (parts.length >= 2) {
+              targetHost = parts[0];
+              targetPort = parseInt(parts[1]);
+            }
+          }
+        }
+      }
+      
+      if (!targetPort) targetPort = 8700;
+      
+      // Compare with current network
+      return selectedNetwork.host === targetHost && selectedNetwork.port === targetPort;
+    } catch (error) {
+      console.error("Error checking network ID match:", error);
+      return false;
     }
+  };
+
+  // Effect to handle network-id checking for logged-in users
+  useEffect(() => {
+    if (networkIdParam && selectedNetwork && agentName && currentPath === "/") {
+      setNetworkIdChecking(true);
+      checkNetworkIdMatch(networkIdParam).then((matches) => {
+        if (!matches) {
+          console.log(`🔄 Network ID ${networkIdParam} doesn't match current network, redirecting to network selection`);
+          setShouldRedirectToNetworkSelection(true);
+        }
+        setNetworkIdChecking(false);
+      });
+    }
+  }, [networkIdParam, selectedNetwork, agentName, currentPath]);
+
+  // Handle redirect to network selection with network-id
+  if (shouldRedirectToNetworkSelection) {
+    return <Navigate to={`/?network-id=${encodeURIComponent(networkIdParam!)}`} replace />;
+  }
+
+  // Show loading while checking network ID match
+  if (networkIdChecking) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Checking network connection...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 处理根路径 "/" - NetworkSelectionPage is now served directly under /
+  if (currentPath === "/") {
+    // If user is fully setup (has network and agent), redirect to the default route
+    if (selectedNetwork && agentName) {
+      // Check if there's a network-id parameter that doesn't match current network
+      if (networkIdParam) {
+        // network-id checking is handled by useEffect above
+        // If we reach here without being redirected, networks match or check is in progress
+        if (!networkIdChecking && !shouldRedirectToNetworkSelection) {
+          console.log(`🔄 Root path with network-id: User setup complete and networks match, redirecting to ${defaultRoute}`);
+          return <Navigate to={defaultRoute} replace />;
+        }
+      } else {
+        // No network-id parameter, normal redirect to default route
+        console.log(`🔄 Root path: User setup complete, redirecting to ${defaultRoute}`);
+        return <Navigate to={defaultRoute} replace />;
+      }
+    }
+    // If user is not fully setup, show NetworkSelectionPage (which is served under /)
+    // Return children to render the NetworkSelectionPage
+    console.log("🔄 Root path: Showing network selection page");
+    return <>{children}</>;
   }
 
   // 处理 /agent-setup 路径的访问控制
   if (currentPath === "/agent-setup") {
     if (!selectedNetwork) {
       console.log(
-        "🔄 Agent setup accessed without network, redirecting to /network-selection"
+        "🔄 Agent setup accessed without network, redirecting to /"
       );
-      return <Navigate to="/network-selection" replace />;
+      return <Navigate to="/" replace />;
     }
     // 有网络选择，允许访问 agent-setup
     return <>{children}</>;
   }
 
-  // 处理 /network-selection 路径的访问控制
-  if (currentPath === "/network-selection") {
-    if (selectedNetwork && agentName) {
-      console.log(
-        `🔄 Network selection accessed after complete setup, redirecting to ${defaultRoute}`
-      );
-      return <Navigate to={defaultRoute} replace />;
-    }
-    // 没有完成设置，允许访问 network-selection
-    return <>{children}</>;
-  }
+  // NetworkSelectionPage is now served under /, so no special handling needed here
 
   // 处理需要认证的路由（ModSidebar 相关路由）
   const isAuthenticatedRoute = routes.some((route) => {
@@ -76,9 +163,13 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     // 访问认证路由，检查是否完成设置
     if (!selectedNetwork) {
       console.log(
-        `🔄 Authenticated route ${currentPath} accessed without network, redirecting to /network-selection`
+        `🔄 Authenticated route ${currentPath} accessed without network, redirecting to /`
       );
-      return <Navigate to="/network-selection" replace />;
+      // Preserve network-id parameter if it exists
+      const redirectUrl = networkIdParam 
+        ? `/?network-id=${encodeURIComponent(networkIdParam)}`
+        : "/";
+      return <Navigate to={redirectUrl} replace />;
     }
 
     if (!agentName) {
@@ -108,9 +199,13 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     return <Navigate to={defaultRoute} replace />;
   } else {
     console.log(
-      `🔄 Invalid route ${currentPath} without setup, redirecting to /network-selection`
+      `🔄 Invalid route ${currentPath} without setup, redirecting to /`
     );
-    return <Navigate to="/network-selection" replace />;
+    // Preserve network-id parameter if it exists
+    const redirectUrl = networkIdParam 
+      ? `/?network-id=${encodeURIComponent(networkIdParam)}`
+      : "/";
+    return <Navigate to={redirectUrl} replace />;
   }
 };
 
