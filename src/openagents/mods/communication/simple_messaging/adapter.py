@@ -243,14 +243,20 @@ class SimpleMessagingAgentAdapter(BaseModAdapter):
                 f"Cannot send message: connector is None for agent {self.agent_id}"
             )
             return f"Error: Agent {self.agent_id} is not connected to a network"
+        
+        if isinstance(content, str):
+            content = {"text": content}
 
         # Create and send the message
         message = Event(
-            event_name="agent.message",
+            event_name="agent.direct_message.send",
             source_id=self.agent_id,
             destination_id=target_agent_id,
-            payload=content,
-            relevant_mod="openagents.mods.communication.simple_messaging",
+            payload={
+                "content": content,
+                "message_type": "direct_message",
+                "target_agent_id": target_agent_id,
+            },
         )
 
         # DO NOT add outbound messages to sender's threads - only recipients should process incoming messages

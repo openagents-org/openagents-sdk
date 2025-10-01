@@ -50,8 +50,8 @@ class ConsoleAgent:
         metadata = {"name": self.agent_id, "type": "console_agent"}
 
         success = await self.agent.connect_to_server(
-            host=self.host,
-            port=self.port,
+            network_host=self.host,
+            network_port=self.port,
             metadata=metadata,
             network_id=self.network_id,
         )

@@ -487,7 +487,7 @@ Example usage:
         print("Press Ctrl+C to stop")
         
         # Start the agent
-        agent.start(host=args.host, port=args.port, metadata=metadata)
+        agent.start(network_host=args.host, network_port=args.port, metadata=metadata)
         
         # Wait for the agent to finish
         agent.wait_for_stop()

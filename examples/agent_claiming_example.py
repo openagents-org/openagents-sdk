@@ -57,7 +57,7 @@ class SecureAgent:
         logger.info(f"🔐 Claiming identity for agent {self.agent_id}...")
         
         # Connect to network
-        success = await self.client.connect_to_server(host=host, port=port)
+        success = await self.client.connect_to_server(network_host=host, network_port=port)
         if not success:
             logger.error("Failed to connect to network for claiming")
             return False
@@ -115,8 +115,8 @@ class SecureAgent:
         
         # Include certificate in connection metadata for validation
         success = await self.client.connect_to_server(
-            host=host, 
-            port=port, 
+            network_host=host, 
+            network_port=port, 
             metadata=metadata
         )
         
@@ -142,8 +142,8 @@ class SecureAgent:
         }
         
         success = await self.client.connect_to_server(
-            host=host, 
-            port=port, 
+            network_host=host, 
+            network_port=port, 
             metadata=metadata
         )
         

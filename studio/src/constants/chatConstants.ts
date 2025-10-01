@@ -11,6 +11,7 @@ import { ConnectionStatusEnum } from "@/types/connection";
 export const CONNECTED_STATUS_COLOR = {
   [ConnectionStatusEnum.CONNECTED]: "#10b981",
   [ConnectionStatusEnum.CONNECTING]: "#f59e0b",
+  [ConnectionStatusEnum.RECONNECTING]: "#f59e0b",
   [ConnectionStatusEnum.DISCONNECTED]: "#6b7280",
   [ConnectionStatusEnum.ERROR]: "#ef4444",
   default: "#6b7280",

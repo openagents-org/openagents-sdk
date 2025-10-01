@@ -1,5 +1,6 @@
 # dependencies
 /node_modules
+/server/node_modules
 /.pnp
 .pnp.js
 
@@ -49,3 +50,5 @@ next-env.d.ts
 # generated files
 *.js.map
 *.css.map 
+
+settings.local.json

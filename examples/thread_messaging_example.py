@@ -87,7 +87,7 @@ class ThreadMessagingExampleAgent:
     
     async def connect(self, host="localhost", port=8000):
         """Connect to the network."""
-        success = await self.client.connect_to_server(host=host, port=port)
+        success = await self.client.connect_to_server(network_host=host, network_port=port)
         if success:
             logger.info(f"[{self.agent_id}] Connected to network")
         return success

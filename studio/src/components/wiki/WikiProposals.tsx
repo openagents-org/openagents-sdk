@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useWikiStore } from '@/stores/wikiStore';
-import { useOpenAgentsService } from '@/contexts/OpenAgentsServiceContext';
-import DiffViewer from '@/components/common/DiffViewer';
-import { formatDateTime } from '@/utils/utils';
+import React, { useEffect, useState, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import { useWikiStore } from "@/stores/wikiStore";
+import DiffViewer from "@/components/common/DiffViewer";
+import { formatDateTime } from "@/utils/utils";
+import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
 
 const WikiProposals: React.FC = () => {
   const navigate = useNavigate();
-  const { service: openAgentsService } = useOpenAgentsService();
+  const context = useContext(OpenAgentsContext);
+  const openAgentsService = context?.connector;
   const [expandedProposal, setExpandedProposal] = useState<string | null>(null);
-  const [pageContents, setPageContents] = useState<{ [key: string]: string }>({});
+  const [pageContents, setPageContents] = useState<{ [key: string]: string }>(
+    {}
+  );
 
   const {
     proposals,
@@ -20,7 +23,7 @@ const WikiProposals: React.FC = () => {
     loadPages,
     loadPage,
     resolveProposal,
-    clearError
+    clearError,
   } = useWikiStore();
 
   // 设置连接
@@ -33,7 +36,7 @@ const WikiProposals: React.FC = () => {
   // 加载提案
   useEffect(() => {
     if (openAgentsService) {
-      console.log('WikiProposals: Loading proposals');
+      console.log("WikiProposals: Loading proposals");
       loadProposals();
       loadPages(); // 确保我们有页面数据
     }
@@ -46,10 +49,10 @@ const WikiProposals: React.FC = () => {
     }
 
     // 首先查找pages中是否已有该页面
-    const existingPage = pages.find(page => page.page_path === pagePath);
+    const existingPage = pages.find((page) => page.page_path === pagePath);
     if (existingPage) {
-      const content = existingPage.wiki_content || '';
-      setPageContents(prev => ({ ...prev, [pagePath]: content }));
+      const content = existingPage.wiki_content || "";
+      setPageContents((prev) => ({ ...prev, [pagePath]: content }));
       return content;
     }
 
@@ -58,13 +61,15 @@ const WikiProposals: React.FC = () => {
       await loadPage(pagePath);
       // 这里我们需要从store中获取最新加载的页面
       const updatedPages = pages;
-      const loadedPage = updatedPages.find(page => page.page_path === pagePath);
-      const content = loadedPage?.wiki_content || '';
-      setPageContents(prev => ({ ...prev, [pagePath]: content }));
+      const loadedPage = updatedPages.find(
+        (page) => page.page_path === pagePath
+      );
+      const content = loadedPage?.wiki_content || "";
+      setPageContents((prev) => ({ ...prev, [pagePath]: content }));
       return content;
     } catch (error) {
-      console.error('Failed to load page content for diff:', error);
-      return '';
+      console.error("Failed to load page content for diff:", error);
+      return "";
     }
   };
 
@@ -78,14 +83,17 @@ const WikiProposals: React.FC = () => {
   };
 
   const handleBack = () => {
-    navigate('/wiki');
+    navigate("/wiki");
   };
 
-  const handleResolveProposal = async (proposalId: string, action: 'approve' | 'reject') => {
+  const handleResolveProposal = async (
+    proposalId: string,
+    action: "approve" | "reject"
+  ) => {
     await resolveProposal(proposalId, action);
   };
 
-  const pendingProposals = proposals.filter(p => p.status === 'pending');
+  const pendingProposals = proposals.filter((p) => p.status === "pending");
 
   return (
     <div className="flex-1 flex flex-col h-full dark:bg-gray-900">
@@ -96,8 +104,18 @@ const WikiProposals: React.FC = () => {
             onClick={handleBack}
             className="py-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
           </button>
           <div>
@@ -129,8 +147,18 @@ const WikiProposals: React.FC = () => {
         {pendingProposals.length === 0 ? (
           <div className="text-center py-12 h-full flex flex-col items-center justify-center">
             <div className="mb-4 text-gray-500 dark:text-gray-400">
-              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              <svg
+                className="w-16 h-16 mx-auto"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1}
+                  d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                />
               </svg>
             </div>
             <h3 className="text-lg font-medium mb-2 text-gray-700 dark:text-gray-300">
@@ -144,7 +172,7 @@ const WikiProposals: React.FC = () => {
           <div className="space-y-4">
             {pendingProposals.map((proposal) => {
               const isExpanded = expandedProposal === proposal.proposal_id;
-              const currentContent = pageContents[proposal.page_path] || '';
+              const currentContent = pageContents[proposal.page_path] || "";
 
               return (
                 <div
@@ -158,32 +186,49 @@ const WikiProposals: React.FC = () => {
                           {proposal.page_path}
                         </h3>
                         <button
-                          onClick={() => handleToggleProposal(proposal.proposal_id, proposal.page_path)}
+                          onClick={() =>
+                            handleToggleProposal(
+                              proposal.proposal_id,
+                              proposal.page_path
+                            )
+                          }
                           className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
                         >
                           <svg
-                            className={`w-4 h-4 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                            className={`w-4 h-4 transform transition-transform ${
+                              isExpanded ? "rotate-180" : ""
+                            }`}
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
                           >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 9l-7 7-7-7"
+                            />
                           </svg>
                         </button>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        by {proposal.proposed_by} • {formatDateTime(proposal.created_timestamp / 1000)}
+                        by {proposal.proposed_by} •{" "}
+                        {formatDateTime(proposal.created_timestamp / 1000)}
                       </p>
                     </div>
                     <div className="flex space-x-2 ml-4">
                       <button
-                        onClick={() => handleResolveProposal(proposal.proposal_id, 'approve')}
+                        onClick={() =>
+                          handleResolveProposal(proposal.proposal_id, "approve")
+                        }
                         className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
                       >
                         Approve
                       </button>
                       <button
-                        onClick={() => handleResolveProposal(proposal.proposal_id, 'reject')}
+                        onClick={() =>
+                          handleResolveProposal(proposal.proposal_id, "reject")
+                        }
                         className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
                       >
                         Reject
@@ -207,7 +252,7 @@ const WikiProposals: React.FC = () => {
                       </div>
                       <DiffViewer
                         oldValue={currentContent}
-                        newValue={proposal.proposed_content || ''}
+                        newValue={proposal.proposed_content || ""}
                         oldTitle="Current Version"
                         newTitle="Proposed Version"
                         viewType="unified"
@@ -220,13 +265,22 @@ const WikiProposals: React.FC = () => {
                       </div>
                       <div className="text-xs p-2 rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                         <div className="whitespace-pre-wrap">
-                          {proposal.proposed_content ? proposal.proposed_content.substring(0, 300) : 'No content'}
-                          {proposal.proposed_content && proposal.proposed_content.length > 300 && '...'}
+                          {proposal.proposed_content
+                            ? proposal.proposed_content.substring(0, 300)
+                            : "No content"}
+                          {proposal.proposed_content &&
+                            proposal.proposed_content.length > 300 &&
+                            "..."}
                         </div>
                       </div>
                       <div className="mt-2">
                         <button
-                          onClick={() => handleToggleProposal(proposal.proposal_id, proposal.page_path)}
+                          onClick={() =>
+                            handleToggleProposal(
+                              proposal.proposal_id,
+                              proposal.page_path
+                            )
+                          }
                           className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
                         >
                           View detailed changes →

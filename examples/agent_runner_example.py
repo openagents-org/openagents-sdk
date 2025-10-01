@@ -128,7 +128,7 @@ def main():
     try:
         # Start the agent (this will connect and run until interrupted)
         print(f"Starting agent and connecting to {host}:{port}...")
-        agent.start(host=host, port=port, metadata=metadata)
+        agent.start(network_host=host, network_port=port, metadata=metadata)
         
         # Wait for the agent to finish (this blocks until Ctrl+C)
         agent.wait_for_stop()

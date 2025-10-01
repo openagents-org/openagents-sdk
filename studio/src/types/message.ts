@@ -51,12 +51,14 @@ export interface UnifiedMessage {
 
 // 原始的后端消息格式（from events.ts ThreadMessage）
 export interface RawThreadMessage {
-  message_id: string;
-  sender_id: string;
+  message_id?: string;
+  sender_id?: string;
+  event_id?: string;
+  source_id?: string;
   timestamp: string;
   content: {
     text: string;
-  };
+  } | string | any; // 支持多种content格式
   message_type: 'direct_message' | 'channel_message' | 'reply_message';
   channel?: string;
   target_agent_id?: string;
@@ -69,6 +71,7 @@ export interface RawThreadMessage {
     thread_level?: number;
     children_count?: number;
   };
+  payload?: any;
   reactions?: {
     [reaction_type: string]: number;
   };
@@ -131,16 +134,38 @@ export class MessageAdapter {
       })));
     }
 
+    const isDirectMessage = raw?.payload?.message_type === 'direct_message';
+
+    // 处理不同的content格式
+    let content = '';
+    if (raw.content) {
+      if (typeof raw.content === 'string') {
+        // content是字符串
+        content = raw.content;
+      } else if (typeof raw.content === 'object' && raw.content.text !== undefined) {
+        // content是对象，包含text字段（即使text是空字符串也是合法的）
+        content = raw.content.text;
+      } else if (typeof raw.content === 'object') {
+        // content是对象但没有text字段，尝试其他字段或转换
+        console.warn('MessageAdapter: Content object missing text field:', raw.content);
+        content = raw.content.message || raw.content.value || String(raw.content);
+      } else {
+        // 其他情况，尝试转换为字符串
+        console.warn('MessageAdapter: Unexpected content format:', raw.content);
+        content = String(raw.content);
+      }
+    }
+
     return {
-      id: raw.message_id,
-      senderId: raw.sender_id,
-      timestamp: raw.timestamp,
-      content: raw.content?.text || '',
-      type: raw.message_type,
-      channel: raw.channel,
-      targetUserId: raw.target_agent_id,
-      replyToId: raw.reply_to_id,
-      threadLevel: raw.thread_level,
+      id: (isDirectMessage ? raw.event_id : raw.message_id) || '',
+      senderId: (isDirectMessage ? raw.source_id : raw.sender_id) || '',
+      timestamp: raw.timestamp, // isDirectMessage ? 10位 : 位,
+      content: isDirectMessage ? raw.payload.content.text : content,
+      type: isDirectMessage ? raw.payload.message_type : raw.message_type,
+      channel: isDirectMessage ? '' : raw.channel,
+      targetUserId: isDirectMessage ? raw.payload.target_agent_id : raw.target_agent_id,
+      replyToId: isDirectMessage ? '' : raw.reply_to_id,
+      threadLevel: isDirectMessage ? 1 : raw.thread_level,
       quotedMessageId: raw.quoted_message_id,
       quotedText: raw.quoted_text,
       reactions: raw.reactions,

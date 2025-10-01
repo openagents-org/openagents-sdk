@@ -25,9 +25,11 @@ SHARED_DOCUMENT_MOD_NAME = "openagents.mods.workspace.documents"
 # ===== DEFAULT VALUES =====
 # Default configuration values
 
+DEFAULT_HTTP_TRANSPORT_PORT = 8700
+
 # Network defaults
 DEFAULT_TRANSPORT_ADDRESS = {
-    "http": {"host": "0.0.0.0", "port": 8700},
+    "http": {"host": "0.0.0.0", "port": DEFAULT_HTTP_TRANSPORT_PORT},
     "websocket": {"host": "0.0.0.0", "port": 8400},
     "grpc": {"host": "0.0.0.0", "port": 8600},
     "libp2p": {"host": "0.0.0.0", "port": 0},

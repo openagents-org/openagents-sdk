@@ -84,7 +84,7 @@ async def test_agent(agent_config, test_network):
     """Create and start a test agent."""
     agent_id = f"test-agent-{int(asyncio.get_event_loop().time())}"
     agent = ToolCallTestAgent(agent_id=agent_id, agent_config=agent_config)
-    await agent.async_start(host="localhost", port=35001)
+    await agent.async_start(network_host="localhost", network_port=35001)
     yield agent
     await agent.async_stop()
 

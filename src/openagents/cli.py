@@ -906,8 +906,8 @@ def agent_start_command(args: argparse.Namespace) -> None:
 
             # Start the agent
             agent.start(
-                host=host,
-                port=port,
+                network_host=host,
+                network_port=port,
                 network_id=network_id,
                 metadata={"agent_type": agent_type, "config_file": args.config},
             )
@@ -1043,8 +1043,8 @@ def launch_agent_command(args: argparse.Namespace) -> None:
 
             # Start the agent
             agent.start(
-                host=host,
-                port=port,
+                network_host=host,
+                network_port=port,
                 network_id=network_id,
                 metadata={"agent_type": agent_type, "config_file": args.config},
             )

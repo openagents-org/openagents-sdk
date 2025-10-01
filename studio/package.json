@@ -5,8 +5,10 @@
   "private": true,
   "proxy": "http://localhost:5000",
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "@types/prismjs": "^1.26.5",
     "@types/react-router-dom": "^5.3.3",
+    "@types/ws": "^8.18.1",
     "@uiw/react-markdown-preview": "^5.1.5",
     "@uiw/react-md-editor": "^4.0.8",
     "axios": "^1.5.0",
@@ -15,7 +17,9 @@
     "events": "^3.3.0",
     "firebase": "^10.11.0",
     "framer-motion": "^12.9.2",
+    "lib0": "^0.2.114",
     "marked": "^9.1.2",
+    "monaco-editor": "^0.53.0",
     "prism-themes": "^1.9.0",
     "prismjs": "^1.30.0",
     "react": "^18.2.0",
@@ -28,6 +32,10 @@
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
     "uuid": "^9.0.1",
+    "ws": "^8.18.3",
+    "y-monaco": "^0.1.6",
+    "y-websocket": "^3.0.0",
+    "yjs": "^13.6.27",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
