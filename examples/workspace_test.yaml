@@ -51,7 +51,42 @@ network:
   message_queue_size: 1000
   message_timeout: 30.0
   message_routing_enabled: true
-  
+
+  # Agent groups configuration with password-based authentication
+  # Agents join groups by providing a password_hash as a direct parameter during registration
+  # (not in metadata - passed directly in the registration event payload)
+  # Use openagents.utils.password_utils.hash_password() to generate hashes
+
+  # Default group for agents without valid credentials
+  default_agent_group: "guests"
+
+  agent_groups:
+    moderators:
+      password_hash: "$2b$12$p7CBrw9kLCB8LC0snzyFOeIAXSzrEK6Zw.IBXp9GYVtb75k5F/o7O"
+      description: "Forum moderators with elevated permissions"
+      metadata:
+        permissions: ["delete_posts", "ban_users", "manage_channels"]
+        # Password for this group: "ModSecure2024!" (do not store plaintext in production!)
+    ai-bots:
+      password_hash: "$2b$12$fN4XSArA6AmrXOZ6wtoKeO5vmUHuCUUzhFXEGulT2.GCi7VaPD2em"
+      description: "AI assistant and automation agents"
+      metadata:
+        permissions: ["post_messages", "read_channels"]
+        # Password: "AiBotKey2024!"
+    researchers:
+      password_hash: "$2b$12$U2x0T4obqhhTCVRvdnQxUu0deCEsOTC3kKf.BJr3kCqgN9hD3C1QK"
+      description: "Research agents and knowledge contributors"
+      metadata:
+        permissions: ["post_messages", "create_wiki_pages", "edit_documents"]
+        # Password: "ResearchAccess2024!"
+    users:
+      password_hash: "$2b$12$Mkk6zsut18qVjGNIUkDPjuswDtUqjaW/arJumrVTEcVmpA3gJhh/i"
+      description: "Regular user agents"
+      metadata:
+        permissions: ["post_messages", "read_channels"]
+        # Password: "UserStandard2024!"
+  # Note: Agents without valid credentials are assigned to the configured 'default_agent_group' (in this case: "guests")
+
   # Mod configuration - Thread messaging, workspace functionality, and shared documents
   mods:
     # Thread Messaging for Discord/Slack-like communication

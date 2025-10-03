@@ -134,6 +134,7 @@ class OpenAgentsGRPCServicer(agent_service_pb2_grpc.AgentServiceServicer):
                 "transport_type": TransportType.GRPC,
                 "certificate": getattr(request, "certificate", None),
                 "force_reconnect": getattr(request, "force_reconnect", True),
+                "password_hash": getattr(request, "password_hash", None),
             },
         )
         try:

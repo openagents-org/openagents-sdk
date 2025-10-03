@@ -32,6 +32,7 @@ class HTTPNetworkConnector(NetworkConnector):
         port: int,
         agent_id: str,
         metadata: Optional[Dict[str, Any]] = None,
+        password_hash: Optional[str] = None,
         timeout: int = 30,
     ):
         """Initialize an HTTP network connector.
@@ -41,12 +42,14 @@ class HTTPNetworkConnector(NetworkConnector):
             port: Server port
             agent_id: Agent identifier
             metadata: Agent metadata to send during registration
+            password_hash: Password hash for agent group authentication
             timeout: Request timeout in seconds (default 30)
         """
         # Initialize base connector
         super().__init__(host, port, agent_id, metadata)
 
         self.timeout = timeout
+        self.password_hash = password_hash
         self.is_polling = True  # HTTP uses polling for message retrieval
 
         # HTTP client session
@@ -115,7 +118,11 @@ class HTTPNetworkConnector(NetworkConnector):
                 return False
 
             # Register with server
-            register_data = {"agent_id": self.agent_id, "metadata": self.metadata}
+            register_data = {
+                "agent_id": self.agent_id,
+                "metadata": self.metadata,
+                "password_hash": self.password_hash or "",
+            }
 
             try:
                 async with self.session.post(

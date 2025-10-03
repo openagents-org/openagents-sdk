@@ -32,6 +32,10 @@ class NetworkTopology(ABC):
         self.agent_registry: Dict[str, AgentConnection] = {}
         self.is_running = False
 
+        # Agent group membership tracking
+        # Maps agent_id -> group_name
+        self.agent_group_membership: Dict[str, str] = {}
+
     @abstractmethod
     async def initialize(self) -> bool:
         """Initialize the network topology.
@@ -51,11 +55,12 @@ class NetworkTopology(ABC):
         pass
 
     @abstractmethod
-    async def register_agent(self, agent_info: AgentConnection) -> bool:
+    async def register_agent(self, agent_info: AgentConnection, password_hash: Optional[str] = None) -> bool:
         """Register an agent with the network.
 
         Args:
             agent_info: Information about the agent to register
+            password_hash: Password hash for group authentication (optional)
 
         Returns:
             bool: True if registration successful
@@ -72,6 +77,7 @@ class NetworkTopology(ABC):
             bool: True if unregistration successful
         """
         await self.cleanup_agent(agent_id)
+        return True
 
     async def is_agent_registered(self, agent_id: str) -> bool:
         """Check if an agent is registered with the network.
@@ -128,6 +134,14 @@ class NetworkTopology(ABC):
             Dict[str, AgentInfo]: Dictionary of agent ID to agent info
         """
         return self.agent_registry.copy()
+    
+    def get_agent_group_membership(self) -> Dict[str, str]:
+        """Get all agent group membership.
+
+        Returns:
+            Dict[str, str]: Dictionary of agent ID to group name
+        """
+        return self.agent_group_membership.copy()
 
     def get_agent_connection(self, agent_id: str) -> Optional[AgentConnection]:
         """Get information about a specific agent.
@@ -149,6 +163,40 @@ class NetworkTopology(ABC):
         for transport in self.transports.values():
             transport.register_event_handler(handler)
 
+    def _assign_agent_to_group(self, agent_id: str, metadata: Dict[str, Any], password_hash: Optional[str] = None) -> str:
+        """Assign agent to a group based on password hash matching.
+
+        Agent provides password_hash during registration. Server compares against stored hash.
+
+        Args:
+            agent_id: ID of the agent
+            metadata: Agent metadata (unused for group assignment)
+            password_hash: Password hash for group authentication (direct parameter)
+
+        Returns:
+            str: Name of the assigned group (configured default_agent_group if no valid credentials)
+        """
+        default_group = self.config.default_agent_group
+
+        # If no password hash provided, assign to default group
+        if not password_hash:
+            self.agent_group_membership[agent_id] = default_group
+            return default_group
+
+        # Try to match password hash with configured groups
+        for group_name, group_config in self.config.agent_groups.items():
+            if group_config.password_hash and password_hash == group_config.password_hash:
+                self.agent_group_membership[agent_id] = group_name
+                logger.info(f"Agent {agent_id} assigned to group '{group_name}'")
+                return group_name
+
+        # Invalid credentials, assign to default group
+        logger.warning(
+            f"Agent {agent_id} provided invalid credentials, assigning to '{default_group}' group"
+        )
+        self.agent_group_membership[agent_id] = default_group
+        return default_group
+
     async def cleanup_agent(self, agent_id: str):
         """Cleanup an agent's connection."""
         if agent_id in self.agent_registry:
@@ -157,6 +205,10 @@ class NetworkTopology(ABC):
             if transport_type in self.transports:
                 self.transports[transport_type].cleanup_agent(agent_id)
             del self.agent_registry[agent_id]
+
+        # Remove from group membership
+        if agent_id in self.agent_group_membership:
+            del self.agent_group_membership[agent_id]
 
 
 class CentralizedTopology(NetworkTopology):
@@ -255,6 +307,10 @@ class CentralizedTopology(NetworkTopology):
                 self.transports[transport_type].cleanup_agent(agent_id)
             del self.agent_registry[agent_id]
 
+        # Remove from group membership
+        if agent_id in self.agent_group_membership:
+            del self.agent_group_membership[agent_id]
+
     async def _heartbeat_monitor(self) -> None:
         """Monitor agent connections and clean up stale ones."""
         heartbeat_interval = self.config.heartbeat_interval
@@ -319,12 +375,14 @@ class CentralizedTopology(NetworkTopology):
         logger.info("Centralized topology shutdown")
         return True
 
-    async def register_agent(self, agent_info: AgentConnection) -> bool:
+    async def register_agent(self, agent_info: AgentConnection, password_hash: Optional[str] = None) -> bool:
         """Register an agent with the centralized registry."""
         self.agent_registry[agent_info.agent_id] = agent_info
         # TODO: send out an event in the system
+        # Assign agent to group based on metadata and password_hash
+        assigned_group = self._assign_agent_to_group(agent_info.agent_id, agent_info.metadata, password_hash)
 
-        logger.info(f"Registered agent {agent_info.agent_id} in centralized registry")
+        logger.info(f"Registered agent {agent_info.agent_id} in centralized registry (group: {assigned_group})")
         return True
 
     async def unregister_agent(self, agent_id: str) -> bool:
@@ -334,6 +392,7 @@ class CentralizedTopology(NetworkTopology):
         await super().unregister_agent(agent_id)
 
         logger.info(f"Unregistered agent {agent_id} from centralized registry")
+        return True
 
 
 class DecentralizedTopology(NetworkTopology):
@@ -463,18 +522,21 @@ class DecentralizedTopology(NetworkTopology):
         logger.info("Decentralized topology shutdown")
         return True
 
-    async def register_agent(self, agent_info: AgentConnection) -> bool:
+    async def register_agent(self, agent_info: AgentConnection, password_hash: Optional[str] = None) -> bool:
         """Register an agent in the decentralized network."""
         try:
             # Add to local DHT
             self.dht_table[agent_info.agent_id] = agent_info
             self.agent_registry[agent_info.agent_id] = agent_info
 
+            # Assign agent to group based on metadata and password_hash
+            assigned_group = self._assign_agent_to_group(agent_info.agent_id, agent_info.metadata, password_hash)
+
             # Announce to connected peers
             await self._announce_agent(agent_info)
 
             logger.info(
-                f"Registered agent {agent_info.agent_id} in decentralized network"
+                f"Registered agent {agent_info.agent_id} in decentralized network (group: {assigned_group})"
             )
             return True
         except Exception as e:

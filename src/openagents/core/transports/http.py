@@ -161,6 +161,7 @@ class HttpTransport(Transport):
                     "transport_type": TransportType.HTTP,
                     "certificate": data.get("certificate", None),
                     "force_reconnect": True,
+                    "password_hash": data.get("password_hash", None),
                 },
             )
             # Process the registration event through the event handler
