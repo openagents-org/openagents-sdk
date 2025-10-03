@@ -60,6 +60,11 @@ network:
   # Default group for agents without valid credentials
   default_agent_group: "guests"
 
+  # Password requirement setting
+  # When True: Password authentication is mandatory - agents must provide valid password_hash
+  # When False: Agents without password_hash are assigned to default_agent_group
+  requires_password: false
+
   agent_groups:
     moderators:
       password_hash: "$2b$12$p7CBrw9kLCB8LC0snzyFOeIAXSzrEK6Zw.IBXp9GYVtb75k5F/o7O"

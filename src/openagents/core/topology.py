@@ -163,7 +163,7 @@ class NetworkTopology(ABC):
         for transport in self.transports.values():
             transport.register_event_handler(handler)
 
-    def _assign_agent_to_group(self, agent_id: str, metadata: Dict[str, Any], password_hash: Optional[str] = None) -> str:
+    def _assign_agent_to_group(self, agent_id: str, metadata: Dict[str, Any], password_hash: Optional[str] = None) -> Optional[str]:
         """Assign agent to a group based on password hash matching.
 
         Agent provides password_hash during registration. Server compares against stored hash.
@@ -174,12 +174,18 @@ class NetworkTopology(ABC):
             password_hash: Password hash for group authentication (direct parameter)
 
         Returns:
-            str: Name of the assigned group (configured default_agent_group if no valid credentials)
+            Optional[str]: Name of the assigned group, or None if registration should be rejected
+                         (when requires_password=True and no valid password provided)
         """
         default_group = self.config.default_agent_group
 
-        # If no password hash provided, assign to default group
+        # If no password hash provided
         if not password_hash:
+            # Check if password is required
+            if self.config.requires_password:
+                logger.warning(f"Agent {agent_id} registration rejected: password required")
+                return None
+            # Otherwise assign to default group
             self.agent_group_membership[agent_id] = default_group
             return default_group
 
@@ -190,12 +196,20 @@ class NetworkTopology(ABC):
                 logger.info(f"Agent {agent_id} assigned to group '{group_name}'")
                 return group_name
 
-        # Invalid credentials, assign to default group
-        logger.warning(
-            f"Agent {agent_id} provided invalid credentials, assigning to '{default_group}' group"
-        )
-        self.agent_group_membership[agent_id] = default_group
-        return default_group
+        # Invalid credentials
+        if self.config.requires_password:
+            # Reject registration if password is required but invalid
+            logger.warning(
+                f"Agent {agent_id} registration rejected: invalid password"
+            )
+            return None
+        else:
+            # Assign to default group if password not strictly required
+            logger.warning(
+                f"Agent {agent_id} provided invalid credentials, assigning to '{default_group}' group"
+            )
+            self.agent_group_membership[agent_id] = default_group
+            return default_group
 
     async def cleanup_agent(self, agent_id: str):
         """Cleanup an agent's connection."""
@@ -377,10 +391,16 @@ class CentralizedTopology(NetworkTopology):
 
     async def register_agent(self, agent_info: AgentConnection, password_hash: Optional[str] = None) -> bool:
         """Register an agent with the centralized registry."""
-        self.agent_registry[agent_info.agent_id] = agent_info
-        # TODO: send out an event in the system
         # Assign agent to group based on metadata and password_hash
         assigned_group = self._assign_agent_to_group(agent_info.agent_id, agent_info.metadata, password_hash)
+
+        # If group assignment returns None, reject registration
+        if assigned_group is None:
+            logger.warning(f"Agent {agent_info.agent_id} registration rejected by group assignment")
+            return False
+
+        self.agent_registry[agent_info.agent_id] = agent_info
+        # TODO: send out an event in the system
 
         logger.info(f"Registered agent {agent_info.agent_id} in centralized registry (group: {assigned_group})")
         return True

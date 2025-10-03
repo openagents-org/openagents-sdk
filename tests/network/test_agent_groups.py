@@ -227,6 +227,137 @@ async def test_group_cleanup_on_unregister(network_with_groups):
 
 
 @pytest.mark.asyncio
+async def test_requires_password_valid_password(network_with_groups):
+    """Test that requires_password=True allows valid password."""
+    # Create network with requires_password=True
+    config = NetworkConfig(
+        name="SecureNetwork",
+        mode=NetworkMode.CENTRALIZED,
+        default_agent_group="guests",
+        requires_password=True,
+        agent_groups={
+            "users": AgentGroupConfig(
+                password_hash=USER_HASH,
+                description="Regular user agents",
+                metadata={"permissions": ["post_messages"]},
+            ),
+        },
+    )
+
+    network = AgentNetwork.create_from_config(config)
+    await network.initialize()
+
+    # Register agent with valid password
+    response = await network.register_agent(
+        agent_id="user-1",
+        transport_type=TransportType.HTTP,
+        metadata={"name": "User 1"},
+        certificate=None,
+        password_hash=USER_HASH,
+    )
+
+    assert response.success
+    assert network.topology.agent_group_membership.get("user-1") == "users"
+
+    await network.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_requires_password_no_password():
+    """Test that requires_password=True rejects agents without password."""
+    # Create network with requires_password=True
+    config = NetworkConfig(
+        name="SecureNetwork",
+        mode=NetworkMode.CENTRALIZED,
+        default_agent_group="guests",
+        requires_password=True,
+        agent_groups={
+            "users": AgentGroupConfig(
+                password_hash=USER_HASH,
+                description="Regular user agents",
+                metadata={"permissions": ["post_messages"]},
+            ),
+        },
+    )
+
+    network = AgentNetwork.create_from_config(config)
+    await network.initialize()
+
+    # Register agent without password
+    response = await network.register_agent(
+        agent_id="user-1",
+        transport_type=TransportType.HTTP,
+        metadata={"name": "User 1"},
+        certificate=None,
+        password_hash=None,
+    )
+
+    assert not response.success
+    assert "Password authentication required" in response.message
+    assert "user-1" not in network.topology.agent_group_membership
+
+    await network.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_requires_password_invalid_password():
+    """Test that requires_password=True rejects agents with invalid password."""
+    # Create network with requires_password=True
+    config = NetworkConfig(
+        name="SecureNetwork",
+        mode=NetworkMode.CENTRALIZED,
+        default_agent_group="guests",
+        requires_password=True,
+        agent_groups={
+            "users": AgentGroupConfig(
+                password_hash=USER_HASH,
+                description="Regular user agents",
+                metadata={"permissions": ["post_messages"]},
+            ),
+        },
+    )
+
+    network = AgentNetwork.create_from_config(config)
+    await network.initialize()
+
+    # Register agent with invalid password
+    response = await network.register_agent(
+        agent_id="user-1",
+        transport_type=TransportType.HTTP,
+        metadata={"name": "User 1"},
+        certificate=None,
+        password_hash="wrong_password_hash",
+    )
+
+    assert not response.success
+    assert "Password authentication required" in response.message
+    assert "user-1" not in network.topology.agent_group_membership
+
+    await network.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_requires_password_false_no_password(network_with_groups):
+    """Test that requires_password=False allows agents without password (default group)."""
+    network = network_with_groups
+
+    # Verify requires_password is False
+    assert network.config.requires_password is False
+
+    # Register agent without password
+    response = await network.register_agent(
+        agent_id="guest-1",
+        transport_type=TransportType.HTTP,
+        metadata={"name": "Guest 1"},
+        certificate=None,
+        password_hash=None,
+    )
+
+    assert response.success
+    assert network.topology.agent_group_membership.get("guest-1") == "guests"
+
+
+@pytest.mark.asyncio
 async def test_network_stats_group_info(network_with_groups):
     """Test that network stats correctly report group information."""
     network = network_with_groups

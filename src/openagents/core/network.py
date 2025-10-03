@@ -424,10 +424,15 @@ class AgentNetwork:
                 data={"secret": secret},
             )
         else:
+            # Check if rejection was due to password requirement
+            error_message = f"Failed to register agent {agent_id} with network"
+            if self.config.requires_password:
+                error_message = "Password authentication required for network registration"
+
             logger.error(f"Failed to register agent {agent_id} with network")
             return EventResponse(
                 success=False,
-                message=f"Failed to register agent {agent_id} with network",
+                message=error_message,
             )
 
     async def unregister_agent(self, agent_id: str) -> EventResponse:

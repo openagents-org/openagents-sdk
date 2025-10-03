@@ -154,6 +154,11 @@ class NetworkConfig(BaseModel):
         "default",
         description="Name of the default group for agents without valid credentials",
     )
+    requires_password: bool = Field(
+        False,
+        description="When True, password authentication is mandatory for all agents (including default group). "
+                    "When False, agents without password_hash are assigned to default_agent_group.",
+    )
 
     @field_validator("name")
     @classmethod
