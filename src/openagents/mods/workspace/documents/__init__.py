@@ -1,33 +1,31 @@
-"""Shared document mod for collaborative editing."""
+"""Documents mod for document management."""
 
-from .adapter import SharedDocumentAgentAdapter
-from .mod import SharedDocumentNetworkMod, SharedDocument
+from .adapter import DocumentsAgentAdapter
+from .mod import DocumentsNetworkMod, Document
 from .document_messages import *
 
+# Backward compatibility aliases
+SharedDocumentAgentAdapter = DocumentsAgentAdapter
+SharedDocumentNetworkMod = DocumentsNetworkMod
+SharedDocument = Document
+
 __all__ = [
-    "SharedDocumentAgentAdapter",
-    "SharedDocumentNetworkMod",
-    "SharedDocument",
+    "DocumentsAgentAdapter",
+    "DocumentsNetworkMod",
+    "Document",
+    "SharedDocumentAgentAdapter",  # Backward compatibility
+    "SharedDocumentNetworkMod",  # Backward compatibility
+    "SharedDocument",  # Backward compatibility
     # Document messages
     "CreateDocumentMessage",
-    "OpenDocumentMessage",
-    "CloseDocumentMessage",
-    "InsertLinesMessage",
-    "RemoveLinesMessage",
-    "ReplaceLinesMessage",
-    "AddCommentMessage",
-    "RemoveCommentMessage",
-    "UpdateCursorPositionMessage",
-    "GetDocumentContentMessage",
+    "SaveDocumentMessage",
+    "RenameDocumentMessage",
+    "GetDocumentMessage",
     "GetDocumentHistoryMessage",
     "ListDocumentsMessage",
-    "GetAgentPresenceMessage",
     "DocumentOperationResponse",
-    "DocumentContentResponse",
+    "DocumentGetResponse",
     "DocumentListResponse",
     "DocumentHistoryResponse",
-    "AgentPresenceResponse",
-    "CursorPosition",
-    "DocumentComment",
-    "AgentPresence",
+    "DocumentOperation",
 ]
