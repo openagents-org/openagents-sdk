@@ -1,8 +1,8 @@
 """
 Test cases for the workspace documents mod using gRPC transport.
 
-This test suite validates the collaborative document editing functionality
-including document creation, editing operations, and real-time synchronization.
+This test suite validates the document management functionality
+including document creation, saving, renaming, and history tracking.
 """
 
 import pytest
@@ -125,110 +125,113 @@ async def test_document_creation(alice_client):
 
 @pytest.mark.asyncio
 async def test_document_collaboration(alice_client, bob_client):
-    """Test collaborative document editing between two agents."""
+    """Test document sharing and access between two agents."""
     alice, alice_adapter = alice_client
     bob, bob_adapter = bob_client
 
     # Alice creates a document
     create_result = await alice_adapter.create_document(
         document_name="Collaborative Doc",
-        initial_content="Line 1\nLine 2\nLine 3",
+        initial_content="Initial content by Alice",
         access_permissions={"bob": "read_write"},
     )
 
     assert create_result["status"] == "success"
     document_id = create_result["data"]["document_id"]
 
-    # Bob opens the document
-    open_result = await bob_adapter.open_document(document_id)
-    assert open_result["status"] == "success"
+    # Bob gets the document
+    get_result = await bob_adapter.get_document(document_id)
+    assert get_result["status"] == "success"
+    assert "Initial content by Alice" in get_result["data"]["content"]
 
-    # Alice inserts a line
-    insert_result = await alice_adapter.insert_lines(
-        document_id=document_id, line_number=2, content=["New line inserted by Alice"]
+    # Bob saves updated content
+    save_result = await bob_adapter.save_document(
+        document_id=document_id,
+        content="Initial content by Alice\n\nUpdated by Bob"
     )
-    assert insert_result["status"] == "success"
+    assert save_result["status"] == "success"
 
-    # Bob gets the document content to verify the change
-    content_result = await bob_adapter.get_document_content(document_id)
+    # Alice gets the document to verify Bob's changes
+    content_result = await alice_adapter.get_document(document_id)
     assert content_result["status"] == "success"
-
-    # Verify the content includes Alice's insertion
-    content = content_result["data"]["content"]
-    assert "New line inserted by Alice" in content
+    assert "Updated by Bob" in content_result["data"]["content"]
 
 
 @pytest.mark.asyncio
 async def test_document_operations(alice_client):
-    """Test various document editing operations."""
+    """Test various document operations (save and rename)."""
     client, adapter = alice_client
 
     # Create a document
     create_result = await adapter.create_document(
         document_name="Operations Test",
-        initial_content="Line 1\nLine 2\nLine 3\nLine 4",
+        initial_content="Original content",
     )
 
     document_id = create_result["data"]["document_id"]
 
-    # Test line insertion
-    insert_result = await adapter.insert_lines(
+    # Test saving content
+    save_result = await adapter.save_document(
         document_id=document_id,
-        line_number=3,
-        content=["Inserted line A", "Inserted line B"],
+        content="Updated content v1"
     )
-    assert insert_result["status"] == "success"
+    assert save_result["status"] == "success"
 
-    # Test line replacement
-    replace_result = await adapter.replace_lines(
-        document_id=document_id, start_line=1, end_line=1, content=["Modified Line 1"]
-    )
-    assert replace_result["status"] == "success"
+    # Verify content was saved
+    get_result = await adapter.get_document(document_id)
+    assert get_result["status"] == "success"
+    assert get_result["data"]["content"] == "Updated content v1"
 
-    # Test line removal
-    remove_result = await adapter.remove_lines(
-        document_id=document_id, start_line=5, end_line=6
+    # Test renaming
+    rename_result = await adapter.rename_document(
+        document_id=document_id,
+        new_name="Renamed Operations Test"
     )
-    assert remove_result["status"] == "success"
+    assert rename_result["status"] == "success"
+
+    # Verify rename
+    get_result = await adapter.get_document(document_id)
+    assert get_result["status"] == "success"
+    assert get_result["data"]["document_name"] == "Renamed Operations Test"
 
 
 @pytest.mark.asyncio
 async def test_document_comments(alice_client, bob_client):
-    """Test document commenting functionality."""
+    """Test document history tracking (replaces comment functionality)."""
     alice, alice_adapter = alice_client
     bob, bob_adapter = bob_client
 
     # Create a document
     create_result = await alice_adapter.create_document(
-        document_name="Comment Test",
-        initial_content="Line 1\nLine 2\nLine 3",
+        document_name="History Test",
+        initial_content="Initial content",
         access_permissions={"bob": "read_write"},
     )
 
     document_id = create_result["data"]["document_id"]
 
-    # Alice adds a comment
-    comment_result = await alice_adapter.add_comment(
-        document_id=document_id, line_number=2, comment_text="This line needs revision"
+    # Alice saves the document
+    await alice_adapter.save_document(
+        document_id=document_id,
+        content="Content updated by Alice"
     )
-    assert comment_result["status"] == "success"
 
-    # Bob opens the document and sees the comment
-    open_result = await bob_adapter.open_document(document_id)
-    assert open_result["status"] == "success"
-
-    # Get document content with comments
-    content_result = await bob_adapter.get_document_content(
-        document_id=document_id, include_comments=True
+    # Bob saves the document
+    await bob_adapter.save_document(
+        document_id=document_id,
+        content="Content updated by Bob"
     )
-    assert content_result["status"] == "success"
 
-    # Verify comment is present
-    comments = content_result["data"].get("comments", [])
-    assert len(comments) > 0
-    assert any(
-        "This line needs revision" in comment.get("text", "") for comment in comments
-    )
+    # Get document history
+    history_result = await alice_adapter.get_document_history(document_id)
+    assert history_result["status"] == "success"
+
+    # Verify operations are tracked
+    operations = history_result["data"]["operations"]
+    assert len(operations) >= 3  # create + 2 saves
+    operation_types = [op["operation_type"] for op in operations]
+    assert "create" in operation_types
+    assert "save" in operation_types
 
 
 @pytest.mark.asyncio
@@ -256,36 +259,36 @@ async def test_document_listing(alice_client):
 
 @pytest.mark.asyncio
 async def test_agent_presence(alice_client, bob_client):
-    """Test agent presence tracking in documents."""
+    """Test version tracking (replaces presence functionality)."""
     alice, alice_adapter = alice_client
     bob, bob_adapter = bob_client
 
     # Create a document
     create_result = await alice_adapter.create_document(
-        document_name="Presence Test",
+        document_name="Version Test",
         initial_content="Test content",
         access_permissions={"bob": "read_write"},
     )
 
     document_id = create_result["data"]["document_id"]
 
-    # Both agents open the document
-    await alice_adapter.open_document(document_id)
-    await bob_adapter.open_document(document_id)
+    # Get initial version
+    get_result = await alice_adapter.get_document(document_id)
+    initial_version = get_result["data"]["version"]
 
-    # Update cursor positions
-    await alice_adapter.update_cursor_position(document_id, 1, 5)
-    await bob_adapter.update_cursor_position(document_id, 1, 10)
+    # Alice saves - version should increment
+    await alice_adapter.save_document(document_id, "Updated by Alice")
 
-    # Get presence information
-    presence_result = await alice_adapter.get_agent_presence(document_id)
-    assert presence_result["status"] == "success"
+    get_result = await alice_adapter.get_document(document_id)
+    version_after_alice = get_result["data"]["version"]
+    assert version_after_alice > initial_version
 
-    # Verify both agents are present
-    presence_data = presence_result["data"]["presence"]
-    agent_ids = [p["agent_id"] for p in presence_data]
-    assert "alice" in agent_ids
-    assert "bob" in agent_ids
+    # Bob saves - version should increment again
+    await bob_adapter.save_document(document_id, "Updated by Bob")
+
+    get_result = await bob_adapter.get_document(document_id)
+    version_after_bob = get_result["data"]["version"]
+    assert version_after_bob > version_after_alice
 
 
 if __name__ == "__main__":
