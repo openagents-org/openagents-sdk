@@ -152,6 +152,7 @@ class AgentClient:
         enforce_transport_type: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         max_message_size: int = 104857600,
+        password_hash: Optional[str] = None,
     ) -> bool:
         """Connect to a network server.
 
@@ -162,6 +163,7 @@ class AgentClient:
             enforce_transport_type: Enforce a specific transport type (grpc, http, websocket)
             metadata: Metadata to send to the server
             max_message_size: Maximum WebSocket message size in bytes (default 10MB)
+            password_hash: Password hash for agent group authentication
 
         Returns:
             bool: True if connection successful
@@ -258,13 +260,14 @@ class AgentClient:
                 self.agent_id,
                 metadata,
                 max_message_size,
+                password_hash,
             )
         elif transport_type == "http":
             logger.info(f"Creating HTTP connector for agent {self.agent_id}")
             from openagents.core.connectors.http_connector import HTTPNetworkConnector
 
             self.connector = HTTPNetworkConnector(
-                optimal_transport_host, optimal_transport_port, self.agent_id, metadata
+                optimal_transport_host, optimal_transport_port, self.agent_id, metadata, password_hash
             )
         elif transport_type == "websocket":
             raise NotImplementedError("WebSocket transport is not supported yet")
@@ -313,6 +316,7 @@ class AgentClient:
         enforce_transport_type: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         max_message_size: int = 104857600,
+        password_hash: Optional[str] = None,
     ) -> bool:
         """Connect to a network server (alias for connect_to_server).
 
@@ -325,12 +329,13 @@ class AgentClient:
             enforce_transport_type: Enforce a specific transport type (grpc, http, websocket)
             metadata: Metadata to send to the server
             max_message_size: Maximum WebSocket message size in bytes (default 10MB)
+            password_hash: Password hash for agent group authentication
 
         Returns:
             bool: True if connection successful
         """
         return await self.connect_to_server(
-            network_host, network_port, network_id, enforce_transport_type, metadata, max_message_size
+            network_host, network_port, network_id, enforce_transport_type, metadata, max_message_size, password_hash
         )
 
     async def disconnect(self) -> bool:
