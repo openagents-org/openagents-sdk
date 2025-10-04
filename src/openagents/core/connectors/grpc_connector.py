@@ -34,6 +34,7 @@ class GRPCNetworkConnector(NetworkConnector):
         agent_id: str,
         metadata: Optional[Dict[str, Any]] = None,
         max_message_size: int = 104857600,
+        password_hash: Optional[str] = None,
     ):
         """Initialize a gRPC network connector.
 
@@ -43,11 +44,13 @@ class GRPCNetworkConnector(NetworkConnector):
             agent_id: Agent identifier
             metadata: Agent metadata to send during registration
             max_message_size: Maximum message size in bytes (default 100MB)
+            password_hash: Password hash for agent group authentication
         """
         # Initialize base connector
         super().__init__(host, port, agent_id, metadata)
 
         self.max_message_size = max_message_size
+        self.password_hash = password_hash
         self.is_polling = True  # gRPC uses polling for message retrieval
 
         # gRPC components
@@ -139,6 +142,7 @@ class GRPCNetworkConnector(NetworkConnector):
                 agent_id=self.agent_id,
                 metadata=self.metadata,
                 capabilities=[],  # TODO: Add capabilities if needed
+                password_hash=self.password_hash or "",
             )
 
             register_response = await self.stub.RegisterAgent(register_request)

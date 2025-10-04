@@ -352,6 +352,7 @@ class AgentNetwork:
         metadata: Dict[str, Any],
         certificate: str,
         force_reconnect: bool = False,
+        password_hash: Optional[str] = None,
     ) -> EventResponse:
         """Register an agent with the network.
 
@@ -361,6 +362,7 @@ class AgentNetwork:
             metadata: Agent metadata including capabilities
             certificate: Agent certificate
             force_reconnect: Whether to force reconnect
+            password_hash: Password hash for group authentication (direct parameter, not in metadata)
 
         Returns:
             bool: True if registration successful
@@ -393,11 +395,13 @@ class AgentNetwork:
                     message=f"Agent {agent_id} already registered with network",
                 )
 
-        success = await self.topology.register_agent(agent_info)
+        success = await self.topology.register_agent(agent_info, password_hash=password_hash)
 
         if success:
             # Generate and store authentication secret
             secret = self.secret_manager.generate_secret(agent_id)
+
+            # Group assignment is now handled by topology layer
 
             # Register agent with event gateway to create event queue
             self.event_gateway.register_agent(agent_id)
@@ -409,17 +413,26 @@ class AgentNetwork:
                 payload={"agent_id": agent_id, "metadata": metadata},
             )
             await self.process_external_event(registration_notification)
-            logger.info(f"Registered agent {agent_id} with network")
+
+            # Get assigned group from topology
+            assigned_group = self.topology.agent_group_membership.get(agent_id, "default")
+            logger.info(f"Registered agent {agent_id} with network in group '{assigned_group}'")
+
             return EventResponse(
                 success=True,
                 message=f"Registered agent {agent_id} with network",
                 data={"secret": secret},
             )
         else:
+            # Check if rejection was due to password requirement
+            error_message = f"Failed to register agent {agent_id} with network"
+            if self.config.requires_password:
+                error_message = "Password authentication required for network registration"
+
             logger.error(f"Failed to register agent {agent_id} with network")
             return EventResponse(
                 success=False,
-                message=f"Failed to register agent {agent_id} with network",
+                message=error_message,
             )
 
     async def unregister_agent(self, agent_id: str) -> EventResponse:
@@ -478,10 +491,41 @@ class AgentNetwork:
         """Get network statistics.
 
         Returns:
-            Dict[str, Any]: Network statistics
+            Dict[str, Any]: Network statistics including group information
         """
         uptime = time.time() - self.start_time if self.start_time else 0
         agent_registry = self.get_agent_registry()
+
+        # Build groups dictionary: group_name -> list of agent_ids
+        # Use topology's agent_group_membership
+        groups: Dict[str, List[str]] = {}
+        for agent_id, group_name in self.topology.agent_group_membership.items():
+            if group_name not in groups:
+                groups[group_name] = []
+            groups[group_name].append(agent_id)
+
+        # Build group config info (without tokens for security)
+        group_config = []
+        added_group_names = set()
+        for group_name, group_cfg in self.config.agent_groups.items():
+            added_group_names.add(group_name)
+            group_config.append({
+                "name": group_name,
+                "description": group_cfg.description,
+                "agent_count": len(groups.get(group_name, [])),
+                "metadata": group_cfg.metadata,
+            })
+
+        # Add default group info if it has agents
+        default_group_name = self.config.default_agent_group
+        if default_group_name not in added_group_names:
+            added_group_names.add(default_group_name)
+            group_config.append({
+                "name": default_group_name,
+                "description": "Agents without valid credentials",
+                "agent_count": len(groups.get(default_group_name, [])),
+                "metadata": {},
+            })
 
         return {
             "network_id": self.network_id,
@@ -495,9 +539,12 @@ class AgentNetwork:
                     "last_seen": info.last_seen,
                     "transport_type": info.transport_type,
                     "address": info.address,
+                    "group": self.topology.agent_group_membership.get(agent_id, self.config.default_agent_group),
                 }
                 for agent_id, info in agent_registry.items()
             },
+            "groups": groups,
+            "group_config": group_config,
             "mods": [mod.model_dump() for mod in self.config.mods],
             "topology_mode": (
                 self.config.mode

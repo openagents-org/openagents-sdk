@@ -35,6 +35,27 @@ class ModConfig(BaseModel):
     )
 
 
+class AgentGroupConfig(BaseModel):
+    """Configuration for an agent group.
+
+    Uses password-based authentication where agents provide plain password
+    as 'password_hash' parameter during registration (not in metadata -
+    passed directly in the registration event payload).
+    """
+
+    password_hash: Optional[str] = Field(
+        None,
+        description="Bcrypt password hash for group authentication. "
+                    "Agents send plain password directly in registration payload, server verifies against this hash."
+    )
+    description: str = Field(
+        default="", description="Human-readable description of this group"
+    )
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict, description="Additional group metadata (e.g., permissions)"
+    )
+
+
 class AgentConfig(BaseModel):
     """Configuration for an agent."""
 
@@ -124,11 +145,42 @@ class NetworkConfig(BaseModel):
     message_queue_size: int = Field(1000, description="Maximum message queue size")
     message_timeout: float = Field(30.0, description="Message timeout in seconds")
 
+    # Agent groups configuration
+    agent_groups: Dict[str, AgentGroupConfig] = Field(
+        default_factory=dict,
+        description="Agent groups with registration tokens for group-based organization and permissions",
+    )
+    default_agent_group: str = Field(
+        "default",
+        description="Name of the default group for agents without valid credentials",
+    )
+    requires_password: bool = Field(
+        False,
+        description="When True, password authentication is mandatory for all agents (including default group). "
+                    "When False, agents without password_hash are assigned to default_agent_group.",
+    )
+
     @field_validator("name")
     @classmethod
     def name_must_be_valid(cls, v):
         if not v or not isinstance(v, str):
             raise ValueError("Network name must be a non-empty string")
+        return v
+
+    @field_validator("agent_groups")
+    @classmethod
+    def validate_agent_groups(cls, v):
+        """Validate agent groups configuration."""
+        if not v:
+            return v
+
+        # Check that each group has password_hash defined
+        for group_name, group_config in v.items():
+            if not group_config.password_hash:
+                raise ValueError(
+                    f"Group '{group_name}' must have 'password_hash' defined"
+                )
+
         return v
 
 
