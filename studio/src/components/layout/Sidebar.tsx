@@ -233,14 +233,14 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
     <div
       className={`sidebar h-full flex flex-col transition-all duration-200 bg-slate-100 dark:bg-gray-900 ${
         className || ""
-      }`}
+      } flex flex-col overflow-y-hidden`}
       style={{ width: "19rem" }}
     >
       {/* 上：Header */}
       <SidebarHeader />
 
       {/* 中：Dynamic Content - 由 SidebarContent 根据路由自动管理 */}
-      <div className="flex-1">
+      <div className="flex-1 overflow-y-hidden">
         <SidebarContent />
       </div>
 
