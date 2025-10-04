@@ -47,7 +47,7 @@ class AgentConfig(BaseModel):
     )
 
     # Core agent configuration
-    instruction: str = Field(default="", description="System instruction/prompt for the agent")
+    instruction: str = Field(..., description="System instruction/prompt for the agent")
     model_name: str = Field(..., description="Name of the model to use")
 
     # Provider configuration

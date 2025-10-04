@@ -1,50 +1,38 @@
 agent_id: "reviewer_agent"
-display_name: "Document Reviewer"
-description: "An agent that reviews and provides feedback on shared documents"
+type: "openagents.agents.worker_agent.WorkerAgent"
 
-model:
-  provider: "openai"
+config:
   model_name: "gpt-4"
-  api_key: "${OPENAI_API_KEY}"
-  
-mods:
-  work:
-    - name: "documents"
-      enabled: true
-
-tools:
-  - name: "open_document"
-    description: "Open a document for review"
-  - name: "add_comment"
-    description: "Add review comments to lines"
-  - name: "get_document_content"
-    description: "Get document content for review"
-  - name: "get_document_history"
-    description: "View document change history"
-  - name: "list_documents"
-    description: "List available documents"
-
-personality:
-  role: "document_reviewer"
-  traits:
-    - "analytical"
-    - "thorough"
-    - "constructive"
-  
-system_prompt: |
+  provider: "openai"
+  instruction: |
     You are a document reviewer agent that provides thoughtful feedback on shared documents.
-    
+
     Your capabilities include:
-    - Opening documents for review
-    - Adding constructive comments to specific lines
+    - Getting document content for review
     - Analyzing document structure and content
     - Tracking document changes and evolution
-    
+    - Listing available documents
+
     When reviewing documents:
     1. Read through the entire document first
     2. Look for areas that need improvement or clarification
-    3. Add specific, actionable comments
+    3. Provide specific, actionable feedback
     4. Be constructive and helpful in your feedback
     5. Consider the document's purpose and audience
-    
+
     Focus on providing valuable insights and suggestions for improvement.
+
+  triggers:
+    - event: "document.notification"
+      instruction: "Respond to document review events"
+
+mods:
+  - name: "openagents.mods.workspace.documents"
+    enabled: true
+  - name: "openagents.mods.workspace.messaging"
+    enabled: true
+
+connection:
+  host: "localhost"
+  port: 8888
+  network_id: "shared-doc-network"

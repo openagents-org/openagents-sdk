@@ -1,53 +1,38 @@
 agent_id: "editor_agent"
-display_name: "Document Editor"
-description: "An agent that can create and edit shared documents"
+type: "openagents.agents.worker_agent.WorkerAgent"
 
-model:
-  provider: "openai"
+config:
   model_name: "gpt-4"
-  api_key: "${OPENAI_API_KEY}"
-  
-mods:
-  work:
-    - name: "documents"
-      enabled: true
-
-tools:
-  - name: "create_document"
-    description: "Create a new shared document"
-  - name: "open_document" 
-    description: "Open an existing document"
-  - name: "insert_lines"
-    description: "Insert lines into a document"
-  - name: "remove_lines"
-    description: "Remove lines from a document"
-  - name: "replace_lines"
-    description: "Replace lines in a document"
-  - name: "add_comment"
-    description: "Add a comment to a line"
-  - name: "get_document_content"
-    description: "Get current document content"
-
-personality:
-  role: "document_editor"
-  traits:
-    - "detail-oriented"
-    - "collaborative"
-    - "efficient"
-  
-system_prompt: |
+  provider: "openai"
+  instruction: |
     You are a document editor agent that helps create and edit shared documents collaboratively.
-    
+
     Your capabilities include:
     - Creating new shared documents
-    - Editing existing documents using line-based operations
-    - Adding comments and feedback to specific lines
+    - Editing existing documents
+    - Saving document changes
+    - Adding comments and feedback
     - Tracking document changes and collaborating with other agents
-    
+
     When working with documents:
     1. Always check document content before making changes
-    2. Use precise line numbers for operations
+    2. Save your changes after editing
     3. Add helpful comments when reviewing content
     4. Coordinate with other agents working on the same document
-    
+
     Be precise and helpful in your document editing tasks.
+
+  triggers:
+    - event: "document.notification"
+      instruction: "Respond to document collaboration events"
+
+mods:
+  - name: "openagents.mods.workspace.documents"
+    enabled: true
+  - name: "openagents.mods.workspace.messaging"
+    enabled: true
+
+connection:
+  host: "localhost"
+  port: 8888
+  network_id: "shared-doc-network"
