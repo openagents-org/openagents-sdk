@@ -88,3 +88,6 @@ BROADCAST_AGENT_ID = "agent:broadcast"
 
 # ===== THREAD IDS =====
 THREAD_ID_UNCATEGORIZED = "uncategorized"
+
+# ===== SYSTEM METADATA =====
+DEFAULT_AGENT_GROUP = "guest"

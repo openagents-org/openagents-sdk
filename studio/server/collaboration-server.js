@@ -172,22 +172,24 @@ wss.on('connection', (conn, req) => {
       switch (messageType) {
         case syncProtocol.messageYjsSyncStep1:
           encoding.writeVarUint(encoder, syncProtocol.messageYjsSyncStep2);
-          syncProtocol.writeUpdate(encoder, syncProtocol.readSyncStep1(decoder, doc));
+          syncProtocol.writeSyncStep2(encoder, doc);
           if (encoding.length(encoder) > 1) {
             conn.send(encoding.toUint8Array(encoder));
           }
           break;
 
         case syncProtocol.messageYjsSyncStep2:
-          Y.applyUpdate(doc, syncProtocol.readSyncStep2(decoder), conn);
+          syncProtocol.readSyncStep2(decoder, doc, conn);
           break;
 
         case syncProtocol.messageYjsUpdate:
-          Y.applyUpdate(doc, syncProtocol.readUpdate(decoder), conn);
+          encoding.writeVarUint(encoder, syncProtocol.messageYjsUpdate);
+          const update = decoding.readVarUint8Array(decoder);
+          Y.applyUpdate(doc, update, conn);
           break;
 
         case awarenessProtocol.messageAwareness:
-          awarenessProtocol.applyAwarenessUpdate(awareness, awarenessProtocol.readAwarenessMessage(decoder), conn);
+          awarenessProtocol.applyAwarenessUpdate(awareness, decoding.readVarUint8Array(decoder), conn);
           break;
       }
     } else {

@@ -33,19 +33,34 @@ async def test_network():
     # Load config and use random port to avoid conflicts
     config = load_network_config(str(config_path))
 
-    # Update the gRPC and HTTP transport ports to avoid conflicts
-    grpc_port = random.randint(47000, 48000)
-    http_port = grpc_port + 100  # HTTP port should be different
+    # Retry network initialization with different ports if there's a conflict
+    network = None
+    max_retries = 5
+    for attempt in range(max_retries):
+        grpc_port = random.randint(47000, 48000)
+        http_port = grpc_port + 100  # HTTP port should be different
 
-    for transport in config.network.transports:
-        if transport.type == "grpc":
-            transport.config["port"] = grpc_port
-        elif transport.type == "http":
-            transport.config["port"] = http_port
+        for transport in config.network.transports:
+            if transport.type == "grpc":
+                transport.config["port"] = grpc_port
+            elif transport.type == "http":
+                transport.config["port"] = http_port
 
-    # Create and initialize network
-    network = create_network(config.network)
-    await network.initialize()
+        # Create and initialize network
+        network = create_network(config.network)
+        success = await network.initialize()
+
+        if success:
+            print(f"✅ Network initialized successfully on attempt {attempt + 1} (ports: gRPC={grpc_port}, HTTP={http_port})")
+            break
+        else:
+            print(f"❌ Network initialization failed on attempt {attempt + 1}, retrying...")
+            try:
+                await network.shutdown()
+            except:
+                pass
+            if attempt == max_retries - 1:
+                raise RuntimeError(f"Failed to initialize network after {max_retries} attempts")
 
     # Give network time to start up
     await asyncio.sleep(1.0)

@@ -5,7 +5,9 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from openagents.agents.orchestrator import orchestrate_agent
+from openagents.config.llm_configs import create_model_provider, determine_provider
 from openagents.core.base_mod_adapter import BaseModAdapter
+from openagents.lms.providers import BaseModelProvider
 from openagents.models.agent_actions import AgentTrajectory
 from openagents.models.agent_config import AgentConfig
 from openagents.utils.mcp_connector import MCPConnector
@@ -219,6 +221,20 @@ class AgentRunner(ABC):
             max_iterations=max_iterations,  
         )
     
+    def get_llm(self) -> BaseModelProvider:
+        """Get the LLM provider for the agent."""
+        agent_config = self.agent_config
+        provider = determine_provider(
+            agent_config.provider, agent_config.model_name, agent_config.api_base
+        )
+        model_provider = create_model_provider(
+            provider=provider,
+            model_name=agent_config.model_name,
+            api_base=agent_config.api_base,
+            api_key=agent_config.api_key,
+        )
+        return model_provider
+    
     async def run_llm(
         self,
         context: EventContext,
@@ -391,6 +407,7 @@ class AgentRunner(ABC):
         port: Optional[int] = None,
         network_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        password_hash: Optional[str] = None,
     ):
         """Async implementation of starting the agent runner.
 
@@ -398,8 +415,12 @@ class AgentRunner(ABC):
         """
         # verbose_print(f"🚀 Agent {self._agent_id} starting...")
         try:
-            connected = await self.client.connect_to_server(
-                host, port, network_id, metadata
+            connected = await self.client.connect(
+                network_host=host,
+                network_port=port,
+                network_id=network_id,
+                metadata=metadata,
+                password_hash=password_hash,
             )
             if not connected:
                 raise Exception("Failed to connect to server")
@@ -619,6 +640,7 @@ class AgentRunner(ABC):
         network_port: Optional[int] = None,
         network_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        password_hash: Optional[str] = None,
     ):
         """Start the agent runner.
 
@@ -630,6 +652,7 @@ class AgentRunner(ABC):
             port: Server port
             network_id: Network ID
             metadata: Additional metadata
+            password_hash: Password hash for agent group authentication
         """
         # Create a new event loop if one doesn't exist
         try:
@@ -641,7 +664,7 @@ class AgentRunner(ABC):
 
         # Run the async start method in the event loop
         try:
-            loop.run_until_complete(self._async_start(network_host, network_port, network_id, metadata))
+            loop.run_until_complete(self._async_start(network_host, network_port, network_id, metadata, password_hash))
         except Exception as e:
             raise Exception(f"Failed to start agent: {str(e)}")
 

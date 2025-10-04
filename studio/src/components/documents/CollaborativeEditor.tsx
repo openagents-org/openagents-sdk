@@ -3,6 +3,7 @@ import Editor, { useMonaco } from '@monaco-editor/react';
 import { MonacoBinding } from 'y-monaco';
 import { CollaborationService, CollaborationUser, ConnectionStatus } from '@/services/collaborationService';
 import { useThemeStore } from '@/stores/themeStore';
+import { useAuthStore } from '@/stores/authStore';
 import ConnectionStatusIndicator from './ConnectionStatus';
 import OnlineUsersList from './OnlineUsers';
 
@@ -30,6 +31,7 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
   className = ''
 }) => {
   const { theme } = useThemeStore();
+  const { agentName } = useAuthStore();
   const monaco = useMonaco();
   const editorRef = useRef<any>(null);
   const collaborationRef = useRef<CollaborationService | null>(null);
@@ -43,11 +45,61 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 更新用户光标
+  const updateUserCursor = useCallback((userId: string, user: CollaborationUser) => {
+    if (!editorRef.current || !user.cursor || !monaco || !userDecorationsRef.current) return;
+
+    const editor = editorRef.current;
+    const { line, column } = user.cursor;
+
+    // 清除旧的装饰
+    const oldDecorations = userDecorationsRef.current.get(userId) || [];
+
+    // 创建新的装饰
+    const newDecorations = editor.deltaDecorations(
+      oldDecorations,
+      [
+        {
+          range: new monaco.Range(line, column, line, column),
+          options: {
+            className: 'user-cursor',
+            stickiness: 1,
+            hoverMessage: { value: `**${user.name}** is here` }
+          }
+        },
+        {
+          range: new monaco.Range(line, column, line, column),
+          options: {
+            className: 'user-cursor-line',
+            isWholeLine: true,
+            linesDecorationsClassName: 'user-cursor-line'
+          }
+        }
+      ]
+    );
+
+    if (userDecorationsRef.current) {
+      userDecorationsRef.current.set(userId, newDecorations);
+    }
+  }, [monaco]);
+
   // 初始化协作服务
   const initializeCollaboration = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
+
+      // 清理之前的协作服务
+      if (collaborationRef.current) {
+        console.log('🧹 [CollaborativeEditor] Cleaning up previous collaboration service');
+        collaborationRef.current.destroy();
+        collaborationRef.current = null;
+      }
+      if (bindingRef.current) {
+        console.log('🧹 [CollaborativeEditor] Cleaning up previous Monaco binding');
+        bindingRef.current.destroy();
+        bindingRef.current = null;
+      }
 
       const roomName = `document-${documentId}`;
       const userId = `user-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -56,13 +108,15 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
       console.log('   📄 Document ID:', documentId);
       console.log('   🏠 Room Name:', roomName);
       console.log('   👤 User ID:', userId);
+      console.log('   👤 Agent Name:', agentName);
       console.log('   🔗 WebSocket URL: ws://localhost:1234');
 
       // 创建协作服务
       const collaborationService = new CollaborationService(
         roomName,
         userId,
-        'ws://localhost:1234'
+        'ws://localhost:1234',
+        agentName || undefined
       );
 
       collaborationRef.current = collaborationService;
@@ -73,6 +127,7 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
         setConnectionStatus(status);
         if (status === ConnectionStatus.CONNECTED) {
           console.log('✅ [CollaborativeEditor] Successfully connected to collaboration server');
+          setError(null);
           setIsLoading(false);
         }
       });
@@ -80,12 +135,17 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
       collaborationService.onUsersUpdate((users) => {
         console.log('👥 [CollaborativeEditor] Online users updated:', users.length, users.map(u => u.name));
         setOnlineUsers(users);
-        updateUserCursors(users);
+        // 更新所有用户光标
+        users.forEach(user => {
+          if (user.cursor && editorRef.current && monaco) {
+            updateUserCursor(user.id, user);
+          }
+        });
       });
 
-      collaborationService.onCursorUpdate((userId, user) => {
-        if (user.cursor) {
-          updateUserCursor(userId, user);
+      collaborationService.onCursorUpdate((_userId, user) => {
+        if (user.cursor && editorRef.current && monaco) {
+          updateUserCursor(_userId, user);
         }
       });
 
@@ -97,6 +157,7 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
       collaborationService.onErrorOccurred((error) => {
         console.error('❌ [CollaborativeEditor] Collaboration error:', error);
         setError(error.message);
+        setIsLoading(false);
       });
 
       // 设置初始内容 - 简化逻辑，只在内容为空时设置
@@ -108,58 +169,12 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
       }
 
     } catch (error) {
-      console.error('初始化协作服务失败:', error);
-      setError('初始化协作服务失败');
+      console.error('❌ [CollaborativeEditor] Failed to initialize collaboration service:', error);
+      setError('初始化协作服务失败,请点击重试按钮');
       setIsLoading(false);
     }
-  }, [documentId, initialContent, onContentChange]);
+  }, [documentId, initialContent, onContentChange, monaco, updateUserCursor, agentName]);
 
-  // 更新用户光标
-  const updateUserCursor = useCallback((userId: string, user: CollaborationUser) => {
-    if (!editorRef.current || !user.cursor || !monaco) return;
-
-    const editor = editorRef.current;
-    const model = editor.getModel();
-    if (!model) return;
-
-    // 检查 userDecorationsRef.current 是否为 null
-    if (!userDecorationsRef.current) {
-      userDecorationsRef.current = new Map();
-    }
-
-    // 清除之前的装饰
-    const oldDecorations = userDecorationsRef.current.get(userId) || [];
-    const newDecorations = editor.deltaDecorations(oldDecorations, [
-      {
-        range: new monaco.Range(user.cursor.line, user.cursor.column, user.cursor.line, user.cursor.column + 1),
-        options: {
-          className: 'user-cursor',
-          stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
-          beforeContentClassName: 'user-cursor-line',
-          afterContentClassName: 'user-cursor-label',
-          after: {
-            content: user.name,
-            inlineClassName: 'user-cursor-label'
-          },
-          overviewRuler: {
-            color: user.color,
-            position: monaco.editor.OverviewRulerLane.Right
-          }
-        }
-      }
-    ]);
-
-    userDecorationsRef.current.set(userId, newDecorations);
-  }, [monaco]);
-
-  // 更新所有用户光标
-  const updateUserCursors = useCallback((users: CollaborationUser[]) => {
-    users.forEach(user => {
-      if (user.cursor) {
-        updateUserCursor(user.id, user);
-      }
-    });
-  }, [updateUserCursor]);
 
   // 处理编辑器挂载
   const handleEditorDidMount = useCallback((editor: any) => {
@@ -173,9 +188,19 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
     const waitForCollaboration = () => {
       retryCount++;
 
-      if (collaborationRef.current && monaco) {
+      // 实时检查当前状态,不依赖闭包捕获的值
+      const currentCollaboration = collaborationRef.current;
+      const currentMonaco = (window as any).monaco;
+
+      console.log(`🔍 [CollaborativeEditor] Checking state... Retry: ${retryCount}/${maxRetries}`, {
+        hasCollaboration: !!currentCollaboration,
+        hasMonaco: !!currentMonaco,
+        hasEditor: !!editor
+      });
+
+      if (currentCollaboration && currentMonaco) {
         // 检查 WebSocket 连接状态
-        const status = collaborationRef.current.getConnectionStatus();
+        const status = currentCollaboration.getConnectionStatus();
         console.log(`🔄 [CollaborativeEditor] Waiting for connection... Status: ${status}, Retry: ${retryCount}/${maxRetries}`);
 
         // 只有在已连接时才创建绑定
@@ -184,7 +209,7 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
 
           // 创建 Monaco-Yjs 绑定
           const binding = new MonacoBinding(
-            collaborationRef.current.getYText(),
+            currentCollaboration.getYText(),
             editor.getModel()!,
             new Set([editor])
           );
@@ -207,19 +232,18 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
           });
 
           // 添加保存快捷键
-          editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+          editor.addCommand(currentMonaco.KeyMod.CtrlCmd | currentMonaco.KeyCode.KeyS, () => {
             const content = editor.getValue();
             onSave?.(content);
           });
 
-          setIsLoading(false);
           console.log('🎉 [CollaborativeEditor] Initialization complete!');
         } else if (retryCount < maxRetries) {
           // 还在连接中，继续等待
           setTimeout(waitForCollaboration, 100);
         } else {
           console.error('❌ [CollaborativeEditor] Timeout waiting for connection');
-          setError('连接超时，请刷新页面重试');
+          setError('连接超时,请点击重试按钮');
         }
       } else if (retryCount < maxRetries) {
         // 协作服务或 Monaco 还没准备好，继续等待
@@ -227,12 +251,17 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
         setTimeout(waitForCollaboration, 100);
       } else {
         console.error('❌ [CollaborativeEditor] Timeout waiting for collaboration service');
-        setError('初始化超时，请刷新页面重试');
+        console.error('   Debug info:', {
+          collaborationExists: !!collaborationRef.current,
+          monacoExists: !!currentMonaco,
+          editorExists: !!editor
+        });
+        setError('初始化超时,请点击重试按钮');
       }
     };
 
     waitForCollaboration();
-  }, [onSave, monaco]);
+  }, [onSave]);
 
   // 心跳发送
   useEffect(() => {

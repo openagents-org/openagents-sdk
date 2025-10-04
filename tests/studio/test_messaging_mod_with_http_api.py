@@ -527,6 +527,9 @@ class TestMessagingFlow:
         print("\n🧪 Test: Direct Message Flow")
         print("-" * 40)
 
+        # Add extra delay to ensure network is fully ready
+        await asyncio.sleep(5)
+
         # Register both clients
         assert await client_a.register(), "Client A registration should succeed"
         assert await client_b.register(), "Client B registration should succeed"
@@ -609,6 +612,9 @@ class TestMessagingFlow:
         """
         print("\n🧪 Test: Self Reply Flow")
         print("-" * 40)
+
+        # Add extra delay to ensure network is fully ready
+        await asyncio.sleep(5)
 
         # Register both clients
         assert await client_a.register(), "Client A registration should succeed"
@@ -710,6 +716,9 @@ class TestMessagingFlow:
         """
         print("\n🧪 Test: Cross-Client Reply Flow")
         print("-" * 40)
+
+        # Add extra delay to ensure network is fully ready
+        await asyncio.sleep(5)
 
         # Register both clients
         assert await client_a.register(), "Client A registration should succeed"
@@ -832,6 +841,9 @@ class TestMessagingFlow:
         print("\n🧪 Test: Reaction Flow")
         print("-" * 40)
 
+        # Add extra delay to ensure network is fully ready
+        await asyncio.sleep(5)
+
         # Register both clients
         assert await client_a.register(), "Client A registration should succeed"
         assert await client_b.register(), "Client B registration should succeed"
@@ -941,6 +953,9 @@ class TestMessagingFlow:
         """
         print("\n🧪 Test: File Operations Flow")
         print("-" * 40)
+
+        # Add extra delay to ensure network is fully ready
+        await asyncio.sleep(5)
 
         # Register both clients
         assert await client_a.register(), "Client A registration should succeed"

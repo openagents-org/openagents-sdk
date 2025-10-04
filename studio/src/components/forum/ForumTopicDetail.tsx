@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useForumStore } from "@/stores/forumStore";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 import ForumCommentThread from "./components/ForumCommentThread";
+import ForumAddCommentModal from "./components/ForumAddCommentModal";
 import { useToast } from "@/context/ToastContext";
 import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
 
@@ -13,8 +14,7 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
   const { topicId } = useParams<{ topicId: string }>();
   const navigate = useNavigate();
 
-  const [newCommentContent, setNewCommentContent] = useState("");
-  const [showPreview, setShowPreview] = useState(false);
+  const [isAddCommentModalOpen, setIsAddCommentModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const openAgentsService = context?.connector;
   const isConnected = context?.isConnected;
@@ -82,17 +82,14 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
     }
   };
 
-  const handleAddComment = async () => {
-    if (!newCommentContent.trim() || !topicId) return;
+  const handleAddComment = async (content: string) => {
+    if (!content.trim() || !topicId) return false;
 
     setIsSubmitting(true);
-    const success = await addComment(topicId, newCommentContent.trim());
-
-    if (success) {
-      setNewCommentContent("");
-      setShowPreview(false);
-    }
+    const success = await addComment(topicId, content.trim());
     setIsSubmitting(false);
+
+    return success;
   };
 
   // 显示连接等待状态
@@ -207,8 +204,8 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
               <MarkdownRenderer content={selectedTopic.content} />
             </div>
 
-            {/* 投票和统计 */}
-            <div className="flex items-center space-x-4">
+            {/* 投票和添加评论按钮 */}
+            <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <button
                   onClick={() => handleVote("upvote")}
@@ -229,6 +226,27 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
                   </span>
                 </button>
               </div>
+
+              {/* 添加评论按钮 */}
+              <button
+                onClick={() => setIsAddCommentModalOpen(true)}
+                className="flex items-center space-x-2 px-4 py-2 rounded-md transition-colors bg-blue-600 text-white hover:bg-blue-700"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                <span className="text-sm font-medium">Add Comment</span>
+              </button>
             </div>
           </div>
 
@@ -240,7 +258,7 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
           </div>
 
           {/* 评论列表 - 可滚动的中间区域 */}
-          <div className="py-4">
+          <div className="py-4 pb-6">
             {commentsLoading ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
@@ -262,61 +280,15 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
             )}
           </div>
         </div>
-
-        {/* 添加评论表单 - 固定在底部 */}
-        <div className="px-6 py-4 border-t bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Add a comment (Markdown supported)
-            </label>
-            <button
-              type="button"
-              onClick={() => setShowPreview(!showPreview)}
-              className={`text-xs px-2 py-1 rounded transition-colors ${
-                showPreview
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              }`}
-            >
-              {showPreview ? "Edit" : "Preview"}
-            </button>
-          </div>
-
-          {showPreview ? (
-            <div className="w-full p-3 border rounded-md min-h-[120px] mb-3 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600">
-              {newCommentContent.trim() ? (
-                <MarkdownRenderer content={newCommentContent} />
-              ) : (
-                <p className="text-gray-400 dark:text-gray-500">
-                  Preview will appear here...
-                </p>
-              )}
-            </div>
-          ) : (
-            <textarea
-              value={newCommentContent}
-              onChange={(e) => setNewCommentContent(e.target.value)}
-              placeholder="Write your comment..."
-              rows={4}
-              className="w-full p-3 border rounded-md mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
-            />
-          )}
-
-          <div className="flex justify-end">
-            <button
-              onClick={handleAddComment}
-              disabled={!newCommentContent.trim() || isSubmitting}
-              className={`px-4 py-2 text-sm font-medium text-white rounded-md transition-colors ${
-                !newCommentContent.trim() || isSubmitting
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700"
-              }`}
-            >
-              {isSubmitting ? "Posting..." : "Post Comment"}
-            </button>
-          </div>
-        </div>
       </div>
+
+      {/* 添加评论弹窗 */}
+      <ForumAddCommentModal
+        isOpen={isAddCommentModalOpen}
+        onClose={() => setIsAddCommentModalOpen(false)}
+        onSubmit={handleAddComment}
+        isSubmitting={isSubmitting}
+      />
     </div>
   );
 };

@@ -105,14 +105,6 @@ class AgentConfig(BaseModel):
             raise ValueError("Model name must be a non-empty string")
         return v
 
-    @field_validator("instruction")
-    @classmethod
-    def validate_instruction(cls, v):
-        """Validate instruction is non-empty string."""
-        if not v or not isinstance(v, str):
-            raise ValueError("Instruction must be a non-empty string")
-        return v
-
     @field_validator("api_base")
     @classmethod
     def validate_api_base(cls, v):

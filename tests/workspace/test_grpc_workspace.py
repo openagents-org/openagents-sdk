@@ -301,9 +301,9 @@ async def test_workspace_channel_message_retrieval(
     # Give time for messages to be processed
     await asyncio.sleep(2.0)
 
-    # Test message retrieval (now synchronous!)
-    print("📥 Testing synchronous message retrieval...")
-    messages = general_channel.get_messages(limit=10)
+    # Test message retrieval
+    print("📥 Testing message retrieval...")
+    messages = await general_channel.get_messages(limit=10)
 
     print(f"📥 Retrieved {len(messages)} messages from channel")
 
@@ -313,7 +313,7 @@ async def test_workspace_channel_message_retrieval(
     for i, message in enumerate(messages[:5]):  # Show first 5 messages
         print(f"   Message {i+1}: {message}")
 
-    print("✅ Workspace channel message retrieval test PASSED (synchronous!)")
+    print("✅ Workspace channel message retrieval test PASSED")
 
 
 @pytest.mark.asyncio
