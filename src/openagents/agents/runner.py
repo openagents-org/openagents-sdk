@@ -5,7 +5,9 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from openagents.agents.orchestrator import orchestrate_agent
+from openagents.config.llm_configs import create_model_provider, determine_provider
 from openagents.core.base_mod_adapter import BaseModAdapter
+from openagents.lms.providers import BaseModelProvider
 from openagents.models.agent_actions import AgentTrajectory
 from openagents.models.agent_config import AgentConfig
 from openagents.utils.mcp_connector import MCPConnector
@@ -218,6 +220,20 @@ class AgentRunner(ABC):
             user_instruction=instruction,
             max_iterations=max_iterations,  
         )
+    
+    def get_llm(self) -> BaseModelProvider:
+        """Get the LLM provider for the agent."""
+        agent_config = self.agent_config
+        provider = determine_provider(
+            agent_config.provider, agent_config.model_name, agent_config.api_base
+        )
+        model_provider = create_model_provider(
+            provider=provider,
+            model_name=agent_config.model_name,
+            api_base=agent_config.api_base,
+            api_key=agent_config.api_key,
+        )
+        return model_provider
     
     async def run_llm(
         self,

@@ -1,6 +1,6 @@
 """Forum message event models."""
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pydantic import BaseModel
 from openagents.models.event import Event
 
@@ -15,6 +15,7 @@ class ForumTopicMessage(Event):
         title: Optional[str] = None,
         content: Optional[str] = None,
         topic_id: Optional[str] = None,
+        allowed_groups: Optional[List[str]] = None,
         **kwargs,
     ):
         # Build event name based on action
@@ -30,6 +31,8 @@ class ForumTopicMessage(Event):
             payload["content"] = content
         if topic_id is not None:
             payload["topic_id"] = topic_id
+        if allowed_groups is not None:
+            payload["allowed_groups"] = allowed_groups
 
         # Initialize parent Event
         super().__init__(
@@ -41,6 +44,7 @@ class ForumTopicMessage(Event):
         self._content = content
         self._action = action
         self._topic_id = topic_id
+        self._allowed_groups = allowed_groups
 
     @property
     def title(self) -> Optional[str]:
@@ -57,6 +61,10 @@ class ForumTopicMessage(Event):
     @property
     def topic_id(self) -> Optional[str]:
         return self._topic_id
+
+    @property
+    def allowed_groups(self) -> Optional[List[str]]:
+        return self._allowed_groups
 
 
 class ForumCommentMessage(Event):
