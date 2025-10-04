@@ -30,6 +30,7 @@ export class CollaborationService {
   private userId: string;
   private roomName: string;
   private websocketUrl: string;
+  private userName?: string;
 
   // 事件回调
   private onStatusChange?: (status: ConnectionStatus) => void;
@@ -56,11 +57,13 @@ export class CollaborationService {
   constructor(
     roomName: string,
     userId?: string,
-    websocketUrl: string = 'ws://localhost:1234'
+    websocketUrl: string = 'ws://localhost:1234',
+    userName?: string
   ) {
     this.roomName = roomName;
     this.userId = userId || this.generateUserId();
     this.websocketUrl = websocketUrl;
+    this.userName = userName;
 
     console.log('🔧 [CollaborationService] Initializing service...');
     console.log('   🏠 Room:', roomName);
@@ -125,7 +128,7 @@ export class CollaborationService {
           console.log('✅ [CollaborationService] Connected to server!');
 
           // 设置本地用户信息
-          const userName = this.generateUserName();
+          const userName = this.userName || this.generateUserName();
           const userColor = this.getUserColor();
           this.awareness.setLocalStateField('user', {
             id: this.userId,
