@@ -12,6 +12,7 @@ export interface ForumTopic {
   upvotes: number;
   downvotes: number;
   comment_count: number;
+  allowed_groups?: string[];
 }
 
 export interface ForumComment {
@@ -30,6 +31,7 @@ export interface ForumComment {
 export interface CreateTopicData {
   title: string;
   content: string;
+  allowed_groups?: string[];
 }
 
 // 递归更新评论 votes 的辅助函数
@@ -335,6 +337,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
           action: "create",
           title: data.title.trim(),
           content: data.content.trim(),
+          ...(data.allowed_groups && data.allowed_groups.length > 0 && { allowed_groups: data.allowed_groups }),
         },
       });
 
