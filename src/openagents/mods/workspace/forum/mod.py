@@ -35,13 +35,20 @@ class ForumTopic:
     """Represents a forum topic."""
 
     def __init__(
-        self, topic_id: str, title: str, content: str, owner_id: str, timestamp: float
+        self,
+        topic_id: str,
+        title: str,
+        content: str,
+        owner_id: str,
+        timestamp: float,
+        allowed_groups: Optional[List[str]] = None,
     ):
         self.topic_id = topic_id
         self.title = title
         self.content = content
         self.owner_id = owner_id
         self.timestamp = timestamp
+        self.allowed_groups = allowed_groups  # None or [] means visible to all
         self.upvotes = 0
         self.downvotes = 0
         self.comment_count = 0
@@ -63,6 +70,7 @@ class ForumTopic:
             "title": self.title,
             "content": self.content,
             "owner_id": self.owner_id,
+            "allowed_groups": self.allowed_groups,
             "timestamp": self.timestamp,
             "upvotes": self.upvotes,
             "downvotes": self.downvotes,
@@ -161,6 +169,44 @@ class ForumNetworkMod(BaseMod):
 
         logger.info(f"Initialized Forum Network Mod: {self.mod_name}")
 
+    def _get_agent_groups(self, agent_id: str) -> List[str]:
+        """Get the groups that an agent belongs to.
+
+        Args:
+            agent_id: ID of the agent
+
+        Returns:
+            List[str]: List of group names the agent belongs to
+        """
+        if not self.network or not self.network.topology:
+            return []
+
+        # Get agent's primary group from topology
+        agent_group = self.network.topology.agent_group_membership.get(agent_id)
+        if agent_group:
+            return [agent_group]
+        return []
+
+    def _can_agent_view_topic(self, agent_id: str, topic: ForumTopic) -> bool:
+        """Check if an agent can view a topic based on allowed_groups.
+
+        Args:
+            agent_id: ID of the agent
+            topic: The topic to check
+
+        Returns:
+            bool: True if agent can view the topic, False otherwise
+        """
+        # If allowed_groups is None or empty, everyone can view
+        if not topic.allowed_groups:
+            return True
+
+        # Get agent's groups
+        agent_groups = self._get_agent_groups(agent_id)
+
+        # Check if agent is in any of the allowed groups
+        return any(group in topic.allowed_groups for group in agent_groups)
+
     @property
     def topics(self) -> Dict[str, ForumTopic]:
         """Get all topics (loaded from storage)."""
@@ -220,6 +266,7 @@ class ForumNetworkMod(BaseMod):
                 content=topic_dict["content"],
                 owner_id=topic_dict["owner_id"],
                 timestamp=topic_dict["timestamp"],
+                allowed_groups=topic_dict.get("allowed_groups"),
             )
 
             # Restore additional attributes
@@ -483,6 +530,7 @@ class ForumNetworkMod(BaseMod):
         payload = event.payload
         title = payload.get("title", "").strip()
         content = payload.get("content", "").strip()
+        allowed_groups = payload.get("allowed_groups")
         owner_id = event.source_id
 
         # Validate input
@@ -502,6 +550,7 @@ class ForumNetworkMod(BaseMod):
             content=content,
             owner_id=owner_id,
             timestamp=timestamp,
+            allowed_groups=allowed_groups,
         )
 
         # Save the new topic to storage
@@ -708,6 +757,14 @@ class ForumNetworkMod(BaseMod):
         topic = self._load_topic(topic_id)
         if not topic:
             return EventResponse(success=False, message="Topic not found")
+
+        # Check if agent can view the topic
+        if not self._can_agent_view_topic(author_id, topic):
+            return EventResponse(
+                success=False,
+                message="Permission denied: You are not allowed to view this topic",
+                data={"error_code": "PERMISSION_DENIED_NOT_IN_ALLOWED_GROUPS"},
+            )
         comment_id = str(uuid.uuid4())
         timestamp = time.time()
 
@@ -761,6 +818,14 @@ class ForumNetworkMod(BaseMod):
         topic = self._load_topic(topic_id)
         if not topic:
             return EventResponse(success=False, message="Topic not found")
+
+        # Check if agent can view the topic
+        if not self._can_agent_view_topic(author_id, topic):
+            return EventResponse(
+                success=False,
+                message="Permission denied: You are not allowed to view this topic",
+                data={"error_code": "PERMISSION_DENIED_NOT_IN_ALLOWED_GROUPS"},
+            )
 
         if not parent_comment_id:
             return EventResponse(success=False, message="Parent comment ID required")
@@ -1012,6 +1077,13 @@ class ForumNetworkMod(BaseMod):
             target_obj = self._load_topic(target_id)
             if not target_obj:
                 return EventResponse(success=False, message="Topic not found")
+            # Check if agent can view the topic
+            if not self._can_agent_view_topic(voter_id, target_obj):
+                return EventResponse(
+                    success=False,
+                    message="Permission denied: You are not allowed to view this topic",
+                    data={"error_code": "PERMISSION_DENIED_NOT_IN_ALLOWED_GROUPS"},
+                )
         else:  # comment
             # Find comment in any topic - need to search through all topics
             for topic_id in self._get_topics_metadata()["topics"].keys():
@@ -1025,6 +1097,14 @@ class ForumNetworkMod(BaseMod):
 
             if not target_obj:
                 return EventResponse(success=False, message="Comment not found")
+
+            # Check if agent can view the topic containing this comment
+            if containing_topic and not self._can_agent_view_topic(voter_id, containing_topic):
+                return EventResponse(
+                    success=False,
+                    message="Permission denied: You are not allowed to view this topic",
+                    data={"error_code": "PERMISSION_DENIED_NOT_IN_ALLOWED_GROUPS"},
+                )
 
         # Check if user already voted on this target - get fresh vote data each time
         user_vote_data = self._get_user_votes(voter_id)
@@ -1226,6 +1306,7 @@ class ForumNetworkMod(BaseMod):
         limit = int(payload.get("limit", 50))
         offset = int(payload.get("offset", 0))
         sort_by = payload.get("sort_by", "recent")
+        requester_id = event.source_id
 
         # Get ordered topic list
         if sort_by == "popular":
@@ -1240,9 +1321,17 @@ class ForumNetworkMod(BaseMod):
         else:  # recent
             ordered_topics = self.topic_order_recent
 
-        # Apply pagination
-        total_count = len(ordered_topics)
-        paginated_topics = ordered_topics[offset : offset + limit]
+        # Filter topics by permission
+        viewable_topics = []
+        for topic_id in ordered_topics:
+            if topic_id in self.topics:
+                topic = self.topics[topic_id]
+                if self._can_agent_view_topic(requester_id, topic):
+                    viewable_topics.append(topic_id)
+
+        # Apply pagination on filtered topics
+        total_count = len(viewable_topics)
+        paginated_topics = viewable_topics[offset : offset + limit]
 
         # Build response
         topics_data = []
@@ -1269,18 +1358,20 @@ class ForumNetworkMod(BaseMod):
         search_query = payload.get("query", "").strip().lower()
         limit = int(payload.get("limit", 50))
         offset = int(payload.get("offset", 0))
+        requester_id = event.source_id
 
         if not search_query:
             return EventResponse(success=False, message="Search query cannot be empty")
 
-        # Search in titles and content
+        # Search in titles and content (only viewable topics)
         matching_topics = []
         for topic in self.topics.values():
-            if (
-                search_query in topic.title.lower()
-                or search_query in topic.content.lower()
-            ):
-                matching_topics.append(topic)
+            if self._can_agent_view_topic(requester_id, topic):
+                if (
+                    search_query in topic.title.lower()
+                    or search_query in topic.content.lower()
+                ):
+                    matching_topics.append(topic)
 
         # Sort by relevance (title matches first, then by recency)
         def relevance_score(topic):
@@ -1314,11 +1405,20 @@ class ForumNetworkMod(BaseMod):
         """Get a specific topic with all its comments."""
         payload = event.payload
         topic_id = payload.get("topic_id")
+        requester_id = event.source_id
 
         if not topic_id or topic_id not in self.topics:
             return EventResponse(success=False, message="Topic not found")
 
         topic = self.topics[topic_id]
+
+        # Check if agent can view the topic
+        if not self._can_agent_view_topic(requester_id, topic):
+            return EventResponse(
+                success=False,
+                message="Permission denied: You are not allowed to view this topic",
+                data={"error_code": "PERMISSION_DENIED_NOT_IN_ALLOWED_GROUPS"},
+            )
 
         return EventResponse(
             success=True,
@@ -1331,13 +1431,22 @@ class ForumNetworkMod(BaseMod):
         payload = event.payload
         limit = int(payload.get("limit", 50))
         offset = int(payload.get("offset", 0))
+        requester_id = event.source_id
 
         # Use popular ordering
         ordered_topics = self.topic_order_popular
 
-        # Apply pagination
-        total_count = len(ordered_topics)
-        paginated_topics = ordered_topics[offset : offset + limit]
+        # Filter topics by permission
+        viewable_topics = []
+        for topic_id in ordered_topics:
+            if topic_id in self.topics:
+                topic = self.topics[topic_id]
+                if self._can_agent_view_topic(requester_id, topic):
+                    viewable_topics.append(topic_id)
+
+        # Apply pagination on filtered topics
+        total_count = len(viewable_topics)
+        paginated_topics = viewable_topics[offset : offset + limit]
 
         topics_data = []
         for topic_id in paginated_topics:
@@ -1361,13 +1470,22 @@ class ForumNetworkMod(BaseMod):
         payload = event.payload
         limit = int(payload.get("limit", 50))
         offset = int(payload.get("offset", 0))
+        requester_id = event.source_id
 
         # Use recent ordering
         ordered_topics = self.topic_order_recent
 
-        # Apply pagination
-        total_count = len(ordered_topics)
-        paginated_topics = ordered_topics[offset : offset + limit]
+        # Filter topics by permission
+        viewable_topics = []
+        for topic_id in ordered_topics:
+            if topic_id in self.topics:
+                topic = self.topics[topic_id]
+                if self._can_agent_view_topic(requester_id, topic):
+                    viewable_topics.append(topic_id)
+
+        # Apply pagination on filtered topics
+        total_count = len(viewable_topics)
+        paginated_topics = viewable_topics[offset : offset + limit]
 
         topics_data = []
         for topic_id in paginated_topics:
@@ -1392,11 +1510,12 @@ class ForumNetworkMod(BaseMod):
         agent_id = payload.get("agent_id", event.source_id)
         limit = int(payload.get("limit", 50))
         offset = int(payload.get("offset", 0))
+        requester_id = event.source_id
 
-        # Find user's topics
+        # Find user's topics (only viewable ones)
         user_topics = []
         for topic in self.topics.values():
-            if topic.owner_id == agent_id:
+            if topic.owner_id == agent_id and self._can_agent_view_topic(requester_id, topic):
                 user_topics.append(topic)
 
         # Sort by recency
@@ -1427,15 +1546,17 @@ class ForumNetworkMod(BaseMod):
         agent_id = payload.get("agent_id", event.source_id)
         limit = int(payload.get("limit", 50))
         offset = int(payload.get("offset", 0))
+        requester_id = event.source_id
 
-        # Find user's comments across all topics
+        # Find user's comments across all topics (only from viewable topics)
         user_comments = []
         for topic in self.topics.values():
-            for comment in topic.comments.values():
-                if comment.author_id == agent_id:
-                    comment_data = comment.to_dict()
-                    comment_data["topic_title"] = topic.title
-                    user_comments.append(comment_data)
+            if self._can_agent_view_topic(requester_id, topic):
+                for comment in topic.comments.values():
+                    if comment.author_id == agent_id:
+                        comment_data = comment.to_dict()
+                        comment_data["topic_title"] = topic.title
+                        user_comments.append(comment_data)
 
         # Sort by recency
         user_comments.sort(key=lambda c: c["timestamp"], reverse=True)
