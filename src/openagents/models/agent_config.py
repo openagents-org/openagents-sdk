@@ -47,7 +47,7 @@ class AgentConfig(BaseModel):
     )
 
     # Core agent configuration
-    instruction: str = Field(..., description="System instruction/prompt for the agent")
+    instruction: str = Field(default="", description="System instruction/prompt for the agent")
     model_name: str = Field(..., description="Name of the model to use")
 
     # Provider configuration
@@ -103,14 +103,6 @@ class AgentConfig(BaseModel):
         """Validate model name is non-empty string."""
         if not v or not isinstance(v, str):
             raise ValueError("Model name must be a non-empty string")
-        return v
-
-    @field_validator("instruction")
-    @classmethod
-    def validate_instruction(cls, v):
-        """Validate instruction is non-empty string."""
-        if not v or not isinstance(v, str):
-            raise ValueError("Instruction must be a non-empty string")
         return v
 
     @field_validator("api_base")
