@@ -44,7 +44,12 @@ async def documents_network():
 
     # Create and initialize network
     network = AgentNetwork.create_from_config(config.network)
-    await network.initialize()
+
+    try:
+        # Initialize with timeout
+        await asyncio.wait_for(network.initialize(), timeout=10.0)
+    except asyncio.TimeoutError:
+        pytest.fail("Network initialization timed out after 10 seconds")
 
     # Give network time to start up
     await asyncio.sleep(1.0)
@@ -52,7 +57,10 @@ async def documents_network():
     yield network, config, grpc_port, http_port
 
     # Cleanup
-    await network.shutdown()
+    try:
+        await asyncio.wait_for(network.shutdown(), timeout=5.0)
+    except asyncio.TimeoutError:
+        print("Warning: Network shutdown timed out")
 
 
 @pytest.fixture
@@ -67,8 +75,14 @@ async def alice_client(documents_network):
     documents_adapter = SharedDocumentAgentAdapter()
     client.register_mod_adapter(documents_adapter)
 
-    # Connect to network using HTTP (like other tests)
-    await client.connect("localhost", http_port)
+    # Connect to network using HTTP (like other tests) with timeout
+    try:
+        await asyncio.wait_for(
+            client.connect("localhost", http_port),
+            timeout=5.0
+        )
+    except asyncio.TimeoutError:
+        pytest.fail("Alice client connection timed out after 5 seconds")
 
     # Give client time to connect and register
     await asyncio.sleep(1.0)
@@ -76,7 +90,10 @@ async def alice_client(documents_network):
     yield client, documents_adapter
 
     # Cleanup
-    await client.disconnect()
+    try:
+        await asyncio.wait_for(client.disconnect(), timeout=3.0)
+    except asyncio.TimeoutError:
+        print("Warning: Alice client disconnect timed out")
 
 
 @pytest.fixture
@@ -91,8 +108,14 @@ async def bob_client(documents_network):
     documents_adapter = SharedDocumentAgentAdapter()
     client.register_mod_adapter(documents_adapter)
 
-    # Connect to network using HTTP (like other tests)
-    await client.connect("localhost", http_port)
+    # Connect to network using HTTP (like other tests) with timeout
+    try:
+        await asyncio.wait_for(
+            client.connect("localhost", http_port),
+            timeout=5.0
+        )
+    except asyncio.TimeoutError:
+        pytest.fail("Bob client connection timed out after 5 seconds")
 
     # Give client time to connect and register
     await asyncio.sleep(1.0)
@@ -100,7 +123,10 @@ async def bob_client(documents_network):
     yield client, documents_adapter
 
     # Cleanup
-    await client.disconnect()
+    try:
+        await asyncio.wait_for(client.disconnect(), timeout=3.0)
+    except asyncio.TimeoutError:
+        print("Warning: Bob client disconnect timed out")
 
 
 @pytest.mark.asyncio
@@ -136,25 +162,35 @@ async def test_document_collaboration(alice_client, bob_client):
         access_permissions={"bob": "read_write"},
     )
 
-    assert create_result["status"] == "success"
+    assert create_result["status"] == "success", f"Create failed: {create_result}"
+    assert "document_id" in create_result.get("data", {}), f"No document_id in response: {create_result}"
     document_id = create_result["data"]["document_id"]
+
+    # Give a small delay for propagation
+    await asyncio.sleep(0.1)
 
     # Bob gets the document
     get_result = await bob_adapter.get_document(document_id)
-    assert get_result["status"] == "success"
-    assert "Initial content by Alice" in get_result["data"]["content"]
+    assert get_result["status"] == "success", f"Bob get failed: {get_result}"
+    assert "content" in get_result.get("data", {}), f"No content in response: {get_result}"
+    assert "Initial content by Alice" in get_result["data"]["content"], \
+        f"Expected content not found: {get_result['data']['content']}"
 
     # Bob saves updated content
     save_result = await bob_adapter.save_document(
         document_id=document_id,
         content="Initial content by Alice\n\nUpdated by Bob"
     )
-    assert save_result["status"] == "success"
+    assert save_result["status"] == "success", f"Bob save failed: {save_result}"
+
+    # Give a small delay for propagation
+    await asyncio.sleep(0.1)
 
     # Alice gets the document to verify Bob's changes
     content_result = await alice_adapter.get_document(document_id)
-    assert content_result["status"] == "success"
-    assert "Updated by Bob" in content_result["data"]["content"]
+    assert content_result["status"] == "success", f"Alice get failed: {content_result}"
+    assert "Updated by Bob" in content_result["data"]["content"], \
+        f"Bob's update not found: {content_result['data']['content']}"
 
 
 @pytest.mark.asyncio
@@ -168,6 +204,7 @@ async def test_document_operations(alice_client):
         initial_content="Original content",
     )
 
+    assert create_result["status"] == "success", f"Create failed: {create_result}"
     document_id = create_result["data"]["document_id"]
 
     # Test saving content
@@ -175,24 +212,34 @@ async def test_document_operations(alice_client):
         document_id=document_id,
         content="Updated content v1"
     )
-    assert save_result["status"] == "success"
+    assert save_result["status"] == "success", f"Save failed: {save_result}"
+
+    # Give a small delay for propagation
+    await asyncio.sleep(0.1)
 
     # Verify content was saved
     get_result = await adapter.get_document(document_id)
-    assert get_result["status"] == "success"
-    assert get_result["data"]["content"] == "Updated content v1"
+    assert get_result["status"] == "success", f"Get after save failed: {get_result}"
+    actual_content = get_result["data"].get("content", "")
+    assert actual_content == "Updated content v1", \
+        f"Expected 'Updated content v1', got '{actual_content}'"
 
     # Test renaming
     rename_result = await adapter.rename_document(
         document_id=document_id,
         new_name="Renamed Operations Test"
     )
-    assert rename_result["status"] == "success"
+    assert rename_result["status"] == "success", f"Rename failed: {rename_result}"
+
+    # Give a small delay for propagation
+    await asyncio.sleep(0.1)
 
     # Verify rename
     get_result = await adapter.get_document(document_id)
-    assert get_result["status"] == "success"
-    assert get_result["data"]["document_name"] == "Renamed Operations Test"
+    assert get_result["status"] == "success", f"Get after rename failed: {get_result}"
+    actual_name = get_result["data"].get("document_name", "")
+    assert actual_name == "Renamed Operations Test", \
+        f"Expected 'Renamed Operations Test', got '{actual_name}'"
 
 
 @pytest.mark.asyncio
@@ -208,30 +255,41 @@ async def test_document_comments(alice_client, bob_client):
         access_permissions={"bob": "read_write"},
     )
 
+    assert create_result["status"] == "success", f"Create failed: {create_result}"
     document_id = create_result["data"]["document_id"]
 
     # Alice saves the document
-    await alice_adapter.save_document(
+    save_result_alice = await alice_adapter.save_document(
         document_id=document_id,
         content="Content updated by Alice"
     )
+    assert save_result_alice["status"] == "success", f"Alice save failed: {save_result_alice}"
 
     # Bob saves the document
-    await bob_adapter.save_document(
+    save_result_bob = await bob_adapter.save_document(
         document_id=document_id,
         content="Content updated by Bob"
     )
+    assert save_result_bob["status"] == "success", f"Bob save failed: {save_result_bob}"
 
-    # Get document history
-    history_result = await alice_adapter.get_document_history(document_id)
-    assert history_result["status"] == "success"
+    # Get document history with retry for robustness
+    max_retries = 3
+    for attempt in range(max_retries):
+        history_result = await alice_adapter.get_document_history(document_id)
+        if history_result["status"] == "success":
+            break
+        if attempt < max_retries - 1:
+            await asyncio.sleep(0.5)
+
+    assert history_result["status"] == "success", f"History retrieval failed: {history_result}"
 
     # Verify operations are tracked
     operations = history_result["data"]["operations"]
-    assert len(operations) >= 3  # create + 2 saves
-    operation_types = [op["operation_type"] for op in operations]
-    assert "create" in operation_types
-    assert "save" in operation_types
+    assert len(operations) >= 3, f"Expected at least 3 operations, got {len(operations)}: {operations}"
+
+    operation_types = [op.get("operation_type") for op in operations]
+    assert "create" in operation_types, f"'create' not found in operation types: {operation_types}"
+    assert "save" in operation_types, f"'save' not found in operation types: {operation_types}"
 
 
 @pytest.mark.asyncio
@@ -270,25 +328,40 @@ async def test_agent_presence(alice_client, bob_client):
         access_permissions={"bob": "read_write"},
     )
 
+    assert create_result["status"] == "success", f"Create failed: {create_result}"
     document_id = create_result["data"]["document_id"]
+
+    # Give a small delay for propagation
+    await asyncio.sleep(0.1)
 
     # Get initial version
     get_result = await alice_adapter.get_document(document_id)
+    assert get_result["status"] == "success", f"Initial get failed: {get_result}"
     initial_version = get_result["data"]["version"]
 
     # Alice saves - version should increment
-    await alice_adapter.save_document(document_id, "Updated by Alice")
+    save_result = await alice_adapter.save_document(document_id, "Updated by Alice")
+    assert save_result["status"] == "success", f"Alice save failed: {save_result}"
+
+    await asyncio.sleep(0.1)
 
     get_result = await alice_adapter.get_document(document_id)
+    assert get_result["status"] == "success", f"Get after Alice save failed: {get_result}"
     version_after_alice = get_result["data"]["version"]
-    assert version_after_alice > initial_version
+    assert version_after_alice > initial_version, \
+        f"Version did not increment: initial={initial_version}, after_alice={version_after_alice}"
 
     # Bob saves - version should increment again
-    await bob_adapter.save_document(document_id, "Updated by Bob")
+    save_result = await bob_adapter.save_document(document_id, "Updated by Bob")
+    assert save_result["status"] == "success", f"Bob save failed: {save_result}"
+
+    await asyncio.sleep(0.1)
 
     get_result = await bob_adapter.get_document(document_id)
+    assert get_result["status"] == "success", f"Get after Bob save failed: {get_result}"
     version_after_bob = get_result["data"]["version"]
-    assert version_after_bob > version_after_alice
+    assert version_after_bob > version_after_alice, \
+        f"Version did not increment: after_alice={version_after_alice}, after_bob={version_after_bob}"
 
 
 if __name__ == "__main__":
