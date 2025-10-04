@@ -68,7 +68,7 @@ class SaveDocumentMessage(Event):
     """Message for saving document content."""
 
     document_id: str = field(default="")
-    content: str = field(default="")
+    document_content: str = field(default="")
 
     def __init__(
         self,
@@ -86,7 +86,17 @@ class SaveDocumentMessage(Event):
         super().__init__(event_name, source_id, **kwargs)
 
         self.document_id = document_id
-        self.content = content
+        self.document_content = content
+
+    @property
+    def content(self) -> str:
+        """Backward compatibility: content maps to document_content."""
+        return self.document_content
+
+    @content.setter
+    def content(self, value: str):
+        """Backward compatibility: content maps to document_content."""
+        object.__setattr__(self, "document_content", value)
 
 
 @dataclass
@@ -232,7 +242,7 @@ class DocumentGetResponse(Event):
 
     document_id: str = Field(..., description="Document ID")
     document_name: str = Field(..., description="Document name")
-    content: str = Field(..., description="Document content")
+    document_content: str = Field(..., description="Document content")
     version: int = Field(..., description="Document version number")
     creator_agent_id: str = Field(..., description="Creator agent ID")
     created_timestamp: datetime = Field(..., description="Creation timestamp")
@@ -264,11 +274,21 @@ class DocumentGetResponse(Event):
 
         self.document_id = document_id
         self.document_name = document_name
-        self.content = content
+        self.document_content = content
         self.version = version
         self.creator_agent_id = creator_agent_id
         self.created_timestamp = created_timestamp
         self.last_modified = last_modified
+
+    @property
+    def content(self) -> str:
+        """Backward compatibility: content maps to document_content."""
+        return self.document_content
+
+    @content.setter
+    def content(self, value: str):
+        """Backward compatibility: content maps to document_content."""
+        self.document_content = value
 
 
 class DocumentListResponse(Event):

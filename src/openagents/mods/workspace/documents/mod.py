@@ -343,8 +343,8 @@ class DocumentsNetworkMod(BaseMod):
             )
             payload = event.payload
             document_id = payload.get("document_id")
-            limit = payload.get("limit", 50)
-            offset = payload.get("offset", 0)
+            limit = int(payload.get("limit", 50))
+            offset = int(payload.get("offset", 0))
 
             if document_id not in self.documents:
                 return EventResponse(
