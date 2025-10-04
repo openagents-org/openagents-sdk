@@ -18,12 +18,13 @@ fi
 # 停止现有进程（如果有）
 echo "🧹 Cleaning up existing processes..."
 pkill -f "collaboration-server.js" 2>/dev/null || true
+pkill -f "y-websocket-server" 2>/dev/null || true
 pkill -f "craco start" 2>/dev/null || true
 
 # 启动协作服务器
 echo "🖥️  Starting collaboration server..."
 cd server
-node collaboration-server.js &
+node y-websocket-server.js &
 COLLAB_PID=$!
 cd ..
 
