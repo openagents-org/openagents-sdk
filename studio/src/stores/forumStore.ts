@@ -41,14 +41,21 @@ const updateCommentVotesRecursively = (
   upvotes: number,
   downvotes: number
 ): ForumComment[] => {
-  return comments.map(comment => {
+  return comments.map((comment) => {
     if (comment.comment_id === targetId) {
       // 找到目标评论，更新 votes
-      console.log(`ForumStore: Updating votes for comment ${targetId}: upvotes=${upvotes}, downvotes=${downvotes}`);
+      console.log(
+        `ForumStore: Updating votes for comment ${targetId}: upvotes=${upvotes}, downvotes=${downvotes}`
+      );
       return { ...comment, upvotes, downvotes };
     } else if (comment.replies && comment.replies.length > 0) {
       // 递归更新 replies 中的评论
-      const updatedReplies = updateCommentVotesRecursively(comment.replies, targetId, upvotes, downvotes);
+      const updatedReplies = updateCommentVotesRecursively(
+        comment.replies,
+        targetId,
+        upvotes,
+        downvotes
+      );
       // 只有当 replies 发生变化时才返回新对象
       if (updatedReplies !== comment.replies) {
         return { ...comment, replies: updatedReplies };
@@ -73,11 +80,17 @@ interface ForumState {
   // 连接服务
   connection: any | null;
 
+  // Permission groups
+  groupsData: Record<string, string[]> | null;
+  agentId: string | null;
+
   // Event handler reference for cleanup
   eventHandler?: ((event: any) => void) | null;
 
   // Actions
   setConnection: (connection: any | null) => void;
+  setGroupsData: (groups: Record<string, string[]>) => void;
+  setAgentId: (agentId: string) => void;
   loadTopics: () => Promise<void>;
   loadTopicDetail: (topicId: string) => Promise<void>;
   createTopic: (data: CreateTopicData) => Promise<boolean>;
@@ -121,10 +134,14 @@ export const useForumStore = create<ForumState>((set, get) => ({
   commentsLoading: false,
   commentsError: null,
   connection: null,
+  groupsData: null,
+  agentId: null,
   eventHandler: null,
 
   // Actions
   setConnection: (connection) => set({ connection }),
+  setGroupsData: (groups) => set({ groupsData: groups }),
+  setAgentId: (agentId) => set({ agentId }),
 
   loadTopics: async () => {
     const { connection } = get();
@@ -330,6 +347,10 @@ export const useForumStore = create<ForumState>((set, get) => ({
     if (!connection) return false;
 
     try {
+      const allowed_groups =
+        data.allowed_groups && data.allowed_groups.length > 0
+          ? data.allowed_groups
+          : undefined;
       const response = await connection.sendEvent({
         event_name: "forum.topic.create",
         destination_id: "mod:openagents.mods.workspace.forum",
@@ -337,7 +358,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
           action: "create",
           title: data.title.trim(),
           content: data.content.trim(),
-          ...(data.allowed_groups && data.allowed_groups.length > 0 && { allowed_groups: data.allowed_groups }),
+          allowed_groups,
         },
       });
 
@@ -352,6 +373,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
           owner_id: connection.getAgentId() || "unknown",
           timestamp: response.data?.timestamp || Date.now() / 1000,
           upvotes: 0,
+          allowed_groups,
           downvotes: 0,
           comment_count: 0,
         };
@@ -519,7 +541,6 @@ export const useForumStore = create<ForumState>((set, get) => ({
     });
   },
 
-
   // Event handling - 设置事件监听
   setupEventListeners: () => {
     const { connection } = get();
@@ -535,6 +556,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
       if (event.event_name === "forum.topic.created" && event.payload?.topic) {
         console.log("ForumStore: Received forum.topic.created event:", event);
         const topic = event.payload.topic;
+        const allowed_groups = topic.allowed_groups;
 
         // 将后端数据转换为ForumTopic格式
         const forumTopic: ForumTopic = {
@@ -546,9 +568,43 @@ export const useForumStore = create<ForumState>((set, get) => ({
           upvotes: topic.upvotes || 0,
           downvotes: topic.downvotes || 0,
           comment_count: topic.comment_count || 0,
+          allowed_groups,
         };
 
-        get().addTopicToList(forumTopic);
+        // 权限检查：判断当前agent是否有权限查看这个话题
+        const { agentId, groupsData } = get();
+        console.log(agentId, groupsData, "-----");
+
+        // 如果没有allowed_groups或为空，说明是公开话题
+        if (!allowed_groups || allowed_groups.length === 0) {
+          console.log("ForumStore: Public topic, adding to list");
+          get().addTopicToList(forumTopic);
+          return;
+        }
+
+        // 检查当前agent是否在允许的组中
+        if (agentId && groupsData) {
+          // 检查agentId是否存在于allowed_groups中的任何一个组
+          const hasPermission = allowed_groups.some((groupName: string) => {
+            const groupMembers = groupsData[groupName];
+            return groupMembers && groupMembers.includes(agentId);
+          });
+
+          if (hasPermission) {
+            console.log(
+              "ForumStore: Agent has permission, adding topic to list"
+            );
+            get().addTopicToList(forumTopic);
+          } else {
+            console.log(
+              "ForumStore: Agent does not have permission, ignoring topic"
+            );
+          }
+        } else {
+          console.log(
+            "ForumStore: Missing agentId or groupsData, cannot check permissions"
+          );
+        }
       }
 
       // 处理comment发布事件
@@ -577,10 +633,14 @@ export const useForumStore = create<ForumState>((set, get) => ({
           };
 
           get().addCommentToTopic(topicId, forumComment);
-          console.log(`ForumStore: Added comment to detail view for topic ${topicId}`);
+          console.log(
+            `ForumStore: Added comment to detail view for topic ${topicId}`
+          );
         } else {
           // 当前在列表页面 - 重新获取主题信息以更新评论数量
-          console.log(`ForumStore: Not viewing topic ${topicId}, refreshing topic in list`);
+          console.log(
+            `ForumStore: Not viewing topic ${topicId}, refreshing topic in list`
+          );
           get().refreshTopicInList(topicId);
         }
       }
@@ -611,10 +671,14 @@ export const useForumStore = create<ForumState>((set, get) => ({
           };
 
           get().addCommentToTopic(topicId, forumComment);
-          console.log(`ForumStore: Added reply to detail view for topic ${topicId}`);
+          console.log(
+            `ForumStore: Added reply to detail view for topic ${topicId}`
+          );
         } else {
           // 当前在列表页面 - 重新获取主题信息以更新评论数量
-          console.log(`ForumStore: Not viewing topic ${topicId}, refreshing topic in list`);
+          console.log(
+            `ForumStore: Not viewing topic ${topicId}, refreshing topic in list`
+          );
           get().refreshTopicInList(topicId);
         }
       }
@@ -649,7 +713,10 @@ export const useForumStore = create<ForumState>((set, get) => ({
           }
         }
       } else if (event.event_name === "forum.vote.notification") {
-        console.log("ForumStore: Received forum.vote.notification event:", event);
+        console.log(
+          "ForumStore: Received forum.vote.notification event:",
+          event
+        );
         const { target_type, target_id, upvotes, downvotes } = event.payload;
 
         if (target_type === "topic") {
@@ -659,7 +726,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
               topic.topic_id === target_id
                 ? { ...topic, upvotes, downvotes }
                 : topic
-            )
+            ),
           }));
 
           // Update currently selected topic if it matches
@@ -667,13 +734,18 @@ export const useForumStore = create<ForumState>((set, get) => ({
           if (selectedTopic && selectedTopic.topic_id === target_id) {
             set((state) => ({
               ...state,
-              selectedTopic: { ...selectedTopic, upvotes, downvotes }
+              selectedTopic: { ...selectedTopic, upvotes, downvotes },
             }));
           }
         } else if (target_type === "comment") {
           // Update comment in the current topic's comments (including nested replies)
           set((state) => ({
-            comments: updateCommentVotesRecursively(state.comments, target_id, upvotes, downvotes)
+            comments: updateCommentVotesRecursively(
+              state.comments,
+              target_id,
+              upvotes,
+              downvotes
+            ),
           }));
         }
       }
@@ -702,7 +774,9 @@ export const useForumStore = create<ForumState>((set, get) => ({
   refreshTopicInList: async (topicId: string) => {
     const { connection } = get();
     if (!connection) {
-      console.warn("ForumStore: No connection available for refreshTopicInList");
+      console.warn(
+        "ForumStore: No connection available for refreshTopicInList"
+      );
       return;
     }
 
@@ -719,14 +793,19 @@ export const useForumStore = create<ForumState>((set, get) => ({
 
       if (response.success && response.data) {
         // 检查数据结构 - API可能返回 response.data 就是topic，或者 response.data.topic
-        const topic = response.data.topic_id ? response.data : response.data.topic;
+        const topic = response.data.topic_id
+          ? response.data
+          : response.data.topic;
 
         if (topic) {
-          console.log(`ForumStore: Updating topic ${topicId} with fresh data:`, {
-            comment_count: topic.comment_count,
-            upvotes: topic.upvotes,
-            downvotes: topic.downvotes
-          });
+          console.log(
+            `ForumStore: Updating topic ${topicId} with fresh data:`,
+            {
+              comment_count: topic.comment_count,
+              upvotes: topic.upvotes,
+              downvotes: topic.downvotes,
+            }
+          );
 
           // 更新 topics 列表中的对应主题
           set((state) => ({
@@ -740,13 +819,16 @@ export const useForumStore = create<ForumState>((set, get) => ({
                     // 保持其他字段不变，只更新需要的统计数据
                   }
                 : t
-            )
+            ),
           }));
         } else {
           console.warn(`ForumStore: No topic data in response for ${topicId}`);
         }
       } else {
-        console.warn(`ForumStore: Failed to refresh topic ${topicId}:`, response);
+        console.warn(
+          `ForumStore: Failed to refresh topic ${topicId}:`,
+          response
+        );
       }
     } catch (error) {
       console.error(`ForumStore: Error refreshing topic ${topicId}:`, error);
@@ -842,7 +924,9 @@ export const useForumStore = create<ForumState>((set, get) => ({
 }));
 
 // 在开发环境中绑定测试工具到全局对象
-if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
   (window as any).useForumStore = useForumStore;
-  console.log("🧪 Forum store and test utils available globally for development testing");
+  console.log(
+    "🧪 Forum store and test utils available globally for development testing"
+  );
 }

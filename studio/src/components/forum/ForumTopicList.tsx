@@ -15,6 +15,8 @@ const ForumTopicList: React.FC = () => {
     topicsLoading,
     topicsError,
     setConnection,
+    setGroupsData,
+    setAgentId,
     loadTopics,
     setupEventListeners,
     cleanupEventListeners,
@@ -26,6 +28,33 @@ const ForumTopicList: React.FC = () => {
       setConnection(openAgentsService);
     }
   }, [openAgentsService, setConnection]);
+
+  // 初始化权限数据
+  useEffect(() => {
+    const initializePermissions = async () => {
+      if (!openAgentsService) return;
+
+      try {
+        // 获取当前agent ID
+        const agentId = openAgentsService.getAgentId();
+        if (agentId) {
+          console.log("ForumTopicList: Setting agentId:", agentId);
+          setAgentId(agentId);
+        }
+
+        // 获取groups数据
+        const healthData = await openAgentsService.getNetworkHealth();
+        if (healthData && healthData.groups) {
+          console.log("ForumTopicList: Setting groupsData:", healthData.groups);
+          setGroupsData(healthData.groups);
+        }
+      } catch (error) {
+        console.error("ForumTopicList: Failed to initialize permissions:", error);
+      }
+    };
+
+    initializePermissions();
+  }, [openAgentsService, setGroupsData, setAgentId]);
 
   // 加载话题（等待连接建立）
   useEffect(() => {

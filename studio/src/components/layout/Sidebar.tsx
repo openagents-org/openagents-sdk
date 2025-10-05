@@ -233,7 +233,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
     <div
       className={`sidebar h-full flex flex-col transition-all duration-200 bg-slate-100 dark:bg-gray-900 ${
         className || ""
-      } flex flex-col overflow-y-hidden`}
+      } flex flex-col overflow-hidden`}
       style={{ width: "19rem" }}
     >
       {/* 上：Header */}
