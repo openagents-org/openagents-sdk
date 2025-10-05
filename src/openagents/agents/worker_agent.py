@@ -186,11 +186,6 @@ class WorkerAgent(CollaboratorAgent):
             f"Initialized WorkerAgent '{self.default_agent_id}' with ID: {agent_id}"
         )
 
-    @property
-    def agent_id(self) -> str:
-        """Get the agent ID."""
-        return self.client.agent_id
-
     def workspace(self) -> Workspace:
         """Get the workspace client."""
         if self._workspace_client is None:

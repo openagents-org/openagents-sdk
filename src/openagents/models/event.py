@@ -88,7 +88,7 @@ class Event(BaseModel):
 
     # Core identification - REQUIRED FIELDS FIRST
     event_name: str  # e.g., "agent.message", "project.run.completed" - REQUIRED
-    source_id: str  # The agent or mod that generated this event - REQUIRED
+    source_id: Optional[str] = Field(default=None)  # The agent or mod that generated this event
 
     # Core identification - OPTIONAL FIELDS WITH DEFAULTS
     event_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -240,14 +240,6 @@ class Event(BaseModel):
             target_id = "system"
 
         return EventDestination(role=role, desitnation_id=target_id)
-
-    @field_validator("source_id")
-    @classmethod
-    def validate_source_id(cls, v):
-        """Validate source_id is provided."""
-        if not v:
-            raise ValueError("Event must have a source_id")
-        return v
 
     @model_validator(mode="after")
     def auto_set_visibility(self):

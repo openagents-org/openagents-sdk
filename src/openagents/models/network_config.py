@@ -3,6 +3,7 @@
 from typing import Dict, List, Optional, Any, Union
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from enum import Enum
+from openagents.config.globals import DEFAULT_AGENT_GROUP
 from openagents.models.network_profile import NetworkProfile
 from openagents.models.transport import TransportType
 from openagents.models.network_role import NetworkRole
@@ -151,11 +152,11 @@ class NetworkConfig(BaseModel):
         description="Agent groups with registration tokens for group-based organization and permissions",
     )
     default_agent_group: str = Field(
-        "default",
+        default=DEFAULT_AGENT_GROUP,
         description="Name of the default group for agents without valid credentials",
     )
     requires_password: bool = Field(
-        False,
+        default=False,
         description="When True, password authentication is mandatory for all agents (including default group). "
                     "When False, agents without password_hash are assigned to default_agent_group.",
     )
