@@ -84,12 +84,15 @@ class ForumAgentAdapter(BaseModAdapter):
         else:
             logger.debug(f"Unhandled forum event: {event_name}")
 
-    async def create_forum_topic(self, title: str, content: str) -> Optional[str]:
+    async def create_forum_topic(
+        self, title: str, content: str, allowed_groups: Optional[List[str]] = None
+    ) -> Optional[str]:
         """Create a new forum topic.
 
         Args:
             title: Title of the topic
             content: Content/body of the topic
+            allowed_groups: List of group IDs that can view this topic. If None or empty, topic is visible to all
 
         Returns:
             Optional[str]: Topic ID if successful, None if failed
@@ -110,7 +113,11 @@ class ForumAgentAdapter(BaseModAdapter):
 
         # Create topic message
         topic_msg = ForumTopicMessage(
-            source_id=self.agent_id, title=title, content=content, action="create"
+            source_id=self.agent_id,
+            title=title,
+            content=content,
+            action="create",
+            allowed_groups=allowed_groups,
         )
 
         # Wrap in Event for proper transport
@@ -624,6 +631,11 @@ class ForumAgentAdapter(BaseModAdapter):
                     "content": {
                         "type": "string",
                         "description": "Content/body of the topic",
+                    },
+                    "allowed_groups": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of group IDs that can view this topic. If null or empty, topic is visible to all agents",
                     },
                 },
                 "required": ["title", "content"],
