@@ -499,8 +499,43 @@ export const useForumStore = create<ForumState>((set, get) => ({
   },
 
   getPopularTopics: () => {
-    const { topics } = get();
-    return [...topics]
+    const { topics, groupsData, agentId } = get();
+    console.log(
+      "ForumStore: Getting popular topics:",
+      topics,
+      groupsData,
+      agentId
+    );
+
+    // 如果 groupsData 还未加载，返回空数组
+    if (!groupsData) {
+      console.log(
+        "ForumStore: groupsData not loaded yet, returning empty array"
+      );
+      return [];
+    }
+
+    // 过滤有权限查看的话题
+    const filteredTopics = topics.filter((topic) => {
+      // 如果没有 allowed_groups 或为空，说明是公开话题
+      if (!topic.allowed_groups || topic.allowed_groups.length === 0) {
+        return true;
+      }
+
+      // 检查当前 agent 是否在允许的组中
+      if (agentId) {
+        const hasPermission = topic.allowed_groups.some((groupName: string) => {
+          const groupMembers = groupsData[groupName];
+          return groupMembers && groupMembers.includes(agentId);
+        });
+        return hasPermission;
+      }
+
+      // 如果没有 agentId，不显示私有话题
+      return false;
+    });
+
+    return [...filteredTopics]
       .sort((a, b) => b.upvotes + b.downvotes - (a.upvotes + a.downvotes))
       .slice(0, 10);
   },
