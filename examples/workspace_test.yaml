@@ -58,7 +58,7 @@ network:
   # Use openagents.utils.password_utils.hash_password() to generate hashes
 
   # Default group for agents without valid credentials
-  default_agent_group: ["guests"]
+  default_agent_group: "guests"
 
   # Password requirement setting
   # When True: Password authentication is mandatory - agents must provide valid password_hash
