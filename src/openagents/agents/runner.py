@@ -18,6 +18,7 @@ from openagents.models.tool import AgentTool
 from openagents.core.client import AgentClient
 from openagents.utils.mod_loaders import load_mod_adapters
 from openagents.utils.verbose import verbose_print
+from openagents.models.event_response import EventResponse
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +97,11 @@ class AgentRunner(ABC):
         # Update tools if we have mod information
         if self._supported_mods is not None:
             self.update_tools()
+
+    @property
+    def agent_id(self) -> str:
+        """Get the agent ID."""
+        return self.client.agent_id
 
     def update_tools(self):
         """Update the tools available to the agent.
@@ -258,6 +264,14 @@ class AgentRunner(ABC):
             disable_finish_tool=True,
             use_llm_user_prompt=True,
         )
+    
+    async def send_event(self, event: Event) -> Optional[EventResponse]:
+        """Send an event to the network."""
+        if event.source_id is None:
+            event.source_id = self.agent_id
+        if event.destination_id is None:
+            event.destination_id = "agent:broadcast"
+        return await self.client.send_event(event)
 
     async def setup(self):
         """Setup the agent runner.
