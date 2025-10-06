@@ -182,11 +182,10 @@ def create_default_network_config(host: str = "localhost", port: int = 8700) -> 
     
     config_path = openagents_dir / "network.yaml"
     
-    # Find the default network template
+    # Find the default network template in the package templates directory
     script_dir = Path(__file__).parent
-    project_root = script_dir.parent.parent
-    template_path = project_root / "examples" / "default_network" / "network.yaml"
-    
+    template_path = script_dir / "templates" / "default_network.yaml"
+
     if not template_path.exists():
         raise FileNotFoundError(f"Default network template not found: {template_path}")
     
