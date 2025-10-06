@@ -2,8 +2,10 @@
   "name": "openagents-studio",
   "version": "1.0.0",
   "description": "OpenAgents Studio - Web interface for OpenAgents networks",
-  "private": true,
   "proxy": "http://localhost:5000",
+  "bin": {
+    "openagents-studio": "./bin/cli.js"
+  },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
     "@types/prismjs": "^1.26.5",
