@@ -617,8 +617,8 @@ def install_openagents_studio_package() -> None:
     try:
         install_process = subprocess.run(
             [
-                "npm", "install", "-g", 
-                "typescript", "react-scripts", "craco", "openagents-studio",
+                "npm", "install", "-g",
+                "openagents-studio",
                 "--prefix", openagents_prefix
             ],
             capture_output=True,
@@ -776,7 +776,7 @@ def studio_command(args: argparse.Namespace) -> None:
     # Check and install openagents-studio package if needed
     logging.info("📦 Checking openagents-studio package...")
     is_installed, is_latest, installed_version = check_openagents_studio_package()
-    
+
     if not is_installed:
         logging.info("📦 openagents-studio package not found, installing...")
         install_openagents_studio_package()

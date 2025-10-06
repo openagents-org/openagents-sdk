@@ -294,8 +294,11 @@ class HTTPNetworkConnector(NetworkConnector):
             return []
 
         try:
-            # Send poll request
+            # Send poll request with authentication
             params = {"agent_id": self.agent_id}
+            if hasattr(self, 'secret') and self.secret:
+                params["secret"] = self.secret
+
             async with self.session.get(
                 f"{self.base_url}/poll", params=params
             ) as response:
