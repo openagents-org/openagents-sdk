@@ -1,0 +1,45 @@
+# Default OpenAgents Network Configuration
+# This is a minimal network configuration with only messaging support
+# Used as the default when no workspace is specified for studio mode
+
+network:
+  name: "MyOpenAgentsNetwork"
+  mode: "centralized"
+  node_id: "my-network-coordinator"
+  host: "localhost"
+  port: 8700
+  server_mode: true
+  transport: "websocket"
+  transport_config:
+    buffer_size: 8192
+    compression: true
+    ping_interval: 30
+    ping_timeout: 10
+    max_message_size: 104857600
+  encryption_enabled: false
+  discovery_interval: 5
+  discovery_enabled: true
+  max_connections: 100
+  connection_timeout: 30.0
+  retry_attempts: 3
+  heartbeat_interval: 30
+  message_queue_size: 1000
+  message_timeout: 30.0
+  message_routing_enabled: true
+  mods:
+    - name: "openagents.mods.communication.simple_messaging"
+      enabled: true
+      config:
+        max_message_size: 104857600
+        message_retention_time: 300
+        enable_message_history: true
+
+network_profile:
+  discoverable: true
+  name: "My OpenAgents Network"
+  description: "A simple OpenAgents network with messaging support"
+  host: "localhost"
+  port: 8700
+  required_openagents_version: "0.5.1"
+
+log_level: "INFO"
