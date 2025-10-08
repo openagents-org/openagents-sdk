@@ -11,7 +11,7 @@ network:
   transports:
     - type: "http"
       config:
-        port: 8700
+        port: 8702
     - type: "grpc"
       config:
         port: 8600

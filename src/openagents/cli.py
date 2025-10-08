@@ -2,10 +2,9 @@
 """
 OpenAgents CLI
 
-Main entry point for the OpenAgents command-line interface.
+A beautiful command-line interface for OpenAgents multi-agent framework.
 """
 
-import argparse
 import sys
 import logging
 import yaml
@@ -17,18 +16,42 @@ import webbrowser
 import tempfile
 import shutil
 import socket
+import argparse
 from pathlib import Path
 from typing import List, Optional, Dict, Any, Tuple
 
+import typer
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.text import Text
+from rich.prompt import Confirm
+from rich.live import Live
+from rich.layout import Layout
+from rich.columns import Columns
+from rich import box
+
 from openagents.launchers.network_launcher import async_launch_network, launch_network
 from openagents.launchers.terminal_console import launch_console
+
+# Initialize rich console
+console = Console()
+
+# Create main app with Rich help
+app = typer.Typer(
+    name="openagents",
+    help="🤖 [bold blue]OpenAgents[/bold blue] - AI Agent Networks for Open Collaboration",
+    add_completion=False,
+    rich_markup_mode="rich"
+)
 
 # Global verbose flag that can be imported by other modules
 VERBOSE_MODE = False
 
 
 def setup_logging(level: str = "INFO", verbose: bool = False) -> None:
-    """Set up logging configuration.
+    """Set up logging configuration with Rich formatting.
 
     Args:
         level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
@@ -37,14 +60,21 @@ def setup_logging(level: str = "INFO", verbose: bool = False) -> None:
     global VERBOSE_MODE
     VERBOSE_MODE = verbose
 
+    from rich.logging import RichHandler
+
     numeric_level = getattr(logging, level.upper(), None)
     if not isinstance(numeric_level, int):
         raise ValueError(f"Invalid log level: {level}")
 
+    # Configure logging with Rich handler
     logging.basicConfig(
         level=numeric_level,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[logging.StreamHandler(), logging.FileHandler("openagents.log")],
+        format="%(message)s",
+        datefmt="[%X]",
+        handlers=[
+            RichHandler(console=console, rich_tracebacks=True, show_path=verbose),
+            logging.FileHandler("openagents.log")
+        ]
     )
 
     # Suppress noisy websockets connection logs in studio mode
@@ -52,32 +82,6 @@ def setup_logging(level: str = "INFO", verbose: bool = False) -> None:
     logging.getLogger("websockets.protocol").setLevel(logging.WARNING)
 
 
-def launch_network_command(args: argparse.Namespace) -> None:
-    """Handle launch-network command.
-
-    Args:
-        args: Command-line arguments
-    """
-    # Use enhanced network launcher for all network launches
-    launch_network(args.config, args.runtime)
-
-
-def connect_command(args: argparse.Namespace) -> None:
-    """Handle connect command.
-
-    Args:
-        args: Command-line arguments
-    """
-    # Validate that either host or network-id is provided
-    if not args.host and not args.network_id:
-        logging.error("Either --host or --network-id must be provided")
-        return
-
-    # If network-id is provided but host is not, use a default host
-    if args.network_id and not args.host:
-        args.host = "localhost"  # Default to localhost when only network-id is provided
-
-    launch_console(args.host, args.port, args.id, args.network_id)
 
 
 def get_default_workspace_path() -> Path:
@@ -513,38 +517,37 @@ def check_nodejs_availability() -> Tuple[bool, str]:
         if version_issues:
             problems.append(f"Version issues: {', '.join(version_issues)}")
         
-        error_msg = f"""
-❌ Node.js/npm compatibility issues: {'; '.join(problems)}
+        error_msg = f"""[red]❌ Node.js/npm compatibility issues:[/red] {'; '.join(problems)}
 
-OpenAgents Studio requires Node.js >= v20 and npm to run the web interface.
+OpenAgents Studio requires [bold]Node.js >= v20[/bold] and [bold]npm[/bold] to run the web interface.
 
-📋 Installation instructions:
+[bold blue]📋 Installation instructions:[/bold blue]
 
-🍎 macOS:
-   brew install node
+🍎 [bold]macOS:[/bold]
+   [code]brew install node[/code]
    # or download from: https://nodejs.org/
 
-🐧 Ubuntu/Debian:
-   sudo apt update && sudo apt install nodejs npm
-   # or: curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt install nodejs
+🐧 [bold]Ubuntu/Debian:[/bold]
+   [code]sudo apt update && sudo apt install nodejs npm[/code]
+   # or: [code]curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt install nodejs[/code]
 
-🎩 CentOS/RHEL/Fedora:
-   sudo dnf install nodejs npm
-   # or: curl -fsSL https://rpm.nodesource.com/setup_lts.x | sudo bash - && sudo dnf install nodejs
+🎩 [bold]CentOS/RHEL/Fedora:[/bold]
+   [code]sudo dnf install nodejs npm[/code]
+   # or: [code]curl -fsSL https://rpm.nodesource.com/setup_lts.x | sudo bash - && sudo dnf install nodejs[/code]
 
-🪟 Windows:
+🪟 [bold]Windows:[/bold]
    Download from: https://nodejs.org/
-   # or: winget install OpenJS.NodeJS
+   # or: [code]winget install OpenJS.NodeJS[/code]
 
-🔧 Alternative - Use nvm (Node Version Manager):
-   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
-   nvm install --lts
-   nvm use --lts
+🔧 [bold]Alternative - Use nvm (Node Version Manager):[/bold]
+   [code]curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash[/code]
+   [code]nvm install --lts[/code]
+   [code]nvm use --lts[/code]
 
-After installation, verify with:
-   node --version && npm --version
+[bold green]After installation, verify with:[/bold green]
+   [code]node --version && npm --version[/code]
 
-Then run 'openagents studio' again.
+Then run [code]openagents studio[/code] again.
 """
         return False, error_msg
 
@@ -757,111 +760,127 @@ def launch_studio_frontend(studio_port: int = 8055) -> subprocess.Popen:
         raise RuntimeError("npx command not found. Please install Node.js and npm.")
 
 
-def studio_command(args: argparse.Namespace) -> None:
-    """Handle studio command.
+def studio_command(args) -> None:
+    """Handle studio command with Rich styling.
 
     Args:
-        args: Command-line arguments
+        args: Command-line arguments (can be argparse.Namespace or SimpleNamespace)
     """
     import asyncio
 
-    logging.info("🚀 Starting OpenAgents Studio...")
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        startup_task = progress.add_task("🚀 Starting OpenAgents Studio...", total=None)
 
-    # Check Node.js/npm availability first
-    is_available, error_msg = check_nodejs_availability()
-    if not is_available:
-        raise RuntimeError(error_msg)
+        try:
+            # Check Node.js/npm availability first
+            progress.update(startup_task, description="🔍 Checking Node.js/npm availability...")
+            is_available, error_msg = check_nodejs_availability()
+            if not is_available:
+                console.print(Panel(
+                    error_msg,
+                    title="[red]❌ Node.js Requirements[/red]",
+                    border_style="red"
+                ))
+                raise typer.Exit(1)
 
-    # Check and install openagents-studio package if needed
-    logging.info("📦 Checking openagents-studio package...")
-    is_installed, is_latest, installed_version = check_openagents_studio_package()
+            # Check and install openagents-studio package if needed
+            progress.update(startup_task, description="📦 Checking openagents-studio package...")
+            is_installed, is_latest, installed_version = check_openagents_studio_package()
 
-    if not is_installed:
-        logging.info("📦 openagents-studio package not found, installing...")
-        install_openagents_studio_package()
-    elif not is_latest:
-        logging.info(f"📦 Updating openagents-studio from {installed_version} to latest...")
-        install_openagents_studio_package()
-    else:
-        logging.info(f"✅ openagents-studio package up-to-date ({installed_version})")
+            if not is_installed:
+                progress.update(startup_task, description="📦 Installing openagents-studio package...")
+                install_openagents_studio_package()
+            elif not is_latest:
+                progress.update(startup_task, description=f"📦 Updating openagents-studio from {installed_version}...")
+                install_openagents_studio_package()
+            else:
+                console.print(f"[green]✅ openagents-studio package up-to-date ({installed_version})[/green]")
 
-    # Extract arguments
-    network_host = args.host
-    network_port = args.port
-    studio_port = args.studio_port
-    workspace_path = getattr(args, "workspace", None)
-    no_browser = args.no_browser
+            # Extract arguments
+            network_host = args.host
+            network_port = args.port
+            studio_port = args.studio_port
+            workspace_path = getattr(args, "workspace", None)
+            no_browser = args.no_browser
 
-    # Determine workspace path (optional)
-    if workspace_path:
-        workspace_path = Path(workspace_path).resolve()
-        logging.info(f"📁 Using workspace: {workspace_path}")
-    else:
-        workspace_path = None
-        logging.info("📁 No workspace specified, will use default network configuration")
+            # Determine workspace path (optional)
+            if workspace_path:
+                workspace_path = Path(workspace_path).resolve()
+                console.print(f"[blue]📁 Using workspace: {workspace_path}[/blue]")
+            else:
+                workspace_path = None
+                console.print("[blue]📁 Using default network configuration[/blue]")
 
-    # Check for port conflicts early
-    logging.info("🔍 Checking port availability...")
-    
-    # Check studio port availability
-    studio_available, studio_process = check_port_availability("0.0.0.0", studio_port)
-    if not studio_available:
-        alt_studio_port = studio_port
-        for offset in range(1, 20):
-            test_port = studio_port + offset
-            if test_port > 65535:
-                break
-            available, _ = check_port_availability("0.0.0.0", test_port)
-            if available:
-                alt_studio_port = test_port
-                break
+            # Check for port conflicts early
+            progress.update(startup_task, description="🔍 Checking port availability...")
+            
+            # Check studio port availability
+            studio_available, studio_process = check_port_availability("0.0.0.0", studio_port)
+            if not studio_available:
+                alt_studio_port = studio_port
+                for offset in range(1, 20):
+                    test_port = studio_port + offset
+                    if test_port > 65535:
+                        break
+                    available, _ = check_port_availability("0.0.0.0", test_port)
+                    if available:
+                        alt_studio_port = test_port
+                        break
 
-        error_msg = f"""
-❌ Studio frontend port conflict detected:
+                error_panel = Panel(
+                    f"🎨 Studio port {studio_port}: occupied by {studio_process}\n\n"
+                    f"💡 Solutions:\n"
+                    f"1️⃣  Use alternative port: [code]openagents studio --studio-port {alt_studio_port}[/code]\n"
+                    f"2️⃣  Stop the conflicting process: [code]sudo lsof -ti:{studio_port} | xargs kill[/code]",
+                    title="[red]❌ Studio Port Conflict[/red]",
+                    border_style="red"
+                )
+                console.print(error_panel)
+                raise typer.Exit(1)
 
-🎨 Studio port {studio_port}: occupied by {studio_process}
+            # Check network port availability 
+            network_available, network_process = check_port_availability(network_host, network_port)
+            skip_network = False
+            
+            if not network_available:
+                if network_port == 8700:  # Default network port
+                    console.print(f"[yellow]⚠️  Default network port {network_port} is occupied by {network_process}[/yellow]")
+                    console.print("[yellow]🎨 Will start studio frontend only (network backend skipped)[/yellow]")
+                    skip_network = True
+                else:
+                    # Custom port specified, show error
+                    error_panel = Panel(
+                        f"🌐 Network port {network_port}: occupied by {network_process}\n\n"
+                        f"💡 Solutions:\n"
+                        f"1️⃣  Use different port: [code]openagents studio --port <available-port>[/code]\n"
+                        f"2️⃣  Stop the conflicting process: [code]sudo lsof -ti:{network_port} | xargs kill[/code]\n"
+                        f"3️⃣  Use default port and skip network: [code]openagents studio[/code] (without --port)",
+                        title="[red]❌ Network Port Conflict[/red]",
+                        border_style="red"
+                    )
+                    console.print(error_panel)
+                    raise typer.Exit(1)
 
-💡 Solutions:
-1️⃣  Use alternative port: openagents studio --studio-port {alt_studio_port}
-2️⃣  Stop the conflicting process: sudo lsof -ti:{studio_port} | xargs kill
-"""
-        logging.error(error_msg)
-        raise RuntimeError("Studio port conflict detected. See above for solutions.")
+            if not skip_network:
+                console.print("[green]✅ All ports are available[/green]")
 
-    # Check network port availability 
-    network_available, network_process = check_port_availability(network_host, network_port)
-    skip_network = False
-    
-    if not network_available:
-        if network_port == 8700:  # Default network port
-            logging.warning(f"⚠️  Default network port {network_port} is occupied by {network_process}")
-            logging.info("🎨 Will start studio frontend only (network backend skipped)")
-            skip_network = True
-        else:
-            # Custom port specified, show error
-            error_msg = f"""
-❌ Network port conflict detected:
+            progress.update(startup_task, description="[green]✅ Pre-flight checks complete![/green]")
 
-🌐 Network port {network_port}: occupied by {network_process}
-
-💡 Solutions:
-1️⃣  Use different port: openagents studio --port <available-port>
-2️⃣  Stop the conflicting process: sudo lsof -ti:{network_port} | xargs kill
-3️⃣  Use default port and skip network: openagents studio (without --port)
-"""
-            logging.error(error_msg)
-            raise RuntimeError("Network port conflict detected. See above for solutions.")
-
-    if not skip_network:
-        logging.info("✅ All ports are available")
+        except Exception as e:
+            progress.update(startup_task, description=f"[red]❌ Setup failed: {e}[/red]")
+            raise
 
     def frontend_monitor(process):
         """Monitor frontend process output and detect when it's ready."""
         ready_detected = False
         for line in iter(process.stdout.readline, ""):
             if line:
-                # Print frontend output with prefix
-                print(f"[Studio] {line.rstrip()}")
+                # Print frontend output with prefix using Rich
+                console.print(f"[dim]\\[Studio][/dim] {line.rstrip()}")
 
                 # Detect when the development server is ready
                 if not ready_detected and (
@@ -875,10 +894,10 @@ def studio_command(args: argparse.Namespace) -> None:
                     if not no_browser:
                         # Wait a moment then open browser
                         time.sleep(2)
-                        logging.info(f"🌐 Opening studio in browser: {studio_url}")
+                        console.print(f"[green]🌐 Opening studio in browser: {studio_url}[/green]")
                         webbrowser.open(studio_url)
                     else:
-                        logging.info(f"🌐 Studio is ready at: {studio_url}")
+                        console.print(f"[green]🌐 Studio is ready at: {studio_url}[/green]")
 
     async def run_studio():
         """Run the complete studio setup."""
@@ -886,6 +905,7 @@ def studio_command(args: argparse.Namespace) -> None:
 
         try:
             # Start frontend using the installed package
+            console.print(f"[blue]🎨 Launching studio frontend on port {studio_port}...[/blue]")
             frontend_process = launch_studio_with_package(studio_port)
 
             # Start monitoring frontend output in background thread
@@ -899,672 +919,513 @@ def studio_command(args: argparse.Namespace) -> None:
 
             if skip_network:
                 # Just wait for frontend without starting network
-                logging.info("🎨 Studio frontend running in standalone mode")
-                logging.info("💡 Start a network separately with: openagents network start")
+                console.print(Panel(
+                    "🎨 Studio frontend running in standalone mode\n"
+                    "💡 Start a network separately with: [code]openagents network start[/code]",
+                    title="[yellow]⚠️  Standalone Mode[/yellow]",
+                    border_style="yellow"
+                ))
                 frontend_process.wait()
             else:
                 # Launch network (this will run indefinitely)
-                logging.info(f"🌐 Starting network on {network_host}:{network_port}...")
+                console.print(f"[blue]🌐 Starting network on {network_host}:{network_port}...[/blue]")
                 await studio_network_launcher(workspace_path, network_host, network_port)
 
         except KeyboardInterrupt:
-            logging.info("📱 Studio shutdown requested...")
+            console.print("\n[yellow]📱 Studio shutdown requested...[/yellow]")
         except Exception as e:
-            logging.error(f"❌ Studio error: {e}")
+            console.print(f"[red]❌ Studio error: {e}[/red]")
+            raise
         finally:
             # Clean up frontend process
             if frontend_process:
-                logging.info("🔄 Shutting down studio frontend...")
+                console.print("[blue]🔄 Shutting down studio frontend...[/blue]")
                 frontend_process.terminate()
                 try:
                     frontend_process.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     frontend_process.kill()
                     frontend_process.wait()
-                logging.info("✅ Studio frontend shutdown complete")
+                console.print("[green]✅ Studio frontend shutdown complete[/green]")
 
     try:
         asyncio.run(run_studio())
     except KeyboardInterrupt:
-        logging.info("✅ OpenAgents Studio stopped")
+        console.print("\n[green]✅ OpenAgents Studio stopped[/green]")
     except Exception as e:
-        logging.error(f"❌ Failed to start OpenAgents Studio: {e}")
+        console.print(f"[red]❌ Failed to start OpenAgents Studio: {e}[/red]")
+        raise typer.Exit(1)
+
+
+
+
+
+
+# ============================================================================
+# Typer Command Definitions
+# ============================================================================
+
+# Network command group
+network_app = typer.Typer(
+    name="network",
+    help="🌐 Network management commands",
+    rich_markup_mode="rich"
+)
+
+# Agent command group  
+agent_app = typer.Typer(
+    name="agent", 
+    help="🤖 Agent management commands",
+    rich_markup_mode="rich"
+)
+
+# Add subcommands to main app
+app.add_typer(network_app, name="network")
+app.add_typer(agent_app, name="agent")
+
+
+@network_app.command("start")
+def network_start(
+    config: Optional[str] = typer.Argument(None, help="Path to network configuration file"),
+    workspace: Optional[str] = typer.Option(None, "--workspace", "-w", help="Path to workspace directory"),
+    port: Optional[int] = typer.Option(None, "--port", "-p", help="Network port (overrides config)"),
+    detach: bool = typer.Option(False, "--detach", "-d", help="Run in background"),
+    runtime: Optional[int] = typer.Option(None, "--runtime", "-t", help="Runtime in seconds"),
+):
+    """🚀 Start a network"""
+    import io
+    import contextlib
+    
+    # Capture log output to detect errors
+    log_capture = io.StringIO()
+    
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Starting network...", total=None)
+        
+        # Create a custom log handler to capture error messages
+        class ErrorDetectingHandler(logging.Handler):
+            def __init__(self):
+                super().__init__()
+                self.has_error = False
+                self.error_messages = []
+                
+            def emit(self, record):
+                if record.levelno >= logging.ERROR:
+                    self.has_error = True
+                    self.error_messages.append(record.getMessage())
+                    
+        error_detector = ErrorDetectingHandler()
+        root_logger = logging.getLogger()
+        original_level = root_logger.level
+        
+        try:
+            # Add our error detector to the root logger and openagents loggers
+            root_logger.addHandler(error_detector)
+            
+            # Also add to specific openagents loggers that might log errors
+            openagents_logger = logging.getLogger('openagents')
+            openagents_logger.addHandler(error_detector)
+            
+            if workspace or config is None:
+                launch_network(config, runtime, workspace)
+            else:
+                launch_network(config, runtime)
+                
+            # Check if any errors were logged during network startup
+            if error_detector.has_error:
+                progress.update(task, description="[red]❌ Failed to start network")
+                
+                # Check for specific error patterns
+                error_text = " ".join(error_detector.error_messages).lower()
+                
+                if "address already in use" in error_text or "errno 98" in error_text:
+                    console.print(Panel(
+                        "[red]❌ Network port is already occupied[/red]\n\n"
+                        "The network could not start because another process is using the port.\n\n"
+                        "[bold cyan]💡 Solutions:[/bold cyan]\n"
+                        "1️⃣  [bold]Stop conflicting process:[/bold] [code]sudo lsof -ti:8700 | xargs kill[/code]\n"
+                        "2️⃣  [bold]Check port usage:[/bold] [code]lsof -i:8700[/code]\n"
+                        "3️⃣  [bold]Edit config:[/bold] Change the port in your network configuration file\n"
+                        "4️⃣  [bold]Use different port:[/bold] Try a different port number (e.g., 8701, 8702)",
+                        title="[red]⚠️  Port Conflict Detected[/red]",
+                        border_style="red"
+                    ))
+                else:
+                    console.print(Panel(
+                        "[red]❌ Network failed to start[/red]\n\n"
+                        "The network encountered an error during startup.\n\n"
+                        "[bold cyan]💡 Common issues & solutions:[/bold cyan]\n"
+                        "1️⃣  [bold]Config error:[/bold] Verify your configuration file exists and is valid\n"
+                        "2️⃣  [bold]Permission issue:[/bold] Check if you have permission to bind to the port\n"
+                        "3️⃣  [bold]More details:[/bold] Run with [code]--verbose[/code] flag\n"
+                        f"4️⃣  [bold]Error details:[/bold] {error_detector.error_messages[0] if error_detector.error_messages else 'Unknown error'}",
+                        title="[red]⚠️  Network Startup Error[/red]",
+                        border_style="red"
+                    ))
+                raise typer.Exit(1)
+            else:
+                progress.update(task, description="[green]✅ Network started successfully!")
+                
+        except Exception as e:
+            error_msg = str(e)
+            progress.update(task, description="[red]❌ Failed to start network")
+            console.print(Panel(
+                f"[red]❌ Network startup failed[/red]\n\n"
+                f"Error: {error_msg}\n\n"
+                "[bold cyan]💡 Troubleshooting:[/bold cyan]\n"
+                "1️⃣  Check the configuration file path\n"
+                "2️⃣  Verify network settings in the config\n"
+                "3️⃣  Run with [code]--verbose[/code] for more details",
+                title="[red]⚠️  Network Error[/red]",
+                border_style="red"
+            ))
+            raise typer.Exit(1)
+        finally:
+            # Remove our error detector from the loggers
+            root_logger.removeHandler(error_detector)
+            openagents_logger.removeHandler(error_detector)
+
+
+@network_app.command("list")
+def network_list(
+    status: bool = typer.Option(False, "--status", "-s", help="Show status information")
+):
+    """📋 List available networks"""
+    table = Table(title="🌐 Available Networks", box=box.ROUNDED)
+    
+    if status:
+        table.add_column("Name", style="cyan")
+        table.add_column("Status", style="green")
+        table.add_column("Port", style="yellow") 
+        table.add_column("PID", style="magenta")
+        table.add_row("No networks found", "—", "—", "—")
+    else:
+        table.add_column("Name", style="cyan")
+        table.add_column("Description", style="green")
+        table.add_row("No networks found", "—")
+    
+    console.print(table)
+
+
+@network_app.command("interact")
+def network_interact(
+    network: Optional[str] = typer.Option(None, "--network", "-n", help="Network ID to connect to"),
+    host: str = typer.Option("localhost", "--host", "-h", help="Server host address"),
+    port: int = typer.Option(8570, "--port", "-p", help="Server port"),
+    agent_id: Optional[str] = typer.Option(None, "--id", help="Agent ID"),
+):
+    """💬 Connect to a network interactively"""
+    console.print(f"[bold blue]🔗 Connecting to network at {host}:{port}[/bold blue]")
+    
+    # Validate that either host or network-id is provided
+    if not host and not network:
+        console.print("[red]❌ Either --host or --network must be provided[/red]")
+        raise typer.Exit(1)
+
+    # If network-id is provided but host is not, use a default host
+    if network and not host:
+        host = "localhost"
+
+    launch_console(host, port, agent_id, network)
+
+
+@agent_app.command("start")
+def agent_start(
+    config: str = typer.Argument(..., help="Path to agent configuration file"),
+    network: Optional[str] = typer.Option(None, "--network", "-n", help="Network ID to connect to"),
+    host: Optional[str] = typer.Option(None, "--host", "-h", help="Server host address"),
+    port: Optional[int] = typer.Option(None, "--port", "-p", help="Server port"),
+    detach: bool = typer.Option(False, "--detach", "-d", help="Run in background"),
+):
+    """🚀 Start an agent"""
+    from openagents.agents.runner import AgentRunner
+    
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Loading agent configuration...", total=None)
+        
+        try:
+            if detach:
+                console.print("[yellow]⚠️  Detached mode not yet implemented, running in foreground[/yellow]")
+
+            # Load agent using AgentRunner.from_yaml
+            agent = AgentRunner.from_yaml(config)
+            progress.update(task, description=f"[green]✅ Loaded agent '{agent.agent_id}'")
+
+            # Prepare connection settings
+            connection_settings = {}
+            config_path = Path(config)
+            if config_path.exists():
+                try:
+                    with open(config_path, "r") as file:
+                        yaml_config = yaml.safe_load(file)
+                    if "connection" in yaml_config:
+                        connection_settings.update(yaml_config["connection"])
+                except Exception as e:
+                    console.print(f"[yellow]⚠️  Could not read connection settings: {e}[/yellow]")
+
+            # Override with command line arguments
+            if host is not None:
+                connection_settings["host"] = host
+            if port is not None:
+                connection_settings["port"] = port
+            if network is not None:
+                connection_settings["network_id"] = network
+
+            # Apply defaults
+            final_host = connection_settings.get("host", "localhost")
+            final_port = connection_settings.get("port", 8570)
+            network_id = connection_settings.get("network_id")
+
+            progress.update(task, description=f"[blue]🔗 Connecting to {final_host}:{final_port}")
+
+            # Start the agent
+            agent.start(
+                network_host=final_host,
+                network_port=final_port,
+                network_id=network_id,
+                metadata={"agent_type": type(agent).__name__, "config_file": config},
+            )
+
+            progress.update(task, description="[green]✅ Agent started successfully!")
+            console.print(f"[green]🤖 Agent '{agent.agent_id}' is running![/green]")
+
+            # Wait for the agent to stop
+            agent.wait_for_stop()
+
+        except KeyboardInterrupt:
+            progress.update(task, description="[yellow]🛑 Agent stopped by user")
+            if 'agent' in locals():
+                agent.stop()
+        except Exception as e:
+            progress.update(task, description=f"[red]❌ Failed to start agent: {e}")
+            console.print(f"[red]Error: {e}[/red]")
+            if 'agent' in locals():
+                agent.stop()
+            raise typer.Exit(1)
+
+
+@agent_app.command("list")  
+def agent_list(
+    network: Optional[str] = typer.Option(None, "--network", "-n", help="Filter by network")
+):
+    """📋 List agents"""
+    table = Table(title="🤖 Available Agents", box=box.ROUNDED)
+    table.add_column("Name", style="cyan")
+    table.add_column("Type", style="green")
+    table.add_column("Status", style="yellow")
+    table.add_column("Network", style="magenta")
+    
+    if network:
+        table.title = f"🤖 Agents in Network '{network}'"
+    
+    table.add_row("No agents found", "—", "—", "—")
+    console.print(table)
+
+
+@app.command("studio")
+def studio(
+    host: str = typer.Option("localhost", "--host", "-h", help="Network host address"),
+    port: int = typer.Option(8700, "--port", "-p", help="Network port"),
+    studio_port: int = typer.Option(8055, "--studio-port", help="Studio frontend port"),
+    workspace: Optional[str] = typer.Option(None, "--workspace", "-w", help="Path to workspace directory"),
+    no_browser: bool = typer.Option(False, "--no-browser", help="Don't automatically open browser"),
+):
+    """🎨 Launch OpenAgents Studio - A beautiful web interface"""
+    import asyncio
+    from types import SimpleNamespace
+    
+    console.print(Panel.fit(
+        "[bold blue]🚀 OpenAgents Studio[/bold blue]\n"
+        "A beautiful web interface for AI agent collaboration",
+        border_style="blue"
+    ))
+
+    # Convert to old args format for compatibility
+    args = SimpleNamespace(
+        host=host,
+        port=port, 
+        studio_port=studio_port,
+        workspace=workspace,
+        no_browser=no_browser
+    )
+    
+    studio_command(args)
+
+
+@app.command("version")
+def version():
+    """📖 Show version information"""
+    try:
+        from openagents import __version__
+        console.print(Panel.fit(
+            f"[bold blue]OpenAgents[/bold blue] [green]v{__version__}[/green]\n"
+            "🤖 AI Agent Networks for Open Collaboration",
+            border_style="blue"
+        ))
+    except ImportError:
+        console.print("[yellow]⚠️  Version information not available[/yellow]")
+
+
+@app.command("examples")
+def show_examples():
+    """📚 Show usage examples"""
+    examples_text = """
+[bold blue]🚀 Common Usage Examples:[/bold blue]
+
+[bold green]1. Quick Start with Studio:[/bold green]
+   [code]openagents studio[/code]
+   
+[bold green]2. Start a Network:[/bold green]
+   [code]openagents network start examples/my_network.yaml[/code]
+   
+[bold green]3. Connect to a Network:[/bold green]
+   [code]openagents network interact --host localhost --port 8570[/code]
+   
+[bold green]4. Launch an Agent:[/bold green]
+   [code]openagents agent start examples/my_agent.yaml[/code]
+   
+[bold green]5. Studio with Custom Workspace:[/bold green]
+   [code]openagents studio --workspace ./my_workspace[/code]
+   
+[bold green]6. Network with Custom Port:[/bold green]
+   [code]openagents network start --runtime 300 config.yaml[/code]
+
+[bold cyan]📖 For more information, visit:[/bold cyan]
+   [link]https://github.com/openagents-org/openagents[/link]
+"""
+    
+    console.print(Panel(
+        examples_text,
+        title="[bold blue]📚 OpenAgents Examples[/bold blue]",
+        border_style="blue",
+        expand=False
+    ))
+
+
+@app.command("init")  
+def init_workspace(
+    path: Optional[str] = typer.Argument(None, help="Workspace directory path"),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing workspace"),
+):
+    """🏗️ Initialize a new OpenAgents workspace"""
+    workspace_path = Path(path) if path else get_default_workspace_path()
+    
+    if workspace_path.exists() and not force:
+        if workspace_path.is_dir() and any(workspace_path.iterdir()):
+            console.print(f"[red]❌ Directory already exists and is not empty: {workspace_path}[/red]")
+            console.print("[yellow]💡 Use --force to overwrite existing content[/yellow]")
+            raise typer.Exit(1)
+    
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("🏗️ Creating workspace...", total=None)
+        
+        try:
+            config_path = initialize_workspace(workspace_path)
+            progress.update(task, description="[green]✅ Workspace created successfully!")
+            
+            console.print(Panel.fit(
+                f"[bold green]🎉 Workspace initialized![/bold green]\n\n"
+                f"📁 Location: [code]{workspace_path}[/code]\n"
+                f"⚙️  Config: [code]{config_path}[/code]\n\n"
+                f"[bold cyan]Next steps:[/bold cyan]\n"
+                f"1. [code]cd {workspace_path}[/code]\n"
+                f"2. [code]openagents studio[/code]",
+                border_style="green"
+            ))
+            
+        except Exception as e:
+            progress.update(task, description=f"[red]❌ Failed to create workspace: {e}[/red]")
+            console.print(f"[red]Error: {e}[/red]")
+            raise typer.Exit(1)
+
+
+# Global options callback
+def version_callback(value: bool):
+    if value:
+        version()
+        raise typer.Exit()
+
+
+def verbose_callback(value: bool):
+    global VERBOSE_MODE
+    VERBOSE_MODE = value
+    return value
+
+
+def show_banner():
+    """Show a beautiful startup banner"""
+    banner_text = """
+[bold blue]   ___                              ___                          _       [/bold blue]
+[bold blue]  / _ \\ _ __    ___  _ __           /   \\  __ _   ___  _ __   | |_  ___ [/bold blue]
+[bold blue] | | | | '_ \\  / _ \\| '_ \\         / /\\ / / _` | / _ \\| '_ \\  | __|/ __([/bold blue]
+[bold blue] | |_| | |_) ||  __/| | | |       / /_// | (_| ||  __/| | | | | |_\\__ \\[/bold blue]
+[bold blue]  \\___/| .__/  \\___||_| |_|      /___,'   \\__, | \\___||_| |_|  \\__|___/[/bold blue]
+[bold blue]       |_|                              |___/                        [/bold blue]
+                                                                      
+[bold cyan]🤖 AI Agent Networks for Open Collaboration[/bold cyan]
+[dim]   Create and manage distributed AI agent networks with ease[/dim]
+"""
+    console.print(Panel(
+        banner_text.strip(),
+        border_style="blue",
+        expand=False
+    ))
+
+
+@app.callback()
+def main(
+    version_flag: Optional[bool] = typer.Option(
+        None, "--version", callback=version_callback, is_eager=True,
+        help="Show version and exit"
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", callback=verbose_callback,
+        help="Enable verbose output"
+    ),
+    log_level: str = typer.Option(
+        "INFO", "--log-level",
+        help="Set the logging level"
+    ),
+    no_banner: bool = typer.Option(
+        False, "--no-banner", 
+        help="Don't show the startup banner"
+    ),
+):
+    """
+    🤖 [bold blue]OpenAgents[/bold blue] - AI Agent Networks for Open Collaboration
+    
+    Create and manage distributed AI agent networks with ease.
+    """
+    setup_logging(log_level, verbose)
+    
+    # Show banner for the studio command (most common entry point)
+    if not no_banner and len(sys.argv) > 1 and sys.argv[1] == 'studio':
+        show_banner()
+
+
+def cli_main():
+    """Entry point for the CLI"""
+    try:
+        app()
+    except KeyboardInterrupt:
+        console.print("\n[yellow]👋 Goodbye![/yellow]")
+        sys.exit(0)
+    except Exception as e:
+        console.print(f"[red]❌ Unexpected error: {e}[/red]")
         sys.exit(1)
 
 
-# Network command handlers
-def handle_network_command(args: argparse.Namespace) -> None:
-    """Route network subcommands to appropriate handlers.
-
-    Args:
-        args: Parsed command line arguments
-    """
-    if args.network_action == "start":
-        network_start_command(args)
-    elif args.network_action == "stop":
-        network_stop_command(args)
-    elif args.network_action == "list":
-        network_list_command(args)
-    elif args.network_action == "info":
-        network_info_command(args)
-    elif args.network_action == "logs":
-        network_logs_command(args)
-    elif args.network_action == "interact":
-        network_interact_command(args)
-    elif args.network_action == "create":
-        network_create_command(args)
-    else:
-        logging.error(f"Unknown network action: {args.network_action}")
-
-
-def network_start_command(args: argparse.Namespace) -> None:
-    """Handle 'network start' command.
-
-    Args:
-        args: Command arguments
-    """
-    if args.detach:
-        config_str = args.config or "auto-discovered config"
-        logging.info(f"Starting network in background: {config_str}")
-        # TODO: Implement detached mode with process management
-        logging.warning("Detached mode not yet implemented, running in foreground")
-
-    # Handle workspace-based launch
-    if args.workspace or args.config is None:
-        workspace_path = args.workspace
-        config_path = args.config
-
-        # Validate that we have either config or workspace
-        if not config_path and not workspace_path:
-            logging.error("Either config file or workspace directory must be provided")
-            return
-
-        # Use workspace-aware launch_network functionality
-        launch_network(config_path, args.runtime, workspace_path)
-    else:
-        # Use existing launch_network functionality for backward compatibility
-        launch_network(args.config, args.runtime)
-
-
-def network_stop_command(args: argparse.Namespace) -> None:
-    """Handle 'network stop' command.
-
-    Args:
-        args: Command arguments
-    """
-    logging.info(f"Stopping network: {args.name if args.name else 'all networks'}")
-    logging.warning("Network stop not yet implemented")
-
-
-def network_list_command(args: argparse.Namespace) -> None:
-    """Handle 'network list' command.
-
-    Args:
-        args: Command arguments
-    """
-    if args.status:
-        print("Networks with status:")
-        print("NAME              STATUS    PORT    PID")
-        print("================  ========  ======  =====")
-        print("No networks found")
-    else:
-        print("Available networks:")
-        print("No networks found")
-
-
-def network_info_command(args: argparse.Namespace) -> None:
-    """Handle 'network info' command.
-
-    Args:
-        args: Command arguments
-    """
-    logging.info(f"Getting info for network: {args.name}")
-    logging.warning("Network info not yet implemented")
-
-
-def network_logs_command(args: argparse.Namespace) -> None:
-    """Handle 'network logs' command.
-
-    Args:
-        args: Command arguments
-    """
-    logging.info(
-        f"{'Following' if args.follow else 'Showing'} logs for network: {args.name}"
-    )
-    logging.warning("Network logs not yet implemented")
-
-
-def network_interact_command(args: argparse.Namespace) -> None:
-    """Handle 'network interact' command.
-
-    Args:
-        args: Command arguments
-    """
-    # Use existing connect functionality
-    launch_console(args.host, args.port, args.id, args.network)
-
-
-def network_create_command(args: argparse.Namespace) -> None:
-    """Handle 'network create' command.
-
-    Args:
-        args: Command arguments
-    """
-    logging.info(f"Creating network from template: {args.template}")
-    logging.warning("Network creation not yet implemented")
-
-
-# Agent command handlers
-def handle_agent_command(args: argparse.Namespace) -> None:
-    """Route agent subcommands to appropriate handlers.
-
-    Args:
-        args: Parsed command line arguments
-    """
-    if args.agent_action == "start":
-        agent_start_command(args)
-    elif args.agent_action == "stop":
-        agent_stop_command(args)
-    elif args.agent_action == "list":
-        agent_list_command(args)
-    elif args.agent_action == "logs":
-        agent_logs_command(args)
-    elif args.agent_action == "create":
-        agent_create_command(args)
-    else:
-        logging.error(f"Unknown agent action: {args.agent_action}")
-
-
-def agent_start_command(args: argparse.Namespace) -> None:
-    """Handle 'agent start' command.
-
-    Args:
-        args: Command arguments
-    """
-    from openagents.agents.runner import AgentRunner
-    import yaml
-
-    if args.detach:
-        logging.info(f"Starting agent in background: {args.config}")
-        logging.warning("Detached mode not yet implemented, running in foreground")
-
-    try:
-        # Load agent using AgentRunner.from_yaml (reuse existing logic)
-        logging.info(f"Loading agent from configuration: {args.config}")
-        agent = AgentRunner.from_yaml(args.config)
-
-        # Get agent information
-        agent_id = agent.agent_id
-        agent_type = type(agent).__name__
-
-        logging.info(f"Loaded agent '{agent_id}' of type '{agent_type}'")
-
-        # Prepare connection settings - prioritize command line arguments over config file
-        connection_settings = {}
-
-        # Load config file to get connection settings if needed
-        config_path = Path(args.config)
-        if config_path.exists():
-            try:
-                with open(config_path, "r") as file:
-                    config = yaml.safe_load(file)
-
-                # Get connection settings from config file
-                if "connection" in config:
-                    conn_config = config["connection"]
-                    connection_settings.update(conn_config)
-            except Exception as e:
-                logging.warning(
-                    f"Could not read connection settings from config file: {e}"
-                )
-
-        # Override with command line arguments (if provided)
-        if args.host is not None:
-            connection_settings["host"] = args.host
-        if args.port is not None:
-            connection_settings["port"] = args.port
-        if args.network is not None:
-            connection_settings["network_id"] = args.network
-
-        # Apply defaults for any missing settings
-        host = connection_settings.get("host", "localhost")
-        port = connection_settings.get("port", 8570)
-        network_id = connection_settings.get("network_id")
-
-        # Start the agent and wait for it to stop
-        try:
-            logging.info(f"Starting agent '{agent_id}' - connecting to {host}:{port}")
-            if network_id:
-                logging.info(f"Target network ID: {network_id}")
-
-            # Start the agent
-            agent.start(
-                network_host=host,
-                network_port=port,
-                network_id=network_id,
-                metadata={"agent_type": agent_type, "config_file": args.config},
-            )
-
-            # Wait for the agent to stop
-            agent.wait_for_stop()
-
-        except KeyboardInterrupt:
-            logging.info("Agent stopped by user")
-            agent.stop()
-        except Exception as e:
-            logging.error(f"Error running agent: {e}")
-            agent.stop()
-
-    except FileNotFoundError as e:
-        logging.error(f"Configuration file not found: {e}")
-        return
-    except ValueError as e:
-        logging.error(f"Invalid configuration: {e}")
-        return
-    except ImportError as e:
-        logging.error(f"Failed to import agent class: {e}")
-        return
-    except Exception as e:
-        logging.error(f"Failed to load agent: {e}")
-        return
-
-
-def agent_stop_command(args: argparse.Namespace) -> None:
-    """Handle 'agent stop' command.
-
-    Args:
-        args: Command arguments
-    """
-    logging.info(f"Stopping agent: {args.name}")
-    logging.warning("Agent stop not yet implemented")
-
-
-def agent_list_command(args: argparse.Namespace) -> None:
-    """Handle 'agent list' command.
-
-    Args:
-        args: Command arguments
-    """
-    if args.network:
-        print(f"Agents in network '{args.network}':")
-    else:
-        print("All agents:")
-
-    print("NAME              TYPE           STATUS    NETWORK")
-    print("================  =============  ========  ================")
-    print("No agents found")
-
-
-def agent_logs_command(args: argparse.Namespace) -> None:
-    """Handle 'agent logs' command.
-
-    Args:
-        args: Command arguments
-    """
-    logging.info(
-        f"{'Following' if args.follow else 'Showing'} logs for agent: {args.name}"
-    )
-    logging.warning("Agent logs not yet implemented")
-
-
-def agent_create_command(args: argparse.Namespace) -> None:
-    """Handle 'agent create' command.
-
-    Args:
-        args: Command arguments
-    """
-    logging.info(f"Creating agent from template: {args.template}")
-    logging.warning("Agent creation not yet implemented")
-
-
-def launch_agent_command(args: argparse.Namespace) -> None:
-    """Handle launch-agent command.
-
-    Args:
-        args: Command-line arguments
-    """
-    from openagents.agents.runner import AgentRunner
-
-    try:
-        # Load agent using AgentRunner.from_yaml
-        logging.info(f"Loading agent from configuration: {args.config}")
-        agent = AgentRunner.from_yaml(args.config)
-
-        # Get agent information
-        agent_id = agent.agent_id
-        agent_type = type(agent).__name__
-
-        logging.info(f"Loaded agent '{agent_id}' of type '{agent_type}'")
-
-        # Prepare connection settings - prioritize command line arguments over config file
-        connection_settings = {}
-
-        # Load config file to get connection settings if needed
-        config_path = Path(args.config)
-        if config_path.exists():
-            try:
-                with open(config_path, "r") as file:
-                    config = yaml.safe_load(file)
-
-                # Get connection settings from config file
-                if "connection" in config:
-                    conn_config = config["connection"]
-                    connection_settings.update(conn_config)
-            except Exception as e:
-                logging.warning(
-                    f"Could not read connection settings from config file: {e}"
-                )
-
-        # Override with command line arguments (if provided)
-        if args.host is not None:
-            connection_settings["host"] = args.host
-        if args.port is not None:
-            connection_settings["port"] = args.port
-        if args.network_id is not None:
-            connection_settings["network_id"] = args.network_id
-
-        # Apply defaults for any missing settings
-        host = connection_settings.get("host", "localhost")
-        port = connection_settings.get("port", 8570)
-        network_id = connection_settings.get("network_id")
-
-        # Start the agent and wait for it to stop
-        try:
-            logging.info(f"Starting agent '{agent_id}' - connecting to {host}:{port}")
-            if network_id:
-                logging.info(f"Target network ID: {network_id}")
-
-            # Start the agent
-            agent.start(
-                network_host=host,
-                network_port=port,
-                network_id=network_id,
-                metadata={"agent_type": agent_type, "config_file": args.config},
-            )
-
-            # Wait for the agent to stop
-            agent.wait_for_stop()
-
-        except KeyboardInterrupt:
-            logging.info("Agent stopped by user")
-            agent.stop()
-        except Exception as e:
-            logging.error(f"Error running agent: {e}")
-            agent.stop()
-
-    except FileNotFoundError as e:
-        logging.error(f"Configuration file not found: {e}")
-        return
-    except ValueError as e:
-        logging.error(f"Invalid configuration: {e}")
-        return
-    except ImportError as e:
-        logging.error(f"Failed to import agent class: {e}")
-        return
-    except Exception as e:
-        logging.error(f"Failed to load agent: {e}")
-        return
-
-
-def main(argv: Optional[List[str]] = None) -> int:
-    """Main entry point for the CLI.
-
-    Args:
-        argv: Command-line arguments (defaults to sys.argv[1:])
-
-    Returns:
-        int: Exit code
-    """
-    parser = argparse.ArgumentParser(
-        description="OpenAgents - A flexible framework for building multi-agent systems"
-    )
-    parser.add_argument(
-        "--log-level",
-        default="INFO",
-        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        help="Logging level",
-    )
-    parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable verbose debugging output"
-    )
-
-    subparsers = parser.add_subparsers(dest="command", help="Command to run")
-
-    # Network command group
-    network_parser = subparsers.add_parser(
-        "network", help="Network management commands"
-    )
-    network_subparsers = network_parser.add_subparsers(
-        dest="network_action", help="Network actions"
-    )
-
-    # network create
-    network_create_parser = network_subparsers.add_parser(
-        "create", help="Create a new network from template"
-    )
-    network_create_parser.add_argument(
-        "template", nargs="?", help="Network template name"
-    )
-    network_create_parser.add_argument("--name", help="Network name")
-    network_create_parser.add_argument("--port", type=int, help="Network port")
-
-    # network start
-    network_start_parser = network_subparsers.add_parser(
-        "start", help="Start a network"
-    )
-    network_start_parser.add_argument(
-        "config",
-        nargs="?",
-        help="Path to network configuration file or network name (optional if workspace has network.yaml)",
-    )
-    network_start_parser.add_argument(
-        "--workspace", help="Path to workspace directory for persistent storage"
-    )
-    network_start_parser.add_argument(
-        "--detach", action="store_true", help="Run in background"
-    )
-    network_start_parser.add_argument(
-        "--runtime", type=int, help="Runtime in seconds (default: run indefinitely)"
-    )
-
-    # network stop
-    network_stop_parser = network_subparsers.add_parser(
-        "stop", help="Stop a running network"
-    )
-    network_stop_parser.add_argument("name", nargs="?", help="Network name to stop")
-
-    # network list
-    network_list_parser = network_subparsers.add_parser("list", help="List networks")
-    network_list_parser.add_argument(
-        "--status", action="store_true", help="Show status information"
-    )
-
-    # network info
-    network_info_parser = network_subparsers.add_parser(
-        "info", help="Show network information"
-    )
-    network_info_parser.add_argument("name", help="Network name")
-
-    # network logs
-    network_logs_parser = network_subparsers.add_parser(
-        "logs", help="Show network logs"
-    )
-    network_logs_parser.add_argument("name", help="Network name")
-    network_logs_parser.add_argument(
-        "--follow", action="store_true", help="Follow log output"
-    )
-
-    # network interact
-    network_interact_parser = network_subparsers.add_parser(
-        "interact", help="Connect to a network interactively"
-    )
-    network_interact_parser.add_argument("--network", help="Network ID to connect to")
-    network_interact_parser.add_argument(
-        "--host", default="localhost", help="Server host address (default: localhost)"
-    )
-    network_interact_parser.add_argument(
-        "--port", type=int, default=8570, help="Server port (default: 8570)"
-    )
-    network_interact_parser.add_argument(
-        "--id", help="Agent ID (default: auto-generated)"
-    )
-
-    # Agent command group
-    agent_parser = subparsers.add_parser("agent", help="Agent management commands")
-    agent_subparsers = agent_parser.add_subparsers(
-        dest="agent_action", help="Agent actions"
-    )
-
-    # agent create
-    agent_create_parser = agent_subparsers.add_parser(
-        "create", help="Create a new agent from template"
-    )
-    agent_create_parser.add_argument("template", help="Agent template name")
-    agent_create_parser.add_argument("--name", help="Agent name")
-    agent_create_parser.add_argument("--network", help="Network to connect to")
-
-    # agent start
-    agent_start_parser = agent_subparsers.add_parser("start", help="Start an agent")
-    agent_start_parser.add_argument(
-        "config", help="Path to agent configuration file or agent name"
-    )
-    agent_start_parser.add_argument(
-        "--network", help="Network ID to connect to (overrides config)"
-    )
-    agent_start_parser.add_argument(
-        "--host", help="Server host address (overrides config)"
-    )
-    agent_start_parser.add_argument(
-        "--port", type=int, help="Server port (overrides config)"
-    )
-    agent_start_parser.add_argument(
-        "--detach", action="store_true", help="Run in background"
-    )
-
-    # agent stop
-    agent_stop_parser = agent_subparsers.add_parser("stop", help="Stop a running agent")
-    agent_stop_parser.add_argument("name", help="Agent name to stop")
-
-    # agent list
-    agent_list_parser = agent_subparsers.add_parser("list", help="List agents")
-    agent_list_parser.add_argument("--network", help="Filter by network")
-
-    # agent logs
-    agent_logs_parser = agent_subparsers.add_parser("logs", help="Show agent logs")
-    agent_logs_parser.add_argument("name", help="Agent name")
-    agent_logs_parser.add_argument(
-        "--follow", action="store_true", help="Follow log output"
-    )
-
-    # Studio command (unchanged)
-    studio_parser = subparsers.add_parser(
-        "studio", help="Launch OpenAgents Studio - a Jupyter-like web interface"
-    )
-    studio_parser.add_argument(
-        "--host", default="localhost", help="Network host address (default: localhost)"
-    )
-    studio_parser.add_argument(
-        "--port", type=int, default=8700, help="Network port (default: 8700)"
-    )
-    studio_parser.add_argument(
-        "--studio-port",
-        type=int,
-        default=8055,
-        help="Studio frontend port (default: 8055)",
-    )
-    studio_parser.add_argument(
-        "--workspace",
-        "-w",
-        help="Path to workspace directory (default: ./openagents_workspace)",
-    )
-    studio_parser.add_argument(
-        "--no-browser", action="store_true", help="Don't automatically open browser"
-    )
-
-    # Legacy commands for backward compatibility
-    legacy_launch_network_parser = subparsers.add_parser(
-        "launch-network", help="[DEPRECATED] Use 'network start' instead"
-    )
-    legacy_launch_network_parser.add_argument(
-        "config", help="Path to network configuration file"
-    )
-    legacy_launch_network_parser.add_argument(
-        "--runtime", type=int, help="Runtime in seconds (default: run indefinitely)"
-    )
-
-    legacy_connect_parser = subparsers.add_parser(
-        "connect", help="[DEPRECATED] Use 'network interact' instead"
-    )
-    legacy_connect_parser.add_argument(
-        "--host", default="localhost", help="Server host address"
-    )
-    legacy_connect_parser.add_argument(
-        "--port", type=int, default=8570, help="Server port (default: 8570)"
-    )
-    legacy_connect_parser.add_argument(
-        "--id", help="Agent ID (default: auto-generated)"
-    )
-    legacy_connect_parser.add_argument("--network-id", help="Network ID to connect to")
-
-    legacy_launch_agent_parser = subparsers.add_parser(
-        "launch-agent", help="[DEPRECATED] Use 'agent start' instead"
-    )
-    legacy_launch_agent_parser.add_argument(
-        "config", help="Path to agent YAML configuration file"
-    )
-    legacy_launch_agent_parser.add_argument(
-        "--network-id", help="Network ID to connect to (overrides config file)"
-    )
-    legacy_launch_agent_parser.add_argument(
-        "--host", help="Server host address (overrides config file)"
-    )
-    legacy_launch_agent_parser.add_argument(
-        "--port", type=int, help="Server port (overrides config file)"
-    )
-
-    # Parse arguments
-    args = parser.parse_args(argv)
-
-    # Set up logging
-    setup_logging(args.log_level, args.verbose)
-
-    try:
-        if args.command == "network":
-            handle_network_command(args)
-        elif args.command == "agent":
-            handle_agent_command(args)
-        elif args.command == "studio":
-            studio_command(args)
-        # Legacy commands with deprecation warnings
-        elif args.command == "launch-network":
-            logging.warning(
-                "⚠️  'launch-network' is deprecated. Use 'openagents network start' instead."
-            )
-            launch_network_command(args)
-        elif args.command == "connect":
-            logging.warning(
-                "⚠️  'connect' is deprecated. Use 'openagents network interact' instead."
-            )
-            # Convert connect args to network interact format
-            args.network = getattr(args, "network_id", None)
-            connect_command(args)
-        elif args.command == "launch-agent":
-            logging.warning(
-                "⚠️  'launch-agent' is deprecated. Use 'openagents agent start' instead."
-            )
-            # Convert legacy args to new format
-            if hasattr(args, "network_id"):
-                args.network = args.network_id
-            launch_agent_command(args)
-        else:
-            parser.print_help()
-            return 1
-
-        return 0
-    except Exception as e:
-        logging.error(f"Error: {e}")
-        return 1
-
-
 if __name__ == "__main__":
-    sys.exit(main())
+    cli_main()
