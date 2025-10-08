@@ -993,101 +993,274 @@ def network_start(
     runtime: Optional[int] = typer.Option(None, "--runtime", "-t", help="Runtime in seconds"),
 ):
     """🚀 Start a network"""
-    import io
-    import contextlib
     
-    # Capture log output to detect errors
-    log_capture = io.StringIO()
+    # Show a simple startup message
+    console.print(f"[blue]🚀 Starting OpenAgents network...[/blue]")
+    if config:
+        console.print(f"[dim]📁 Config: {config}[/dim]")
+    if workspace:
+        console.print(f"[dim]📂 Workspace: {workspace}[/dim]")
+    console.print("[dim]Press Ctrl+C to stop[/dim]")
+    console.print()  # Add blank line before network logs
     
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        task = progress.add_task("Starting network...", total=None)
-        
-        # Create a custom log handler to capture error messages
-        class ErrorDetectingHandler(logging.Handler):
-            def __init__(self):
-                super().__init__()
-                self.has_error = False
-                self.error_messages = []
-                
-            def emit(self, record):
-                if record.levelno >= logging.ERROR:
-                    self.has_error = True
-                    self.error_messages.append(record.getMessage())
-                    
-        error_detector = ErrorDetectingHandler()
-        root_logger = logging.getLogger()
-        original_level = root_logger.level
-        
-        try:
-            # Add our error detector to the root logger and openagents loggers
-            root_logger.addHandler(error_detector)
+    # Create error detection system with network status tracking
+    class NetworkStatusHandler(logging.Handler):
+        def __init__(self, console):
+            super().__init__()
+            self.has_error = False
+            self.error_messages = []
+            self.error_displayed = False
+            self.network_started = False
+            self.network_host = None
+            self.network_ports = []
+            self.status_displayed = False
+            self.console = console
             
-            # Also add to specific openagents loggers that might log errors
-            openagents_logger = logging.getLogger('openagents')
-            openagents_logger.addHandler(error_detector)
+        def emit(self, record):
+            message = record.getMessage()
             
-            if workspace or config is None:
-                launch_network(config, runtime, workspace)
-            else:
-                launch_network(config, runtime)
-                
-            # Check if any errors were logged during network startup
-            if error_detector.has_error:
-                progress.update(task, description="[red]❌ Failed to start network")
-                
-                # Check for specific error patterns
-                error_text = " ".join(error_detector.error_messages).lower()
-                
-                if "address already in use" in error_text or "errno 98" in error_text:
-                    console.print(Panel(
-                        "[red]❌ Network port is already occupied[/red]\n\n"
-                        "The network could not start because another process is using the port.\n\n"
-                        "[bold cyan]💡 Solutions:[/bold cyan]\n"
-                        "1️⃣  [bold]Stop conflicting process:[/bold] [code]sudo lsof -ti:8700 | xargs kill[/code]\n"
-                        "2️⃣  [bold]Check port usage:[/bold] [code]lsof -i:8700[/code]\n"
-                        "3️⃣  [bold]Edit config:[/bold] Change the port in your network configuration file\n"
-                        "4️⃣  [bold]Use different port:[/bold] Try a different port number (e.g., 8701, 8702)",
-                        title="[red]⚠️  Port Conflict Detected[/red]",
-                        border_style="red"
+            # Filter out noisy poll messages that appear every 2 seconds
+            if any(pattern in message for pattern in [
+                "🔧 POLL_MESSAGES:",
+                "🔧 HTTP: Processing 0 polled messages",
+                "🔧 HTTP: Successfully converted 0 messages",
+                "/api/poll?agent_id=",
+                "POLL_MESSAGES: Handler called for event: system.poll_messages",
+                "POLL_MESSAGES: Requesting agent:",
+                "POLL_MESSAGES: Serialized 0 messages",
+                "POLL_MESSAGES: Sending response with 0 messages",
+                "No secret found for agent",
+                "Authentication failed for event from",
+                "Poll messages request failed: Authentication failed",
+                "GET /api/poll?agent_id=",
+                "KeenHelper",  # Filter any messages related to KeenHelper agent
+                "studio.openagents.org"  # Filter studio polling requests
+            ]):
+                return  # Don't process or display these messages
+            
+            if record.levelno >= logging.ERROR:
+                self.has_error = True
+                self.error_messages.append(message)
+            elif "started successfully" in message:
+                self.network_started = True
+                # Show status immediately when network starts successfully
+                if not self.status_displayed and not self.has_error:
+                    self.status_displayed = True
+                    self.console.print()  # Add blank line  
+                    self.console.print(Panel.fit(
+                        f"[bold green]✅ OpenAgents network is online[/bold green]\n"
+                        f"🌐 Network: [code]WorkspaceTestNetwork[/code]\n"
+                        f"🔌 Check the logs above for host and port details",
+                        border_style="green"
                     ))
-                else:
-                    console.print(Panel(
-                        "[red]❌ Network failed to start[/red]\n\n"
-                        "The network encountered an error during startup.\n\n"
-                        "[bold cyan]💡 Common issues & solutions:[/bold cyan]\n"
-                        "1️⃣  [bold]Config error:[/bold] Verify your configuration file exists and is valid\n"
-                        "2️⃣  [bold]Permission issue:[/bold] Check if you have permission to bind to the port\n"
-                        "3️⃣  [bold]More details:[/bold] Run with [code]--verbose[/code] flag\n"
-                        f"4️⃣  [bold]Error details:[/bold] {error_detector.error_messages[0] if error_detector.error_messages else 'Unknown error'}",
-                        title="[red]⚠️  Network Startup Error[/red]",
-                        border_style="red"
-                    ))
-                raise typer.Exit(1)
-            else:
-                progress.update(task, description="[green]✅ Network started successfully!")
+                    self.console.print("[dim]Network is running... Press Ctrl+C to stop[/dim]")
+            elif "Transport" in record.getMessage() and ":" in record.getMessage():
+                # Extract host:port from transport messages like "Transport TransportType.HTTP: 0.0.0.0:8702"
+                message = record.getMessage()
+                if ":" in message:
+                    # Look for pattern like "0.0.0.0:8702" in the message
+                    import re
+                    match = re.search(r'(\d+\.\d+\.\d+\.\d+):(\d+)', message)
+                    if match:
+                        self.network_host = match.group(1)
+                        port = match.group(2)
+                        if port not in self.network_ports:
+                            self.network_ports.append(port)
+                        self._check_and_display_status()
+                            
+        def _check_and_display_status(self):
+            # Display status line once we have all the information and network is started
+            if (not self.status_displayed and 
+                self.network_started and 
+                self.network_host and 
+                self.network_ports and 
+                not self.has_error):
                 
-        except Exception as e:
-            error_msg = str(e)
-            progress.update(task, description="[red]❌ Failed to start network")
-            console.print(Panel(
-                f"[red]❌ Network startup failed[/red]\n\n"
-                f"Error: {error_msg}\n\n"
-                "[bold cyan]💡 Troubleshooting:[/bold cyan]\n"
-                "1️⃣  Check the configuration file path\n"
-                "2️⃣  Verify network settings in the config\n"
-                "3️⃣  Run with [code]--verbose[/code] for more details",
-                title="[red]⚠️  Network Error[/red]",
-                border_style="red"
-            ))
+                self.status_displayed = True
+                ports_str = ", ".join(self.network_ports)
+                self.console.print()  # Add blank line
+                self.console.print(Panel.fit(
+                    f"[bold green]✅ OpenAgents network is online[/bold green]\n"
+                    f"🌐 Host: [code]{self.network_host}[/code]\n"
+                    f"🔌 Ports: [code]{ports_str}[/code]",
+                    border_style="green"
+                ))
+                self.console.print("[dim]Network is running... Press Ctrl+C to stop[/dim]")
+                
+    # Create a filter to suppress noisy poll messages
+    class PollMessageFilter(logging.Filter):
+        def filter(self, record):
+            message = record.getMessage()
+            # Block noisy poll messages and repetitive event logs
+            if any(pattern in message for pattern in [
+                "🔧 POLL_MESSAGES:",
+                "🔧 HTTP: Processing 0 polled messages", 
+                "🔧 HTTP: Successfully converted 0 messages",
+                "/api/poll?agent_id=",
+                "POLL_MESSAGES: Handler called for event: system.poll_messages",
+                "POLL_MESSAGES: Requesting agent:",
+                "POLL_MESSAGES: Serialized 0 messages",
+                "POLL_MESSAGES: Sending response with 0 messages",
+                "No secret found for agent",
+                "Authentication failed for event from",
+                "Poll messages request failed: Authentication failed",
+                "GET /api/poll?agent_id=",
+                "KeenHelper",  # Filter any messages related to KeenHelper agent
+                "studio.openagents.org",  # Filter studio polling requests
+                "🔧 NETWORK: Processing regular event:",  # Filter repetitive network event processing logs
+                "Agents to notify: set()",  # Filter empty agent notification logs
+                "system.notification.register_agent"  # Filter agent registration notifications
+            ]):
+                return False  # Block these messages from being logged
+            return True  # Allow other messages
+    
+    network_status = NetworkStatusHandler(console)
+    root_logger = logging.getLogger()
+    openagents_logger = logging.getLogger('openagents')
+    
+    # Add poll message filter to reduce noise
+    poll_filter = PollMessageFilter()
+    
+    # Apply filter to all existing handlers on root logger
+    root_logger.addFilter(poll_filter)
+    for handler in root_logger.handlers:
+        handler.addFilter(poll_filter)
+    
+    # Apply filter to openagents logger and its handlers
+    openagents_logger.addFilter(poll_filter) 
+    for handler in openagents_logger.handlers:
+        handler.addFilter(poll_filter)
+        
+    # Also apply to any child loggers of openagents
+    for name, logger in logging.Logger.manager.loggerDict.items():
+        if isinstance(logger, logging.Logger) and name.startswith('openagents'):
+            logger.addFilter(poll_filter)
+            for handler in logger.handlers:
+                handler.addFilter(poll_filter)
+    
+    # Add network status handler
+    root_logger.addHandler(network_status)
+    openagents_logger.addHandler(network_status)
+    
+    try:
+        # Launch the network directly (this handles its own logging and output)
+        if workspace or config is None:
+            launch_network(config, runtime, workspace)
+        else:
+            launch_network(config, runtime)
+            
+        # Check for errors that were logged during startup (if network launcher returned)
+        if network_status.has_error and not network_status.error_displayed:
+            error_text = " ".join(network_status.error_messages).lower()
+            network_status.error_displayed = True
+            
+            if "address already in use" in error_text or "errno 98" in error_text:
+                # Extract port number from error message
+                import re
+                # Look for pattern like "('0.0.0.0', 8702)" or similar
+                port_match = re.search(r"'[^']*',\s*(\d+)", error_text)
+                if not port_match:
+                    # Try alternative patterns
+                    port_match = re.search(r"port['\s:]+(\d+)", error_text)
+                
+                port = port_match.group(1) if port_match else "8700"
+                
+                console.print(Panel(
+                    "[red]❌ Network port is already occupied[/red]\n\n"
+                    "The network could not start because another process is using the port.\n\n"
+                    "[bold cyan]💡 Solutions:[/bold cyan]\n"
+                    f"1️⃣  [bold]Stop conflicting process:[/bold] [code]sudo lsof -ti:{port} | xargs kill[/code]\n"
+                    f"2️⃣  [bold]Check port usage:[/bold] [code]lsof -i:{port}[/code]\n"
+                    "3️⃣  [bold]Edit config:[/bold] Change the port in your network configuration file\n"
+                    f"4️⃣  [bold]Use different port:[/bold] Try a different port number (e.g., {int(port)+1}, {int(port)+2})",
+                    title="[red]⚠️  Port Conflict Detected[/red]",
+                    border_style="red"
+                ))
+            else:
+                console.print(Panel(
+                    "[red]❌ Network failed to start[/red]\n\n"
+                    "The network encountered an error during startup.\n\n"
+                    "[bold cyan]💡 Common issues & solutions:[/bold cyan]\n"
+                    "1️⃣  [bold]Config error:[/bold] Verify your configuration file exists and is valid\n"
+                    "2️⃣  [bold]Permission issue:[/bold] Check if you have permission to bind to the port\n"
+                    "3️⃣  [bold]More details:[/bold] Run with [code]--verbose[/code] flag\n"
+                    f"4️⃣  [bold]Error details:[/bold] {network_status.error_messages[0] if network_status.error_messages else 'Unknown error'}",
+                    title="[red]⚠️  Network Startup Error[/red]",
+                    border_style="red"
+                ))
             raise typer.Exit(1)
-        finally:
-            # Remove our error detector from the loggers
-            root_logger.removeHandler(error_detector)
-            openagents_logger.removeHandler(error_detector)
+            
+    except KeyboardInterrupt:
+        console.print("\n[yellow]⚠️  Network shutdown requested[/yellow]")
+        raise typer.Exit(1)
+    except Exception as e:
+        error_msg = str(e)
+        
+        # Check if it's a port conflict error (only if not already displayed)
+        if not network_status.error_displayed and ("address already in use" in error_msg.lower() or "errno 98" in error_msg.lower() or network_status.has_error):
+            # Check for specific error patterns in logged messages
+            error_text = " ".join(network_status.error_messages).lower()
+            network_status.error_displayed = True
+            
+            if "address already in use" in error_text or "errno 98" in error_text:
+                # Extract port number from error message
+                import re
+                # Look for pattern like "('0.0.0.0', 8702)" or similar
+                port_match = re.search(r"'[^']*',\s*(\d+)", error_text)
+                if not port_match:
+                    # Try alternative patterns
+                    port_match = re.search(r"port['\s:]+(\d+)", error_text)
+                
+                port = port_match.group(1) if port_match else "8700"
+                
+                console.print(Panel(
+                    "[red]❌ Network port is already occupied[/red]\n\n"
+                    "The network could not start because another process is using the port.\n\n"
+                    "[bold cyan]💡 Solutions:[/bold cyan]\n"
+                    f"1️⃣  [bold]Stop conflicting process:[/bold] [code]sudo lsof -ti:{port} | xargs kill[/code]\n"
+                    f"2️⃣  [bold]Check port usage:[/bold] [code]lsof -i:{port}[/code]\n"
+                    "3️⃣  [bold]Edit config:[/bold] Change the port in your network configuration file\n"
+                    f"4️⃣  [bold]Use different port:[/bold] Try a different port number (e.g., {int(port)+1}, {int(port)+2})",
+                    title="[red]⚠️  Port Conflict Detected[/red]",
+                    border_style="red"
+                ))
+            else:
+                console.print(Panel(
+                    "[red]❌ Network failed to start[/red]\n\n"
+                    "The network encountered an error during startup.\n\n"
+                    "[bold cyan]💡 Common issues & solutions:[/bold cyan]\n"
+                    "1️⃣  [bold]Config error:[/bold] Verify your configuration file exists and is valid\n"
+                    "2️⃣  [bold]Permission issue:[/bold] Check if you have permission to bind to the port\n"
+                    "3️⃣  [bold]More details:[/bold] Run with [code]--verbose[/code] flag\n"
+                    f"4️⃣  [bold]Error details:[/bold] {network_status.error_messages[0] if network_status.error_messages else error_msg}",
+                    title="[red]⚠️  Network Startup Error[/red]",
+                    border_style="red"
+                ))
+        elif not network_status.error_displayed:
+            console.print(f"[red]❌ Error starting network: {e}[/red]")
+        
+        raise typer.Exit(1)
+        
+    finally:
+        # Clean up network status handler and filters
+        root_logger.removeHandler(network_status)
+        openagents_logger.removeHandler(network_status)
+        
+        # Remove filters from all loggers and handlers
+        root_logger.removeFilter(poll_filter)
+        for handler in root_logger.handlers:
+            handler.removeFilter(poll_filter)
+            
+        openagents_logger.removeFilter(poll_filter)
+        for handler in openagents_logger.handlers:
+            handler.removeFilter(poll_filter)
+            
+        # Clean up child loggers 
+        for name, logger in logging.Logger.manager.loggerDict.items():
+            if isinstance(logger, logging.Logger) and name.startswith('openagents'):
+                logger.removeFilter(poll_filter)
+                for handler in logger.handlers:
+                    handler.removeFilter(poll_filter)
 
 
 @network_app.command("list")
@@ -1131,6 +1304,51 @@ def network_interact(
         host = "localhost"
 
     launch_console(host, port, agent_id, network)
+
+
+@network_app.command("publish")
+def network_publish(
+    config: Optional[str] = typer.Argument(None, help="Path to network configuration file"),
+    workspace: Optional[str] = typer.Option(None, "--workspace", "-w", help="Path to workspace directory"),
+):
+    """🌍 Publish your network to the OpenAgents dashboard"""
+    
+    console.print(Panel.fit(
+        "[bold cyan]🌍 Publish Your Network[/bold cyan]\n\n"
+        "Share your OpenAgents network with the community!\n\n"
+        "[bold yellow]🚀 Ready to publish?[/bold yellow]\n"
+        "Visit the OpenAgents dashboard to get started:",
+        border_style="blue"
+    ))
+    
+    console.print()
+    console.print("[bold green]🔗 https://openagents.org/login[/bold green]")
+    console.print()
+    
+    # Show network info if config is provided
+    if config:
+        try:
+            import yaml
+            with open(config, 'r') as f:
+                config_data = yaml.safe_load(f)
+            
+            network_name = config_data.get('network', {}).get('name', 'Unknown')
+            network_profile = config_data.get('network_profile', {})
+            
+            if network_profile:
+                console.print(Panel(
+                    f"[bold]Network to Publish:[/bold]\n"
+                    f"📝 Name: [code]{network_name}[/code]\n"
+                    f"📋 Description: {network_profile.get('description', 'No description')}\n"
+                    f"🏷️  Tags: {', '.join(network_profile.get('tags', []))}\n"
+                    f"🌐 Discoverable: {network_profile.get('discoverable', False)}",
+                    title="[green]📋 Network Details[/green]",
+                    border_style="green"
+                ))
+        except Exception as e:
+            console.print(f"[yellow]⚠️  Could not read network config: {e}[/yellow]")
+    
+    console.print("[dim]💡 Tip: Make sure your network is running and accessible before publishing![/dim]")
 
 
 @agent_app.command("start")
