@@ -25,8 +25,8 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusProps> = ({
                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           ),
-          text: '已连接',
-          description: '实时协作已启用',
+          text: 'Connected',
+          description: 'Real-time collaboration enabled',
           dot: 'bg-green-500 animate-pulse'
         };
 
@@ -41,8 +41,8 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusProps> = ({
                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           ),
-          text: '连接中',
-          description: '正在建立连接...',
+          text: 'Connecting',
+          description: 'Establishing connection...',
           dot: 'bg-blue-500 animate-pulse'
         };
 
@@ -57,8 +57,8 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusProps> = ({
                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           ),
-          text: '重连中',
-          description: '连接中断，正在重连...',
+          text: 'Reconnecting',
+          description: 'Connection interrupted, reconnecting...',
           dot: 'bg-yellow-500 animate-pulse'
         };
 
@@ -74,8 +74,8 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusProps> = ({
                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.864-.833-2.634 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           ),
-          text: '已断开',
-          description: '协作功能不可用',
+          text: 'Disconnected',
+          description: 'Collaboration feature unavailable',
           dot: 'bg-red-500'
         };
     }
@@ -85,12 +85,12 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusProps> = ({
 
   return (
     <div className={`flex items-center space-x-2 ${className}`}>
-      {/* 状态点 */}
+      {/* Status dot */}
       <div className="relative">
         <div className={`w-2 h-2 rounded-full ${config.dot}`}></div>
       </div>
 
-      {/* 状态文本 */}
+      {/* Status text */}
       <div className="flex items-center space-x-1">
         <div className={config.color}>
           {config.icon}
@@ -100,7 +100,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusProps> = ({
         </span>
       </div>
 
-      {/* 详细状态（悬停显示） */}
+      {/* Detailed status (shown on hover) */}
       <div className="relative group">
         <div className={`
           absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg shadow-lg border text-sm
@@ -109,7 +109,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusProps> = ({
         `}>
           {config.description}
 
-          {/* 箭头 */}
+          {/* Arrow */}
           <div className={`
             absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0
             border-l-4 border-r-4 border-t-4 border-transparent ${config.borderColor.replace('border-', 'border-t-')}

@@ -3,6 +3,28 @@
   "version": "1.0.5",
   "description": "OpenAgents Studio - Web interface for OpenAgents networks",
   "proxy": "http://localhost:5000",
+  "main": "build/index.html",
+  "files": [
+    "build",
+    "bin",
+    "server",
+    "public"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/raphaelshu/openagents.git",
+    "directory": "studio"
+  },
+  "keywords": [
+    "openagents",
+    "studio",
+    "ai",
+    "agents",
+    "web-interface",
+    "collaborative-editing"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/raphaelshu/openagents#readme",
   "bin": {
     "openagents-studio": "./bin/cli.js"
   },
