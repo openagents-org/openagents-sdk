@@ -1,0 +1,76 @@
+# Multi-stage Dockerfile for OpenAgents Network + Studio
+# Stage 1: Build the Studio frontend
+FROM node:20-alpine AS studio-builder
+
+WORKDIR /app/studio
+
+# Copy studio package files
+COPY studio/package*.json ./
+
+# Install dependencies
+RUN npm ci --legacy-peer-deps
+
+# Copy studio source code
+COPY studio/ ./
+
+# Build the production bundle
+RUN npm run build
+
+# Stage 2: Build the final runtime image
+FROM python:3.12-slim
+
+LABEL org.opencontainers.image.source="https://github.com/openagents-org/openagents"
+LABEL org.opencontainers.image.description="OpenAgents Network + Studio - AI Agent Networks for Open Collaboration"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Python project files
+COPY pyproject.toml setup.py setup.cfg MANIFEST.in ./
+COPY src/ ./src/
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -e .
+
+# Copy built studio from stage 1
+COPY --from=studio-builder /app/studio/build /app/studio/build
+
+# Install serve to host the studio static files
+RUN npm install -g serve
+
+# Copy network configuration
+COPY examples/default_network/ ./examples/default_network/
+
+# Copy startup script
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Create data directory
+RUN mkdir -p /app/data
+
+# Expose ports
+# 8700 - HTTP transport
+# 8600 - gRPC transport
+# 8050 - Studio web interface
+EXPOSE 8700 8600 8050
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV NODE_ENV=production
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8700/health || exit 1
+
+# Run the startup script
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

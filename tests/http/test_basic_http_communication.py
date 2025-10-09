@@ -78,8 +78,19 @@ async def test_network():
     # Cleanup
     try:
         await network.shutdown()
+        # Give network time to fully shutdown
+        await asyncio.sleep(0.5)
     except Exception as e:
         print(f"Error during network shutdown: {e}")
+    finally:
+        # Force cleanup of any remaining resources
+        try:
+            # Cancel any remaining tasks
+            import gc
+            gc.collect()
+            await asyncio.sleep(0.1)
+        except Exception as cleanup_error:
+            print(f"Error in final cleanup: {cleanup_error}")
 
 
 @pytest.fixture
@@ -99,8 +110,19 @@ async def http_client_a(test_network):
     # Cleanup
     try:
         await client.disconnect()
+        # Give time for cleanup to complete
+        await asyncio.sleep(0.1)
     except Exception as e:
         print(f"Error disconnecting http-client-a: {e}")
+    finally:
+        # Force cleanup of any remaining HTTP connections
+        if hasattr(client, 'connector') and hasattr(client.connector, 'session') and client.connector.session:
+            try:
+                await client.connector.session.close()
+                # Wait for session cleanup
+                await asyncio.sleep(0.1)
+            except Exception as cleanup_error:
+                print(f"Error in session cleanup for http-client-a: {cleanup_error}")
 
 
 @pytest.fixture
@@ -120,8 +142,19 @@ async def http_client_b(test_network):
     # Cleanup
     try:
         await client.disconnect()
+        # Give time for cleanup to complete
+        await asyncio.sleep(0.1)
     except Exception as e:
         print(f"Error disconnecting http-client-b: {e}")
+    finally:
+        # Force cleanup of any remaining HTTP connections
+        if hasattr(client, 'connector') and hasattr(client.connector, 'session') and client.connector.session:
+            try:
+                await client.connector.session.close()
+                # Wait for session cleanup
+                await asyncio.sleep(0.1)
+            except Exception as cleanup_error:
+                print(f"Error in session cleanup for http-client-b: {cleanup_error}")
 
 
 @pytest.mark.asyncio

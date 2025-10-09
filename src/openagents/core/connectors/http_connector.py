@@ -187,8 +187,15 @@ class HTTPNetworkConnector(NetworkConnector):
             if self.session:
                 try:
                     unregister_data = {"agent_id": self.agent_id}
+                    if hasattr(self, 'secret') and self.secret:
+                        unregister_data["secret"] = self.secret
+                    
+                    # Set a short timeout for unregistration to avoid hanging
+                    timeout = self.aiohttp.ClientTimeout(total=5.0)
                     async with self.session.post(
-                        f"{self.base_url}/unregister", json=unregister_data
+                        f"{self.base_url}/unregister", 
+                        json=unregister_data,
+                        timeout=timeout
                     ) as response:
                         if response.status != 200:
                             logger.warning(
@@ -197,10 +204,17 @@ class HTTPNetworkConnector(NetworkConnector):
                 except Exception as e:
                     logger.warning(f"Failed to unregister agent: {e}")
 
-            # Close session
+            # Close session with grace period
             if self.session:
-                await self.session.close()
-                self.session = None
+                try:
+                    # Close the session gracefully
+                    await self.session.close()
+                    # Give time for connections to close
+                    await asyncio.sleep(0.1)
+                except Exception as e:
+                    logger.warning(f"Error closing HTTP session: {e}")
+                finally:
+                    self.session = None
 
             logger.info(f"Agent {self.agent_id} disconnected from HTTP network")
             return True
@@ -294,8 +308,11 @@ class HTTPNetworkConnector(NetworkConnector):
             return []
 
         try:
-            # Send poll request
+            # Send poll request with authentication
             params = {"agent_id": self.agent_id}
+            if hasattr(self, 'secret') and self.secret:
+                params["secret"] = self.secret
+
             async with self.session.get(
                 f"{self.base_url}/poll", params=params
             ) as response:
