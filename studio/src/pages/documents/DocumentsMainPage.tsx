@@ -5,7 +5,7 @@ import { useDocumentStore } from "@/stores/documentStore";
 import DocumentEditor from "@/components/documents/DocumentEditor";
 
 /**
- * 文档主页面 - 处理文档相关的所有功能
+ * Documents Main Page - handles all document-related functionality
  */
 const DocumentsMainPage: React.FC = () => {
   const navigate = useNavigate();
@@ -13,7 +13,7 @@ const DocumentsMainPage: React.FC = () => {
   const { documents, selectedDocumentId, setSelectedDocument, setDocuments } =
     useDocumentStore();
 
-  // 文档选择处理器
+  // Document selection handler
   const handleDocumentSelect = useCallback(
     (documentId: string | null) => {
       setSelectedDocument(documentId);
@@ -23,7 +23,7 @@ const DocumentsMainPage: React.FC = () => {
 
   return (
     <Routes>
-      {/* 默认文档视图 */}
+      {/* Default document view */}
       <Route
         index
         element={
@@ -37,7 +37,7 @@ const DocumentsMainPage: React.FC = () => {
         }
       />
 
-      {/* 文档编辑页面 */}
+      {/* Document editor page */}
       <Route
         path=":documentId"
         element={<DocumentEditor />}

@@ -75,16 +75,16 @@ const DocumentItem: React.FC<{
 ));
 DocumentItem.displayName = "DocumentItem";
 
-// Documents Sidebar Props - 现在不需要外部传递数据
+// Documents Sidebar Props - no need for external data passing
 export interface DocumentsSidebarProps {}
 
-// Documents Sidebar Content Component - 自己管理数据
+// Documents Sidebar Content Component - manages its own data
 const DocumentsSidebar: React.FC<DocumentsSidebarProps> = () => {
-  // 使用  获取实际数据
+  // Use store to get actual data
   const { documents, selectedDocumentId, setSelectedDocument } =
     useDocumentStore();
 
-  // 文档选择处理
+  // Handle document selection
   const onDocumentSelect = (documentId: string | null) => {
     setSelectedDocument(documentId);
   };
