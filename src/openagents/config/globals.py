@@ -91,3 +91,6 @@ THREAD_ID_UNCATEGORIZED = "uncategorized"
 
 # ===== SYSTEM METADATA =====
 DEFAULT_AGENT_GROUP = "guest"
+
+# ===== OpenAgents Discovery Server =====
+OPENAGENTS_DISCOVERY_SERVER_URL = "https://endpoint.openagents.org/v1"
