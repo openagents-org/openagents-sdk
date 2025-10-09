@@ -39,23 +39,23 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
   const userDecorationsRef = useRef<Map<string, string[]>>(new Map());
   const lastCursorPositionRef = useRef<{ line: number; column: number } | null>(null);
 
-  // 状态
+  // State
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(ConnectionStatus.DISCONNECTED);
   const [onlineUsers, setOnlineUsers] = useState<CollaborationUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 更新用户光标
+  // Update user cursor
   const updateUserCursor = useCallback((userId: string, user: CollaborationUser) => {
     if (!editorRef.current || !user.cursor || !monaco || !userDecorationsRef.current) return;
 
     const editor = editorRef.current;
     const { line, column } = user.cursor;
 
-    // 清除旧的装饰
+    // Clear old decorations
     const oldDecorations = userDecorationsRef.current.get(userId) || [];
 
-    // 创建新的装饰
+    // Create new decorations
     const newDecorations = editor.deltaDecorations(
       oldDecorations,
       [
@@ -83,13 +83,13 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
     }
   }, [monaco]);
 
-  // 初始化协作服务
+  // Initialize collaboration service
   const initializeCollaboration = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // 清理之前的协作服务
+      // Clean up previous collaboration service
       if (collaborationRef.current) {
         console.log('🧹 [CollaborativeEditor] Cleaning up previous collaboration service');
         collaborationRef.current.destroy();
@@ -111,7 +111,7 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
       console.log('   👤 Agent Name:', agentName);
       console.log('   🔗 WebSocket URL: ws://localhost:1234');
 
-      // 创建协作服务
+      // Create collaboration service
       const collaborationService = new CollaborationService(
         roomName,
         userId,
@@ -121,7 +121,7 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
 
       collaborationRef.current = collaborationService;
 
-      // 设置事件监听器
+      // Set up event listeners
       collaborationService.onConnectionStatusChange((status) => {
         console.log('🔗 [CollaborativeEditor] Connection status changed:', status);
         setConnectionStatus(status);
@@ -135,7 +135,7 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
       collaborationService.onUsersUpdate((users) => {
         console.log('👥 [CollaborativeEditor] Online users updated:', users.length, users.map(u => u.name));
         setOnlineUsers(users);
-        // 更新所有用户光标
+        // Update all user cursors
         users.forEach(user => {
           if (user.cursor && editorRef.current && monaco) {
             updateUserCursor(user.id, user);
@@ -160,7 +160,7 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
         setIsLoading(false);
       });
 
-      // 设置初始内容 - 简化逻辑，只在内容为空时设置
+      // Set initial content - simplified logic, only set when content is not empty
       if (initialContent) {
         console.log('📄 [CollaborativeEditor] Setting initial content, length:', initialContent.length);
         collaborationService.setInitialContent(initialContent);
@@ -170,25 +170,25 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
 
     } catch (error) {
       console.error('❌ [CollaborativeEditor] Failed to initialize collaboration service:', error);
-      setError('初始化协作服务失败,请点击重试按钮');
+      setError('Failed to initialize collaboration service, please click retry button');
       setIsLoading(false);
     }
   }, [documentId, initialContent, onContentChange, monaco, updateUserCursor, agentName]);
 
 
-  // 处理编辑器挂载
+  // Handle editor mount
   const handleEditorDidMount = useCallback((editor: any) => {
     console.log('🖥️  [CollaborativeEditor] Monaco editor mounted');
     editorRef.current = editor;
 
     let retryCount = 0;
-    const maxRetries = 50; // 5秒超时 (50 * 100ms)
+    const maxRetries = 50; // 5 seconds timeout (50 * 100ms)
 
-    // 等待协作服务初始化完成
+    // Wait for collaboration service initialization to complete
     const waitForCollaboration = () => {
       retryCount++;
 
-      // 实时检查当前状态,不依赖闭包捕获的值
+      // Check current state in real-time, don't rely on closure-captured values
       const currentCollaboration = collaborationRef.current;
       const currentMonaco = (window as any).monaco;
 
@@ -199,15 +199,15 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
       });
 
       if (currentCollaboration && currentMonaco) {
-        // 检查 WebSocket 连接状态
+        // Check WebSocket connection status
         const status = currentCollaboration.getConnectionStatus();
         console.log(`🔄 [CollaborativeEditor] Waiting for connection... Status: ${status}, Retry: ${retryCount}/${maxRetries}`);
 
-        // 只有在已连接时才创建绑定
+        // Only create binding when connected
         if (status === ConnectionStatus.CONNECTED) {
           console.log('✅ [CollaborativeEditor] Creating Monaco-Yjs binding...');
 
-          // 创建 Monaco-Yjs 绑定
+          // Create Monaco-Yjs binding
           const binding = new MonacoBinding(
             currentCollaboration.getYText(),
             editor.getModel()!,
@@ -217,12 +217,12 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
           bindingRef.current = binding;
           console.log('✅ [CollaborativeEditor] Monaco-Yjs binding created successfully');
 
-          // 监听光标位置变化
+          // Listen for cursor position changes
           editor.onDidChangeCursorPosition((event: any) => {
             const position = event.position;
             const newPosition = { line: position.lineNumber, column: position.column };
 
-            // 避免频繁发送相同位置
+            // Avoid sending the same position frequently
             if (!lastCursorPositionRef.current ||
                 lastCursorPositionRef.current.line !== newPosition.line ||
                 lastCursorPositionRef.current.column !== newPosition.column) {
@@ -231,7 +231,7 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
             }
           });
 
-          // 添加保存快捷键
+          // Add save shortcut
           editor.addCommand(currentMonaco.KeyMod.CtrlCmd | currentMonaco.KeyCode.KeyS, () => {
             const content = editor.getValue();
             onSave?.(content);
@@ -239,14 +239,14 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
 
           console.log('🎉 [CollaborativeEditor] Initialization complete!');
         } else if (retryCount < maxRetries) {
-          // 还在连接中，继续等待
+          // Still connecting, continue waiting
           setTimeout(waitForCollaboration, 100);
         } else {
           console.error('❌ [CollaborativeEditor] Timeout waiting for connection');
-          setError('连接超时,请点击重试按钮');
+          setError('Connection timeout, please click retry button');
         }
       } else if (retryCount < maxRetries) {
-        // 协作服务或 Monaco 还没准备好，继续等待
+        // Collaboration service or Monaco not ready yet, continue waiting
         console.log(`⏳ [CollaborativeEditor] Waiting for service/monaco... Retry: ${retryCount}/${maxRetries}`);
         setTimeout(waitForCollaboration, 100);
       } else {
@@ -256,14 +256,14 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
           monacoExists: !!currentMonaco,
           editorExists: !!editor
         });
-        setError('初始化超时,请点击重试按钮');
+        setError('Initialization timeout, please click retry button');
       }
     };
 
     waitForCollaboration();
   }, [onSave]);
 
-  // 心跳发送
+  // Send heartbeat
   useEffect(() => {
     const heartbeatInterval = setInterval(() => {
       collaborationRef.current?.sendHeartbeat();
@@ -272,12 +272,12 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
     return () => clearInterval(heartbeatInterval);
   }, []);
 
-  // 初始化
+  // Initialize
   useEffect(() => {
     initializeCollaboration();
 
     return () => {
-      // 清理资源
+      // Clean up resources
       if (bindingRef.current) {
         bindingRef.current.destroy();
       }
@@ -287,7 +287,7 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
     };
   }, [initializeCollaboration]);
 
-  // 添加自定义 CSS 样式
+  // Add custom CSS styles
   useEffect(() => {
     const style = document.createElement('style');
     style.textContent = `
@@ -329,7 +329,7 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
-            正在连接协作服务...
+            Connecting to collaboration service...
           </p>
         </div>
       </div>
@@ -347,7 +347,7 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
             </svg>
           </div>
           <h3 className={`text-lg font-medium mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
-            连接失败
+            Connection Failed
           </h3>
           <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-4`}>
             {error}
@@ -356,7 +356,7 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
             onClick={initializeCollaboration}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            重新连接
+            Reconnect
           </button>
         </div>
       </div>
@@ -365,7 +365,7 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
-      {/* 顶部工具栏 */}
+      {/* Top toolbar */}
       <div className={`flex items-center justify-between p-4 border-b ${
         theme === 'dark' ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
       }`}>
@@ -375,7 +375,7 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
             theme={theme}
           />
           <div className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            文档 ID: {documentId}
+            Document ID: {documentId}
           </div>
         </div>
 
@@ -396,13 +396,13 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12" />
               </svg>
-              <span>保存</span>
+              <span>Save</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* 编辑器区域 */}
+      {/* Editor area */}
       <div className="flex-1 overflow-hidden">
         <Editor
           height={height}

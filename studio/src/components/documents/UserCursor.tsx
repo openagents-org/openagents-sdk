@@ -23,7 +23,7 @@ const UserCursor: React.FC<UserCursorProps> = ({
 
   return (
     <>
-      {/* 光标线 */}
+      {/* Cursor line */}
       <div
         className="absolute pointer-events-none z-50"
         style={{
@@ -34,7 +34,7 @@ const UserCursor: React.FC<UserCursorProps> = ({
         }}
       />
 
-      {/* 用户标签 */}
+      {/* User label */}
       <div
         className="absolute pointer-events-none z-50 transform -translate-y-full"
         style={{
@@ -52,7 +52,7 @@ const UserCursor: React.FC<UserCursorProps> = ({
         {user.name}
       </div>
 
-      {/* 选区高亮（如果有选区的话） */}
+      {/* Selection highlight (if there's a selection) */}
       {user.cursor && (
         <div
           className="absolute pointer-events-none z-40"
