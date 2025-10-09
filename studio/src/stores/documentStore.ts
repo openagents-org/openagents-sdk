@@ -4,38 +4,38 @@ import { DocumentInfo } from "@/types";
 import { ThreadState } from "@/types/thread";
 import { CollaborationService, CollaborationUser, ConnectionStatus } from "@/services/collaborationService";
 
-// 数据版本号 - 用于控制 localStorage 数据兼容性
-const STORAGE_VERSION = 2; // 增加版本号以清理旧数据
+// Data version number - used for localStorage data compatibility control
+const STORAGE_VERSION = 2; // Increment version to clean up old data
 
 interface DocumentStoreState {
-  // 数据版本
+  // Data version
   version: number;
 
-  // 简化的线程状态 - 只存储当前选择
+  // Simplified thread state - only stores current selection
   threadState: ThreadState | null;
 
-  // 文档相关状态
+  // Document-related state
   documents: DocumentInfo[];
   selectedDocumentId: string | null;
 
-  // 协作功能状态
+  // Collaboration feature state
   collaborationServices: Map<string, CollaborationService>;
   connectionStatuses: Map<string, ConnectionStatus>;
   onlineUsers: Map<string, CollaborationUser[]>;
   isCollaborationEnabled: boolean;
 
-  // 线程操作
+  // Thread operations
   setThreadState: (state: ThreadState | null) => void;
   updateThreadState: (updates: Partial<ThreadState>) => void;
 
-  // 文档操作
+  // Document operations
   setDocuments: (documents: DocumentInfo[]) => void;
   addDocument: (document: DocumentInfo) => void;
   updateDocument: (documentId: string, updates: Partial<DocumentInfo>) => void;
   removeDocument: (documentId: string) => void;
   setSelectedDocument: (documentId: string | null) => void;
 
-  // 协作功能操作
+  // Collaboration feature operations
   initializeCollaboration: (documentId: string, userId?: string) => Promise<CollaborationService>;
   destroyCollaboration: (documentId: string) => void;
   getCollaborationService: (documentId: string) => CollaborationService | null;
@@ -43,19 +43,19 @@ interface DocumentStoreState {
   updateOnlineUsers: (documentId: string, users: CollaborationUser[]) => void;
   setCollaborationEnabled: (enabled: boolean) => void;
 
-  // 文档内容操作
+  // Document content operations
   getDocumentContent: (documentId: string) => string | null;
   saveDocumentContent: (documentId: string, content: string) => Promise<boolean>;
   createDocument: (name: string, content?: string) => Promise<string | null>;
 }
 
-// 清理旧版本的 localStorage 数据
+// Clean up old localStorage data
 const cleanupOldStorage = () => {
   try {
     const stored = localStorage.getItem('openagents_documents');
     if (stored) {
       const parsed = JSON.parse(stored);
-      // 检查版本号，如果版本不匹配或没有版本号，清理数据
+      // Check version number, clean up if version doesn't match or is missing
       if (!parsed.state?.version || parsed.state.version < STORAGE_VERSION) {
         console.log('🧹 Cleaning up old localStorage data...');
         localStorage.removeItem('openagents_documents');
@@ -63,18 +63,18 @@ const cleanupOldStorage = () => {
     }
   } catch (error) {
     console.error('Error cleaning up storage:', error);
-    // 如果解析失败，直接清理
+    // If parsing fails, clean up directly
     localStorage.removeItem('openagents_documents');
   }
 };
 
-// 在创建 store 之前清理旧数据
+// Clean up old data before creating store
 cleanupOldStorage();
 
 export const useDocumentStore = create<DocumentStoreState>()(
   persist(
     (set, get) => ({
-      // 初始状态
+      // Initial state
       version: STORAGE_VERSION,
       threadState: null,
       documents: [],
@@ -84,12 +84,12 @@ export const useDocumentStore = create<DocumentStoreState>()(
       onlineUsers: new Map(),
       isCollaborationEnabled: true,
 
-      // 设置完整的线程状态
+      // Set complete thread state
       setThreadState: (state: ThreadState | null) => {
         set({ threadState: state });
       },
 
-      // 更新部分线程状态
+      // Update partial thread state
       updateThreadState: (updates: Partial<ThreadState>) => {
         set((state) => ({
           threadState: state.threadState
@@ -102,19 +102,19 @@ export const useDocumentStore = create<DocumentStoreState>()(
         }));
       },
 
-      // 设置文档列表
+      // Set document list
       setDocuments: (documents: DocumentInfo[]) => {
         set({ documents });
       },
 
-      // 添加文档
+      // Add document
       addDocument: (document: DocumentInfo) => {
         set((state) => ({
           documents: [...state.documents, document],
         }));
       },
 
-      // 更新文档
+      // Update document
       updateDocument: (documentId: string, updates: Partial<DocumentInfo>) => {
         set((state) => ({
           documents: state.documents.map((doc) =>
@@ -123,11 +123,11 @@ export const useDocumentStore = create<DocumentStoreState>()(
         }));
       },
 
-      // 移除文档
+      // Remove document
       removeDocument: (documentId: string) => {
         const state = get();
 
-        // 清理协作服务
+        // Clean up collaboration service
         const collaborationService = state.collaborationServices.get(documentId);
         if (collaborationService) {
           collaborationService.destroy();
@@ -140,7 +140,7 @@ export const useDocumentStore = create<DocumentStoreState>()(
           documents: state.documents.filter(
             (doc) => doc.document_id !== documentId
           ),
-          // 如果移除的是当前选中的文档，清除选择
+          // Clear selection if the removed document is currently selected
           selectedDocumentId:
             state.selectedDocumentId === documentId
               ? null
@@ -148,16 +148,16 @@ export const useDocumentStore = create<DocumentStoreState>()(
         }));
       },
 
-      // 设置选中的文档
+      // Set selected document
       setSelectedDocument: (documentId: string | null) => {
         set({ selectedDocumentId: documentId });
       },
 
-      // 初始化协作服务
+      // Initialize collaboration service
       initializeCollaboration: async (documentId: string, userId?: string) => {
         const state = get();
 
-        // 检查是否已经存在服务
+        // Check if service already exists
         if (state.collaborationServices.has(documentId)) {
           return state.collaborationServices.get(documentId)!;
         }
@@ -169,7 +169,7 @@ export const useDocumentStore = create<DocumentStoreState>()(
             'ws://localhost:1234'
           );
 
-          // 设置事件监听器
+          // Set up event listeners
           collaborationService.onConnectionStatusChange((status) => {
             get().updateConnectionStatus(documentId, status);
           });
@@ -179,7 +179,7 @@ export const useDocumentStore = create<DocumentStoreState>()(
           });
 
           collaborationService.onContentUpdate((content) => {
-            // 可以在这里自动保存内容
+            // Can implement auto-save content here
             console.log(`📝 Document ${documentId} content updated:`, content.length, 'characters');
           });
 
@@ -187,7 +187,7 @@ export const useDocumentStore = create<DocumentStoreState>()(
             console.error(`🔴 Collaboration error for document ${documentId}:`, error);
           });
 
-          // 存储服务
+          // Store service
           state.collaborationServices.set(documentId, collaborationService);
 
           return collaborationService;
@@ -197,7 +197,7 @@ export const useDocumentStore = create<DocumentStoreState>()(
         }
       },
 
-      // 销毁协作服务
+      // Destroy collaboration service
       destroyCollaboration: (documentId: string) => {
         const state = get();
         const collaborationService = state.collaborationServices.get(documentId);
@@ -216,13 +216,13 @@ export const useDocumentStore = create<DocumentStoreState>()(
         }
       },
 
-      // 获取协作服务
+      // Get collaboration service
       getCollaborationService: (documentId: string) => {
         const state = get();
         return state.collaborationServices.get(documentId) || null;
       },
 
-      // 更新连接状态
+      // Update connection status
       updateConnectionStatus: (documentId: string, status: ConnectionStatus) => {
         const state = get();
         state.connectionStatuses.set(documentId, status);
@@ -232,12 +232,12 @@ export const useDocumentStore = create<DocumentStoreState>()(
         });
       },
 
-      // 更新在线用户
+      // Update online users
       updateOnlineUsers: (documentId: string, users: CollaborationUser[]) => {
         const state = get();
         state.onlineUsers.set(documentId, users);
 
-        // 同时更新文档的活跃用户列表
+        // Also update document's active users list
         get().updateDocument(documentId, {
           active_agents: users.map(user => user.name)
         });
@@ -247,12 +247,12 @@ export const useDocumentStore = create<DocumentStoreState>()(
         });
       },
 
-      // 设置协作功能开关
+      // Set collaboration feature toggle
       setCollaborationEnabled: (enabled: boolean) => {
         set({ isCollaborationEnabled: enabled });
       },
 
-      // 获取文档内容
+      // Get document content
       getDocumentContent: (documentId: string) => {
         const state = get();
         const collaborationService = state.collaborationServices.get(documentId);
@@ -261,20 +261,20 @@ export const useDocumentStore = create<DocumentStoreState>()(
           return collaborationService.getContent();
         }
 
-        // 如果没有协作服务，返回空内容或从其他地方获取
+        // If no collaboration service, return empty content or get from elsewhere
         return '';
       },
 
-      // 保存文档内容
+      // Save document content
       saveDocumentContent: async (documentId: string, content: string) => {
         try {
-          // 这里可以实现将内容保存到服务器的逻辑
+          // Can implement logic to save content to server here
           console.log(`💾 Saving document ${documentId} with ${content.length} characters`);
 
-          // 模拟保存操作
+          // Simulate save operation
           await new Promise(resolve => setTimeout(resolve, 500));
 
-          // 更新文档的最后修改时间
+          // Update document's last modified time
           get().updateDocument(documentId, {
             last_modified: new Date().toISOString(),
             version: (get().documents.find(doc => doc.document_id === documentId)?.version || 0) + 1
@@ -287,7 +287,7 @@ export const useDocumentStore = create<DocumentStoreState>()(
         }
       },
 
-      // 创建新文档
+      // Create new document
       createDocument: async (name: string, content: string = '') => {
         try {
           const documentId = `doc-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -296,7 +296,7 @@ export const useDocumentStore = create<DocumentStoreState>()(
           const newDocument: DocumentInfo = {
             document_id: documentId,
             name: name,
-            creator: 'current-user', // 这里应该从用户状态获取
+            creator: 'current-user', // Should get from user state here
             created: now,
             last_modified: now,
             version: 1,
@@ -304,10 +304,10 @@ export const useDocumentStore = create<DocumentStoreState>()(
             permission: 'read_write'
           };
 
-          // 添加到文档列表
+          // Add to document list
           get().addDocument(newDocument);
 
-          // 如果有初始内容，设置内容
+          // If has initial content, set content
           if (content && get().isCollaborationEnabled) {
             const collaborationService = await get().initializeCollaboration(documentId);
             collaborationService.setInitialContent(content);
@@ -323,10 +323,10 @@ export const useDocumentStore = create<DocumentStoreState>()(
     {
       name: "openagents_documents", // localStorage key
       partialize: (state) => ({
-        // 持久化版本号和基本状态，不持久化文档列表（确保所有用户看到相同的默认文档）
+        // Persist version number and basic state, don't persist document list (ensure all users see the same default documents)
         version: state.version,
         threadState: state.threadState,
-        // documents: state.documents, // 移除文档列表的持久化，让所有用户看到相同的公共文档
+        // documents: state.documents, // Remove document list persistence, let all users see the same public documents
         selectedDocumentId: state.selectedDocumentId,
         isCollaborationEnabled: state.isCollaborationEnabled,
       }),

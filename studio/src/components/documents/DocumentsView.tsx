@@ -42,7 +42,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
       const publicDocument: DocumentInfo[] = [
         {
           document_id: "shared-public-doc",
-          name: "🌐 公共协作文档",
+          name: "🌐 Public Collaborative Document",
           creator: "System",
           created: new Date().toISOString(),
           last_modified: new Date().toISOString(),
@@ -196,7 +196,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                 currentTheme === "dark" ? "text-gray-400" : "text-gray-600"
               }`}
             >
-              在不同浏览器窗口打开同一个文档即可开始实时协作编辑
+              Open the same document in different browser windows to start real-time collaborative editing
             </p>
           </div>
           <button

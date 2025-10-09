@@ -13,16 +13,16 @@ const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 
 console.log(`🚀 Starting collaboration server on port ${PORT}`);
 
-// 创建 WebSocket 服务器
+// Create WebSocket server
 const wss = new WebSocketServer({ port: PORT });
 
-// 存储文档和连接信息
+// Store documents and connection information
 const docs = new Map(); // docname -> Y.Doc
 const rooms = new Map(); // docname -> Set of connections
 const userColors = new Map(); // userId -> color
 const userNames = new Map(); // userId -> userName
 
-// 预定义用户颜色
+// Predefined user colors
 const COLORS = [
   '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57',
   '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF9F43',
@@ -31,7 +31,7 @@ const COLORS = [
 
 let colorIndex = 0;
 
-// 获取用户颜色
+// Get user color
 function getUserColor(userId) {
   if (!userColors.has(userId)) {
     userColors.set(userId, COLORS[colorIndex % COLORS.length]);
@@ -40,7 +40,7 @@ function getUserColor(userId) {
   return userColors.get(userId);
 }
 
-// 处理自定义消息
+// Handle custom messages
 function handleCustomMessage(conn, message, roomName, userId) {
   switch (message.type) {
     case 'cursor-position':
@@ -56,7 +56,7 @@ function handleCustomMessage(conn, message, roomName, userId) {
   }
 }
 
-// 生成用户名
+// Generate user name
 function generateUserName(userId) {
   if (!userNames.has(userId)) {
     const names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry'];
@@ -67,7 +67,7 @@ function generateUserName(userId) {
   return userNames.get(userId);
 }
 
-// 广播房间用户列表
+// Broadcast room user list
 function broadcastRoomUsers(roomName) {
   const room = rooms.get(roomName);
   if (!room) return;
@@ -101,7 +101,7 @@ function broadcastRoomUsers(roomName) {
   });
 }
 
-// 广播光标位置
+// Broadcast cursor position
 function broadcastCursorPosition(roomName, userId, position) {
   const room = rooms.get(roomName);
   if (!room) return;
@@ -125,7 +125,7 @@ function broadcastCursorPosition(roomName, userId, position) {
   });
 }
 
-// 处理 WebSocket 连接
+// Handle WebSocket connection
 wss.on('connection', (conn, req) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const roomName = url.searchParams.get('room') || 'default';
@@ -133,36 +133,36 @@ wss.on('connection', (conn, req) => {
 
   console.log(`📝 New connection to room '${roomName}' from user '${userId}'`);
 
-  // 设置连接属性
+  // Set connection properties
   conn.userId = userId;
   conn.roomName = roomName;
   conn.isAlive = true;
   conn.cursorPosition = null;
 
-  // 获取或创建文档
+  // Get or create document
   if (!docs.has(roomName)) {
     const ydoc = new Y.Doc();
     docs.set(roomName, ydoc);
     console.log(`📄 Created new document for room '${roomName}'`);
   }
 
-  // 获取或创建房间
+  // Get or create room
   if (!rooms.has(roomName)) {
     rooms.set(roomName, new Set());
   }
   rooms.get(roomName).add(conn);
 
-  // 设置 Yjs WebSocket 连接
+  // Set up Yjs WebSocket connection
   const doc = docs.get(roomName);
 
-  // 创建 awareness 实例
+  // Create awareness instance
   if (!doc.awareness) {
     doc.awareness = new awarenessProtocol.Awareness(doc);
   }
 
   const awareness = doc.awareness;
 
-  // 处理 WebSocket 消息
+  // Handle WebSocket messages
   const messageHandler = (data, isBinary) => {
     if (isBinary) {
       const decoder = decoding.createDecoder(data);
@@ -193,7 +193,7 @@ wss.on('connection', (conn, req) => {
           break;
       }
     } else {
-      // 处理自定义 JSON 消息
+      // Handle custom JSON messages
       try {
         const message = JSON.parse(data.toString());
         handleCustomMessage(conn, message, roomName, userId);
@@ -205,13 +205,13 @@ wss.on('connection', (conn, req) => {
 
   conn.on('message', messageHandler);
 
-  // 发送初始同步
+  // Send initial sync
   const encoder = encoding.createEncoder();
   encoding.writeVarUint(encoder, syncProtocol.messageYjsSyncStep1);
   syncProtocol.writeSyncStep1(encoder, doc);
   conn.send(encoding.toUint8Array(encoder));
 
-  // 发送初始 awareness 状态
+  // Send initial awareness state
   if (awareness.getStates().size > 0) {
     const awarenessEncoder = encoding.createEncoder();
     encoding.writeVarUint(awarenessEncoder, awarenessProtocol.messageAwareness);
@@ -219,7 +219,7 @@ wss.on('connection', (conn, req) => {
     conn.send(encoding.toUint8Array(awarenessEncoder));
   }
 
-  // 监听文档更新
+  // Listen for document updates
   const updateHandler = (update, origin) => {
     if (origin !== conn) {
       const encoder = encoding.createEncoder();
@@ -231,7 +231,7 @@ wss.on('connection', (conn, req) => {
 
   doc.on('update', updateHandler);
 
-  // 监听 awareness 更新
+  // Listen for awareness updates
   const awarenessChangeHandler = ({ added, updated, removed }, origin) => {
     const changedClients = added.concat(updated).concat(removed);
     if (origin !== conn) {
@@ -244,7 +244,7 @@ wss.on('connection', (conn, req) => {
 
   awareness.on('change', awarenessChangeHandler);
 
-  // 发送用户信息
+  // Send user information
   const userInfo = {
     type: 'user-info',
     userId: userId,
@@ -258,17 +258,17 @@ wss.on('connection', (conn, req) => {
     console.error('Error sending user info:', error);
   }
 
-  // 广播用户列表更新
+  // Broadcast user list update
   setTimeout(() => {
     broadcastRoomUsers(roomName);
   }, 100);
 
 
-  // 处理连接关闭
+  // Handle connection close
   conn.on('close', () => {
     console.log(`📤 User '${userId}' disconnected from room '${roomName}'`);
 
-    // 清理事件监听器
+    // Clean up event listeners
     doc.off('update', updateHandler);
     awareness.off('change', awarenessChangeHandler);
 
@@ -276,31 +276,31 @@ wss.on('connection', (conn, req) => {
     if (room) {
       room.delete(conn);
 
-      // 如果房间为空，可以选择清理文档（这里保留文档以便重连）
+      // Can optionally clean up document if room is empty (keeping document here for reconnection)
       if (room.size === 0) {
         console.log(`🏠 Room '${roomName}' is now empty`);
-        // 可选：删除空房间和文档
+        // Optional: Delete empty room and document
         // rooms.delete(roomName);
         // docs.delete(roomName);
       } else {
-        // 广播用户列表更新
+        // Broadcast user list update
         broadcastRoomUsers(roomName);
       }
     }
   });
 
-  // 错误处理
+  // Error handling
   conn.on('error', (error) => {
     console.error(`❌ WebSocket error for user '${userId}':`, error);
   });
 
-  // 心跳检测
+  // Heartbeat detection
   conn.on('pong', () => {
     conn.isAlive = true;
   });
 });
 
-// 心跳检测定时器
+// Heartbeat detection timer
 const heartbeat = setInterval(() => {
   wss.clients.forEach((conn) => {
     if (!conn.isAlive) {
@@ -313,7 +313,7 @@ const heartbeat = setInterval(() => {
   });
 }, HEARTBEAT_INTERVAL);
 
-// 优雅关闭
+// Graceful shutdown
 process.on('SIGINT', () => {
   console.log('\n🛑 Shutting down collaboration server...');
   clearInterval(heartbeat);

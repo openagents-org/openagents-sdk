@@ -18,7 +18,7 @@ const OnlineUsersList: React.FC<OnlineUsersProps> = ({
     return (
       <div className={`flex items-center space-x-2 ${className}`}>
         <div className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-          无在线用户
+          No users online
         </div>
       </div>
     );
@@ -26,14 +26,14 @@ const OnlineUsersList: React.FC<OnlineUsersProps> = ({
 
   return (
     <div className={`relative ${className}`}>
-      {/* 用户头像组 */}
+      {/* User avatar group */}
       <div
         className="flex items-center space-x-1 cursor-pointer"
         onClick={() => setShowDetails(!showDetails)}
         onMouseEnter={() => setShowDetails(true)}
         onMouseLeave={() => setShowDetails(false)}
       >
-        {/* 显示前5个用户的头像 */}
+        {/* Show first 5 user avatars */}
         {users.slice(0, 5).map((user, index) => (
           <div
             key={user.id}
@@ -51,7 +51,7 @@ const OnlineUsersList: React.FC<OnlineUsersProps> = ({
               {user.name.charAt(0).toUpperCase()}
             </div>
 
-            {/* 活跃指示器 */}
+            {/* Active indicator */}
             {user.cursor && (
               <div
                 className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800"
@@ -63,7 +63,7 @@ const OnlineUsersList: React.FC<OnlineUsersProps> = ({
           </div>
         ))}
 
-        {/* 更多用户指示器 */}
+        {/* More users indicator */}
         {users.length > 5 && (
           <div className={`
             w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ring-2 ring-white dark:ring-gray-800
@@ -73,13 +73,13 @@ const OnlineUsersList: React.FC<OnlineUsersProps> = ({
           </div>
         )}
 
-        {/* 在线数量 */}
+        {/* Online count */}
         <div className={`text-sm ml-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-          {users.length} 在线
+          {users.length} online
         </div>
       </div>
 
-      {/* 详细用户列表 */}
+      {/* Detailed user list */}
       {showDetails && (
         <div
           className={`
@@ -96,7 +96,7 @@ const OnlineUsersList: React.FC<OnlineUsersProps> = ({
             <div className={`text-sm font-medium mb-3 ${
               theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
             }`}>
-              在线用户 ({users.length})
+              Online Users ({users.length})
             </div>
 
             <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -111,7 +111,7 @@ const OnlineUsersList: React.FC<OnlineUsersProps> = ({
                     }
                   `}
                 >
-                  {/* 用户头像 */}
+                  {/* User avatar */}
                   <div className="relative">
                     <div
                       className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-medium"
@@ -120,14 +120,14 @@ const OnlineUsersList: React.FC<OnlineUsersProps> = ({
                       {user.name.charAt(0).toUpperCase()}
                     </div>
 
-                    {/* 活跃状态指示器 */}
+                    {/* Active status indicator */}
                     <div className={`
                       absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-gray-800
                       ${user.cursor ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}
                     `}></div>
                   </div>
 
-                  {/* 用户信息 */}
+                  {/* User info */}
                   <div className="flex-1 min-w-0">
                     <div className={`text-sm font-medium truncate ${
                       theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
@@ -141,18 +141,18 @@ const OnlineUsersList: React.FC<OnlineUsersProps> = ({
                       {user.cursor ? (
                         <span className="flex items-center">
                           <span className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></span>
-                          正在编辑第 {user.cursor.line} 行
+                          Editing line {user.cursor.line}
                         </span>
                       ) : (
                         <span className="flex items-center">
                           <span className="w-2 h-2 bg-gray-400 rounded-full mr-1"></span>
-                          空闲中
+                          Idle
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* 颜色标识 */}
+                  {/* Color indicator */}
                   <div
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: user.color }}
@@ -161,7 +161,7 @@ const OnlineUsersList: React.FC<OnlineUsersProps> = ({
               ))}
             </div>
 
-            {/* 底部信息 */}
+            {/* Footer info */}
             <div className={`
               mt-3 pt-3 border-t text-xs text-center
               ${theme === 'dark'
@@ -169,7 +169,7 @@ const OnlineUsersList: React.FC<OnlineUsersProps> = ({
                 : 'border-gray-200 text-gray-600'
               }
             `}>
-              实时协作模式 · 所有更改自动同步
+              Real-time collaboration · All changes auto-synced
             </div>
           </div>
         </div>

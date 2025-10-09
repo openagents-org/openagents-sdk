@@ -2,7 +2,7 @@ import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import * as awarenessProtocol from 'y-protocols/awareness';
 
-// 用户信息接口
+// User information interface
 export interface CollaborationUser {
   id: string;
   name: string;
@@ -13,7 +13,7 @@ export interface CollaborationUser {
   };
 }
 
-// 连接状态枚举
+// Connection status enumeration
 export enum ConnectionStatus {
   DISCONNECTED = 'disconnected',
   CONNECTING = 'connecting',
@@ -21,7 +21,7 @@ export enum ConnectionStatus {
   RECONNECTING = 'reconnecting'
 }
 
-// 协作服务类
+// Collaboration service class
 export class CollaborationService {
   private ydoc: Y.Doc;
   private provider: WebsocketProvider;
@@ -32,21 +32,21 @@ export class CollaborationService {
   private websocketUrl: string;
   private userName?: string;
 
-  // 事件回调
+  // Event callbacks
   private onStatusChange?: (status: ConnectionStatus) => void;
   private onUsersChange?: (users: CollaborationUser[]) => void;
   private onCursorChange?: (userId: string, user: CollaborationUser) => void;
   private onContentChange?: (content: string) => void;
   private onError?: (error: Error) => void;
 
-  // 状态
+  // State
   private connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED;
   private users: Map<string, CollaborationUser> = new Map();
   private retryCount = 0;
   private maxRetries = 5;
   private retryDelay = 1000;
 
-  // 用户颜色池
+  // User color pool
   private static COLORS = [
     '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57',
     '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF9F43',
@@ -70,11 +70,11 @@ export class CollaborationService {
     console.log('   👤 User ID:', this.userId);
     console.log('   🌐 WebSocket:', websocketUrl);
 
-    // 创建 Yjs 文档
+    // Create Yjs document
     this.ydoc = new Y.Doc();
     this.ytext = this.ydoc.getText('monaco');
 
-    // 初始化 WebSocket 提供者
+    // Initialize WebSocket provider
     this.provider = new WebsocketProvider(
       this.websocketUrl,
       this.roomName,
@@ -83,36 +83,36 @@ export class CollaborationService {
 
     console.log('🔌 [CollaborationService] WebSocket provider created');
 
-    // 获取 awareness 实例
+    // Get awareness instance
     this.awareness = this.provider.awareness;
 
     this.setupEventListeners();
   }
 
-  // 生成用户ID
+  // Generate user ID
   private generateUserId(): string {
     return `user-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   }
 
-  // 获取用户颜色
+  // Get user color
   private getUserColor(): string {
     const color = CollaborationService.COLORS[CollaborationService.colorIndex % CollaborationService.COLORS.length];
     CollaborationService.colorIndex++;
     return color;
   }
 
-  // 生成用户名
+  // Generate user name
   private generateUserName(): string {
     const names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry'];
     const adjectives = ['Creative', 'Smart', 'Friendly', 'Bold', 'Clever', 'Bright', 'Quick', 'Wise'];
     return `${adjectives[Math.floor(Math.random() * adjectives.length)]} ${names[Math.floor(Math.random() * names.length)]}`;
   }
 
-  // 设置事件监听器
+  // Set up event listeners
   private setupEventListeners() {
     console.log('👂 [CollaborationService] Setting up event listeners...');
 
-    // 连接状态监听
+    // Connection status listener
     this.provider.on('status', (event: { status: string }) => {
       const prevStatus = this.connectionStatus;
       console.log(`📡 [CollaborationService] Provider status event:`, event.status);
@@ -127,7 +127,7 @@ export class CollaborationService {
           this.retryCount = 0;
           console.log('✅ [CollaborationService] Connected to server!');
 
-          // 设置本地用户信息
+          // Set local user information
           const userName = this.userName || this.generateUserName();
           const userColor = this.getUserColor();
           this.awareness.setLocalStateField('user', {
@@ -150,26 +150,26 @@ export class CollaborationService {
       }
     });
 
-    // Awareness 变化监听
+    // Awareness change listener
     this.awareness.on('change', () => {
       console.log('👥 [CollaborationService] Awareness changed, updating users...');
       this.updateUsersFromAwareness();
     });
 
-    // 文档变更监听
+    // Document change listener
     this.ytext.observe((event) => {
       const content = this.ytext.toString();
       console.log('📝 [CollaborationService] Document content changed, length:', content.length);
       this.onContentChange?.(content);
     });
 
-    // WebSocket 错误处理
+    // WebSocket error handling
     this.provider.ws?.addEventListener('error', (error) => {
       console.error('🔴 WebSocket error:', error);
       this.onError?.(new Error('WebSocket connection error'));
     });
 
-    // WebSocket 关闭处理
+    // WebSocket close handling
     this.provider.ws?.addEventListener('close', (event) => {
       console.log('🔌 WebSocket closed:', event.code, event.reason);
       if (!event.wasClean) {
@@ -178,7 +178,7 @@ export class CollaborationService {
     });
   }
 
-  // 从 awareness 更新用户列表
+  // Update user list from awareness
   private updateUsersFromAwareness() {
     const users: CollaborationUser[] = [];
 
@@ -193,7 +193,7 @@ export class CollaborationService {
         users.push(user);
         this.users.set(user.id, user);
 
-        // 触发光标更新回调
+        // Trigger cursor update callback
         if (state.cursor && clientId !== this.awareness.clientID) {
           this.onCursorChange?.(user.id, user);
         }
@@ -204,14 +204,14 @@ export class CollaborationService {
   }
 
 
-  // 处理断开连接
+  // Handle disconnection
   private handleDisconnection() {
     if (this.retryCount < this.maxRetries) {
       this.connectionStatus = ConnectionStatus.RECONNECTING;
       this.onStatusChange?.(this.connectionStatus);
 
       this.retryCount++;
-      const delay = this.retryDelay * Math.pow(2, this.retryCount - 1); // 指数退避
+      const delay = this.retryDelay * Math.pow(2, this.retryCount - 1); // Exponential backoff
 
       console.log(`🔄 Attempting to reconnect (${this.retryCount}/${this.maxRetries}) in ${delay}ms`);
 
@@ -224,7 +224,7 @@ export class CollaborationService {
     }
   }
 
-  // 重新连接
+  // Reconnect
   private reconnect() {
     try {
       this.provider.disconnect();
@@ -245,7 +245,7 @@ export class CollaborationService {
     }
   }
 
-  // 发送光标位置
+  // Send cursor position
   public updateCursor(line: number, column: number) {
     try {
       this.awareness.setLocalStateField('cursor', { line, column });
@@ -254,39 +254,39 @@ export class CollaborationService {
     }
   }
 
-  // 发送心跳（不再需要，awareness 自动处理）
+  // Send heartbeat (no longer needed, awareness handles automatically)
   public sendHeartbeat() {
     // No-op - awareness handles heartbeat automatically
   }
 
-  // 获取文档内容
+  // Get document content
   public getContent(): string {
     return this.ytext.toString();
   }
 
-  // 设置文档内容（初始化时使用）
+  // Set document content (used during initialization)
   public setInitialContent(content: string) {
     if (this.ytext.length === 0 && content) {
       this.ytext.insert(0, content);
     }
   }
 
-  // 获取当前用户信息
+  // Get current user information
   public getCurrentUser(): CollaborationUser | null {
     return this.users.get(this.userId) || null;
   }
 
-  // 获取所有用户
+  // Get all users
   public getUsers(): CollaborationUser[] {
     return Array.from(this.users.values());
   }
 
-  // 获取连接状态
+  // Get connection status
   public getConnectionStatus(): ConnectionStatus {
     return this.connectionStatus;
   }
 
-  // 获取 Yjs 文档和文本对象
+  // Get Yjs document and text object
   public getYDoc(): Y.Doc {
     return this.ydoc;
   }
@@ -295,7 +295,7 @@ export class CollaborationService {
     return this.ytext;
   }
 
-  // 事件回调设置
+  // Event callback settings
   public onConnectionStatusChange(callback: (status: ConnectionStatus) => void) {
     this.onStatusChange = callback;
   }
@@ -316,23 +316,23 @@ export class CollaborationService {
     this.onError = callback;
   }
 
-  // 清理资源
+  // Clean up resources
   public destroy() {
     try {
-      // 清理事件监听器
+      // Clean up event listeners
       this.onStatusChange = undefined;
       this.onUsersChange = undefined;
       this.onCursorChange = undefined;
       this.onContentChange = undefined;
       this.onError = undefined;
 
-      // 清理 awareness 本地状态
+      // Clear awareness local state
       this.awareness.setLocalState(null);
 
-      // 断开连接
+      // Disconnect
       this.provider.disconnect();
 
-      // 销毁文档
+      // Destroy document
       this.ydoc.destroy();
 
       console.log('🧹 Collaboration service destroyed');
@@ -342,7 +342,7 @@ export class CollaborationService {
   }
 }
 
-// 服务工厂函数
+// Service factory function
 export function createCollaborationService(
   documentId: string,
   userId?: string,
@@ -355,6 +355,6 @@ export function createCollaborationService(
   );
 }
 
-// 导出常量
+// Export constants
 export const DEFAULT_WEBSOCKET_URL = 'ws://localhost:1234';
 export const HEARTBEAT_INTERVAL = 30000; // 30 seconds
