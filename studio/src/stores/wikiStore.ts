@@ -587,7 +587,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
               pageData.version
             );
           } else {
-            // 对于其他事件（如创建），使用完整对象更新
+            // For other events (such as creation), use full object update
             console.log(
               "WikiStore: Handling non-edit page notification for:",
               pageData.page_path

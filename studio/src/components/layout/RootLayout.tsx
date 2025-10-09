@@ -13,13 +13,13 @@ interface RootLayoutProps {
   children: ReactNode;
 }
 
-// 条件渲染的 OpenAgents Provider 包装器
+// Conditionally rendered OpenAgents Provider wrapper
 const ConditionalOpenAgentsProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const { selectedNetwork, agentName } = useAuthStore();
 
-  // 只有在完成基础设置后才初始化 OpenAgentsProvider
+  // Only initialize OpenAgentsProvider after basic setup is complete
   if (selectedNetwork && agentName) {
     console.log("🚀 RootLayout: Initializing OpenAgentsProvider", {
       network:
@@ -34,12 +34,12 @@ const ConditionalOpenAgentsProvider: React.FC<{
 };
 
 /**
- * 根布局组件 - 负责整体布局结构
- * 包含：左侧模块导航 + 中间内容区域（侧边栏 + 主内容）
+ * Root layout component - responsible for overall layout structure
+ * Contains: left module navigation + middle content area (sidebar + main content)
  *
- * 现在还负责条件渲染 OpenAgentsProvider：
- * - 只有在用户完成网络选择和代理设置后才初始化 OpenAgentsProvider
- * - 这样确保所有使用 RootLayout 的页面都可以访问 OpenAgents context
+ * Now also responsible for conditionally rendering OpenAgentsProvider:
+ * - Only initializes OpenAgentsProvider after user completes network selection and agent setup
+ * - This ensures all pages using RootLayout can access OpenAgents context
  */
 const RootLayout: React.FC<RootLayoutProps> = ({ children }) => {
   return (
@@ -49,27 +49,27 @@ const RootLayout: React.FC<RootLayoutProps> = ({ children }) => {
   );
 };
 
-// 实际的布局内容组件
+// Actual layout content component
 const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
   const context = useContext(OpenAgentsContext);
   const isConnected = context?.isConnected || false;
 
   return (
     <div className="h-screen w-screen flex overflow-hidden bg-slate-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      {/* 连接状态覆盖层 - 只有在有 OpenAgentsProvider 且未连接时显示 */}
+      {/* Connection status overlay - only shown when OpenAgentsProvider exists but not connected */}
       {context && !isConnected && <ConnectionLoadingOverlay />}
 
       {context && isConnected && (
         <>
-          {/* 左侧模块导航栏 */}
+          {/* Left module navigation bar */}
           <ModSidebar />
 
-          {/* 中间内容区域：侧边栏 + 主内容 */}
+          {/* Middle content area: sidebar + main content */}
           <div className="flex-1 flex overflow-hidden">
-            {/* 功能侧边栏 - 现在是自管理的，会根据路由自动显示相应内容 */}
+            {/* Feature sidebar - now self-managed, automatically displays corresponding content based on route */}
             <Sidebar />
 
-            {/* 主内容区域 */}
+            {/* Main content area */}
             <main className="flex-1 flex flex-col overflow-hidden m-1 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-white via-blue-50 to-purple-50 dark:bg-gray-800">
               {children}
             </main>

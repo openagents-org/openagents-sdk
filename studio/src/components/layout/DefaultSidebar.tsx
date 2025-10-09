@@ -6,7 +6,7 @@ export interface DefaultSidebarProps {
   icon?: React.ReactNode;
 }
 
-// Default Sidebar Content Component - 用于没有特定侧边栏内容的路由
+// Default Sidebar Content Component - for routes without specific sidebar content
 const DefaultSidebar: React.FC<DefaultSidebarProps> = ({
   message = "Navigation content will appear here",
   icon,

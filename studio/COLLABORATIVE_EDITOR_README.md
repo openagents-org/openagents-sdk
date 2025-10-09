@@ -1,142 +1,142 @@
-# 基于 Yjs + Monaco Editor 的实时协作编辑器
+# Real-time Collaborative Editor based on Yjs + Monaco Editor
 
-## 🚀 功能特性
+## 🚀 Features
 
-✅ **实时协作编辑** - 多用户同时编辑，自动冲突解决
-✅ **光标位置同步** - 实时显示其他用户的光标位置（不同颜色）
-✅ **在线用户列表** - 显示当前在线的所有协作用户
-✅ **连接状态指示** - 实时显示连接状态（已连接/连接中/重连中/已断开）
-✅ **自动重连机制** - 网络断开时自动尝试重连
-✅ **CRDT 冲突解决** - 使用 Yjs 内置的 CRDT 算法处理编辑冲突
-✅ **Monaco Editor 集成** - VS Code 同款编辑器，支持语法高亮
-✅ **TypeScript 支持** - 完整的类型定义和类型检查
+✅ **Real-time Collaborative Editing** - Multiple users editing simultaneously with automatic conflict resolution
+✅ **Cursor Position Synchronization** - Real-time display of other users' cursor positions (different colors)
+✅ **Online User List** - Display all currently online collaborating users
+✅ **Connection Status Indicator** - Real-time display of connection status (connected/connecting/reconnecting/disconnected)
+✅ **Automatic Reconnection Mechanism** - Automatically attempts to reconnect when network disconnects
+✅ **CRDT Conflict Resolution** - Uses Yjs built-in CRDT algorithm to handle editing conflicts
+✅ **Monaco Editor Integration** - Same editor as VS Code, supports syntax highlighting
+✅ **TypeScript Support** - Complete type definitions and type checking
 
-## 📁 项目结构
+## 📁 Project Structure
 
 ```
 studio/
 ├── src/
 │   ├── components/documents/
-│   │   ├── CollaborativeEditor.tsx    # 协作编辑器核心组件
-│   │   ├── ConnectionStatus.tsx       # 连接状态指示器
-│   │   ├── OnlineUsers.tsx           # 在线用户列表
-│   │   ├── UserCursor.tsx            # 用户光标组件
-│   │   └── DocumentEditor.tsx        # 文档编辑器页面
+│   │   ├── CollaborativeEditor.tsx    # Collaborative editor core component
+│   │   ├── ConnectionStatus.tsx       # Connection status indicator
+│   │   ├── OnlineUsers.tsx           # Online user list
+│   │   ├── UserCursor.tsx            # User cursor component
+│   │   └── DocumentEditor.tsx        # Document editor page
 │   ├── services/
-│   │   └── collaborationService.ts   # 协作服务管理器
+│   │   └── collaborationService.ts   # Collaboration service manager
 │   └── stores/
-│       └── documentStore.ts          # 文档状态管理（增强版）
+│       └── documentStore.ts          # Document state management (enhanced)
 ├── server/
-│   ├── collaboration-server.js       # WebSocket 协作服务器
-│   └── package.json                  # 服务器依赖
-├── start-collaboration.sh            # 启动脚本
-└── stop-collaboration.sh             # 停止脚本
+│   ├── collaboration-server.js       # WebSocket collaboration server
+│   └── package.json                  # Server dependencies
+├── start-collaboration.sh            # Start script
+└── stop-collaboration.sh             # Stop script
 ```
 
-## 🔧 技术栈
+## 🔧 Tech Stack
 
-- **前端**：React 18 + TypeScript + Monaco Editor + Yjs + y-monaco
-- **后端**：Node.js + WebSocket + Yjs + y-protocols
-- **状态管理**：Zustand
-- **样式**：Tailwind CSS
-- **协作引擎**：Yjs (CRDT) + WebSocket Provider
+- **Frontend**: React 18 + TypeScript + Monaco Editor + Yjs + y-monaco
+- **Backend**: Node.js + WebSocket + Yjs + y-protocols
+- **State Management**: Zustand
+- **Styling**: Tailwind CSS
+- **Collaboration Engine**: Yjs (CRDT) + WebSocket Provider
 
-## 🚦 快速开始
+## 🚦 Quick Start
 
-### 1. 启动服务
+### 1. Start Services
 
 ```bash
-# 方式一：使用启动脚本（推荐）
+# Method 1: Using start script (recommended)
 cd studio
 ./start-collaboration.sh
 
-# 方式二：手动启动
-# 终端1：启动协作服务器
+# Method 2: Manual start
+# Terminal 1: Start collaboration server
 cd studio/server
 node collaboration-server.js
 
-# 终端2：启动前端应用
+# Terminal 2: Start frontend application
 cd studio
 npm start
 ```
 
-### 2. 访问应用
+### 2. Access Application
 
-- 🌐 前端应用：http://localhost:8050
-- 📡 协作服务器：ws://localhost:1234
+- 🌐 Frontend application: http://localhost:8050
+- 📡 Collaboration server: ws://localhost:1234
 
-### 3. 测试协作功能
+### 3. Test Collaboration Features
 
-1. 在浏览器中打开 http://localhost:8050
-2. 导航到 **Documents** 页面
-3. 点击任意文档进入编辑器
-4. 在另一个浏览器标签页或窗口中打开相同的文档
-5. 开始在两个窗口中同时编辑，观察实时同步效果！
+1. Open http://localhost:8050 in your browser
+2. Navigate to the **Documents** page
+3. Click on any document to enter the editor
+4. Open the same document in another browser tab or window
+5. Start editing simultaneously in both windows and observe the real-time synchronization!
 
-## 🎮 使用说明
+## 🎮 Usage Guide
 
-### 编辑器功能
+### Editor Features
 
-- **实时编辑**：在编辑器中输入内容，其他用户会实时看到变化
-- **光标跟踪**：可以看到其他用户的光标位置和选区
-- **用户标识**：每个用户都有不同的颜色和名称
-- **保存功能**：使用 `Ctrl+S` 或点击保存按钮保存文档
-- **语法高亮**：支持 TypeScript、JavaScript 等语言的语法高亮
+- **Real-time Editing**: Type content in the editor, other users will see changes in real-time
+- **Cursor Tracking**: See other users' cursor positions and selections
+- **User Identification**: Each user has a different color and name
+- **Save Function**: Use `Ctrl+S` or click the save button to save the document
+- **Syntax Highlighting**: Supports syntax highlighting for TypeScript, JavaScript, and other languages
 
-### 状态指示器
+### Status Indicators
 
-- 🟢 **已连接**：协作功能正常工作
-- 🔵 **连接中**：正在建立连接
-- 🟡 **重连中**：网络中断，正在重连
-- 🔴 **已断开**：协作功能不可用
+- 🟢 **Connected**: Collaboration features working normally
+- 🔵 **Connecting**: Establishing connection
+- 🟡 **Reconnecting**: Network interrupted, reconnecting
+- 🔴 **Disconnected**: Collaboration features unavailable
 
-### 在线用户
+### Online Users
 
-- 悬停在用户头像上查看详细信息
-- 绿点表示用户正在编辑
-- 灰点表示用户在线但空闲
+- Hover over user avatars to view detailed information
+- Green dot indicates user is actively editing
+- Gray dot indicates user is online but idle
 
-## 🔧 配置选项
+## 🔧 Configuration Options
 
-### 协作服务器配置
+### Collaboration Server Configuration
 
-编辑 `server/collaboration-server.js`：
+Edit `server/collaboration-server.js`:
 
 ```javascript
-const PORT = 1234;                    // WebSocket 端口
-const HEARTBEAT_INTERVAL = 30000;     // 心跳间隔（毫秒）
+const PORT = 1234;                    // WebSocket port
+const HEARTBEAT_INTERVAL = 30000;     // Heartbeat interval (milliseconds)
 ```
 
-### 客户端配置
+### Client Configuration
 
-编辑 `src/services/collaborationService.ts`：
+Edit `src/services/collaborationService.ts`:
 
 ```typescript
 export const DEFAULT_WEBSOCKET_URL = 'ws://localhost:1234';
 export const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 ```
 
-## 🐛 故障排除
+## 🐛 Troubleshooting
 
-### 常见问题
+### Common Issues
 
-1. **连接失败**
-   - 确保协作服务器已启动
-   - 检查防火墙设置
-   - 验证 WebSocket URL 是否正确
+1. **Connection Failed**
+   - Ensure the collaboration server is running
+   - Check firewall settings
+   - Verify the WebSocket URL is correct
 
-2. **编辑不同步**
-   - 检查网络连接
-   - 查看浏览器控制台错误
-   - 重新刷新页面
+2. **Editing Not Syncing**
+   - Check network connection
+   - Check browser console for errors
+   - Refresh the page
 
-3. **用户列表为空**
-   - 确保多个客户端连接到同一个文档
-   - 检查服务器日志
+3. **User List is Empty**
+   - Ensure multiple clients are connected to the same document
+   - Check server logs
 
-### 调试信息
+### Debug Information
 
-打开浏览器开发工具控制台，可以看到详细的连接和同步日志：
+Open the browser developer tools console to see detailed connection and synchronization logs:
 
 ```
 🔗 Collaboration connection status: connected
@@ -144,93 +144,93 @@ export const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 👤 Received user info: { id: "user-123", name: "Alice", color: "#FF6B6B" }
 ```
 
-## 📈 性能优化
+## 📈 Performance Optimization
 
-- **延迟**：编辑同步延迟 < 100ms
-- **并发**：支持多用户同时编辑
-- **网络**：断线重连，本地编辑缓存
-- **内存**：自动垃圾回收，清理过期连接
+- **Latency**: Edit synchronization latency < 100ms
+- **Concurrency**: Supports multiple users editing simultaneously
+- **Network**: Disconnection recovery, local edit caching
+- **Memory**: Automatic garbage collection, cleanup of expired connections
 
-## 🛠️ 开发扩展
+## 🛠️ Development Extensions
 
-### 添加新的编程语言支持
+### Adding New Programming Language Support
 
-在 `CollaborativeEditor.tsx` 中修改：
+Modify in `CollaborativeEditor.tsx`:
 
 ```typescript
 <CollaborativeEditor
-  language="python"  // 支持的语言：typescript, javascript, python, java, etc.
+  language="python"  // Supported languages: typescript, javascript, python, java, etc.
   // ...
 />
 ```
 
-### 自定义用户颜色
+### Customizing User Colors
 
-在 `server/collaboration-server.js` 中修改 `COLORS` 数组：
+Modify the `COLORS` array in `server/collaboration-server.js`:
 
 ```javascript
 const COLORS = [
-  '#FF6B6B', '#4ECDC4', '#45B7D1', // 添加更多颜色
+  '#FF6B6B', '#4ECDC4', '#45B7D1', // Add more colors
   // ...
 ];
 ```
 
-### 集成用户认证
+### Integrating User Authentication
 
-1. 修改 `CollaborationService` 构造函数传入用户 ID
-2. 在服务器端验证用户权限
-3. 根据用户角色显示不同的编辑权限
+1. Modify `CollaborationService` constructor to pass in user ID
+2. Validate user permissions on the server side
+3. Display different editing permissions based on user roles
 
-## 📝 API 文档
+## 📝 API Documentation
 
 ### CollaborationService
 
 ```typescript
-// 创建协作服务
+// Create collaboration service
 const service = new CollaborationService(roomName, userId, websocketUrl);
 
-// 事件监听
+// Event listeners
 service.onConnectionStatusChange((status) => { /* ... */ });
 service.onUsersUpdate((users) => { /* ... */ });
 service.onContentUpdate((content) => { /* ... */ });
 
-// 发送光标位置
+// Send cursor position
 service.updateCursor(line, column);
 
-// 获取文档内容
+// Get document content
 const content = service.getContent();
 
-// 清理资源
+// Cleanup resources
 service.destroy();
 ```
 
 ### DocumentStore
 
 ```typescript
-// 初始化协作
+// Initialize collaboration
 const service = await initializeCollaboration(documentId, userId);
 
-// 保存文档
+// Save document
 const success = await saveDocumentContent(documentId, content);
 
-// 创建文档
+// Create document
 const documentId = await createDocument(name, content);
 ```
 
-## 🎯 后续改进
+## 🎯 Future Improvements
 
-- [ ] 添加评论和批注功能
-- [ ] 实现版本历史和回滚
-- [ ] 支持更多文件格式（Markdown, JSON 等）
-- [ ] 添加用户权限管理
-- [ ] 实现文件夹和目录结构
-- [ ] 集成代码执行和预览
-- [ ] 添加插件系统
+- [ ] Add commenting and annotation features
+- [ ] Implement version history and rollback
+- [ ] Support more file formats (Markdown, JSON, etc.)
+- [ ] Add user permission management
+- [ ] Implement folders and directory structure
+- [ ] Integrate code execution and preview
+- [ ] Add plugin system
 
-## 📄 许可证
+## 📄 License
 
 MIT License
 
 ---
 
-🎉 **恭喜！** 您已成功实现了一个功能完整的实时协作编辑器！
+🎉 **Congratulations!** You have successfully implemented a fully functional real-time collaborative editor!

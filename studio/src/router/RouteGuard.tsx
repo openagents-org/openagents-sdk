@@ -11,8 +11,8 @@ interface RouteGuardProps {
 }
 
 /**
- * 全局路由守卫 - 集中处理所有页面流程的路由逻辑
- * 根据当前状态确定用户应该在哪个页面
+ * Global route guard - centralized handling of all page flow routing logic
+ * Determines which page the user should be on based on current state
  */
 const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   const location = useLocation();
@@ -107,7 +107,7 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     );
   }
 
-  // 处理根路径 "/" - NetworkSelectionPage is now served directly under /
+  // Handle root path "/" - NetworkSelectionPage is now served directly under /
   if (currentPath === "/") {
     // If user is fully setup (has network and agent), redirect to the default route
     if (selectedNetwork && agentName) {
@@ -131,7 +131,7 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     return <>{children}</>;
   }
 
-  // 处理 /agent-setup 路径的访问控制
+  // Handle /agent-setup path access control
   if (currentPath === "/agent-setup") {
     if (!selectedNetwork) {
       console.log(
@@ -139,28 +139,28 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
       );
       return <Navigate to="/" replace />;
     }
-    // 有网络选择，允许访问 agent-setup
+    // Has network selection, allow access to agent-setup
     return <>{children}</>;
   }
 
   // NetworkSelectionPage is now served under /, so no special handling needed here
 
-  // 处理需要认证的路由（ModSidebar 相关路由）
+  // Handle authenticated routes (ModSidebar related routes)
   const isAuthenticatedRoute = routes.some((route) => {
     if (!route.requiresAuth) return false;
 
-    // 处理通配符路径 (如 "/forum/*")
+    // Handle wildcard paths (e.g. "/forum/*")
     if (route.path.endsWith("/*")) {
-      const basePath = route.path.slice(0, -2); // 移除 "/*"
+      const basePath = route.path.slice(0, -2); // Remove "/*"
       return currentPath === basePath || currentPath.startsWith(basePath + "/");
     }
 
-    // 精确匹配
+    // Exact match
     return currentPath === route.path;
   });
 
   if (isAuthenticatedRoute) {
-    // 访问认证路由，检查是否完成设置
+    // Accessing authenticated route, check if setup is complete
     if (!selectedNetwork) {
       console.log(
         `🔄 Authenticated route ${currentPath} accessed without network, redirecting to /`
@@ -179,7 +179,7 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
       return <Navigate to="/agent-setup" replace />;
     }
 
-    // 检查路由是否在启用的模块中可用
+    // Check if route is available in enabled modules
     if (isModulesLoaded && !isRouteAvailable(currentPath, enabledModules)) {
       console.log(
         `🔄 Route ${currentPath} not available in enabled modules, redirecting to ${defaultRoute}`
@@ -187,11 +187,11 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
       return <Navigate to={defaultRoute} replace />;
     }
 
-    // 设置完成，允许访问认证路由
+    // Setup complete, allow access to authenticated route
     return <>{children}</>;
   }
 
-  // 处理无效路径 - 重定向到合适的页面
+  // Handle invalid paths - redirect to appropriate page
   if (selectedNetwork && agentName) {
     console.log(
       `🔄 Invalid route ${currentPath} with complete setup, redirecting to ${defaultRoute}`

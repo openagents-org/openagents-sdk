@@ -135,7 +135,7 @@ export class EventNetworkService {
       channel
     );
 
-    // 检查外层success和内层data.success
+    // Check outer success and inner data.success
     const isSuccess = response.success && response.data?.success !== false;
 
     if (isSuccess) {
@@ -148,7 +148,7 @@ export class EventNetworkService {
       );
     }
 
-    // 返回修正后的success状态
+    // Return corrected success status
     return {
       ...response,
       success: isSuccess,
@@ -166,7 +166,7 @@ export class EventNetworkService {
       channel
     );
 
-    // 检查外层success和内层data.success
+    // Check outer success and inner data.success
     const isSuccess = response.success && response.data?.success !== false;
 
     if (isSuccess) {
@@ -181,7 +181,7 @@ export class EventNetworkService {
       );
     }
 
-    // 返回修正后的success状态
+    // Return corrected success status
     return {
       ...response,
       success: isSuccess,
@@ -258,49 +258,49 @@ export class EventNetworkService {
           `✅ Retrieved ${response.data.messages.length} direct messages with ${targetAgentId}`
         );
 
-        // 标准化 direct messages 数据格式（区别于 channel messages）
+        // Standardize direct messages data format (different from channel messages)
         const standardizedMessages = response.data.messages.map((msg: any) => {
-          // 检查是否已经是标准 ThreadMessage 格式
+          // Check if it's already in standard ThreadMessage format
           if (msg.sender_id && msg.content && msg.message_type) {
             return msg as ThreadMessage;
           }
 
-          // 转换原始事件格式为标准 ThreadMessage 格式
+          // Convert raw event format to standard ThreadMessage format
           console.log(`🔄 Converting raw direct message event to ThreadMessage:`, msg);
 
-          // 安全提取 reactions，检查多个可能的位置和嵌套结构
+          // Safely extract reactions, checking multiple possible locations and nested structures
           const rawReactions = msg.payload?.reactions ||
                                msg.reactions ||
                                msg.payload?.metadata?.reactions ||
                                msg.metadata?.reactions ||
                                {};
 
-          // 转换 reactions 格式：数组 -> 数字计数
+          // Convert reactions format: array -> number count
           const reactions: { [key: string]: number } = {};
           if (rawReactions && typeof rawReactions === 'object') {
             Object.entries(rawReactions).forEach(([type, value]) => {
               if (Array.isArray(value)) {
-                // 如果是数组格式（如 {laugh: ['SharpUnit2379', 'Krane']}），转换为计数
+                // If array format (e.g. {laugh: ['SharpUnit2379', 'Krane']}), convert to count
                 reactions[type] = value.length;
               } else if (typeof value === 'number') {
-                // 如果已经是数字格式，直接使用
+                // If already number format, use directly
                 reactions[type] = value;
               } else if (typeof value === 'string') {
-                // 如果是字符串，尝试解析为数字
+                // If string, try to parse as number
                 const numValue = parseInt(value, 10);
                 reactions[type] = isNaN(numValue) ? 1 : numValue;
               }
             });
           }
 
-          // 调试 reactions 数据转换
+          // Debug reactions data conversion
           if (Object.keys(rawReactions).length > 0) {
             console.log(`🎭 Converting reactions for message ${msg.event_id}:`);
             console.log(`  Raw reactions:`, rawReactions);
             console.log(`  Converted reactions:`, reactions);
           }
 
-          // 调试完整消息结构（仅在有 reactions 时）
+          // Debug complete message structure (only when there are reactions)
           if (Object.keys(rawReactions).length > 0) {
             console.log(`🔍 Full message structure for ${msg.event_id}:`, {
               hasPayload: !!msg.payload,
@@ -332,7 +332,7 @@ export class EventNetworkService {
             attachment_filename: msg.payload?.attachment_filename || msg.attachment_filename,
             attachment_size: msg.payload?.attachment_size || msg.attachment_size,
             attachments: msg.payload?.attachments || msg.attachments,
-            // 保留原始数据用于调试
+            // Keep original data for debugging
             payload: msg.payload,
             source_id: msg.source_id
           } as ThreadMessage;

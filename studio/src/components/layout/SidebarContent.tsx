@@ -6,12 +6,12 @@ import DocumentsSidebar from "@/pages/documents/DocumentsSidebar";
 import ForumSidebar from "@/pages/forum/ForumSidebar";
 import WikiSidebar from "@/pages/wiki/WikiSidebar";
 
-// SidebarContent 组件 - 根据路由动态显示不同的侧边栏内容
-// 每个具体的侧边栏组件会自己管理数据，不需要从外部传递
+// SidebarContent component - dynamically displays different sidebar content based on route
+// Each specific sidebar component manages its own data, no need to pass from outside
 const SidebarContent: React.FC = () => {
   const location = useLocation();
 
-  // 根据当前路由决定显示哪个侧边栏内容
+  // Decide which sidebar content to display based on current route
   const renderContent = () => {
     const pathname = location.pathname;
 
@@ -20,17 +20,17 @@ const SidebarContent: React.FC = () => {
     }
 
     if (pathname.startsWith("/forum")) {
-      // ForumSidebar 会自己通过 hooks 获取需要的数据
+      // ForumSidebar gets needed data through hooks itself
       return <ForumSidebar />;
     }
 
     if (pathname.startsWith("/wiki")) {
-      // WikiSidebar 会自己通过 hooks 获取需要的数据
+      // WikiSidebar gets needed data through hooks itself
       return <WikiSidebar />;
     }
 
     if (pathname.startsWith("/documents")) {
-      // DocumentsSidebar 会自己通过 hooks 获取需要的数据
+      // DocumentsSidebar gets needed data through hooks itself
       return <DocumentsSidebar />;
     }
 
@@ -109,7 +109,7 @@ const SidebarContent: React.FC = () => {
       );
     }
 
-    // 默认情况
+    // Default case
     return <DefaultSidebar />;
   };
 

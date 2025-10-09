@@ -6,9 +6,9 @@ import RouteGuard from "./RouteGuard";
 import { routes } from "./routeConfig";
 import RootLayout from "@/components/layout/RootLayout";
 
-// 创建受保护路由的包装器组件
+// Create protected routes wrapper component
 const ProtectedRoutes: React.FC = () => {
-  // 获取需要认证的路由（登录后的页面）
+  // Get routes that require authentication (pages after login)
   const protectedRoutes = routes.filter((route) => route.requiresAuth);
 
   return (
@@ -35,7 +35,7 @@ const ProtectedRoutes: React.FC = () => {
 };
 
 const AppRouter: React.FC = () => {
-  // 获取不需要认证的路由（登录页面）
+  // Get routes that don't require authentication (login pages)
   const publicRoutes = routes.filter((route) => !route.requiresAuth);
 
   return (

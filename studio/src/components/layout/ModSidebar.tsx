@@ -11,34 +11,34 @@ const ModSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 使用动态配置生成图标组
+  // Generate icon groups using dynamic configuration
   const iconGroups = useMemo(() => {
     const primaryRoutes = getNavigationRoutesByGroup("primary");
     const secondaryRoutes = getNavigationRoutesByGroup("secondary");
 
     return [
-      // Primary group (主要功能)
+      // Primary group (main features)
       primaryRoutes.map((route) => ({
         key: route.navigationConfig!.key,
         label: route.navigationConfig!.label,
         icon: React.createElement(
           NavigationIcons[route.navigationConfig!.icon]
         ),
-        route: route.path.replace("/*", ""), // 移除通配符
+        route: route.path.replace("/*", ""), // Remove wildcard
       })),
-      // Secondary group (设置相关)
+      // Secondary group (settings-related)
       secondaryRoutes.map((route) => ({
         key: route.navigationConfig!.key,
         label: route.navigationConfig!.label,
         icon: React.createElement(
           NavigationIcons[route.navigationConfig!.icon]
         ),
-        route: route.path.replace("/*", ""), // 移除通配符
+        route: route.path.replace("/*", ""), // Remove wildcard
       })),
     ];
   }, []);
 
-  // 判断当前路由是否激活
+  // Check if current route is active
   const isRouteActive = (route: string) => {
     if (route === "/messaging") {
       return location.pathname === "/messaging" || location.pathname === "/messaging/";
@@ -46,7 +46,7 @@ const ModSidebar: React.FC = () => {
     return location.pathname.startsWith(route);
   };
 
-  // 处理导航点击
+  // Handle navigation click
   const handleNavigation = (route: string) => {
     navigate(route);
   };
@@ -77,7 +77,7 @@ const ModSidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Top Icons - 主要功能 */}
+      {/* Top Icons - main features */}
       <div className="flex flex-col space-y-3 flex-1">
         {iconGroups[0].map((iconConfig) => (
           <ModIcon
@@ -90,7 +90,7 @@ const ModSidebar: React.FC = () => {
         ))}
       </div>
 
-      {/* Bottom Icons - 设置相关 */}
+      {/* Bottom Icons - settings-related */}
       <div className="flex flex-col space-y-3 mt-auto">
         {iconGroups[1].map((iconConfig) => (
           <ModIcon
@@ -106,5 +106,5 @@ const ModSidebar: React.FC = () => {
   );
 };
 
-// 缓存整个 ModSidebar 组件
+// Cache entire ModSidebar component
 export default React.memo(ModSidebar);

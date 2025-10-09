@@ -35,24 +35,24 @@ const ConnectionLoadingOverlay: React.FC = () => {
 
 
 
-  // 登出处理函数
+  // Logout handler function
   const handleLogout = async () => {
     console.log("🚪 Logout button clicked - showing confirmation dialog");
 
     try {
-      // 清空网络状态
+      // Clear network state
       clearNetwork();
       clearAgentName();
       console.log("🧹 Network state cleared");
 
-      // 清空 chat store 数据
+      // Clear chat store data
       clearAllChatData();
       console.log("🧹 Chat store data cleared");
 
-      // 清空 OpenAgents 相关的所有数据（保留主题设置）
+      // Clear all OpenAgents-related data (preserve theme settings)
       clearAllOpenAgentsDataForLogout();
 
-      // 跳转到网络选择页面
+      // Navigate to network selection page
       console.log("🔄 Navigating to network selection");
       navigate("/network-selection", { replace: true });
     } catch (error) {
