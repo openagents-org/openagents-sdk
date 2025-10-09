@@ -45,6 +45,7 @@ class AgentConfig(BaseModel):
     model_config = ConfigDict(
         use_enum_values=True, extra="allow"  # Allow provider-specific kwargs
     )
+    
 
     # Core agent configuration
     instruction: str = Field(..., description="System instruction/prompt for the agent")

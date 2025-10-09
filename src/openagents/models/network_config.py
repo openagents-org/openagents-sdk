@@ -3,6 +3,7 @@
 from typing import Dict, List, Optional, Any, Union
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from enum import Enum
+from openagents.config.globals import DEFAULT_AGENT_GROUP
 from openagents.models.network_profile import NetworkProfile
 from openagents.models.transport import TransportType
 from openagents.models.network_role import NetworkRole
@@ -90,7 +91,7 @@ class TransportConfigItem(BaseModel):
 class NetworkConfig(BaseModel):
     """Configuration for a network."""
 
-    model_config = ConfigDict(use_enum_values=True)
+    model_config = ConfigDict(use_enum_values=True, extra='allow')
 
     name: str = Field(..., description="Name of the network")
     mode: NetworkMode = Field(
@@ -116,7 +117,7 @@ class NetworkConfig(BaseModel):
         "http", description="Transport used for manifests"
     )
     recommended_transport: Optional[str] = Field(
-        "grpc", description="Recommended transport type"
+        None, description="Recommended transport type (will be auto-set from transports if not specified)"
     )
 
     # Security configuration
@@ -151,11 +152,11 @@ class NetworkConfig(BaseModel):
         description="Agent groups with registration tokens for group-based organization and permissions",
     )
     default_agent_group: str = Field(
-        "default",
+        default=DEFAULT_AGENT_GROUP,
         description="Name of the default group for agents without valid credentials",
     )
     requires_password: bool = Field(
-        False,
+        default=False,
         description="When True, password authentication is mandatory for all agents (including default group). "
                     "When False, agents without password_hash are assigned to default_agent_group.",
     )
@@ -182,6 +183,42 @@ class NetworkConfig(BaseModel):
                 )
 
         return v
+
+    def model_post_init(self, __context):
+        """Handle legacy transport fields and set defaults after model initialization."""
+        # Handle legacy 'transport' (singular) field
+        if hasattr(self, 'transport') and self.transport:
+            legacy_transport = getattr(self, 'transport')
+            legacy_config = getattr(self, 'transport_config', {}).copy()
+
+            # Copy network-level host and port into transport config if not already present
+            if hasattr(self, 'host') and 'host' not in legacy_config:
+                legacy_config['host'] = getattr(self, 'host')
+            if hasattr(self, 'port') and 'port' not in legacy_config:
+                legacy_config['port'] = getattr(self, 'port')
+
+            # If transports list is still the default (HTTP only), replace it with the legacy transport
+            # For WebSocket, we still use HTTP (since WebSocket config actually sets up HTTP transport in the old design)
+            if len(self.transports) == 1 and self.transports[0].type == TransportType.HTTP and not self.transports[0].config:
+                transport_type = TransportType(legacy_transport) if isinstance(legacy_transport, str) else legacy_transport
+
+                # For backward compatibility: "websocket" in legacy config actually means HTTP transport
+                # (the old openagents used HTTP as the base transport layer)
+                # So we keep HTTP as the transport type but update the recommended transport
+                if transport_type == TransportType.WEBSOCKET:
+                    # Use HTTP transport with the legacy config
+                    self.transports = [TransportConfigItem(type=TransportType.HTTP, config=legacy_config)]
+                else:
+                    # For other transports, use the specified transport
+                    self.transports = [TransportConfigItem(type=transport_type, config=legacy_config)]
+
+        # Set recommended_transport to match the first available transport if not explicitly set
+        if not self.recommended_transport and self.transports:
+            self.recommended_transport = self.transports[0].type.value if hasattr(self.transports[0].type, 'value') else str(self.transports[0].type)
+
+        # Set manifest_transport to HTTP by default (used for health checks)
+        if not self.manifest_transport:
+            self.manifest_transport = "http"
 
 
 class OpenAgentsConfig(BaseModel):

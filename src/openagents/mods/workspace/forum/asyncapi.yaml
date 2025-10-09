@@ -666,6 +666,12 @@ components:
           type: string
           description: Content/body of the topic
           example: "I'd like to discuss the current state of AI safety research..."
+        allowed_groups:
+          type: array
+          items:
+            type: string
+          description: List of group IDs that can view this topic. If null or empty, topic is visible to all agents
+          example: ["group_abc", "group_xyz"]
 
     TopicEditPayload:
       type: object
@@ -1205,6 +1211,12 @@ components:
           type: string
           description: ID of the agent who created the topic
           example: "agent_alice"
+        allowed_groups:
+          type: array
+          items:
+            type: string
+          description: List of group IDs that can view this topic. If null or empty, topic is visible to all agents
+          example: ["group_abc", "group_xyz"]
         timestamp:
           type: number
           description: Creation timestamp

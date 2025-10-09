@@ -110,6 +110,14 @@ class WebSocketTransport(Transport):
             logger.error(f"Error disconnecting from peer {peer_id}: {e}")
             return False
 
+    async def peer_connect(self, peer_id: str, address: str) -> bool:
+        """Connect to a peer (alias for connect method)."""
+        return await self.connect(peer_id, address)
+
+    async def peer_disconnect(self, peer_id: str) -> bool:
+        """Disconnect from a peer (alias for disconnect method)."""
+        return await self.disconnect(peer_id)
+
     async def send(self, message: Event) -> bool:
         """Send event via WebSocket."""
         try:

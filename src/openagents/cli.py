@@ -166,6 +166,53 @@ def load_workspace_config(workspace_path: Path) -> Dict[str, Any]:
         raise ValueError(f"Failed to load workspace configuration: {e}")
 
 
+def create_default_network_config(host: str = "localhost", port: int = 8700) -> str:
+    """Create a default network configuration by copying from template.
+
+    Args:
+        host: Host to bind the network to
+        port: Port to bind the network to
+
+    Returns:
+        str: Path to the created configuration file
+    """
+    # Create .openagents/my-network directory
+    openagents_dir = Path.home() / ".openagents" / "my-network"
+    openagents_dir.mkdir(parents=True, exist_ok=True)
+    
+    config_path = openagents_dir / "network.yaml"
+    
+    # Find the default network template in the package templates directory
+    script_dir = Path(__file__).parent
+    template_path = script_dir / "templates" / "default_network.yaml"
+
+    if not template_path.exists():
+        raise FileNotFoundError(f"Default network template not found: {template_path}")
+    
+    # Copy template and update host/port
+    try:
+        with open(template_path, "r") as f:
+            config = yaml.safe_load(f)
+        
+        # Update network host and port
+        if "network" in config:
+            config["network"]["host"] = host
+            config["network"]["port"] = port
+        
+        # Update network profile host and port
+        if "network_profile" in config:
+            config["network_profile"]["host"] = host
+            config["network_profile"]["port"] = port
+        
+        with open(config_path, "w") as f:
+            yaml.dump(config, f, default_flow_style=False)
+        
+        return str(config_path)
+        
+    except Exception as e:
+        raise RuntimeError(f"Failed to create default network config: {e}")
+
+
 def create_default_studio_config(host: str = "localhost", port: int = 8570) -> str:
     """Create a default network configuration for studio mode.
 
@@ -244,40 +291,46 @@ def create_default_studio_config(host: str = "localhost", port: int = 8570) -> s
     return config_path
 
 
-async def studio_network_launcher(workspace_path: Path, host: str, port: int) -> None:
-    """Launch the network for studio mode using workspace configuration.
+async def studio_network_launcher(workspace_path: Optional[Path], host: str, port: int) -> None:
+    """Launch the network for studio mode using workspace configuration or default config.
 
     Args:
-        workspace_path: Path to the workspace directory
+        workspace_path: Path to the workspace directory (optional)
         host: Host to bind the network to
         port: Port to bind the network to
     """
     try:
-        # Load workspace configuration
-        config = load_workspace_config(workspace_path)
+        if workspace_path:
+            # Load workspace configuration
+            config = load_workspace_config(workspace_path)
 
-        # Override network host and port with command line arguments
-        if "network" not in config:
-            config["network"] = {}
+            # Override network host and port with command line arguments
+            if "network" not in config:
+                config["network"] = {}
 
-        config["network"]["host"] = host
-        config["network"]["port"] = port
+            config["network"]["host"] = host
+            config["network"]["port"] = port
 
-        # Add workspace metadata to the configuration
-        if "metadata" not in config:
-            config["metadata"] = {}
-        config["metadata"]["workspace_path"] = str(workspace_path.resolve())
+            # Add workspace metadata to the configuration
+            if "metadata" not in config:
+                config["metadata"] = {}
+            config["metadata"]["workspace_path"] = str(workspace_path.resolve())
 
-        # Create temporary config file with updated settings
-        temp_dir = tempfile.gettempdir()
-        temp_config_path = os.path.join(
-            temp_dir, "openagents_studio_workspace_config.yaml"
-        )
+            # Create temporary config file with updated settings
+            temp_dir = tempfile.gettempdir()
+            temp_config_path = os.path.join(
+                temp_dir, "openagents_studio_workspace_config.yaml"
+            )
 
-        with open(temp_config_path, "w") as f:
-            yaml.dump(config, f, default_flow_style=False)
+            with open(temp_config_path, "w") as f:
+                yaml.dump(config, f, default_flow_style=False)
 
-        logging.info(f"Using workspace configuration from: {workspace_path}")
+            logging.info(f"Using workspace configuration from: {workspace_path}")
+        else:
+            # Use default network configuration
+            temp_config_path = create_default_network_config(host, port)
+            logging.info(f"Created default network configuration at: {temp_config_path}")
+
         await async_launch_network(temp_config_path, runtime=None)
 
     except Exception as e:
@@ -419,16 +472,25 @@ def suggest_alternative_ports(network_port: int, studio_port: int) -> Tuple[int,
 
 
 def check_nodejs_availability() -> Tuple[bool, str]:
-    """Check if Node.js and npm are available on the system.
+    """Check if Node.js and npm are available on the system, and verify Node.js version >= v20.
 
     Returns:
         tuple: (is_available, error_message)
     """
     missing_tools = []
+    version_issues = []
 
-    # Check for Node.js
+    # Check for Node.js and its version
     try:
-        subprocess.run(["node", "--version"], capture_output=True, check=True)
+        result = subprocess.run(["node", "--version"], capture_output=True, check=True, text=True)
+        node_version = result.stdout.strip()
+        # Parse version string (e.g., "v20.1.0" -> 20)
+        if node_version.startswith('v'):
+            major_version = int(node_version[1:].split('.')[0])
+            if major_version < 20:
+                version_issues.append(f"Node.js version {node_version} (requires >= v20)")
+        else:
+            version_issues.append(f"Node.js version {node_version} (cannot parse version)")
     except (FileNotFoundError, subprocess.CalledProcessError):
         missing_tools.append("Node.js")
 
@@ -444,11 +506,17 @@ def check_nodejs_availability() -> Tuple[bool, str]:
     except (FileNotFoundError, subprocess.CalledProcessError):
         missing_tools.append("npx")
 
-    if missing_tools:
+    if missing_tools or version_issues:
+        problems = []
+        if missing_tools:
+            problems.append(f"Missing: {', '.join(missing_tools)}")
+        if version_issues:
+            problems.append(f"Version issues: {', '.join(version_issues)}")
+        
         error_msg = f"""
-❌ Missing required dependencies: {', '.join(missing_tools)}
+❌ Node.js/npm compatibility issues: {'; '.join(problems)}
 
-OpenAgents Studio requires Node.js and npm to run the web interface.
+OpenAgents Studio requires Node.js >= v20 and npm to run the web interface.
 
 📋 Installation instructions:
 
@@ -481,6 +549,134 @@ Then run 'openagents studio' again.
         return False, error_msg
 
     return True, ""
+
+
+def check_openagents_studio_package() -> Tuple[bool, bool, str]:
+    """Check if openagents-studio package is installed and up-to-date.
+    
+    Returns:
+        tuple: (is_installed, is_latest, installed_version)
+    """
+    openagents_prefix = os.path.expanduser("~/.openagents")
+    
+    # Check if package is installed
+    try:
+        result = subprocess.run(
+            ["npm", "list", "-g", "openagents-studio", "--prefix", openagents_prefix],
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode != 0:
+            return False, False, ""
+            
+        # Extract version from npm list output
+        lines = result.stdout.strip().split('\n')
+        for line in lines:
+            if 'openagents-studio@' in line:
+                installed_version = line.split('@')[-1].strip()
+                break
+        else:
+            return False, False, ""
+            
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return False, False, ""
+    
+    # Check latest version on npm
+    try:
+        result = subprocess.run(
+            ["npm", "view", "openagents-studio", "version"],
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode != 0:
+            # If we can't check latest version, assume installed version is OK
+            return True, True, installed_version
+            
+        latest_version = result.stdout.strip()
+        is_latest = installed_version == latest_version
+        
+        return True, is_latest, installed_version
+        
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        # If we can't check latest version, assume installed version is OK
+        return True, True, installed_version
+
+
+def install_openagents_studio_package() -> None:
+    """Install openagents-studio package and dependencies to ~/.openagents prefix."""
+    openagents_prefix = os.path.expanduser("~/.openagents")
+    
+    # Ensure the prefix directory exists
+    os.makedirs(openagents_prefix, exist_ok=True)
+    
+    logging.info("Installing openagents-studio package and dependencies...")
+    
+    try:
+        install_process = subprocess.run(
+            [
+                "npm", "install", "-g",
+                "openagents-studio",
+                "--prefix", openagents_prefix
+            ],
+            capture_output=True,
+            text=True,
+            timeout=600,  # 10 minute timeout for npm install
+        )
+        
+        if install_process.returncode != 0:
+            raise RuntimeError(
+                f"Failed to install openagents-studio package:\n{install_process.stderr}"
+            )
+            
+        logging.info("openagents-studio package installed successfully")
+        
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(
+            "npm install timed out after 10 minutes. Please check your internet connection and try again."
+        )
+    except FileNotFoundError:
+        raise RuntimeError("npm command not found. Please install Node.js and npm.")
+
+
+def launch_studio_with_package(studio_port: int = 8055) -> subprocess.Popen:
+    """Launch studio using the installed openagents-studio package.
+    
+    Args:
+        studio_port: Port for the studio frontend
+        
+    Returns:
+        subprocess.Popen: The studio process
+    """
+    openagents_prefix = os.path.expanduser("~/.openagents")
+    studio_bin = os.path.join(openagents_prefix, "bin", "openagents-studio")
+    
+    if not os.path.exists(studio_bin):
+        raise RuntimeError(f"openagents-studio binary not found: {studio_bin}")
+    
+    # Set up environment with PATH including ~/.openagents/bin
+    env = os.environ.copy()
+    current_path = env.get("PATH", "")
+    openagents_bin = os.path.join(openagents_prefix, "bin")
+    env["PATH"] = f"{openagents_bin}:{current_path}"
+    env["PORT"] = str(studio_port)
+    
+    logging.info(f"Starting openagents-studio on port {studio_port}...")
+    
+    try:
+        process = subprocess.Popen(
+            [studio_bin, "start"],
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            universal_newlines=True,
+        )
+        return process
+    except FileNotFoundError:
+        raise RuntimeError(f"Failed to execute openagents-studio binary: {studio_bin}")
 
 
 def launch_studio_frontend(studio_port: int = 8055) -> subprocess.Popen:
@@ -543,10 +739,10 @@ def launch_studio_frontend(studio_port: int = 8055) -> subprocess.Popen:
     logging.info(f"Starting studio frontend on port {studio_port}...")
 
     try:
-        # Use npx to run react-scripts directly with our PORT environment variable
+        # Use npx to run craco start to ensure our webpack configuration is applied
         # This ensures our PORT value takes precedence over the package.json
         process = subprocess.Popen(
-            ["npx", "react-scripts", "start"],
+            ["npx", "craco", "start"],
             cwd=studio_dir,
             env=env,
             stdout=subprocess.PIPE,
@@ -571,6 +767,24 @@ def studio_command(args: argparse.Namespace) -> None:
 
     logging.info("🚀 Starting OpenAgents Studio...")
 
+    # Check Node.js/npm availability first
+    is_available, error_msg = check_nodejs_availability()
+    if not is_available:
+        raise RuntimeError(error_msg)
+
+    # Check and install openagents-studio package if needed
+    logging.info("📦 Checking openagents-studio package...")
+    is_installed, is_latest, installed_version = check_openagents_studio_package()
+
+    if not is_installed:
+        logging.info("📦 openagents-studio package not found, installing...")
+        install_openagents_studio_package()
+    elif not is_latest:
+        logging.info(f"📦 Updating openagents-studio from {installed_version} to latest...")
+        install_openagents_studio_package()
+    else:
+        logging.info(f"✅ openagents-studio package up-to-date ({installed_version})")
+
     # Extract arguments
     network_host = args.host
     network_port = args.port
@@ -578,55 +792,68 @@ def studio_command(args: argparse.Namespace) -> None:
     workspace_path = getattr(args, "workspace", None)
     no_browser = args.no_browser
 
-    # Determine workspace path
+    # Determine workspace path (optional)
     if workspace_path:
         workspace_path = Path(workspace_path).resolve()
+        logging.info(f"📁 Using workspace: {workspace_path}")
     else:
-        workspace_path = get_default_workspace_path()
-
-    logging.info(f"📁 Using workspace: {workspace_path}")
+        workspace_path = None
+        logging.info("📁 No workspace specified, will use default network configuration")
 
     # Check for port conflicts early
     logging.info("🔍 Checking port availability...")
-    ports_available, conflicts = check_studio_ports(
-        network_host, network_port, studio_port
-    )
-
-    if not ports_available:
-        alt_network_port, alt_studio_port = suggest_alternative_ports(
-            network_port, studio_port
-        )
+    
+    # Check studio port availability
+    studio_available, studio_process = check_port_availability("0.0.0.0", studio_port)
+    if not studio_available:
+        alt_studio_port = studio_port
+        for offset in range(1, 20):
+            test_port = studio_port + offset
+            if test_port > 65535:
+                break
+            available, _ = check_port_availability("0.0.0.0", test_port)
+            if available:
+                alt_studio_port = test_port
+                break
 
         error_msg = f"""
-❌ Port conflicts detected:
+❌ Studio frontend port conflict detected:
 
-{chr(10).join(conflicts)}
+🎨 Studio port {studio_port}: occupied by {studio_process}
 
 💡 Solutions:
-
-1️⃣  Use alternative ports (recommended):
-   openagents studio --port {alt_network_port} --studio-port {alt_studio_port}
-
-2️⃣  Stop the conflicting processes:
-   # Find and stop processes using these ports
-   # On macOS/Linux: sudo lsof -ti:{network_port},{studio_port} | xargs kill
-   # Or restart the conflicting applications
-
-3️⃣  Choose custom ports:
-   openagents studio --port <network-port> --studio-port <frontend-port>
-
-💭 Common port conflicts:
-   • Port {studio_port}: Often used by other development servers (React, Vue, etc.)
-   • Port {network_port}: May be used by other OpenAgents instances or services
-   
-🔧 Quick command to find available ports:
-   python3 -c "import socket; s=socket.socket(); s.bind(('',0)); print('Available port:', s.getsockname()[1]); s.close()"
+1️⃣  Use alternative port: openagents studio --studio-port {alt_studio_port}
+2️⃣  Stop the conflicting process: sudo lsof -ti:{studio_port} | xargs kill
 """
-
         logging.error(error_msg)
-        raise RuntimeError("Port conflicts detected. See above for solutions.")
+        raise RuntimeError("Studio port conflict detected. See above for solutions.")
 
-    logging.info("✅ All ports are available")
+    # Check network port availability 
+    network_available, network_process = check_port_availability(network_host, network_port)
+    skip_network = False
+    
+    if not network_available:
+        if network_port == 8700:  # Default network port
+            logging.warning(f"⚠️  Default network port {network_port} is occupied by {network_process}")
+            logging.info("🎨 Will start studio frontend only (network backend skipped)")
+            skip_network = True
+        else:
+            # Custom port specified, show error
+            error_msg = f"""
+❌ Network port conflict detected:
+
+🌐 Network port {network_port}: occupied by {network_process}
+
+💡 Solutions:
+1️⃣  Use different port: openagents studio --port <available-port>
+2️⃣  Stop the conflicting process: sudo lsof -ti:{network_port} | xargs kill
+3️⃣  Use default port and skip network: openagents studio (without --port)
+"""
+            logging.error(error_msg)
+            raise RuntimeError("Network port conflict detected. See above for solutions.")
+
+    if not skip_network:
+        logging.info("✅ All ports are available")
 
     def frontend_monitor(process):
         """Monitor frontend process output and detect when it's ready."""
@@ -658,8 +885,8 @@ def studio_command(args: argparse.Namespace) -> None:
         frontend_process = None
 
         try:
-            # Start frontend in a separate thread
-            frontend_process = launch_studio_frontend(studio_port)
+            # Start frontend using the installed package
+            frontend_process = launch_studio_with_package(studio_port)
 
             # Start monitoring frontend output in background thread
             frontend_thread = threading.Thread(
@@ -670,9 +897,15 @@ def studio_command(args: argparse.Namespace) -> None:
             # Small delay to let frontend start
             await asyncio.sleep(2)
 
-            # Launch network (this will run indefinitely)
-            logging.info(f"🌐 Starting network on {network_host}:{network_port}...")
-            await studio_network_launcher(workspace_path, network_host, network_port)
+            if skip_network:
+                # Just wait for frontend without starting network
+                logging.info("🎨 Studio frontend running in standalone mode")
+                logging.info("💡 Start a network separately with: openagents network start")
+                frontend_process.wait()
+            else:
+                # Launch network (this will run indefinitely)
+                logging.info(f"🌐 Starting network on {network_host}:{network_port}...")
+                await studio_network_launcher(workspace_path, network_host, network_port)
 
         except KeyboardInterrupt:
             logging.info("📱 Studio shutdown requested...")
@@ -1231,7 +1464,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "--host", default="localhost", help="Network host address (default: localhost)"
     )
     studio_parser.add_argument(
-        "--port", type=int, default=8570, help="Network port (default: 8570)"
+        "--port", type=int, default=8700, help="Network port (default: 8700)"
     )
     studio_parser.add_argument(
         "--studio-port",
