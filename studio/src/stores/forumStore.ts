@@ -34,7 +34,7 @@ export interface CreateTopicData {
   allowed_groups?: string[];
 }
 
-// 递归更新评论 votes 的辅助函数
+// Helper function to recursively update comment votes
 const updateCommentVotesRecursively = (
   comments: ForumComment[],
   targetId: string,
@@ -43,20 +43,20 @@ const updateCommentVotesRecursively = (
 ): ForumComment[] => {
   return comments.map((comment) => {
     if (comment.comment_id === targetId) {
-      // 找到目标评论，更新 votes
+      // Found target comment, update votes
       console.log(
         `ForumStore: Updating votes for comment ${targetId}: upvotes=${upvotes}, downvotes=${downvotes}`
       );
       return { ...comment, upvotes, downvotes };
     } else if (comment.replies && comment.replies.length > 0) {
-      // 递归更新 replies 中的评论
+      // Recursively update comments in replies
       const updatedReplies = updateCommentVotesRecursively(
         comment.replies,
         targetId,
         upvotes,
         downvotes
       );
-      // 只有当 replies 发生变化时才返回新对象
+      // Only return new object when replies have changed
       if (updatedReplies !== comment.replies) {
         return { ...comment, replies: updatedReplies };
       }
@@ -66,18 +66,18 @@ const updateCommentVotesRecursively = (
 };
 
 interface ForumState {
-  // 话题列表
+  // Topic list
   topics: ForumTopic[];
   topicsLoading: boolean;
   topicsError: string | null;
 
-  // 当前话题详情
+  // Current topic details
   selectedTopic: ForumTopic | null;
   comments: ForumComment[];
   commentsLoading: boolean;
   commentsError: string | null;
 
-  // 连接服务
+  // Connection service
   connection: any | null;
 
   // Permission groups
@@ -176,7 +176,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
           topicsLoading: false,
         });
       } else {
-        // API失败时设置错误状态
+        // Set error state when API fails
         console.warn(
           "ForumStore: API failed to load topics. Response:",
           response
@@ -207,7 +207,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
 
     set({ commentsLoading: true, commentsError: null });
 
-    // 首先尝试从已加载的topics中查找 - 这样可以立即显示详情
+    // First try to find from loaded topics - this allows immediate display of details
     const existingTopic = topics.find((t) => t.topic_id === topicId);
 
     if (existingTopic) {
@@ -215,14 +215,14 @@ export const useForumStore = create<ForumState>((set, get) => ({
         "ForumStore: Found existing topic in memory:",
         existingTopic.title
       );
-      // 立即显示话题，评论为空数组
+      // Display topic immediately with empty comments array
       set({
         selectedTopic: existingTopic,
         comments: [],
         commentsLoading: false,
       });
 
-      // 可选：在后台尝试从API获取最新的评论数据
+      // Optional: try to fetch latest comment data from API in background
       if (connection) {
         try {
           const response = await connection.sendEvent({
@@ -236,12 +236,12 @@ export const useForumStore = create<ForumState>((set, get) => ({
 
           if (response.success && response.data && response.data.comments) {
             console.log("ForumStore: Updated comments from API");
-            // 按timestamp降序排序，确保最新comment在最上面
+            // Sort by timestamp descending to ensure latest comments are on top
             const sortedComments = [...response.data.comments].sort(
               (a, b) => b.timestamp - a.timestamp
             );
 
-            // 同步更新topics列表中的comment_count
+            // Synchronize comment_count in topics list
             const updatedTopics = get().topics.map((t) =>
               t.topic_id === topicId
                 ? { ...t, comment_count: sortedComments.length }
@@ -264,7 +264,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
       return;
     }
 
-    // 如果在topics中找不到，且没有连接，显示错误
+    // If not found in topics and no connection, display error
     if (!connection) {
       console.warn(
         "ForumStore: No connection available and topic not found in memory"
@@ -276,7 +276,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
       return;
     }
 
-    // 尝试从API加载topic详情
+    // Try to load topic details from API
     try {
       const response = await connection.sendEvent({
         event_name: "forum.topic.get",
@@ -290,19 +290,19 @@ export const useForumStore = create<ForumState>((set, get) => ({
       if (response.success && response.data) {
         console.log("ForumStore: API success, topic data:", response.data);
 
-        // 检查数据结构 - API可能返回 response.data 就是topic，或者 response.data.topic
+        // Check data structure - API may return response.data as topic, or response.data.topic
         const topic = response.data.topic_id
           ? response.data
           : response.data.topic;
 
         if (topic) {
-          // 按timestamp降序排序comments，确保最新comment在最上面
+          // Sort comments by timestamp descending to ensure latest comments are on top
           const comments = response.data.comments || [];
           const sortedComments = [...comments].sort(
             (a, b) => b.timestamp - a.timestamp
           );
 
-          // 同步更新topics列表中对应topic的comment_count
+          // Synchronize comment_count for corresponding topic in topics list
           const updatedTopics = get().topics.map((t) =>
             t.topic_id === topicId
               ? {
@@ -322,7 +322,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
         }
       }
 
-      // API调用失败，显示错误状态
+      // API call failed, display error state
       console.warn(
         "ForumStore: API failed to load topic details. Response:",
         response
@@ -363,7 +363,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
       });
 
       if (response.success) {
-        // 构造新话题对象并直接添加到列表
+        // Construct new topic object and add directly to list
         const newTopic: ForumTopic = {
           topic_id:
             response.data?.topic_id ||
@@ -380,7 +380,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
 
         console.log("ForumStore: Creating topic with data:", newTopic);
 
-        // 直接添加到列表顶部，无需重新加载
+        // Add directly to top of list, no need to reload
         get().addTopicToList(newTopic);
         return true;
       }
@@ -412,7 +412,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
           "ForumStore: Comment posted successfully, using incremental update"
         );
 
-        // 使用返回的comment数据进行增量更新
+        // Use returned comment data for incremental update
         const comment = response.data.comment;
         const forumComment: ForumComment = {
           comment_id: comment.comment_id,
@@ -430,7 +430,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
         get().addCommentToTopic(topicId, forumComment);
         return true;
       } else if (response.success) {
-        // 如果没有返回comment数据，则使用原来的方式刷新
+        // If no comment data returned, fall back to original refresh method
         console.log(
           "ForumStore: Comment posted but no comment data returned, falling back to reload"
         );
@@ -469,16 +469,16 @@ export const useForumStore = create<ForumState>((set, get) => ({
       });
 
       if (response.success) {
-        // 刷新数据
+        // Refresh data
         if (type === "topic") {
           await get().loadTopics();
-          // 如果是当前选中的topic，也刷新详情
+          // If it's the currently selected topic, also refresh details
           const { selectedTopic } = get();
           if (selectedTopic && selectedTopic.topic_id === targetId) {
             await get().loadTopicDetail(targetId);
           }
         } else {
-          // 刷新评论
+          // Refresh comments
           const { selectedTopic } = get();
           if (selectedTopic) {
             await get().loadTopicDetail(selectedTopic.topic_id);
@@ -486,7 +486,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
         }
         return true;
       } else {
-        // 处理投票失败的情况
+        // Handle vote failure
         const errorMessage = response.message || "Vote failed";
         onError?.(errorMessage);
         return false;
@@ -507,7 +507,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
       agentId
     );
 
-    // 如果 groupsData 还未加载，返回空数组
+    // If groupsData not yet loaded, return empty array
     if (!groupsData) {
       console.log(
         "ForumStore: groupsData not loaded yet, returning empty array"
@@ -515,14 +515,14 @@ export const useForumStore = create<ForumState>((set, get) => ({
       return [];
     }
 
-    // 过滤有权限查看的话题
+    // Filter topics with view permission
     const filteredTopics = topics.filter((topic) => {
-      // 如果没有 allowed_groups 或为空，说明是公开话题
+      // If no allowed_groups or empty, it's a public topic
       if (!topic.allowed_groups || topic.allowed_groups.length === 0) {
         return true;
       }
 
-      // 检查当前 agent 是否在允许的组中
+      // Check if current agent is in allowed groups
       if (agentId) {
         const hasPermission = topic.allowed_groups.some((groupName: string) => {
           const groupMembers = groupsData[groupName];
@@ -531,7 +531,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
         return hasPermission;
       }
 
-      // 如果没有 agentId，不显示私有话题
+      // If no agentId, don't display private topics
       return false;
     });
 
@@ -553,10 +553,10 @@ export const useForumStore = create<ForumState>((set, get) => ({
     });
   },
 
-  // Real-time updates - 增量添加新topic到列表顶部
+  // Real-time updates - incrementally add new topic to top of list
   addTopicToList: (newTopic: ForumTopic) => {
     set((state) => {
-      // 检查topic是否已经存在，避免重复添加
+      // Check if topic already exists to avoid duplicate additions
       const exists = state.topics.some(
         (topic) => topic.topic_id === newTopic.topic_id
       );
@@ -576,24 +576,24 @@ export const useForumStore = create<ForumState>((set, get) => ({
     });
   },
 
-  // Event handling - 设置事件监听
+  // Event handling - set up event listeners
   setupEventListeners: () => {
     const { connection } = get();
     if (!connection) return;
 
     console.log("ForumStore: Setting up forum event listeners");
 
-    // 使用事件路由器监听forum相关事件
+    // Use event router to listen for forum-related events
     const forumEventHandler = (event: any) => {
       console.log("ForumStore: Received forum event:", event);
 
-      // 处理topic创建事件
+      // Handle topic creation event
       if (event.event_name === "forum.topic.created" && event.payload?.topic) {
         console.log("ForumStore: Received forum.topic.created event:", event);
         const topic = event.payload.topic;
         const allowed_groups = topic.allowed_groups;
 
-        // 将后端数据转换为ForumTopic格式
+        // Convert backend data to ForumTopic format
         const forumTopic: ForumTopic = {
           topic_id: topic.topic_id,
           title: topic.title,
@@ -606,20 +606,20 @@ export const useForumStore = create<ForumState>((set, get) => ({
           allowed_groups,
         };
 
-        // 权限检查：判断当前agent是否有权限查看这个话题
+        // Permission check: determine if current agent has permission to view this topic
         const { agentId, groupsData } = get();
         console.log(agentId, groupsData, "-----");
 
-        // 如果没有allowed_groups或为空，说明是公开话题
+        // If no allowed_groups or empty, it's a public topic
         if (!allowed_groups || allowed_groups.length === 0) {
           console.log("ForumStore: Public topic, adding to list");
           get().addTopicToList(forumTopic);
           return;
         }
 
-        // 检查当前agent是否在允许的组中
+        // Check if current agent is in allowed groups
         if (agentId && groupsData) {
-          // 检查agentId是否存在于allowed_groups中的任何一个组
+          // Check if agentId exists in any of the allowed_groups
           const hasPermission = allowed_groups.some((groupName: string) => {
             const groupMembers = groupsData[groupName];
             return groupMembers && groupMembers.includes(agentId);
@@ -642,7 +642,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
         }
       }
 
-      // 处理comment发布事件
+      // Handle comment post event
       else if (
         event.event_name === "forum.comment.posted" &&
         event.payload?.comment
@@ -653,7 +653,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
 
         const { selectedTopic } = get();
         if (selectedTopic && selectedTopic.topic_id === topicId) {
-          // 当前在详情页面 - 添加评论到详情页面
+          // Currently on detail page - add comment to detail page
           const forumComment: ForumComment = {
             comment_id: comment.comment_id,
             topic_id: comment.topic_id,
@@ -672,7 +672,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
             `ForumStore: Added comment to detail view for topic ${topicId}`
           );
         } else {
-          // 当前在列表页面 - 重新获取主题信息以更新评论数量
+          // Currently on list page - refresh topic info to update comment count
           console.log(
             `ForumStore: Not viewing topic ${topicId}, refreshing topic in list`
           );
@@ -680,7 +680,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
         }
       }
 
-      // 处理comment回复事件
+      // Handle comment reply event
       else if (
         event.event_name === "forum.comment.replied" &&
         event.payload?.comment
@@ -691,7 +691,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
 
         const { selectedTopic } = get();
         if (selectedTopic && selectedTopic.topic_id === topicId) {
-          // 当前在详情页面 - 添加回复到详情页面
+          // Currently on detail page - add reply to detail page
           const forumComment: ForumComment = {
             comment_id: comment.comment_id,
             topic_id: comment.topic_id,
@@ -710,7 +710,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
             `ForumStore: Added reply to detail view for topic ${topicId}`
           );
         } else {
-          // 当前在列表页面 - 重新获取主题信息以更新评论数量
+          // Currently on list page - refresh topic info to update comment count
           console.log(
             `ForumStore: Not viewing topic ${topicId}, refreshing topic in list`
           );
@@ -718,18 +718,18 @@ export const useForumStore = create<ForumState>((set, get) => ({
         }
       }
 
-      // 处理投票事件
+      // Handle vote event
       else if (event.event_name === "forum.vote.cast" && event.payload) {
         console.log("ForumStore: Received forum.vote.cast event:", event);
         const { target_type, target_id } = event.payload;
 
-        // 根据投票目标类型刷新相应的数据
+        // Refresh corresponding data based on vote target type
         if (target_type === "topic") {
-          // 刷新topics列表以更新投票计数
+          // Refresh topics list to update vote count
           console.log("ForumStore: Vote cast on topic, refreshing topics list");
           get().loadTopics();
 
-          // 如果是当前查看的topic，也刷新详情
+          // If it's the currently viewed topic, also refresh details
           const { selectedTopic } = get();
           if (selectedTopic && selectedTopic.topic_id === target_id) {
             console.log(
@@ -738,7 +738,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
             get().loadTopicDetail(target_id);
           }
         } else if (target_type === "comment") {
-          // 刷新当前topic的评论以更新投票计数
+          // Refresh current topic's comments to update vote count
           const { selectedTopic } = get();
           if (selectedTopic) {
             console.log(
@@ -786,26 +786,26 @@ export const useForumStore = create<ForumState>((set, get) => ({
       }
     };
 
-    // 注册到事件路由器
+    // Register to event router
     eventRouter.onForumEvent(forumEventHandler);
 
-    // 保存handler引用以便清理
+    // Save handler reference for cleanup
     set({ eventHandler: forumEventHandler });
   },
 
-  // 递归计算所有评论数量（包括嵌套的回复）
+  // Recursively calculate total comment count (including nested replies)
   countAllComments: (comments: ForumComment[]): number => {
     let total = 0;
     for (const comment of comments) {
-      total += 1; // 当前评论
+      total += 1; // Current comment
       if (comment.replies && comment.replies.length > 0) {
-        total += get().countAllComments(comment.replies); // 递归计算子评论
+        total += get().countAllComments(comment.replies); // Recursively calculate child comments
       }
     }
     return total;
   },
 
-  // 重新获取并更新列表中的特定主题信息
+  // Fetch and update specific topic info in list
   refreshTopicInList: async (topicId: string) => {
     const { connection } = get();
     if (!connection) {
@@ -827,7 +827,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
       });
 
       if (response.success && response.data) {
-        // 检查数据结构 - API可能返回 response.data 就是topic，或者 response.data.topic
+        // Check data structure - API may return response.data as topic, or response.data.topic
         const topic = response.data.topic_id
           ? response.data
           : response.data.topic;
@@ -842,7 +842,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
             }
           );
 
-          // 更新 topics 列表中的对应主题
+          // Update corresponding topic in topics list
           set((state) => ({
             topics: state.topics.map((t) =>
               t.topic_id === topicId
@@ -851,7 +851,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
                     comment_count: topic.comment_count || 0,
                     upvotes: topic.upvotes || 0,
                     downvotes: topic.downvotes || 0,
-                    // 保持其他字段不变，只更新需要的统计数据
+                    // Keep other fields unchanged, only update required statistics
                   }
                 : t
             ),
@@ -870,10 +870,10 @@ export const useForumStore = create<ForumState>((set, get) => ({
     }
   },
 
-  // 增量更新comment到当前topic
+  // Incrementally update comment to current topic
   addCommentToTopic: (_topicId: string, newComment: ForumComment) => {
     set((state) => {
-      // 检查comment是否已存在，避免重复添加
+      // Check if comment already exists to avoid duplicate additions
       const exists = state.comments.some(
         (comment) => comment.comment_id === newComment.comment_id
       );
@@ -885,7 +885,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
         return state;
       }
 
-      // 递归查找父评论并添加回复
+      // Recursively find parent comment and add reply
       const addReplyToParent = (
         comments: ForumComment[],
         parentId: string,
@@ -894,14 +894,14 @@ export const useForumStore = create<ForumState>((set, get) => ({
         for (let i = 0; i < comments.length; i++) {
           const comment = comments[i];
           if (comment.comment_id === parentId) {
-            // 找到父评论，将回复添加到其replies数组的开头（最新的在前）
+            // Found parent comment, add reply to beginning of its replies array (newest first)
             if (!comment.replies) {
               comment.replies = [];
             }
             comment.replies.unshift(reply);
             return true;
           }
-          // 递归查找子评论
+          // Recursively search child comments
           if (comment.replies && comment.replies.length > 0) {
             if (addReplyToParent(comment.replies, parentId, reply)) {
               return true;
@@ -914,14 +914,14 @@ export const useForumStore = create<ForumState>((set, get) => ({
       let updatedComments = [...state.comments];
 
       if (newComment.parent_comment_id) {
-        // 这是一个回复，查找父评论并添加到其replies中
+        // This is a reply, find parent comment and add to its replies
         const foundParent = addReplyToParent(
           updatedComments,
           newComment.parent_comment_id,
           newComment
         );
         if (!foundParent) {
-          // 如果找不到父评论，将其作为一级评论处理
+          // If parent comment not found, treat as root comment
           console.warn(
             "ForumStore: Parent comment not found, treating as root comment:",
             newComment.parent_comment_id
@@ -929,7 +929,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
           updatedComments.unshift(newComment);
         }
       } else {
-        // 这是一级评论，添加到根评论列表的开头（最新的在前）
+        // This is a root comment, add to beginning of root comments list (newest first)
         updatedComments.unshift(newComment);
       }
 
@@ -945,7 +945,7 @@ export const useForumStore = create<ForumState>((set, get) => ({
     });
   },
 
-  // 清理事件监听
+  // Cleanup event listeners
   cleanupEventListeners: () => {
     const { eventHandler } = get();
 
@@ -958,10 +958,10 @@ export const useForumStore = create<ForumState>((set, get) => ({
   },
 }));
 
-// 在开发环境中绑定测试工具到全局对象
+// Bind test tools to global object in development environment
 if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
   (window as any).useForumStore = useForumStore;
   console.log(
-    "🧪 Forum store and test utils available globally for development testing"
+    "Forum store and test utils available globally for development testing"
   );
 }

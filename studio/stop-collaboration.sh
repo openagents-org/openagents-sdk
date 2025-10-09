@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# 停止协作编辑器服务脚本
+# Stop collaborative editor services script
 echo "🛑 Stopping Collaborative Editor services..."
 
-# 从 PID 文件读取并终止进程
+# Read from PID file and terminate processes
 if [ -f ".collaboration.pid" ]; then
     COLLAB_PID=$(cat .collaboration.pid)
     if kill -0 $COLLAB_PID 2>/dev/null; then
@@ -22,7 +22,7 @@ if [ -f ".react.pid" ]; then
     rm -f .react.pid
 fi
 
-# 额外清理
+# Additional cleanup
 echo "🧹 Cleaning up any remaining processes..."
 pkill -f "collaboration-server.js" 2>/dev/null || true
 pkill -f "craco start" 2>/dev/null || true

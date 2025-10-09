@@ -45,9 +45,9 @@ export const useThemeStore = create<ThemeState>()(
     {
       name: "openagents_theme", // localStorage key
       partialize: (state) => ({
-        theme: state.theme, // 只持久化 theme
+        theme: state.theme, // only persist theme
       }),
-      // 恢复时同步到 document
+      // sync to document on rehydration
       onRehydrateStorage: () => (state) => {
         if (state && typeof document !== "undefined") {
           if (state.theme === "dark") {

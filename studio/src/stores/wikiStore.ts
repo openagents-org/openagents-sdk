@@ -2,11 +2,11 @@ import { create } from "zustand";
 import { OpenAgentsService } from "../services/openAgentsService";
 import { eventRouter } from "@/services/eventRouter";
 
-// 时间戳格式检测和转换函数
+// Timestamp format detection and conversion function
 const normalizeTimestamp = (timestamp: number | undefined): number => {
   if (!timestamp) return Date.now() / 1000;
 
-  // 如果是13位毫秒级时间戳，转换为10位秒级
+  // If it's a 13-digit millisecond timestamp, convert to 10-digit seconds
   if (timestamp > 1000000000000) {
     const converted = timestamp / 1000;
     console.log(
@@ -18,7 +18,7 @@ const normalizeTimestamp = (timestamp: number | undefined): number => {
     return converted;
   }
 
-  // 如果是10位秒级时间戳，直接返回
+  // If it's a 10-digit second timestamp, return directly
   console.log("WikiStore: Using timestamp as seconds:", timestamp);
   return timestamp;
 };
@@ -227,7 +227,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
       });
 
       if (response.success) {
-        // 构造新页面对象并直接添加到列表
+        // Construct new page object and add directly to list
         const newPage: WikiPage = {
           page_path: pagePath.trim(),
           title: title.trim(),
@@ -240,11 +240,11 @@ export const useWikiStore = create<WikiState>((set, get) => ({
 
         console.log("WikiStore: Creating page with data:", newPage);
 
-        // 如果服务器返回了页面数据，使用服务器数据，否则使用本地构造的数据
+        // If server returned page data, use server data, otherwise use locally constructed data
         if (response.data?.page) {
           const serverPage = response.data.page;
 
-          // 统一时间戳处理
+          // Unified timestamp handling
           const createdAt = normalizeTimestamp(serverPage.created_at);
           const lastModified = normalizeTimestamp(
             serverPage.last_modified || serverPage.created_at
@@ -268,19 +268,19 @@ export const useWikiStore = create<WikiState>((set, get) => ({
           };
           get().updateOrAddPageToList(wikiPage);
         } else {
-          // 直接添加到列表顶部，无需重新加载
+          // Add directly to top of list, no need to reload
           get().updateOrAddPageToList(newPage);
         }
 
         return true;
       } else {
-        // 不再设置错误状态，让UI层处理错误显示
+        // No longer set error state, let UI layer handle error display
         console.error("Failed to create wiki page:", response.message);
         return false;
       }
     } catch (err) {
       console.error("Failed to create wiki page:", err);
-      // 不再设置错误状态，让UI层处理错误显示
+      // No longer set error state, let UI layer handle error display
       return false;
     }
   },
@@ -389,7 +389,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
     set({ selectedPage: page });
   },
 
-  // Real-time updates - 更新或添加页面到列表
+  // Real-time updates - update or add page to list
   updateOrAddPageToList: (newPage: WikiPage) => {
     set((state) => {
       const existingIndex = state.pages.findIndex(
@@ -397,7 +397,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
       );
 
       if (existingIndex >= 0) {
-        // 页面已存在，更新内容
+        // Page already exists, update content
         console.log(
           "WikiStore: Updating existing page in list:",
           newPage.page_path
@@ -405,7 +405,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
         const updatedPages = [...state.pages];
         updatedPages[existingIndex] = newPage;
 
-        // 如果当前选中的页面就是被更新的页面，同时更新selectedPage
+        // If the currently selected page is the updated page, also update selectedPage
         const updatedSelectedPage =
           state.selectedPage?.page_path === newPage.page_path
             ? newPage
@@ -417,7 +417,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
           selectedPage: updatedSelectedPage,
         };
       } else {
-        // 页面不存在，添加到列表顶部
+        // Page doesn't exist, add to top of list
         console.log("WikiStore: Adding new page to list:", newPage.title);
         return {
           ...state,
@@ -427,7 +427,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
     });
   },
 
-  // 专门用于更新页面内容的函数，只更新必要的字段
+  // Function specifically for updating page content, only updates necessary fields
   updatePageContent: (
     pagePath: string,
     content: string,
@@ -440,12 +440,12 @@ export const useWikiStore = create<WikiState>((set, get) => ({
       );
 
       if (existingIndex >= 0) {
-        // 页面存在，只更新内容相关字段
+        // Page exists, only update content-related fields
         console.log("WikiStore: Updating page content for:", pagePath);
         const updatedPages = [...state.pages];
         const currentPage = updatedPages[existingIndex];
 
-        // 只更新内容、最后修改时间和版本号，保留其他字段不变
+        // Only update content, last modified time and version number, keep other fields unchanged
         updatedPages[existingIndex] = {
           ...currentPage,
           wiki_content: content,
@@ -453,7 +453,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
           version: version || currentPage.version,
         };
 
-        // 如果当前选中的页面就是被更新的页面，同时更新selectedPage
+        // If the currently selected page is the updated page, also update selectedPage
         const updatedSelectedPage =
           state.selectedPage?.page_path === pagePath
             ? updatedPages[existingIndex]
@@ -465,7 +465,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
           selectedPage: updatedSelectedPage,
         };
       } else {
-        // 页面不存在，记录警告但不执行操作
+        // Page doesn't exist, log warning but don't perform operation
         console.warn(
           "WikiStore: Cannot update content for non-existent page:",
           pagePath
@@ -481,14 +481,14 @@ export const useWikiStore = create<WikiState>((set, get) => ({
 
     console.log("WikiStore: Setting up wiki event listeners");
 
-    // 使用事件路由器监听wiki相关事件
+    // Use event router to listen for wiki-related events
     const wikiEventHandler = (event: any) => {
-      // 处理页面创建事件
+      // Handle page creation event
       if (event.event_name === "wiki.page.created" && event.payload?.page) {
         console.log("WikiStore: Received wiki.page.created event:", event);
         const page = event.payload.page;
 
-        // 将后端数据转换为WikiPage格式，统一时间戳处理
+        // Convert backend data to WikiPage format, unified timestamp handling
         const createdAt = normalizeTimestamp(page.created_at);
         const lastModified = normalizeTimestamp(
           page.last_modified || page.created_at
@@ -514,7 +514,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
         get().updateOrAddPageToList(wikiPage);
       }
 
-      // 处理wiki proposal通知事件
+      // Handle wiki proposal notification event
       else if (event.event_name === "wiki.proposal.notification") {
         console.log(
           "WikiStore: Received wiki.proposal.notification event:",
@@ -525,11 +525,11 @@ export const useWikiStore = create<WikiState>((set, get) => ({
           JSON.stringify(event.payload, null, 2)
         );
 
-        // 重新加载proposals列表以获取最新的待审批提案
+        // Reload proposals list to get latest pending proposals
         get().loadProposals();
       }
 
-      // 处理wiki通知事件
+      // Handle wiki notification event
       else if (event.event_name === "wiki.page.notification") {
         console.log("WikiStore: Received wiki.page.notification event:", event);
         console.log(
@@ -537,25 +537,25 @@ export const useWikiStore = create<WikiState>((set, get) => ({
           JSON.stringify(event.payload, null, 2)
         );
 
-        // 检查各种可能的事件结构
+        // Check various possible event structures
         let pageData = null;
 
-        // 方式1: payload直接包含页面数据
+        // Method 1: payload directly contains page data
         if (event.payload?.page) {
           pageData = event.payload.page;
           console.log("WikiStore: Found page data in payload.page");
         }
-        // 方式2: payload就是页面数据
+        // Method 2: payload is page data
         else if (event.payload?.page_path && event.payload?.title) {
           pageData = event.payload;
           console.log("WikiStore: Found page data directly in payload");
         }
-        // 方式3: data字段包含页面数据
+        // Method 3: data field contains page data
         else if (event.data?.page) {
           pageData = event.data.page;
           console.log("WikiStore: Found page data in data.page");
         }
-        // 方式4: data就是页面数据
+        // Method 4: data is page data
         else if (event.data?.page_path && event.data?.title) {
           pageData = event.data;
           console.log("WikiStore: Found page data directly in data");
@@ -564,9 +564,9 @@ export const useWikiStore = create<WikiState>((set, get) => ({
         if (pageData) {
           console.log("WikiStore: Processing page data:", pageData);
 
-          // 检查是否是编辑事件
+          // Check if it's an edit event
           if (pageData.action === "page_edited") {
-            // 对于编辑事件，只更新内容相关字段
+            // For edit events, only update content-related fields
             console.log(
               "WikiStore: Handling page edit notification for:",
               pageData.page_path
@@ -645,10 +645,10 @@ export const useWikiStore = create<WikiState>((set, get) => ({
       }
     };
 
-    // 注册到事件路由器
+    // Register to event router
     eventRouter.onWikiEvent(wikiEventHandler);
 
-    // 保存handler引用以便清理
+    // Save handler reference for cleanup
     set({ eventHandler: wikiEventHandler });
   },
 

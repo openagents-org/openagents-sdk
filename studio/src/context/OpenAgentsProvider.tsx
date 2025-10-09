@@ -1,11 +1,11 @@
 /**
- * 简化的 OpenAgents Provider - 专注于连接状态管理
+ * Simplified OpenAgents Provider - focused on connection state management
  *
- * 职责：
- * 1. 维护单一的 HttpEventConnector 实例
- * 2. 监听和管理连接状态变化
- * 3. 提供连接状态给组件使用
- * 4. 暴露connector实例供其他组件直接使用
+ * Responsibilities:
+ * 1. Maintain a single HttpEventConnector instance
+ * 2. Listen and manage connection state changes
+ * 3. Provide connection state to components
+ * 4. Expose connector instance for direct use by other components
  */
 
 import React, {
@@ -215,7 +215,7 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
         if (event.event_name === "thread.channel_message.notification" && event.payload) {
           const messageData = event.payload;
           if (messageData.channel && messageData.content) {
-            const senderName = event.sender_id || event.source_id || "未知用户";
+            const senderName = event.sender_id || event.source_id || "Unknown user";
             const content = typeof messageData.content === 'string'
               ? messageData.content
               : messageData.content.text || "";
@@ -233,7 +233,7 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
         else if (event.event_name === "thread.reply.notification" && event.payload) {
           const messageData = event.payload;
           if (messageData.channel && messageData.content) {
-            const senderName = messageData.original_sender || event.source_id || "未知用户";
+            const senderName = messageData.original_sender || event.source_id || "Unknown user";
             const content = typeof messageData.content === 'string'
               ? messageData.content
               : messageData.content.text || "";
@@ -262,7 +262,7 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
         else if (event.event_name === "thread.direct_message.notification" && event.payload) {
           const messageData = event.payload;
           if (messageData.content) {
-            const senderName = event.source_id || messageData.sender_id || "未知用户";
+            const senderName = event.source_id || messageData.sender_id || "Unknown user";
             const content = typeof messageData.content === 'string'
               ? messageData.content
               : messageData.content.text || "";

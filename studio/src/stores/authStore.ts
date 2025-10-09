@@ -107,12 +107,12 @@ export const useAuthStore = create<NetworkState>()(
       },
     }),
     {
-      name: "auth-storage", // 持久化存储的 key
+      name: "auth-storage", // key for persistent storage
       partialize: (state) => ({
         selectedNetwork: state.selectedNetwork,
         agentName: state.agentName,
         moduleState: state.moduleState,
-      }), // 持久化网络、代理和模块状态
+      }), // persist network, agent, and module state
     }
   )
 );
