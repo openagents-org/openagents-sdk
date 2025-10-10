@@ -716,13 +716,24 @@ def install_openagents_studio_package(progress=None, task_id=None) -> None:
         progress_thread.start()
     
     try:
-        install_process = subprocess.run(
-            [
+        # On Windows, npm with --prefix can have issues, so we use a different approach
+        if is_windows:
+            # Install globally without --prefix, but set npm config to use custom location
+            install_cmd = [
+                "npm", "install", "-g",
+                "openagents-studio",
+                f"--prefix={openagents_prefix}",
+            ]
+        else:
+            install_cmd = [
                 "npm", "install", "-g",
                 "openagents-studio",
                 "--prefix", openagents_prefix,
                 "--silent"  # Reduce npm output noise
-            ],
+            ]
+
+        install_process = subprocess.run(
+            install_cmd,
             capture_output=True,
             text=True,
             timeout=600,  # 10 minute timeout for npm install
@@ -762,14 +773,69 @@ def launch_studio_with_package(studio_port: int = 8055) -> subprocess.Popen:
     openagents_prefix = os.path.expanduser("~/.openagents")
     is_windows = sys.platform.startswith('win')
 
-    # On Windows, npm creates a .cmd wrapper instead of a direct executable
+    # Try to find the studio binary - npm creates different files on different platforms
+    # and in different locations depending on how it was installed
+    possible_bin_paths = []
     if is_windows:
-        studio_bin = os.path.join(openagents_prefix, "bin", "openagents-studio.cmd")
+        # On Windows, npm can create .cmd, .bat, or .ps1 files in multiple locations
+        possible_bin_paths = [
+            # Standard bin location
+            os.path.join(openagents_prefix, "bin", "openagents-studio.cmd"),
+            os.path.join(openagents_prefix, "bin", "openagents-studio.bat"),
+            os.path.join(openagents_prefix, "bin", "openagents-studio"),
+            # node_modules/.bin location
+            os.path.join(openagents_prefix, "node_modules", ".bin", "openagents-studio.cmd"),
+            os.path.join(openagents_prefix, "node_modules", ".bin", "openagents-studio.bat"),
+            os.path.join(openagents_prefix, "node_modules", ".bin", "openagents-studio"),
+        ]
     else:
-        studio_bin = os.path.join(openagents_prefix, "bin", "openagents-studio")
+        possible_bin_paths = [
+            os.path.join(openagents_prefix, "bin", "openagents-studio"),
+            os.path.join(openagents_prefix, "node_modules", ".bin", "openagents-studio"),
+        ]
 
-    if not os.path.exists(studio_bin):
-        raise RuntimeError(f"openagents-studio binary not found: {studio_bin}")
+    # Find the first existing binary
+    studio_bin = None
+    for bin_path in possible_bin_paths:
+        if os.path.exists(bin_path):
+            studio_bin = bin_path
+            break
+
+    if not studio_bin:
+        # List what's actually in the bin directory for debugging
+        bin_dir = os.path.join(openagents_prefix, "bin")
+        if os.path.exists(bin_dir):
+            files_in_bin = os.listdir(bin_dir)
+            logging.warning(
+                f"openagents-studio binary not found. Files in {bin_dir}: {', '.join(files_in_bin) if files_in_bin else '(empty)'}"
+            )
+        else:
+            logging.warning(f"Bin directory does not exist: {bin_dir}")
+
+        # Try using npx as a fallback to run openagents-studio
+        logging.warning(f"Trying to run openagents-studio using npx...")
+        try:
+            # Use npx to run the package
+            env = os.environ.copy()
+            env["PORT"] = str(studio_port)
+
+            process = subprocess.Popen(
+                ["npx", "--prefix", openagents_prefix, "openagents-studio", "start"],
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+                shell=is_windows
+            )
+            return process
+        except Exception as e:
+            raise RuntimeError(
+                f"openagents-studio binary not found in any of: {', '.join(possible_bin_paths)}\n"
+                f"Also failed to run with npx: {e}\n"
+                f"Try reinstalling with: pip install --upgrade openagents"
+            )
 
     # Set up environment with PATH including ~/.openagents/bin
     env = os.environ.copy()
