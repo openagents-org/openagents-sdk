@@ -18,6 +18,11 @@ import shutil
 import socket
 import argparse
 from pathlib import Path
+try:
+    from importlib.resources import files
+except ImportError:
+    # Python < 3.9 fallback
+    from importlib_resources import files
 from typing import List, Optional, Dict, Any, Tuple
 
 import typer
@@ -100,40 +105,59 @@ def initialize_workspace(workspace_path: Path) -> Path:
         workspace_path: Path to the workspace directory
 
     Returns:
-        Path: Path to the config.yaml file in the workspace
+        Path: Path to the network.yaml file in the workspace
     """
     # Create workspace directory if it doesn't exist
     workspace_path.mkdir(parents=True, exist_ok=True)
 
-    config_path = workspace_path / "config.yaml"
+    config_path = workspace_path / "network.yaml"
 
-    # Check if config.yaml already exists
+    # Check if network.yaml already exists
     if config_path.exists():
         logging.info(f"Using existing workspace configuration: {config_path}")
         return config_path
 
-    # Find the default workspace template
-    script_dir = Path(__file__).parent
-    project_root = script_dir.parent.parent
-    default_workspace_path = project_root / "examples" / "default_workspace"
-
-    if not default_workspace_path.exists():
-        logging.error(f"Default workspace template not found: {default_workspace_path}")
-        raise FileNotFoundError(
-            f"Default workspace template not found: {default_workspace_path}"
-        )
-
-    # Copy all files from default workspace to the new workspace
+    # Get the default workspace template from package resources
     try:
-        for item in default_workspace_path.iterdir():
-            if item.is_file():
-                dest_path = workspace_path / item.name
-                shutil.copy2(item, dest_path)
-                logging.info(f"Copied {item.name} to workspace")
-            elif item.is_dir():
-                dest_dir = workspace_path / item.name
-                shutil.copytree(item, dest_dir, dirs_exist_ok=True)
-                logging.info(f"Copied directory {item.name} to workspace")
+        # First, try to get the network.yaml template from package resources
+        template_files = files("openagents.templates.default_workspace")
+        
+        # Copy the main network.yaml template
+        network_yaml_content = (template_files / "network.yaml").read_text()
+        with open(config_path, 'w') as f:
+            f.write(network_yaml_content)
+        logging.info(f"Created network.yaml in workspace")
+        
+    except (FileNotFoundError, ModuleNotFoundError):
+        # Fallback to development mode path resolution
+        script_dir = Path(__file__).parent
+        
+        # Try templates directory first (package mode)
+        template_path = script_dir / "templates" / "default_workspace" / "network.yaml"
+        if template_path.exists():
+            shutil.copy2(template_path, config_path)
+            logging.info(f"Copied network.yaml from templates to workspace")
+        else:
+            # Fallback to examples directory (development mode)
+            project_root = script_dir.parent.parent
+            default_workspace_path = project_root / "examples" / "default_workspace"
+            
+            if not default_workspace_path.exists():
+                logging.error(f"Default workspace template not found: {default_workspace_path}")
+                raise FileNotFoundError(
+                    f"Default workspace template not found: {default_workspace_path}"
+                )
+            
+            # Copy all files from default workspace to the new workspace
+            for item in default_workspace_path.iterdir():
+                if item.is_file():
+                    dest_path = workspace_path / item.name
+                    shutil.copy2(item, dest_path)
+                    logging.info(f"Copied {item.name} to workspace")
+                elif item.is_dir():
+                    dest_dir = workspace_path / item.name
+                    shutil.copytree(item, dest_dir, dirs_exist_ok=True)
+                    logging.info(f"Copied directory {item.name} to workspace")
 
         logging.info(f"Initialized new workspace at: {workspace_path}")
 
@@ -287,7 +311,7 @@ def create_default_studio_config(host: str = "localhost", port: int = 8570) -> s
 
     # Create temporary config file
     temp_dir = tempfile.gettempdir()
-    config_path = os.path.join(temp_dir, "openagents_studio_config.yaml")
+    config_path = os.path.join(temp_dir, "openagents_studio_network.yaml")
 
     with open(config_path, "w") as f:
         yaml.dump(config, f, default_flow_style=False)
@@ -323,7 +347,7 @@ async def studio_network_launcher(workspace_path: Optional[Path], host: str, por
             # Create temporary config file with updated settings
             temp_dir = tempfile.gettempdir()
             temp_config_path = os.path.join(
-                temp_dir, "openagents_studio_workspace_config.yaml"
+                temp_dir, "openagents_studio_workspace_network.yaml"
             )
 
             with open(temp_config_path, "w") as f:
@@ -986,8 +1010,8 @@ app.add_typer(agent_app, name="agent")
 
 @network_app.command("start")
 def network_start(
-    config: Optional[str] = typer.Argument(None, help="Path to network configuration file"),
-    workspace: Optional[str] = typer.Option(None, "--workspace", "-w", help="Path to workspace directory"),
+    path: Optional[str] = typer.Argument(None, help="Path to network configuration file (.yaml) or workspace directory"),
+    workspace: Optional[str] = typer.Option(None, "--workspace", "-w", help="Path to workspace directory (deprecated: use positional argument)"),
     port: Optional[int] = typer.Option(None, "--port", "-p", help="Network port (overrides config)"),
     detach: bool = typer.Option(False, "--detach", "-d", help="Run in background"),
     runtime: Optional[int] = typer.Option(None, "--runtime", "-t", help="Runtime in seconds"),
@@ -996,8 +1020,8 @@ def network_start(
     
     # Show a simple startup message
     console.print(f"[blue]🚀 Starting OpenAgents network...[/blue]")
-    if config:
-        console.print(f"[dim]📁 Config: {config}[/dim]")
+    if path:
+        console.print(f"[dim]📁 Path: {path}[/dim]")
     if workspace:
         console.print(f"[dim]📂 Workspace: {workspace}[/dim]")
     console.print("[dim]Press Ctrl+C to stop[/dim]")
@@ -1143,11 +1167,34 @@ def network_start(
     openagents_logger.addHandler(network_status)
     
     try:
+        # Auto-detect whether path argument is a file or directory
+        actual_config = None
+        actual_workspace = workspace  # Keep existing --workspace flag for backward compatibility
+
+        if path:
+            path_obj = Path(path)
+            if path_obj.is_file() and path_obj.suffix.lower() in ['.yaml', '.yml']:
+                # It's a config file
+                actual_config = path
+            elif path_obj.is_dir():
+                # It's a workspace directory
+                actual_workspace = path
+                actual_config = None
+            else:
+                # Handle error case
+                console.print(f"[red]❌ Invalid path: {path} is neither a .yaml file nor a directory[/red]")
+                raise typer.Exit(1)
+
+        # Validate that workspace and path directory aren't both specified
+        if workspace and actual_workspace and workspace != actual_workspace:
+            console.print("[red]❌ Cannot specify both --workspace flag and workspace directory as positional argument[/red]")
+            raise typer.Exit(1)
+
         # Launch the network directly (this handles its own logging and output)
-        if workspace or config is None:
-            launch_network(config, runtime, workspace)
+        if actual_workspace or actual_config is None:
+            launch_network(actual_config, runtime, actual_workspace)
         else:
-            launch_network(config, runtime)
+            launch_network(actual_config, runtime)
             
         # Check for errors that were logged during startup (if network launcher returned)
         if network_status.has_error and not network_status.error_displayed:
@@ -1261,6 +1308,55 @@ def network_start(
                 logger.removeFilter(poll_filter)
                 for handler in logger.handlers:
                     handler.removeFilter(poll_filter)
+
+
+@network_app.command("init")
+def network_init(
+    workspace_dir: str = typer.Argument(..., help="Directory name for the new workspace"),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing workspace"),
+):
+    """🛠️ Initialize a new workspace directory with default network.yaml"""
+    
+    workspace_path = Path(workspace_dir)
+    
+    # Check if directory already exists
+    if workspace_path.exists() and not force:
+        if workspace_path.is_dir() and any(workspace_path.iterdir()):
+            console.print(f"[red]❌ Directory '{workspace_dir}' already exists and is not empty[/red]")
+            console.print("[dim]Use --force to overwrite existing workspace[/dim]")
+            raise typer.Exit(1)
+        elif workspace_path.is_file():
+            console.print(f"[red]❌ A file named '{workspace_dir}' already exists[/red]")
+            raise typer.Exit(1)
+    
+    try:
+        # Show initialization message
+        console.print(f"[blue]🛠️ Initializing workspace in '{workspace_dir}'...[/blue]")
+        
+        # Use the existing initialize_workspace function
+        config_path = initialize_workspace(workspace_path)
+        
+        # Success message
+        console.print()
+        console.print(Panel.fit(
+            f"[bold green]✅ Workspace initialized successfully![/bold green]\n\n"
+            f"📁 Location: [code]{workspace_path.absolute()}[/code]\n"
+            f"📝 Config: [code]{config_path.name}[/code]\n\n"
+            f"[bold cyan]Next steps:[/bold cyan]\n"
+            f"1️⃣ Start the network: [code]openagents network start {workspace_dir}/[/code]\n"
+            f"2️⃣ Edit the config: [code]{config_path}[/code]",
+            border_style="green"
+        ))
+        
+    except FileNotFoundError as e:
+        console.print(f"[red]❌ Template not found: {e}[/red]")
+        raise typer.Exit(1)
+    except RuntimeError as e:
+        console.print(f"[red]❌ Failed to initialize workspace: {e}[/red]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]❌ Unexpected error: {e}[/red]")
+        raise typer.Exit(1)
 
 
 @network_app.command("list")
@@ -1514,7 +1610,7 @@ def show_examples():
    [code]openagents studio --workspace ./my_workspace[/code]
    
 [bold green]6. Network with Custom Port:[/bold green]
-   [code]openagents network start --runtime 300 config.yaml[/code]
+   [code]openagents network start --runtime 300 network.yaml[/code]
 
 [bold cyan]📖 For more information, visit:[/bold cyan]
    [link]https://github.com/openagents-org/openagents[/link]
