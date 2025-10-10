@@ -1669,9 +1669,10 @@ def network_publish(
 @agent_app.command("start")
 def agent_start(
     config: str = typer.Argument(..., help="Path to agent configuration file"),
-    network: Optional[str] = typer.Option(None, "--network", "-n", help="Network ID to connect to"),
-    host: Optional[str] = typer.Option(None, "--host", "-h", help="Server host address"),
-    port: Optional[int] = typer.Option(None, "--port", "-p", help="Server port"),
+    agent_id: Optional[str] = typer.Option(None, "--agent-id", "-i", help="Override agent ID"),
+    network_id: Optional[str] = typer.Option(None, "--network-id", "-n", help="Network ID to connect to"),
+    host: Optional[str] = typer.Option(None, "--network-host", "-h", help="Network host address"),
+    port: Optional[int] = typer.Option(None, "--network-port", "-p", help="Network port"),
     detach: bool = typer.Option(False, "--detach", "-d", help="Run in background"),
 ):
     """🚀 Start an agent"""
@@ -1688,11 +1689,20 @@ def agent_start(
             if detach:
                 console.print("[yellow]⚠️  Detached mode not yet implemented, running in foreground[/yellow]")
 
-            # Load agent using AgentRunner.from_yaml
-            agent = AgentRunner.from_yaml(config)
+            # Prepare connection override from command line arguments
+            connection_override = {}
+            if host is not None:
+                connection_override["host"] = host
+            if port is not None:
+                connection_override["port"] = port
+            if network_id is not None:
+                connection_override["network_id"] = network_id
+
+            # Load agent using AgentRunner.from_yaml with overrides
+            agent = AgentRunner.from_yaml(config, agent_id_override=agent_id, connection_override=connection_override if connection_override else None)
             progress.update(task, description=f"[green]✅ Loaded agent '{agent.agent_id}'")
 
-            # Prepare connection settings
+            # Prepare connection settings (combine config file + CLI overrides)
             connection_settings = {}
             config_path = Path(config)
             if config_path.exists():
@@ -1704,26 +1714,36 @@ def agent_start(
                 except Exception as e:
                     console.print(f"[yellow]⚠️  Could not read connection settings: {e}[/yellow]")
 
-            # Override with command line arguments
+            # Apply CLI overrides to connection settings
             if host is not None:
                 connection_settings["host"] = host
             if port is not None:
                 connection_settings["port"] = port
-            if network is not None:
-                connection_settings["network_id"] = network
+            if network_id is not None:
+                connection_settings["network_id"] = network_id
 
-            # Apply defaults
-            final_host = connection_settings.get("host", "localhost")
-            final_port = connection_settings.get("port", 8570)
-            network_id = connection_settings.get("network_id")
+            # Apply defaults only when no network_id is provided
+            final_network_id = connection_settings.get("network_id")
+            if final_network_id:
+                # When network_id is provided, let the client handle network discovery
+                final_host = connection_settings.get("host")  # None if not specified
+                final_port = connection_settings.get("port")  # None if not specified
+            else:
+                # When no network_id, use defaults for direct connection
+                final_host = connection_settings.get("host", "localhost")
+                final_port = connection_settings.get("port", 8570)
 
-            progress.update(task, description=f"[blue]🔗 Connecting to {final_host}:{final_port}")
+            # Update progress message appropriately
+            if final_network_id:
+                progress.update(task, description=f"[blue]🔗 Connecting to network '{final_network_id}'")
+            else:
+                progress.update(task, description=f"[blue]🔗 Connecting to {final_host}:{final_port}")
 
             # Start the agent
             agent.start(
                 network_host=final_host,
                 network_port=final_port,
-                network_id=network_id,
+                network_id=final_network_id,
                 metadata={"agent_type": type(agent).__name__, "config_file": config},
             )
 
