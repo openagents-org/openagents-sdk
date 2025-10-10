@@ -761,7 +761,7 @@ def install_openagents_studio_package(progress=None, task_id=None) -> None:
         raise RuntimeError("npm command not found. Please install Node.js and npm.")
 
 
-def launch_studio_with_package(studio_port: int = 8055) -> subprocess.Popen:
+def launch_studio_with_package(studio_port: int = 8050) -> subprocess.Popen:
     """Launch studio using the installed openagents-studio package.
 
     Args:
@@ -890,7 +890,7 @@ def launch_studio_with_package(studio_port: int = 8055) -> subprocess.Popen:
         raise RuntimeError(f"Failed to execute openagents-studio binary: {studio_bin}")
 
 
-def launch_studio_frontend(studio_port: int = 8055) -> subprocess.Popen:
+def launch_studio_frontend(studio_port: int = 8050) -> subprocess.Popen:
     """Launch the studio frontend development server.
 
     Args:
@@ -1767,7 +1767,7 @@ def agent_list(
 def studio(
     host: str = typer.Option("localhost", "--host", "-h", help="Network host address"),
     port: int = typer.Option(8700, "--port", "-p", help="Network port"),
-    studio_port: int = typer.Option(8055, "--studio-port", help="Studio frontend port"),
+    studio_port: int = typer.Option(8050, "--studio-port", help="Studio frontend port"),
     workspace: Optional[str] = typer.Option(None, "--workspace", "-w", help="Path to workspace directory"),
     no_browser: bool = typer.Option(False, "--no-browser", help="Don't automatically open browser"),
     standalone: bool = typer.Option(False, "--standalone", "-s", help="Launch studio frontend only (without network)"),
