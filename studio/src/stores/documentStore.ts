@@ -2,10 +2,14 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { DocumentInfo } from "@/types";
 import { ThreadState } from "@/types/thread";
-import { CollaborationService, CollaborationUser, ConnectionStatus } from "@/services/collaborationService";
+import {
+  CollaborationService,
+  CollaborationUser,
+  ConnectionStatus,
+} from "@/services/collaborationService";
 
-// Data version number - used for localStorage data compatibility control
-const STORAGE_VERSION = 2; // Increment version to clean up old data
+// Data version number - used to control localStorage data compatibility
+const STORAGE_VERSION = 2; // Increment version number to clean old data
 
 interface DocumentStoreState {
   // Data version
@@ -36,35 +40,44 @@ interface DocumentStoreState {
   setSelectedDocument: (documentId: string | null) => void;
 
   // Collaboration feature operations
-  initializeCollaboration: (documentId: string, userId?: string) => Promise<CollaborationService>;
+  initializeCollaboration: (
+    documentId: string,
+    userId?: string
+  ) => Promise<CollaborationService>;
   destroyCollaboration: (documentId: string) => void;
   getCollaborationService: (documentId: string) => CollaborationService | null;
-  updateConnectionStatus: (documentId: string, status: ConnectionStatus) => void;
+  updateConnectionStatus: (
+    documentId: string,
+    status: ConnectionStatus
+  ) => void;
   updateOnlineUsers: (documentId: string, users: CollaborationUser[]) => void;
   setCollaborationEnabled: (enabled: boolean) => void;
 
   // Document content operations
   getDocumentContent: (documentId: string) => string | null;
-  saveDocumentContent: (documentId: string, content: string) => Promise<boolean>;
+  saveDocumentContent: (
+    documentId: string,
+    content: string
+  ) => Promise<boolean>;
   createDocument: (name: string, content?: string) => Promise<string | null>;
 }
 
 // Clean up old localStorage data
 const cleanupOldStorage = () => {
   try {
-    const stored = localStorage.getItem('openagents_documents');
+    const stored = localStorage.getItem("openagents_documents");
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Check version number, clean up if version doesn't match or is missing
+      // Check version number, clear data if version doesn't match or doesn't exist
       if (!parsed.state?.version || parsed.state.version < STORAGE_VERSION) {
-        console.log('🧹 Cleaning up old localStorage data...');
-        localStorage.removeItem('openagents_documents');
+        console.log("🧹 Cleaning up old localStorage data...");
+        localStorage.removeItem("openagents_documents");
       }
     }
   } catch (error) {
-    console.error('Error cleaning up storage:', error);
+    console.error("Error cleaning up storage:", error);
     // If parsing fails, clean up directly
-    localStorage.removeItem('openagents_documents');
+    localStorage.removeItem("openagents_documents");
   }
 };
 
@@ -128,7 +141,8 @@ export const useDocumentStore = create<DocumentStoreState>()(
         const state = get();
 
         // Clean up collaboration service
-        const collaborationService = state.collaborationServices.get(documentId);
+        const collaborationService =
+          state.collaborationServices.get(documentId);
         if (collaborationService) {
           collaborationService.destroy();
           state.collaborationServices.delete(documentId);
@@ -166,7 +180,7 @@ export const useDocumentStore = create<DocumentStoreState>()(
           const collaborationService = new CollaborationService(
             `document-${documentId}`,
             userId,
-            'ws://localhost:1234'
+            "ws://localhost:1234"
           );
 
           // Set up event listeners
@@ -179,12 +193,19 @@ export const useDocumentStore = create<DocumentStoreState>()(
           });
 
           collaborationService.onContentUpdate((content) => {
-            // Can implement auto-save content here
-            console.log(`📝 Document ${documentId} content updated:`, content.length, 'characters');
+            // Can implement automatic content saving here
+            console.log(
+              `📝 Document ${documentId} content updated:`,
+              content.length,
+              "characters"
+            );
           });
 
           collaborationService.onErrorOccurred((error) => {
-            console.error(`🔴 Collaboration error for document ${documentId}:`, error);
+            console.error(
+              `🔴 Collaboration error for document ${documentId}:`,
+              error
+            );
           });
 
           // Store service
@@ -192,7 +213,7 @@ export const useDocumentStore = create<DocumentStoreState>()(
 
           return collaborationService;
         } catch (error) {
-          console.error('Failed to initialize collaboration:', error);
+          console.error("Failed to initialize collaboration:", error);
           throw error;
         }
       },
@@ -200,7 +221,8 @@ export const useDocumentStore = create<DocumentStoreState>()(
       // Destroy collaboration service
       destroyCollaboration: (documentId: string) => {
         const state = get();
-        const collaborationService = state.collaborationServices.get(documentId);
+        const collaborationService =
+          state.collaborationServices.get(documentId);
 
         if (collaborationService) {
           collaborationService.destroy();
@@ -211,7 +233,7 @@ export const useDocumentStore = create<DocumentStoreState>()(
           set({
             collaborationServices: new Map(state.collaborationServices),
             connectionStatuses: new Map(state.connectionStatuses),
-            onlineUsers: new Map(state.onlineUsers)
+            onlineUsers: new Map(state.onlineUsers),
           });
         }
       },
@@ -223,12 +245,15 @@ export const useDocumentStore = create<DocumentStoreState>()(
       },
 
       // Update connection status
-      updateConnectionStatus: (documentId: string, status: ConnectionStatus) => {
+      updateConnectionStatus: (
+        documentId: string,
+        status: ConnectionStatus
+      ) => {
         const state = get();
         state.connectionStatuses.set(documentId, status);
 
         set({
-          connectionStatuses: new Map(state.connectionStatuses)
+          connectionStatuses: new Map(state.connectionStatuses),
         });
       },
 
@@ -237,13 +262,13 @@ export const useDocumentStore = create<DocumentStoreState>()(
         const state = get();
         state.onlineUsers.set(documentId, users);
 
-        // Also update document's active users list
+        // Also update the document's active user list
         get().updateDocument(documentId, {
-          active_agents: users.map(user => user.name)
+          active_agents: users.map((user) => user.name),
         });
 
         set({
-          onlineUsers: new Map(state.onlineUsers)
+          onlineUsers: new Map(state.onlineUsers),
         });
       },
 
@@ -255,67 +280,76 @@ export const useDocumentStore = create<DocumentStoreState>()(
       // Get document content
       getDocumentContent: (documentId: string) => {
         const state = get();
-        const collaborationService = state.collaborationServices.get(documentId);
+        const collaborationService =
+          state.collaborationServices.get(documentId);
 
         if (collaborationService) {
           return collaborationService.getContent();
         }
 
         // If no collaboration service, return empty content or get from elsewhere
-        return '';
+        return "";
       },
 
       // Save document content
       saveDocumentContent: async (documentId: string, content: string) => {
         try {
           // Can implement logic to save content to server here
-          console.log(`💾 Saving document ${documentId} with ${content.length} characters`);
+          console.log(
+            `💾 Saving document ${documentId} with ${content.length} characters`
+          );
 
           // Simulate save operation
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise((resolve) => setTimeout(resolve, 500));
 
           // Update document's last modified time
           get().updateDocument(documentId, {
             last_modified: new Date().toISOString(),
-            version: (get().documents.find(doc => doc.document_id === documentId)?.version || 0) + 1
+            version:
+              (get().documents.find((doc) => doc.document_id === documentId)
+                ?.version || 0) + 1,
           });
 
           return true;
         } catch (error) {
-          console.error('Failed to save document:', error);
+          console.error("Failed to save document:", error);
           return false;
         }
       },
 
       // Create new document
-      createDocument: async (name: string, content: string = '') => {
+      createDocument: async (name: string, content: string = "") => {
         try {
-          const documentId = `doc-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          const documentId = `doc-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2)}`;
           const now = new Date().toISOString();
 
           const newDocument: DocumentInfo = {
             document_id: documentId,
             name: name,
-            creator: 'current-user', // Should get from user state here
+            creator: "current-user", // Should get from user state
             created: now,
             last_modified: now,
             version: 1,
             active_agents: [],
-            permission: 'read_write'
+            permission: "read_write",
           };
 
           // Add to document list
           get().addDocument(newDocument);
 
-          // If has initial content, set content
+          // If there's initial content, set it
           if (content && get().isCollaborationEnabled) {
-            const collaborationService = await get().initializeCollaboration(documentId);
+            const collaborationService = await get().initializeCollaboration(
+              documentId
+            );
             collaborationService.setInitialContent(content);
           }
 
           return documentId;
         } catch (error) {
-          console.error('Failed to create document:', error);
+          console.error("Failed to create document:", error);
           return null;
         }
       },
@@ -323,10 +357,10 @@ export const useDocumentStore = create<DocumentStoreState>()(
     {
       name: "openagents_documents", // localStorage key
       partialize: (state) => ({
-        // Persist version number and basic state, don't persist document list (ensure all users see the same default documents)
+        // Persist version number and basic state, don't persist document list (ensure all users see same default documents)
         version: state.version,
         threadState: state.threadState,
-        // documents: state.documents, // Remove document list persistence, let all users see the same public documents
+        // documents: state.documents, // Removed document list persistence, let all users see the same public documents
         selectedDocumentId: state.selectedDocumentId,
         isCollaborationEnabled: state.isCollaborationEnabled,
       }),

@@ -1,11 +1,15 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import Editor, { useMonaco } from '@monaco-editor/react';
-import { MonacoBinding } from 'y-monaco';
-import { CollaborationService, CollaborationUser, ConnectionStatus } from '@/services/collaborationService';
-import { useThemeStore } from '@/stores/themeStore';
-import { useAuthStore } from '@/stores/authStore';
-import ConnectionStatusIndicator from './ConnectionStatus';
-import OnlineUsersList from './OnlineUsers';
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import Editor, { useMonaco } from "@monaco-editor/react";
+import { MonacoBinding } from "y-monaco";
+import {
+  CollaborationService,
+  CollaborationUser,
+  ConnectionStatus,
+} from "@/services/collaborationService";
+import { useThemeStore } from "@/stores/themeStore";
+import { useAuthStore } from "@/stores/authStore";
+import ConnectionStatusIndicator from "./ConnectionStatus";
+import OnlineUsersList from "./OnlineUsers";
 
 // Use Monaco types through the useMonaco hook
 
@@ -22,13 +26,13 @@ interface CollaborativeEditorProps {
 
 const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
   documentId,
-  initialContent = '',
+  initialContent = "",
   onContentChange,
   onSave,
   readOnly = false,
-  language = 'typescript',
-  height = '100%',
-  className = ''
+  language = "typescript",
+  height = "100%",
+  className = "",
 }) => {
   const { theme } = useThemeStore();
   const { agentName } = useAuthStore();
@@ -37,51 +41,61 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
   const collaborationRef = useRef<CollaborationService | null>(null);
   const bindingRef = useRef<MonacoBinding | null>(null);
   const userDecorationsRef = useRef<Map<string, string[]>>(new Map());
-  const lastCursorPositionRef = useRef<{ line: number; column: number } | null>(null);
+  const lastCursorPositionRef = useRef<{ line: number; column: number } | null>(
+    null
+  );
 
   // State
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(ConnectionStatus.DISCONNECTED);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(
+    ConnectionStatus.DISCONNECTED
+  );
   const [onlineUsers, setOnlineUsers] = useState<CollaborationUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Update user cursor
-  const updateUserCursor = useCallback((userId: string, user: CollaborationUser) => {
-    if (!editorRef.current || !user.cursor || !monaco || !userDecorationsRef.current) return;
+  const updateUserCursor = useCallback(
+    (userId: string, user: CollaborationUser) => {
+      if (
+        !editorRef.current ||
+        !user.cursor ||
+        !monaco ||
+        !userDecorationsRef.current
+      )
+        return;
 
-    const editor = editorRef.current;
-    const { line, column } = user.cursor;
+      const editor = editorRef.current;
+      const { line, column } = user.cursor;
 
-    // Clear old decorations
-    const oldDecorations = userDecorationsRef.current.get(userId) || [];
+      // Clear old decorations
+      const oldDecorations = userDecorationsRef.current.get(userId) || [];
 
-    // Create new decorations
-    const newDecorations = editor.deltaDecorations(
-      oldDecorations,
-      [
+      // Create new decorations
+      const newDecorations = editor.deltaDecorations(oldDecorations, [
         {
           range: new monaco.Range(line, column, line, column),
           options: {
-            className: 'user-cursor',
+            className: "user-cursor",
             stickiness: 1,
-            hoverMessage: { value: `**${user.name}** is here` }
-          }
+            hoverMessage: { value: `**${user.name}** is here` },
+          },
         },
         {
           range: new monaco.Range(line, column, line, column),
           options: {
-            className: 'user-cursor-line',
+            className: "user-cursor-line",
             isWholeLine: true,
-            linesDecorationsClassName: 'user-cursor-line'
-          }
-        }
-      ]
-    );
+            linesDecorationsClassName: "user-cursor-line",
+          },
+        },
+      ]);
 
-    if (userDecorationsRef.current) {
-      userDecorationsRef.current.set(userId, newDecorations);
-    }
-  }, [monaco]);
+      if (userDecorationsRef.current) {
+        userDecorationsRef.current.set(userId, newDecorations);
+      }
+    },
+    [monaco]
+  );
 
   // Initialize collaboration service
   const initializeCollaboration = useCallback(async () => {
@@ -91,31 +105,37 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
 
       // Clean up previous collaboration service
       if (collaborationRef.current) {
-        console.log('🧹 [CollaborativeEditor] Cleaning up previous collaboration service');
+        console.log(
+          "🧹 [CollaborativeEditor] Cleaning up previous collaboration service"
+        );
         collaborationRef.current.destroy();
         collaborationRef.current = null;
       }
       if (bindingRef.current) {
-        console.log('🧹 [CollaborativeEditor] Cleaning up previous Monaco binding');
+        console.log(
+          "🧹 [CollaborativeEditor] Cleaning up previous Monaco binding"
+        );
         bindingRef.current.destroy();
         bindingRef.current = null;
       }
 
       const roomName = `document-${documentId}`;
-      const userId = `user-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const userId = `user-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}`;
 
-      console.log('🚀 [CollaborativeEditor] Initializing collaboration...');
-      console.log('   📄 Document ID:', documentId);
-      console.log('   🏠 Room Name:', roomName);
-      console.log('   👤 User ID:', userId);
-      console.log('   👤 Agent Name:', agentName);
-      console.log('   🔗 WebSocket URL: ws://localhost:1234');
+      console.log("🚀 [CollaborativeEditor] Initializing collaboration...");
+      console.log("   📄 Document ID:", documentId);
+      console.log("   🏠 Room Name:", roomName);
+      console.log("   👤 User ID:", userId);
+      console.log("   👤 Agent Name:", agentName);
+      console.log("   🔗 WebSocket URL: ws://localhost:1234");
 
       // Create collaboration service
       const collaborationService = new CollaborationService(
         roomName,
         userId,
-        'ws://localhost:1234',
+        "ws://localhost:1234",
         agentName || undefined
       );
 
@@ -123,20 +143,29 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
 
       // Set up event listeners
       collaborationService.onConnectionStatusChange((status) => {
-        console.log('🔗 [CollaborativeEditor] Connection status changed:', status);
+        console.log(
+          "🔗 [CollaborativeEditor] Connection status changed:",
+          status
+        );
         setConnectionStatus(status);
         if (status === ConnectionStatus.CONNECTED) {
-          console.log('✅ [CollaborativeEditor] Successfully connected to collaboration server');
+          console.log(
+            "✅ [CollaborativeEditor] Successfully connected to collaboration server"
+          );
           setError(null);
           setIsLoading(false);
         }
       });
 
       collaborationService.onUsersUpdate((users) => {
-        console.log('👥 [CollaborativeEditor] Online users updated:', users.length, users.map(u => u.name));
+        console.log(
+          "👥 [CollaborativeEditor] Online users updated:",
+          users.length,
+          users.map((u) => u.name)
+        );
         setOnlineUsers(users);
         // Update all user cursors
-        users.forEach(user => {
+        users.forEach((user) => {
           if (user.cursor && editorRef.current && monaco) {
             updateUserCursor(user.id, user);
           }
@@ -150,118 +179,163 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
       });
 
       collaborationService.onContentUpdate((content) => {
-        console.log('📝 [CollaborativeEditor] Content updated, length:', content.length);
+        console.log(
+          "📝 [CollaborativeEditor] Content updated, length:",
+          content.length
+        );
         onContentChange?.(content);
       });
 
       collaborationService.onErrorOccurred((error) => {
-        console.error('❌ [CollaborativeEditor] Collaboration error:', error);
+        console.error("❌ [CollaborativeEditor] Collaboration error:", error);
         setError(error.message);
         setIsLoading(false);
       });
 
-      // Set initial content - simplified logic, only set when empty
+      // Set initial content - simplified logic, only set when content is not empty
       if (initialContent) {
-        console.log('📄 [CollaborativeEditor] Setting initial content, length:', initialContent.length);
+        console.log(
+          "📄 [CollaborativeEditor] Setting initial content, length:",
+          initialContent.length
+        );
         collaborationService.setInitialContent(initialContent);
       } else {
-        console.log('📄 [CollaborativeEditor] No initial content provided');
+        console.log("📄 [CollaborativeEditor] No initial content provided");
       }
-
     } catch (error) {
-      console.error('❌ [CollaborativeEditor] Failed to initialize collaboration service:', error);
-      setError('Failed to initialize collaboration service, please click retry button');
+      console.error(
+        "❌ [CollaborativeEditor] Failed to initialize collaboration service:",
+        error
+      );
+      setError(
+        "Failed to initialize collaboration service, please click retry button"
+      );
       setIsLoading(false);
     }
-  }, [documentId, initialContent, onContentChange, monaco, updateUserCursor, agentName]);
-
+  }, [
+    documentId,
+    initialContent,
+    onContentChange,
+    monaco,
+    updateUserCursor,
+    agentName,
+  ]);
 
   // Handle editor mount
-  const handleEditorDidMount = useCallback((editor: any) => {
-    console.log('🖥️  [CollaborativeEditor] Monaco editor mounted');
-    editorRef.current = editor;
+  const handleEditorDidMount = useCallback(
+    (editor: any) => {
+      console.log("🖥️  [CollaborativeEditor] Monaco editor mounted");
+      editorRef.current = editor;
 
-    let retryCount = 0;
-    const maxRetries = 50; // 5 second timeout (50 * 100ms)
+      let retryCount = 0;
+      const maxRetries = 50; // 5 seconds timeout (50 * 100ms)
 
-    // Wait for collaboration service initialization
-    const waitForCollaboration = () => {
-      retryCount++;
+      // Wait for collaboration service initialization to complete
+      const waitForCollaboration = () => {
+        retryCount++;
 
-      // Check current state in real-time, not relying on closure-captured values
-      const currentCollaboration = collaborationRef.current;
-      const currentMonaco = (window as any).monaco;
+        // Check current state in real-time, don't rely on closure-captured values
+        const currentCollaboration = collaborationRef.current;
+        const currentMonaco = (window as any).monaco;
 
-      console.log(`🔍 [CollaborativeEditor] Checking state... Retry: ${retryCount}/${maxRetries}`, {
-        hasCollaboration: !!currentCollaboration,
-        hasMonaco: !!currentMonaco,
-        hasEditor: !!editor
-      });
+        console.log(
+          `🔍 [CollaborativeEditor] Checking state... Retry: ${retryCount}/${maxRetries}`,
+          {
+            hasCollaboration: !!currentCollaboration,
+            hasMonaco: !!currentMonaco,
+            hasEditor: !!editor,
+          }
+        );
 
-      if (currentCollaboration && currentMonaco) {
-        // Check WebSocket connection status
-        const status = currentCollaboration.getConnectionStatus();
-        console.log(`🔄 [CollaborativeEditor] Waiting for connection... Status: ${status}, Retry: ${retryCount}/${maxRetries}`);
-
-        // Only create binding when connected
-        if (status === ConnectionStatus.CONNECTED) {
-          console.log('✅ [CollaborativeEditor] Creating Monaco-Yjs binding...');
-
-          // Create Monaco-Yjs binding
-          const binding = new MonacoBinding(
-            currentCollaboration.getYText(),
-            editor.getModel()!,
-            new Set([editor])
+        if (currentCollaboration && currentMonaco) {
+          // Check WebSocket connection status
+          const status = currentCollaboration.getConnectionStatus();
+          console.log(
+            `🔄 [CollaborativeEditor] Waiting for connection... Status: ${status}, Retry: ${retryCount}/${maxRetries}`
           );
 
-          bindingRef.current = binding;
-          console.log('✅ [CollaborativeEditor] Monaco-Yjs binding created successfully');
+          // Only create binding when connected
+          if (status === ConnectionStatus.CONNECTED) {
+            console.log(
+              "✅ [CollaborativeEditor] Creating Monaco-Yjs binding..."
+            );
 
-          // Listen for cursor position changes
-          editor.onDidChangeCursorPosition((event: any) => {
-            const position = event.position;
-            const newPosition = { line: position.lineNumber, column: position.column };
+            // Create Monaco-Yjs binding
+            const binding = new MonacoBinding(
+              currentCollaboration.getYText(),
+              editor.getModel()!,
+              new Set([editor])
+            );
 
-            // Avoid frequently sending the same position
-            if (!lastCursorPositionRef.current ||
+            bindingRef.current = binding;
+            console.log(
+              "✅ [CollaborativeEditor] Monaco-Yjs binding created successfully"
+            );
+
+            // Listen for cursor position changes
+            editor.onDidChangeCursorPosition((event: any) => {
+              const position = event.position;
+              const newPosition = {
+                line: position.lineNumber,
+                column: position.column,
+              };
+
+              // Avoid sending the same position frequently
+              if (
+                !lastCursorPositionRef.current ||
                 lastCursorPositionRef.current.line !== newPosition.line ||
-                lastCursorPositionRef.current.column !== newPosition.column) {
-              collaborationRef.current?.updateCursor(newPosition.line, newPosition.column);
-              lastCursorPositionRef.current = newPosition;
-            }
-          });
+                lastCursorPositionRef.current.column !== newPosition.column
+              ) {
+                collaborationRef.current?.updateCursor(
+                  newPosition.line,
+                  newPosition.column
+                );
+                lastCursorPositionRef.current = newPosition;
+              }
+            });
 
-          // Add save shortcut
-          editor.addCommand(currentMonaco.KeyMod.CtrlCmd | currentMonaco.KeyCode.KeyS, () => {
-            const content = editor.getValue();
-            onSave?.(content);
-          });
+            // Add save shortcut
+            editor.addCommand(
+              currentMonaco.KeyMod.CtrlCmd | currentMonaco.KeyCode.KeyS,
+              () => {
+                const content = editor.getValue();
+                onSave?.(content);
+              }
+            );
 
-          console.log('🎉 [CollaborativeEditor] Initialization complete!');
+            console.log("🎉 [CollaborativeEditor] Initialization complete!");
+          } else if (retryCount < maxRetries) {
+            // Still connecting, continue waiting
+            setTimeout(waitForCollaboration, 100);
+          } else {
+            console.error(
+              "❌ [CollaborativeEditor] Timeout waiting for connection"
+            );
+            setError("Connection timeout, please click retry button");
+          }
         } else if (retryCount < maxRetries) {
-          // Still connecting, continue waiting
+          // Collaboration service or Monaco not ready yet, continue waiting
+          console.log(
+            `⏳ [CollaborativeEditor] Waiting for service/monaco... Retry: ${retryCount}/${maxRetries}`
+          );
           setTimeout(waitForCollaboration, 100);
         } else {
-          console.error('❌ [CollaborativeEditor] Timeout waiting for connection');
-          setError('Connection timeout, please click retry button');
+          console.error(
+            "❌ [CollaborativeEditor] Timeout waiting for collaboration service"
+          );
+          console.error("   Debug info:", {
+            collaborationExists: !!collaborationRef.current,
+            monacoExists: !!currentMonaco,
+            editorExists: !!editor,
+          });
+          setError("Initialization timeout, please click retry button");
         }
-      } else if (retryCount < maxRetries) {
-        // Collaboration service or Monaco not ready yet, continue waiting
-        console.log(`⏳ [CollaborativeEditor] Waiting for service/monaco... Retry: ${retryCount}/${maxRetries}`);
-        setTimeout(waitForCollaboration, 100);
-      } else {
-        console.error('❌ [CollaborativeEditor] Timeout waiting for collaboration service');
-        console.error('   Debug info:', {
-          collaborationExists: !!collaborationRef.current,
-          monacoExists: !!currentMonaco,
-          editorExists: !!editor
-        });
-        setError('Initialization timeout, please click retry button');
-      }
-    };
+      };
 
-    waitForCollaboration();
-  }, [onSave]);
+      waitForCollaboration();
+    },
+    [onSave]
+  );
 
   // Send heartbeat
   useEffect(() => {
@@ -289,7 +363,7 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
 
   // Add custom CSS styles
   useEffect(() => {
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.textContent = `
       .user-cursor {
         border-left: 2px solid currentColor;
@@ -328,7 +402,7 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
       <div className={`flex items-center justify-center h-64 ${className}`}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
+          <p className={theme === "dark" ? "text-gray-400" : "text-gray-600"}>
             Connecting to collaboration service...
           </p>
         </div>
@@ -341,15 +415,32 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
       <div className={`flex items-center justify-center h-64 ${className}`}>
         <div className="text-center">
           <div className="text-red-500 mb-4">
-            <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.864-.833-2.634 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
+            <svg
+              className="w-16 h-16 mx-auto"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.864-.833-2.634 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"
+              />
             </svg>
           </div>
-          <h3 className={`text-lg font-medium mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+          <h3
+            className={`text-lg font-medium mb-2 ${
+              theme === "dark" ? "text-gray-200" : "text-gray-800"
+            }`}
+          >
             Connection Failed
           </h3>
-          <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-4`}>
+          <p
+            className={`${
+              theme === "dark" ? "text-gray-400" : "text-gray-600"
+            } mb-4`}
+          >
             {error}
           </p>
           <button
@@ -366,35 +457,46 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
   return (
     <div className={`flex flex-col h-full ${className}`}>
       {/* Top toolbar */}
-      <div className={`flex items-center justify-between p-4 border-b ${
-        theme === 'dark' ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
-      }`}>
+      <div
+        className={`flex items-center justify-between p-4 border-b ${
+          theme === "dark"
+            ? "border-gray-700 bg-gray-800"
+            : "border-gray-200 bg-white"
+        }`}
+      >
         <div className="flex items-center space-x-4">
-          <ConnectionStatusIndicator
-            status={connectionStatus}
-            theme={theme}
-          />
-          <div className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <ConnectionStatusIndicator status={connectionStatus} theme={theme} />
+          <div
+            className={`text-sm ${
+              theme === "dark" ? "text-gray-400" : "text-gray-600"
+            }`}
+          >
             Document ID: {documentId}
           </div>
         </div>
 
         <div className="flex items-center space-x-4">
-          <OnlineUsersList
-            users={onlineUsers}
-            theme={theme}
-          />
+          <OnlineUsersList users={onlineUsers} theme={theme} />
           {onSave && (
             <button
               onClick={() => {
-                const content = editorRef.current?.getValue() || '';
+                const content = editorRef.current?.getValue() || "";
                 onSave(content);
               }}
               className="flex items-center space-x-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12"
+                />
               </svg>
               <span>Save</span>
             </button>
@@ -407,31 +509,31 @@ const CollaborativeEditor: React.FC<CollaborativeEditorProps> = ({
         <Editor
           height={height}
           language={language}
-          theme={theme === 'dark' ? 'vs-dark' : 'vs-light'}
+          theme={theme === "dark" ? "vs-dark" : "vs-light"}
           onMount={handleEditorDidMount}
           options={{
             readOnly,
             minimap: { enabled: false },
             fontSize: 14,
-            lineNumbers: 'on',
-            wordWrap: 'on',
+            lineNumbers: "on",
+            wordWrap: "on",
             automaticLayout: true,
             scrollBeyondLastLine: false,
-            renderLineHighlight: 'line',
+            renderLineHighlight: "line",
             selectOnLineNumbers: true,
             bracketPairColorization: { enabled: true },
             formatOnPaste: true,
             formatOnType: true,
             tabSize: 2,
             insertSpaces: true,
-            cursorStyle: 'line',
-            cursorBlinking: 'smooth',
+            cursorStyle: "line",
+            cursorBlinking: "smooth",
             smoothScrolling: true,
             mouseWheelZoom: true,
             contextmenu: true,
             quickSuggestions: true,
             suggestOnTriggerCharacters: true,
-            acceptSuggestionOnEnter: 'on'
+            acceptSuggestionOnEnter: "on",
           }}
         />
       </div>

@@ -18,7 +18,7 @@ const OnlineUsersList: React.FC<OnlineUsersProps> = ({
     return (
       <div className={`flex items-center space-x-2 ${className}`}>
         <div className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-          No users online
+          No online users
         </div>
       </div>
     );
@@ -33,7 +33,7 @@ const OnlineUsersList: React.FC<OnlineUsersProps> = ({
         onMouseEnter={() => setShowDetails(true)}
         onMouseLeave={() => setShowDetails(false)}
       >
-        {/* Show first 5 user avatars */}
+        {/* Display first 5 user avatars */}
         {users.slice(0, 5).map((user, index) => (
           <div
             key={user.id}
@@ -127,7 +127,7 @@ const OnlineUsersList: React.FC<OnlineUsersProps> = ({
                     `}></div>
                   </div>
 
-                  {/* User info */}
+                  {/* User information */}
                   <div className="flex-1 min-w-0">
                     <div className={`text-sm font-medium truncate ${
                       theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
@@ -161,7 +161,7 @@ const OnlineUsersList: React.FC<OnlineUsersProps> = ({
               ))}
             </div>
 
-            {/* Footer info */}
+            {/* Footer information */}
             <div className={`
               mt-3 pt-3 border-t text-xs text-center
               ${theme === 'dark'
@@ -169,7 +169,7 @@ const OnlineUsersList: React.FC<OnlineUsersProps> = ({
                 : 'border-gray-200 text-gray-600'
               }
             `}>
-              Real-time collaboration · All changes auto-synced
+              Real-time collaboration mode · All changes auto-synced
             </div>
           </div>
         </div>
