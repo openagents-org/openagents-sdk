@@ -508,9 +508,18 @@ def check_nodejs_availability() -> Tuple[bool, str]:
     missing_tools = []
     version_issues = []
 
+    # On Windows, we need shell=True to find executables in PATH
+    is_windows = sys.platform.startswith('win')
+
     # Check for Node.js and its version
     try:
-        result = subprocess.run(["node", "--version"], capture_output=True, check=True, text=True)
+        result = subprocess.run(
+            ["node", "--version"],
+            capture_output=True,
+            check=True,
+            text=True,
+            shell=is_windows
+        )
         node_version = result.stdout.strip()
         # Parse version string (e.g., "v20.1.0" -> 20)
         if node_version.startswith('v'):
@@ -524,13 +533,23 @@ def check_nodejs_availability() -> Tuple[bool, str]:
 
     # Check for npm
     try:
-        subprocess.run(["npm", "--version"], capture_output=True, check=True)
+        subprocess.run(
+            ["npm", "--version"],
+            capture_output=True,
+            check=True,
+            shell=is_windows
+        )
     except (FileNotFoundError, subprocess.CalledProcessError):
         missing_tools.append("npm")
 
     # Check for npx
     try:
-        subprocess.run(["npx", "--version"], capture_output=True, check=True)
+        subprocess.run(
+            ["npx", "--version"],
+            capture_output=True,
+            check=True,
+            shell=is_windows
+        )
     except (FileNotFoundError, subprocess.CalledProcessError):
         missing_tools.append("npx")
 
@@ -580,18 +599,20 @@ Then run [code]openagents studio[/code] again.
 
 def check_openagents_studio_package() -> Tuple[bool, bool, str]:
     """Check if openagents-studio package is installed and up-to-date.
-    
+
     Returns:
         tuple: (is_installed, is_latest, installed_version)
     """
     openagents_prefix = os.path.expanduser("~/.openagents")
-    
+    is_windows = sys.platform.startswith('win')
+
     # Check if package is installed
     try:
         result = subprocess.run(
             ["npm", "list", "-g", "openagents-studio", "--prefix", openagents_prefix],
             capture_output=True,
-            text=True
+            text=True,
+            shell=is_windows
         )
         
         if result.returncode != 0:
@@ -614,7 +635,8 @@ def check_openagents_studio_package() -> Tuple[bool, bool, str]:
         result = subprocess.run(
             ["npm", "view", "openagents-studio", "version"],
             capture_output=True,
-            text=True
+            text=True,
+            shell=is_windows
         )
         
         if result.returncode != 0:
@@ -633,19 +655,20 @@ def check_openagents_studio_package() -> Tuple[bool, bool, str]:
 
 def install_openagents_studio_package(progress=None, task_id=None) -> None:
     """Install openagents-studio package and dependencies to ~/.openagents prefix.
-    
+
     Args:
         progress: Optional Rich Progress instance to use for progress updates
         task_id: Optional task ID for progress updates
     """
     import threading
     import time
-    
+
     openagents_prefix = os.path.expanduser("~/.openagents")
-    
+    is_windows = sys.platform.startswith('win')
+
     # Ensure the prefix directory exists
     os.makedirs(openagents_prefix, exist_ok=True)
-    
+
     logging.info("Installing openagents-studio package and dependencies...")
     
     # Progress tracking variables
@@ -703,6 +726,7 @@ def install_openagents_studio_package(progress=None, task_id=None) -> None:
             capture_output=True,
             text=True,
             timeout=600,  # 10 minute timeout for npm install
+            shell=is_windows
         )
         
         process_complete = True
@@ -728,28 +752,37 @@ def install_openagents_studio_package(progress=None, task_id=None) -> None:
 
 def launch_studio_with_package(studio_port: int = 8055) -> subprocess.Popen:
     """Launch studio using the installed openagents-studio package.
-    
+
     Args:
         studio_port: Port for the studio frontend
-        
+
     Returns:
         subprocess.Popen: The studio process
     """
     openagents_prefix = os.path.expanduser("~/.openagents")
-    studio_bin = os.path.join(openagents_prefix, "bin", "openagents-studio")
-    
+    is_windows = sys.platform.startswith('win')
+
+    # On Windows, npm creates a .cmd wrapper instead of a direct executable
+    if is_windows:
+        studio_bin = os.path.join(openagents_prefix, "bin", "openagents-studio.cmd")
+    else:
+        studio_bin = os.path.join(openagents_prefix, "bin", "openagents-studio")
+
     if not os.path.exists(studio_bin):
         raise RuntimeError(f"openagents-studio binary not found: {studio_bin}")
-    
+
     # Set up environment with PATH including ~/.openagents/bin
     env = os.environ.copy()
     current_path = env.get("PATH", "")
-    openagents_bin = os.path.join(openagents_prefix, "bin")
-    env["PATH"] = f"{openagents_bin}:{current_path}"
+    openagents_bin_dir = os.path.join(openagents_prefix, "bin")
+
+    # On Windows, use semicolon as path separator
+    path_sep = ";" if is_windows else ":"
+    env["PATH"] = f"{openagents_bin_dir}{path_sep}{current_path}"
     env["PORT"] = str(studio_port)
-    
+
     logging.info(f"Starting openagents-studio on port {studio_port}...")
-    
+
     try:
         process = subprocess.Popen(
             [studio_bin, "start"],
@@ -759,6 +792,7 @@ def launch_studio_with_package(studio_port: int = 8055) -> subprocess.Popen:
             text=True,
             bufsize=1,
             universal_newlines=True,
+            shell=is_windows
         )
         return process
     except FileNotFoundError:
@@ -783,6 +817,8 @@ def launch_studio_frontend(studio_port: int = 8055) -> subprocess.Popen:
     if not is_available:
         raise RuntimeError(error_msg)
 
+    is_windows = sys.platform.startswith('win')
+
     # Find the studio directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(os.path.dirname(script_dir))
@@ -802,6 +838,7 @@ def launch_studio_frontend(studio_port: int = 8055) -> subprocess.Popen:
                 capture_output=True,
                 text=True,
                 timeout=300,  # 5 minute timeout for npm install
+                shell=is_windows
             )
             if install_process.returncode != 0:
                 raise RuntimeError(
@@ -836,6 +873,7 @@ def launch_studio_frontend(studio_port: int = 8055) -> subprocess.Popen:
             text=True,
             bufsize=1,
             universal_newlines=True,
+            shell=is_windows
         )
         return process
     except FileNotFoundError:
