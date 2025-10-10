@@ -779,6 +779,15 @@ def launch_studio_with_package(studio_port: int = 8055) -> subprocess.Popen:
     env["HOST"] = "0.0.0.0"
     env["DANGEROUSLY_DISABLE_HOST_CHECK"] = "true"
 
+    # On Windows, increase Node.js memory limit to avoid buffer allocation errors
+    # Also disable source maps which can cause memory issues
+    if is_windows:
+        env["NODE_OPTIONS"] = "--max-old-space-size=4096"
+        env["GENERATE_SOURCEMAP"] = "false"
+        # Use polling for file watching to reduce memory usage on Windows
+        env["CHOKIDAR_USEPOLLING"] = "true"
+        env["WATCHPACK_POLLING"] = "true"
+
     # On Windows, npm global installs with --prefix don't reliably create wrapper scripts,
     # so we use npx directly which is more reliable
     if is_windows:
@@ -940,6 +949,13 @@ def launch_studio_frontend(studio_port: int = 8055) -> subprocess.Popen:
     env["PORT"] = str(studio_port)
     env["HOST"] = "0.0.0.0"
     env["DANGEROUSLY_DISABLE_HOST_CHECK"] = "true"
+
+    # On Windows, increase Node.js memory limit and optimize file watching
+    if is_windows:
+        env["NODE_OPTIONS"] = "--max-old-space-size=4096"
+        env["GENERATE_SOURCEMAP"] = "false"
+        env["CHOKIDAR_USEPOLLING"] = "true"
+        env["WATCHPACK_POLLING"] = "true"
 
     logging.info(f"Starting studio frontend on port {studio_port}...")
 
