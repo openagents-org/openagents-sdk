@@ -773,26 +773,63 @@ def launch_studio_with_package(studio_port: int = 8055) -> subprocess.Popen:
     openagents_prefix = os.path.expanduser("~/.openagents")
     is_windows = sys.platform.startswith('win')
 
-    # Try to find the studio binary - npm creates different files on different platforms
-    # and in different locations depending on how it was installed
-    possible_bin_paths = []
+    # Set up environment
+    env = os.environ.copy()
+    env["PORT"] = str(studio_port)
+    env["HOST"] = "0.0.0.0"
+    env["DANGEROUSLY_DISABLE_HOST_CHECK"] = "true"
+
+    # On Windows, npm global installs with --prefix don't reliably create wrapper scripts,
+    # so we use npx directly which is more reliable
     if is_windows:
-        # On Windows, npm can create .cmd, .bat, or .ps1 files in multiple locations
-        possible_bin_paths = [
-            # Standard bin location
-            os.path.join(openagents_prefix, "bin", "openagents-studio.cmd"),
-            os.path.join(openagents_prefix, "bin", "openagents-studio.bat"),
-            os.path.join(openagents_prefix, "bin", "openagents-studio"),
-            # node_modules/.bin location
-            os.path.join(openagents_prefix, "node_modules", ".bin", "openagents-studio.cmd"),
-            os.path.join(openagents_prefix, "node_modules", ".bin", "openagents-studio.bat"),
-            os.path.join(openagents_prefix, "node_modules", ".bin", "openagents-studio"),
+        logging.info(f"Starting openagents-studio on port {studio_port} using npx...")
+
+        # Try to find the openagents-studio directory
+        possible_studio_dirs = [
+            os.path.join(openagents_prefix, "node_modules", "openagents-studio"),
+            os.path.join(openagents_prefix, "lib", "node_modules", "openagents-studio"),
         ]
-    else:
-        possible_bin_paths = [
-            os.path.join(openagents_prefix, "bin", "openagents-studio"),
-            os.path.join(openagents_prefix, "node_modules", ".bin", "openagents-studio"),
-        ]
+
+        studio_dir = None
+        for dir_path in possible_studio_dirs:
+            if os.path.exists(dir_path):
+                studio_dir = dir_path
+                break
+
+        if not studio_dir:
+            raise RuntimeError(
+                f"openagents-studio package directory not found.\n"
+                f"Searched in: {', '.join(possible_studio_dirs)}\n"
+                f"Try reinstalling with: pip install --upgrade openagents"
+            )
+
+        try:
+            # Call craco directly to avoid the Unix-style env var syntax in npm scripts
+            # The environment variables (PORT, HOST, DANGEROUSLY_DISABLE_HOST_CHECK) are set via env parameter
+            process = subprocess.Popen(
+                ["npx", "craco", "start"],
+                env=env,
+                cwd=studio_dir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+                shell=True
+            )
+            return process
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to run openagents-studio with npx: {e}\n"
+                f"Make sure Node.js and npm are properly installed.\n"
+                f"Try reinstalling with: pip install --upgrade openagents"
+            )
+
+    # On Unix-like systems, try to find the binary first
+    possible_bin_paths = [
+        os.path.join(openagents_prefix, "bin", "openagents-studio"),
+        os.path.join(openagents_prefix, "node_modules", ".bin", "openagents-studio"),
+    ]
 
     # Find the first existing binary
     studio_bin = None
@@ -802,23 +839,9 @@ def launch_studio_with_package(studio_port: int = 8055) -> subprocess.Popen:
             break
 
     if not studio_bin:
-        # List what's actually in the bin directory for debugging
-        bin_dir = os.path.join(openagents_prefix, "bin")
-        if os.path.exists(bin_dir):
-            files_in_bin = os.listdir(bin_dir)
-            logging.warning(
-                f"openagents-studio binary not found. Files in {bin_dir}: {', '.join(files_in_bin) if files_in_bin else '(empty)'}"
-            )
-        else:
-            logging.warning(f"Bin directory does not exist: {bin_dir}")
-
-        # Try using npx as a fallback to run openagents-studio
-        logging.warning(f"Trying to run openagents-studio using npx...")
+        # Try using npx as a fallback on Unix systems too
+        logging.warning(f"openagents-studio binary not found, trying npx...")
         try:
-            # Use npx to run the package
-            env = os.environ.copy()
-            env["PORT"] = str(studio_port)
-
             process = subprocess.Popen(
                 ["npx", "--prefix", openagents_prefix, "openagents-studio", "start"],
                 env=env,
@@ -827,7 +850,6 @@ def launch_studio_with_package(studio_port: int = 8055) -> subprocess.Popen:
                 text=True,
                 bufsize=1,
                 universal_newlines=True,
-                shell=is_windows
             )
             return process
         except Exception as e:
@@ -838,14 +860,9 @@ def launch_studio_with_package(studio_port: int = 8055) -> subprocess.Popen:
             )
 
     # Set up environment with PATH including ~/.openagents/bin
-    env = os.environ.copy()
     current_path = env.get("PATH", "")
     openagents_bin_dir = os.path.join(openagents_prefix, "bin")
-
-    # On Windows, use semicolon as path separator
-    path_sep = ";" if is_windows else ":"
-    env["PATH"] = f"{openagents_bin_dir}{path_sep}{current_path}"
-    env["PORT"] = str(studio_port)
+    env["PATH"] = f"{openagents_bin_dir}:{current_path}"
 
     logging.info(f"Starting openagents-studio on port {studio_port}...")
 
@@ -858,7 +875,6 @@ def launch_studio_with_package(studio_port: int = 8055) -> subprocess.Popen:
             text=True,
             bufsize=1,
             universal_newlines=True,
-            shell=is_windows
         )
         return process
     except FileNotFoundError:
