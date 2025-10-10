@@ -29,7 +29,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
 from rich.text import Text
 from rich.prompt import Confirm
 from rich.live import Live
@@ -631,8 +631,16 @@ def check_openagents_studio_package() -> Tuple[bool, bool, str]:
         return True, True, installed_version
 
 
-def install_openagents_studio_package() -> None:
-    """Install openagents-studio package and dependencies to ~/.openagents prefix."""
+def install_openagents_studio_package(progress=None, task_id=None) -> None:
+    """Install openagents-studio package and dependencies to ~/.openagents prefix.
+    
+    Args:
+        progress: Optional Rich Progress instance to use for progress updates
+        task_id: Optional task ID for progress updates
+    """
+    import threading
+    import time
+    
     openagents_prefix = os.path.expanduser("~/.openagents")
     
     # Ensure the prefix directory exists
@@ -640,17 +648,66 @@ def install_openagents_studio_package() -> None:
     
     logging.info("Installing openagents-studio package and dependencies...")
     
+    # Progress tracking variables
+    progress_stages = [
+        "📦 Resolving dependencies...",
+        "⬇️  Downloading packages...",
+        "🔧 Installing packages...",
+        "🎯 Finalizing installation..."
+    ]
+    current_stage = 0
+    process_complete = False
+    
+    def update_progress():
+        nonlocal current_stage, process_complete
+        start_time = time.time()
+        
+        while not process_complete:
+            elapsed = time.time() - start_time
+            
+            # Update stage based on elapsed time (rough estimates)
+            if elapsed > 5 and current_stage < 1:
+                current_stage = 1
+                if progress and task_id:
+                    progress.update(task_id, description=progress_stages[1], completed=25)
+            elif elapsed > 15 and current_stage < 2:
+                current_stage = 2
+                if progress and task_id:
+                    progress.update(task_id, description=progress_stages[2], completed=60)
+            elif elapsed > 30 and current_stage < 3:
+                current_stage = 3
+                if progress and task_id:
+                    progress.update(task_id, description=progress_stages[3], completed=90)
+            else:
+                # Increment progress slowly for the current stage
+                if progress and task_id:
+                    current_progress = min(progress.tasks[task_id].completed + 1, 95)
+                    progress.update(task_id, completed=current_progress)
+            
+            time.sleep(1)
+    
+    # Start progress update thread if we have progress context
+    if progress and task_id:
+        progress.update(task_id, description=progress_stages[0], completed=5)
+        progress_thread = threading.Thread(target=update_progress, daemon=True)
+        progress_thread.start()
+    
     try:
         install_process = subprocess.run(
             [
                 "npm", "install", "-g",
                 "openagents-studio",
-                "--prefix", openagents_prefix
+                "--prefix", openagents_prefix,
+                "--silent"  # Reduce npm output noise
             ],
             capture_output=True,
             text=True,
             timeout=600,  # 10 minute timeout for npm install
         )
+        
+        process_complete = True
+        if progress and task_id:
+            progress.update(task_id, description="✅ Installation complete!", completed=100)
         
         if install_process.returncode != 0:
             raise RuntimeError(
@@ -660,10 +717,12 @@ def install_openagents_studio_package() -> None:
         logging.info("openagents-studio package installed successfully")
         
     except subprocess.TimeoutExpired:
+        process_complete = True
         raise RuntimeError(
             "npm install timed out after 10 minutes. Please check your internet connection and try again."
         )
     except FileNotFoundError:
+        process_complete = True
         raise RuntimeError("npm command not found. Please install Node.js and npm.")
 
 
@@ -795,6 +854,9 @@ def studio_command(args) -> None:
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        TimeElapsedColumn(),
         console=console,
     ) as progress:
         startup_task = progress.add_task("🚀 Starting OpenAgents Studio...", total=None)
@@ -816,11 +878,15 @@ def studio_command(args) -> None:
             is_installed, is_latest, installed_version = check_openagents_studio_package()
 
             if not is_installed:
-                progress.update(startup_task, description="📦 Installing openagents-studio package...")
-                install_openagents_studio_package()
+                # Create a separate task for installation with progress bar
+                install_task = progress.add_task("📦 Installing openagents-studio package...", total=100)
+                install_openagents_studio_package(progress, install_task)
+                progress.remove_task(install_task)
             elif not is_latest:
-                progress.update(startup_task, description=f"📦 Updating openagents-studio from {installed_version}...")
-                install_openagents_studio_package()
+                # Create a separate task for update with progress bar
+                install_task = progress.add_task(f"📦 Updating openagents-studio from {installed_version}...", total=100)
+                install_openagents_studio_package(progress, install_task)
+                progress.remove_task(install_task)
             else:
                 console.print(f"[green]✅ openagents-studio package up-to-date ({installed_version})[/green]")
 
@@ -830,6 +896,7 @@ def studio_command(args) -> None:
             studio_port = args.studio_port
             workspace_path = getattr(args, "workspace", None)
             no_browser = args.no_browser
+            standalone = getattr(args, "standalone", False)
 
             # Determine workspace path (optional)
             if workspace_path:
@@ -866,31 +933,37 @@ def studio_command(args) -> None:
                 console.print(error_panel)
                 raise typer.Exit(1)
 
-            # Check network port availability 
-            network_available, network_process = check_port_availability(network_host, network_port)
-            skip_network = False
-            
-            if not network_available:
-                if network_port == 8700:  # Default network port
-                    console.print(f"[yellow]⚠️  Default network port {network_port} is occupied by {network_process}[/yellow]")
-                    console.print("[yellow]🎨 Will start studio frontend only (network backend skipped)[/yellow]")
-                    skip_network = True
-                else:
-                    # Custom port specified, show error
-                    error_panel = Panel(
-                        f"🌐 Network port {network_port}: occupied by {network_process}\n\n"
-                        f"💡 Solutions:\n"
-                        f"1️⃣  Use different port: [code]openagents studio --port <available-port>[/code]\n"
-                        f"2️⃣  Stop the conflicting process: [code]sudo lsof -ti:{network_port} | xargs kill[/code]\n"
-                        f"3️⃣  Use default port and skip network: [code]openagents studio[/code] (without --port)",
-                        title="[red]❌ Network Port Conflict[/red]",
-                        border_style="red"
-                    )
-                    console.print(error_panel)
-                    raise typer.Exit(1)
+            # Handle standalone mode or check network port availability
+            if standalone:
+                skip_network = True
+                console.print("[blue]🎨 Starting in standalone mode (frontend only)[/blue]")
+            else:
+                # Check network port availability 
+                network_available, network_process = check_port_availability(network_host, network_port)
+                skip_network = False
+                
+                if not network_available:
+                    if network_port == 8700:  # Default network port
+                        console.print(f"[yellow]⚠️  Default network port {network_port} is occupied by {network_process}[/yellow]")
+                        console.print("[yellow]🎨 Will start studio frontend only (network backend skipped)[/yellow]")
+                        skip_network = True
+                    else:
+                        # Custom port specified, show error
+                        error_panel = Panel(
+                            f"🌐 Network port {network_port}: occupied by {network_process}\n\n"
+                            f"💡 Solutions:\n"
+                            f"1️⃣  Use different port: [code]openagents studio --port <available-port>[/code]\n"
+                            f"2️⃣  Stop the conflicting process: [code]sudo lsof -ti:{network_port} | xargs kill[/code]\n"
+                            f"3️⃣  Use standalone mode: [code]openagents studio --standalone[/code]\n"
+                            f"4️⃣  Use default port and skip network: [code]openagents studio[/code] (without --port)",
+                            title="[red]❌ Network Port Conflict[/red]",
+                            border_style="red"
+                        )
+                        console.print(error_panel)
+                        raise typer.Exit(1)
 
-            if not skip_network:
-                console.print("[green]✅ All ports are available[/green]")
+                if not skip_network:
+                    console.print("[green]✅ All ports are available[/green]")
 
             progress.update(startup_task, description="[green]✅ Pre-flight checks complete![/green]")
 
@@ -943,12 +1016,22 @@ def studio_command(args) -> None:
 
             if skip_network:
                 # Just wait for frontend without starting network
-                console.print(Panel(
-                    "🎨 Studio frontend running in standalone mode\n"
-                    "💡 Start a network separately with: [code]openagents network start[/code]",
-                    title="[yellow]⚠️  Standalone Mode[/yellow]",
-                    border_style="yellow"
-                ))
+                if standalone:
+                    # Explicit standalone mode
+                    console.print(Panel(
+                        "🎨 Studio frontend running in standalone mode\n"
+                        "💡 Start a network separately with: [code]openagents network start[/code]",
+                        title="[blue]🎨 Standalone Mode[/blue]",
+                        border_style="blue"
+                    ))
+                else:
+                    # Automatic standalone due to port conflict
+                    console.print(Panel(
+                        "🎨 Studio frontend running in standalone mode\n"
+                        "💡 Start a network separately with: [code]openagents network start[/code]",
+                        title="[yellow]⚠️  Standalone Mode (Port Conflict)[/yellow]",
+                        border_style="yellow"
+                    ))
                 frontend_process.wait()
             else:
                 # Launch network (this will run indefinitely)
@@ -1551,6 +1634,7 @@ def studio(
     studio_port: int = typer.Option(8055, "--studio-port", help="Studio frontend port"),
     workspace: Optional[str] = typer.Option(None, "--workspace", "-w", help="Path to workspace directory"),
     no_browser: bool = typer.Option(False, "--no-browser", help="Don't automatically open browser"),
+    standalone: bool = typer.Option(False, "--standalone", "-s", help="Launch studio frontend only (without network)"),
 ):
     """🎨 Launch OpenAgents Studio - A beautiful web interface"""
     import asyncio
@@ -1568,7 +1652,8 @@ def studio(
         port=port, 
         studio_port=studio_port,
         workspace=workspace,
-        no_browser=no_browser
+        no_browser=no_browser,
+        standalone=standalone
     )
     
     studio_command(args)
@@ -1683,7 +1768,7 @@ def show_banner():
     banner_text = """
 [bold blue]   ___                              ___                          _       [/bold blue]
 [bold blue]  / _ \\ _ __    ___  _ __           /   \\  __ _   ___  _ __   | |_  ___ [/bold blue]
-[bold blue] | | | | '_ \\  / _ \\| '_ \\         / /\\ / / _` | / _ \\| '_ \\  | __|/ __([/bold blue]
+[bold blue] | | | | '_ \\  / _ \\| '_ \\         / /\\ / / _` | / _ \\| '_ \\  | __|/ __[/bold blue]
 [bold blue] | |_| | |_) ||  __/| | | |       / /_// | (_| ||  __/| | | | | |_\\__ \\[/bold blue]
 [bold blue]  \\___/| .__/  \\___||_| |_|      /___,'   \\__, | \\___||_| |_|  \\__|___/[/bold blue]
 [bold blue]       |_|                              |___/                        [/bold blue]
