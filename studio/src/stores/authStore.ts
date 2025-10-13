@@ -17,6 +17,9 @@ interface NetworkState {
   agentName: string | null;
   setAgentName: (name: string | null) => void;
   clearAgentName: () => void;
+  passwordHash: string | null;
+  setPasswordHash: (hash: string | null) => void;
+  clearPasswordHash: () => void;
 
   // Module management
   moduleState: ModuleState;
@@ -37,6 +40,7 @@ export const useAuthStore = create<NetworkState>()(
     (set, get) => ({
       selectedNetwork: null,
       agentName: null,
+      passwordHash: null,
 
       // Initialize module state
       moduleState: {
@@ -63,9 +67,18 @@ export const useAuthStore = create<NetworkState>()(
         set({ agentName: null });
       },
 
+      setPasswordHash: (hash: string | null) => {
+        set({ passwordHash: hash });
+      },
+
+      clearPasswordHash: () => {
+        set({ passwordHash: null });
+      },
+
       clearNetwork: () => {
         set({ selectedNetwork: null });
         get().clearModules();
+        get().clearPasswordHash();
       },
 
       // Module management actions

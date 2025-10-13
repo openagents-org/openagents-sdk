@@ -72,7 +72,7 @@ interface OpenAgentsProviderProps {
 export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
   children,
 }) => {
-  const { agentName, selectedNetwork } = useAuthStore();
+  const { agentName, selectedNetwork, passwordHash } = useAuthStore();
   const { selectChannel, selectDirectMessage } = useChatStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -300,6 +300,7 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
       agentId: agentName,
       host: selectedNetwork.host,
       port: selectedNetwork.port,
+      passwordHash: passwordHash,
     });
 
     // Set up connection status listeners
@@ -321,6 +322,7 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
     agentName,
     selectedNetwork?.host,
     selectedNetwork?.port,
+    passwordHash,
     setupConnectionListeners,
   ]);
 

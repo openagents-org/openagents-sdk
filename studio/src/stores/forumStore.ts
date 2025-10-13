@@ -522,6 +522,11 @@ export const useForumStore = create<ForumState>((set, get) => ({
         return true;
       }
 
+      // Check if current agent is the owner
+      if (agentId && topic.owner_id === agentId) {
+        return true;
+      }
+
       // Check if current agent is in allowed groups
       if (agentId) {
         const hasPermission = topic.allowed_groups.some((groupName: string) => {
@@ -608,11 +613,17 @@ export const useForumStore = create<ForumState>((set, get) => ({
 
         // Permission check: determine if current agent has permission to view this topic
         const { agentId, groupsData } = get();
-        console.log(agentId, groupsData, "-----");
 
         // If no allowed_groups or empty, it's a public topic
         if (!allowed_groups || allowed_groups.length === 0) {
           console.log("ForumStore: Public topic, adding to list");
+          get().addTopicToList(forumTopic);
+          return;
+        }
+
+        // Check if current agent is the owner
+        if (agentId && topic.owner_id === agentId) {
+          console.log("ForumStore: Agent is owner, adding topic to list");
           get().addTopicToList(forumTopic);
           return;
         }
