@@ -12,6 +12,7 @@ import {
 } from "@/services/networkService";
 import { ConnectionStatusEnum } from "@/types/connection";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 
 const DEFAULT_PORT = "8700";
 
@@ -118,12 +119,12 @@ export default function ManualNetwork() {
         handleNetworkSelected(connection);
         navigate("/agent-setup");
       } else {
-        alert(
+        toast.error(
           "Failed to connect to the network. Please check the host and port."
         );
       }
     } catch (error) {
-      alert("Error connecting to network: " + error);
+      toast.error("Error connecting to network: " + error);
     } finally {
       setIsLoadingConnection(false);
     }
@@ -150,7 +151,7 @@ export default function ManualNetwork() {
       const networkResult = await fetchNetworkById(networkId);
 
       if (!networkResult.success) {
-        alert(`Failed to fetch network: ${networkResult.error}`);
+        toast.error(`Failed to fetch network: ${networkResult.error}`);
         return;
       }
 
@@ -199,7 +200,7 @@ export default function ManualNetwork() {
       }
 
       if (!host) {
-        alert(
+        toast.error(
           `Network configuration incomplete: No host information found for '${networkId}'`
         );
         return;
@@ -210,7 +211,7 @@ export default function ManualNetwork() {
         port,
       });
     } catch (error: any) {
-      alert(`Error connecting with network ID: ${error.message || error}`);
+      toast.error(`Error connecting with network ID: ${error.message || error}`);
     } finally {
       setIsLoadingConnection(false);
     }

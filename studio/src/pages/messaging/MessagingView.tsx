@@ -20,15 +20,13 @@ import MessageInput from "./components/MessageInput";
 import NotificationPermissionOverlay from "./components/NotificationPermissionOverlay";
 import { useThemeStore } from "@/stores/themeStore";
 import { CONNECTED_STATUS_COLOR } from "@/constants/chatConstants";
-import { useToast } from "@/context/ToastContext";
+import { toast } from "sonner";
 import { useAuthStore } from "@/stores/authStore";
 
 const ThreadMessagingViewEventBased: React.FC = () => {
   const { agentName } = useAuthStore();
   // Use theme from store
   const { theme: currentTheme } = useThemeStore();
-  // Use toast for error notifications
-  const { error: showError } = useToast();
 
   // 从 chatStore 获取当前选择状态和选择方法
   const { currentChannel, currentDirectMessage, selectChannel, selectDirectMessage } = useChatStore();
@@ -434,16 +432,16 @@ const ThreadMessagingViewEventBased: React.FC = () => {
           // 反应更新会通过事件监听器自动同步到 store 中
         } else {
           console.error(`Failed to ${action} reaction`);
-          // 显示错误toast
-          showError(`Failed to ${action} reaction "${reactionType}". Please try again.`);
+          // Show error toast
+          toast.error(`Failed to ${action} reaction "${reactionType}". Please try again.`);
         }
       } catch (error) {
         console.error(`Failed to ${action} reaction:`, error);
-        // 显示网络错误toast
-        showError(`Network error while ${action}ing reaction "${reactionType}". Please check your connection and try again.`);
+        // Show network error toast
+        toast.error(`Network error while ${action}ing reaction "${reactionType}". Please check your connection and try again.`);
       }
     },
-    [addReaction, removeReaction, currentChannel, showError]
+    [addReaction, removeReaction, currentChannel]
   );
 
   // Methods are managed through chatStore state, no ref needed

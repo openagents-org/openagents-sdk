@@ -1,6 +1,6 @@
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ToastProvider } from "@/context/ToastContext";
+import { Toaster } from "sonner";
 import { ConfirmProvider } from "@/context/ConfirmContext";
 import RouteGuard from "./RouteGuard";
 import { routes } from "./routeConfig";
@@ -40,33 +40,30 @@ const AppRouter: React.FC = () => {
 
   return (
     <BrowserRouter>
-      <ToastProvider>
-        <ConfirmProvider>
-          <Routes>
-            {publicRoutes.map(
-              ({ path, element: Component, requiresLayout }) => (
-                <Route
-                  key={path}
-                  path={path}
-                  element={
-                    <RouteGuard>
-                      {requiresLayout ? (
-                        <RootLayout>
-                          <Component />
-                        </RootLayout>
-                      ) : (
-                        <Component />
-                      )}
-                    </RouteGuard>
-                  }
-                />
-              )
-            )}
+      <ConfirmProvider>
+        <Toaster position="top-right" richColors />
+        <Routes>
+          {publicRoutes.map(({ path, element: Component, requiresLayout }) => (
+            <Route
+              key={path}
+              path={path}
+              element={
+                <RouteGuard>
+                  {requiresLayout ? (
+                    <RootLayout>
+                      <Component />
+                    </RootLayout>
+                  ) : (
+                    <Component />
+                  )}
+                </RouteGuard>
+              }
+            />
+          ))}
 
-            <Route path="/*" element={<ProtectedRoutes />} />
-          </Routes>
-        </ConfirmProvider>
-      </ToastProvider>
+          <Route path="/*" element={<ProtectedRoutes />} />
+        </Routes>
+      </ConfirmProvider>
     </BrowserRouter>
   );
 };

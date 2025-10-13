@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer';
 import { ForumComment } from '@/stores/forumStore';
 import { useForumStore } from '@/stores/forumStore';
-import { useToast } from '@/context/ToastContext';
+import { toast } from "sonner";
 
 interface ForumCommentThreadProps {
   comments: ForumComment[];
@@ -46,10 +46,9 @@ const ForumCommentItem: React.FC<ForumCommentItemProps> = React.memo(({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { vote, addComment } = useForumStore();
-  const { error: showErrorToast } = useToast();
 
   const handleVote = async (voteType: 'upvote' | 'downvote') => {
-    await vote('comment', comment.comment_id, voteType, showErrorToast);
+    await vote('comment', comment.comment_id, voteType, (message) => toast.error(message));
   };
 
   const handleReply = async () => {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ServerCard from './ServerCard';
 import { ServerIcon } from './icons';
 import { getAuth } from 'firebase/auth';
-import { useToast } from '../../context/ToastContext';
+import { toast } from "sonner";
 import { useConfirm } from '../../context/ConfirmContext';
 
 // 添加获取认证令牌的函数
@@ -38,7 +38,7 @@ const McpServerView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isVisible, setIsVisible] = useState(true);
-  const toast = useToast();
+  // Toast is imported from sonner
   const { confirm } = useConfirm();
 
   // 跟踪组件可见性

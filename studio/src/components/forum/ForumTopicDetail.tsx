@@ -4,7 +4,7 @@ import { useForumStore } from "@/stores/forumStore";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 import ForumCommentThread from "./components/ForumCommentThread";
 import ForumAddCommentModal from "./components/ForumAddCommentModal";
-import { useToast } from "@/context/ToastContext";
+import { toast } from "sonner";
 import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
 
 interface ForumTopicDetailProps {}
@@ -18,7 +18,6 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const openAgentsService = context?.connector;
   const isConnected = context?.isConnected;
-  const { error: showErrorToast } = useToast();
 
   const {
     selectedTopic,
@@ -78,7 +77,7 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
 
   const handleVote = async (voteType: "upvote" | "downvote") => {
     if (selectedTopic) {
-      await vote("topic", selectedTopic.topic_id, voteType, showErrorToast);
+      await vote("topic", selectedTopic.topic_id, voteType, (message) => toast.error(message));
     }
   };
 
