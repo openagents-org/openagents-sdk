@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { NetworkConnection } from "@/types/connection";
+import { encryptForStorage, decryptFromStorage } from "@/utils/storageEncryption";
 
 interface ModuleState {
   enabledModules: string[];
@@ -17,8 +18,9 @@ interface NetworkState {
   agentName: string | null;
   setAgentName: (name: string | null) => void;
   clearAgentName: () => void;
-  passwordHash: string | null;
-  setPasswordHash: (hash: string | null) => void;
+  passwordHashEncrypted: string | null; // Store encrypted version
+  setPasswordHash: (hash: string | null) => void; // Encrypts before storing
+  getPasswordHash: () => string | null; // Decrypts when retrieving
   clearPasswordHash: () => void;
 
   // Module management
@@ -40,7 +42,7 @@ export const useAuthStore = create<NetworkState>()(
     (set, get) => ({
       selectedNetwork: null,
       agentName: null,
-      passwordHash: null,
+      passwordHashEncrypted: null,
 
       // Initialize module state
       moduleState: {
@@ -68,11 +70,43 @@ export const useAuthStore = create<NetworkState>()(
       },
 
       setPasswordHash: (hash: string | null) => {
-        set({ passwordHash: hash });
+        if (!hash) {
+          set({ passwordHashEncrypted: null });
+          console.log('🔑 Password hash cleared');
+          return;
+        }
+
+        try {
+          const encrypted = encryptForStorage(hash);
+          set({ passwordHashEncrypted: encrypted });
+          console.log('🔑 Password hash encrypted and stored');
+        } catch (error) {
+          console.error('❌ Failed to encrypt password hash:', error);
+          // Fallback: don't store if encryption fails
+          set({ passwordHashEncrypted: null });
+        }
+      },
+
+      getPasswordHash: () => {
+        const encrypted = get().passwordHashEncrypted;
+        if (!encrypted) {
+          return null;
+        }
+
+        try {
+          const decrypted = decryptFromStorage(encrypted);
+          return decrypted;
+        } catch (error) {
+          console.error('❌ Failed to decrypt password hash:', error);
+          // Clear corrupted data
+          get().clearPasswordHash();
+          return null;
+        }
       },
 
       clearPasswordHash: () => {
-        set({ passwordHash: null });
+        set({ passwordHashEncrypted: null });
+        console.log('🔑 Password hash cleared from storage');
       },
 
       clearNetwork: () => {
@@ -124,8 +158,9 @@ export const useAuthStore = create<NetworkState>()(
       partialize: (state) => ({
         selectedNetwork: state.selectedNetwork,
         agentName: state.agentName,
+        passwordHashEncrypted: state.passwordHashEncrypted, // Persist encrypted password hash
         moduleState: state.moduleState,
-      }), // persist network, agent, and module state
+      }), // persist network, agent, encrypted password hash, and module state
     }
   )
 );
