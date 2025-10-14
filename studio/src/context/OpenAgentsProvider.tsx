@@ -72,7 +72,7 @@ interface OpenAgentsProviderProps {
 export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
   children,
 }) => {
-  const { agentName, selectedNetwork, passwordHash } = useAuthStore();
+  const { agentName, selectedNetwork, getPasswordHash } = useAuthStore();
   const { selectChannel, selectDirectMessage } = useChatStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -290,10 +290,14 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
       return;
     }
 
+    // Decrypt password hash before passing to connector
+    const passwordHash = getPasswordHash();
+
     console.log("🔧 Initializing OpenAgents connector...", {
       agentId: agentName,
       host: selectedNetwork.host,
       port: selectedNetwork.port,
+      hasPasswordHash: !!passwordHash,
     });
 
     const newConnector = new HttpEventConnector({
@@ -322,7 +326,7 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
     agentName,
     selectedNetwork?.host,
     selectedNetwork?.port,
-    passwordHash,
+    getPasswordHash,
     setupConnectionListeners,
   ]);
 
