@@ -11,7 +11,8 @@ import {
 import { useAuthStore } from "@/stores/authStore";
 import { useNavigate } from "react-router-dom";
 import { PasswordModal } from "@/components/auth/PasswordModal";
-// import { hashPassword } from "@/utils/passwordHash";
+import { findMatchingGroup, GroupConfig } from "@/utils/passwordHash";
+import { networkFetch } from "@/utils/httpClient";
 
 const AgentNamePicker: React.FC = () => {
   const navigate = useNavigate();
@@ -26,11 +27,13 @@ const AgentNamePicker: React.FC = () => {
   const [pageAgentName, setPageAgentName] = useState<string | null>(null);
   const [savedAgentName, setSavedAgentName] = useState<string | null>(null);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [groupConfigs, setGroupConfigs] = useState<GroupConfig[]>([]);
 
   const handleRandomize = useCallback(() => {
     setPageAgentName(generateRandomAgentName());
   }, [setPageAgentName]);
 
+  // Load saved agent name
   useEffect(() => {
     if (!selectedNetwork) return;
     const savedName = getSavedAgentNameForNetwork(
@@ -46,6 +49,39 @@ const AgentNamePicker: React.FC = () => {
     }
   }, [selectedNetwork, handleRandomize, setPageAgentName]);
 
+  // Fetch group configurations from network health endpoint
+  useEffect(() => {
+    const fetchGroupConfigs = async () => {
+      if (!selectedNetwork) return;
+
+      try {
+        const response = await networkFetch(
+          selectedNetwork.host,
+          selectedNetwork.port,
+          "/api/health",
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+            },
+          }
+        );
+
+        if (response.ok) {
+          const healthData = await response.json();
+          if (healthData.data && healthData.data.group_config) {
+            setGroupConfigs(healthData.data.group_config);
+            console.log('Loaded group configs:', healthData.data.group_config);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch group configs:', error);
+      }
+    };
+
+    fetchGroupConfigs();
+  }, [selectedNetwork]);
+
   const onBack = useCallback(() => {
     clearAgentName();
     clearNetwork();
@@ -60,20 +96,28 @@ const AgentNamePicker: React.FC = () => {
     setIsPasswordModalOpen(true);
   };
 
-  const handlePasswordConfirm = async (password: string) => {
+  const handlePasswordConfirm = async (password: string): Promise<string | null> => {
     try {
-      // Hash the password
-      // const hash = await hashPassword(password);
-      const hash = password;
+      // Verify password against group configs from network
+      const result = await findMatchingGroup(password, groupConfigs);
 
-      // Close modal
-      setIsPasswordModalOpen(false);
+      if (result.success && result.passwordHash) {
+        console.log(`Password matched group: ${result.groupName}`);
 
-      // Proceed with connection
-      proceedWithConnection(hash);
+        // Close modal
+        setIsPasswordModalOpen(false);
+
+        // Proceed with connection using the matched password hash
+        proceedWithConnection(result.passwordHash);
+
+        return null; // Success - no error
+      } else {
+        // Return error message to display in modal
+        return result.error || "Invalid password. Please try again.";
+      }
     } catch (error) {
-      console.error("Failed to hash password:", error);
-      alert("Failed to process password. Please try again.");
+      console.error("Failed to verify password:", error);
+      return "Failed to process password. Please try again.";
     }
   };
 

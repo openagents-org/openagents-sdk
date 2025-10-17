@@ -71,3 +71,86 @@ export const AGENT_GROUP_PASSWORDS = {
     hash: '$2b$12$Mkk6zsut18qVjGNIUkDPjuswDtUqjaW/arJumrVTEcVmpA3gJhh/i'
   }
 } as const;
+
+/**
+ * Interface for group configuration from /api/health endpoint
+ */
+export interface GroupConfig {
+  name: string;
+  description?: string;
+  password_hash?: string;
+  agent_count?: number;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Result of password verification against group configs
+ */
+export interface PasswordMatchResult {
+  success: boolean;
+  groupName?: string;
+  passwordHash?: string;
+  error?: string;
+}
+
+/**
+ * Find the agent group that matches the provided password
+ *
+ * @param password - Plain text password to verify
+ * @param groupConfigs - Array of group configurations from /api/health
+ * @returns Promise that resolves to match result with group name and hash
+ *
+ * @example
+ * const result = await findMatchingGroup("ModSecure2024!", groupConfigs);
+ * if (result.success) {
+ *   console.log(`Matched group: ${result.groupName}`);
+ *   // Use result.passwordHash for backend authentication
+ * }
+ */
+export async function findMatchingGroup(
+  password: string,
+  groupConfigs: GroupConfig[]
+): Promise<PasswordMatchResult> {
+  if (!password || password.trim().length === 0) {
+    return {
+      success: false,
+      error: 'Password cannot be empty'
+    };
+  }
+
+  if (!groupConfigs || groupConfigs.length === 0) {
+    return {
+      success: false,
+      error: 'No agent groups available'
+    };
+  }
+
+  // Try to match password against each group's hash
+  for (const group of groupConfigs) {
+    // Skip groups without password_hash (like default guest group)
+    if (!group.password_hash) {
+      continue;
+    }
+
+    try {
+      const isMatch = await verifyPassword(password, group.password_hash);
+
+      if (isMatch) {
+        return {
+          success: true,
+          groupName: group.name,
+          passwordHash: group.password_hash
+        };
+      }
+    } catch (error) {
+      console.error(`Error verifying password for group ${group.name}:`, error);
+      // Continue checking other groups
+    }
+  }
+
+  // No matching group found
+  return {
+    success: false,
+    error: 'Invalid password. Please check your credentials.'
+  };
+}
