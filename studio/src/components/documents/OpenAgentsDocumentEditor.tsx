@@ -41,8 +41,6 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
   
   // Content state
   const [textContent, setTextContent] = useState('');
-  const [localVersion, setLocalVersion] = useState(0);
-  const [serverVersion, setServerVersion] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaveTime, setLastSaveTime] = useState<number>(0);
   
@@ -86,22 +84,20 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
       contentType: typeof content.content,
       contentIsArray: Array.isArray(content.content),
       contentLength: content.content?.length,
-      version: content.version,
       keys: Object.keys(content),
       actualContent: content.content,
       firstLine: content.content?.[0],
       allLines: content.content
     });
-    
+
     // Check if content is in the expected format
     let newTextContent = '';
-    let newVersion = 0;
-    
+
     if (content.content && Array.isArray(content.content)) {
       // Standard format: content is array of lines
       console.log('📄 Raw content array:', content.content);
       console.log('📄 Array items:', content.content.map((line: string, i: number) => `[${i}]: "${line}"`));
-      
+
       // Filter out empty strings if the array only contains empty strings
       const filteredContent = content.content.filter((line: string) => line !== '');
       if (filteredContent.length === 0 && content.content.length > 0) {
@@ -110,46 +106,35 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
       } else {
         newTextContent = content.content.join('\n');
       }
-      newVersion = content.version || 0;
     } else if (content.data && content.data.content && Array.isArray(content.data.content)) {
       // Nested format: content is in data.content
       newTextContent = content.data.content.join('\n');
-      newVersion = content.data.version || 0;
     } else if (typeof content.content === 'string') {
       // String format: content is already a string
       newTextContent = content.content;
-      newVersion = content.version || 0;
     } else if (content.data && typeof content.data.content === 'string') {
       // Nested string format
       newTextContent = content.data.content;
-      newVersion = content.data.version || 0;
     } else {
       console.warn('⚠️ Content not in expected format:', content);
       return; // Exit early if we can't parse the content
     }
-    
-    console.log(`📄 Processing content: "${newTextContent}" (version ${newVersion})`);
-    
+
+    console.log(`📄 Processing content: "${newTextContent}"`);
+
     // Smart live collaboration: Allow updates but protect active typing
     const isCurrentlyEditing = document.activeElement === textareaRef.current;
-    const isInitialLoad = serverVersion === 0;
-    const hasNewerVersion = newVersion > serverVersion;
     const hasUnsavedWork = hasUnsavedChanges;
     const recentlySaved = Date.now() - lastSaveTime < 2000; // 2 seconds grace period after save
-    
+
     // Update logic:
-    // 1. Always update on initial load
-    // 2. Update if not currently editing AND not saving AND no unsaved work
-    // 3. Update if version jumped significantly (major changes from others)
-    // 4. NEVER update if user has unsaved changes and is actively typing
-    // 5. Give user 2 seconds grace period after saving to continue typing
-    const versionJumpedSignificantly = newVersion > serverVersion + 2;
-    const shouldUpdate = isInitialLoad || 
-                        (!isCurrentlyEditing && !isSaving && !hasUnsavedWork && !recentlySaved) ||
-                        (versionJumpedSignificantly && !isSaving && !recentlySaved);
-    
-    console.log(`📄 Update decision: editing=${isCurrentlyEditing}, saving=${isSaving}, unsaved=${hasUnsavedChanges}, recentSave=${recentlySaved}, serverV=${serverVersion}, newV=${newVersion}, shouldUpdate=${shouldUpdate}`);
-    
+    // 1. Update if not currently editing AND not saving AND no unsaved work
+    // 2. NEVER update if user has unsaved changes and is actively typing
+    // 3. Give user 2 seconds grace period after saving to continue typing
+    const shouldUpdate = (!isCurrentlyEditing && !isSaving && !hasUnsavedWork && !recentlySaved);
+
+    console.log(`📄 Update decision: editing=${isCurrentlyEditing}, saving=${isSaving}, unsaved=${hasUnsavedChanges}, recentSave=${recentlySaved}, shouldUpdate=${shouldUpdate}`);
+
     if (shouldUpdate) {
       // Preserve cursor position during live updates (Notion-style)
       let cursorPosition = 0;
@@ -160,11 +145,10 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
       }
       
       setTextContent(newTextContent);
-      setServerVersion(newVersion);
-      
+
       if (textareaRef.current) {
         textareaRef.current.value = newTextContent;
-        
+
         // Restore cursor position if user was editing
         if (isCurrentlyEditing && cursorPosition >= 0) {
           // Ensure cursor position is within bounds of new content
@@ -174,31 +158,31 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
           console.log(`🎯 Restored cursor position: ${safeStart}-${safeEnd}`);
         }
       }
-      
+
       setLastSyncTime(new Date());
-      console.log(`✅ Live collaboration update (version ${newVersion})`);
-      
+      console.log(`✅ Live collaboration update`);
+
       // Show live update indicator briefly (only for updates from other users)
-      if (isCurrentlyEditing && hasNewerVersion && !isSaving) {
+      if (isCurrentlyEditing && !isSaving) {
         setLiveUpdateIndicator(true);
         setTimeout(() => setLiveUpdateIndicator(false), 1500);
       }
-      
+
       // Only clear unsaved changes if this isn't a user's active edit
       if (!isCurrentlyEditing || !hasUnsavedChanges) {
         setHasUnsavedChanges(false);
       }
-      
+
       // Update line authorship from backend data
       if (content.line_authors && typeof content.line_authors === 'object') {
         console.log('📝 Updating line authorship:', content.line_authors);
         setLineAuthors(content.line_authors);
-      } else if (hasNewerVersion) {
+      } else {
         // Fallback: if no line authorship data, clear existing authorship
         console.log('⚠️ No line authorship data received, clearing authorship');
         setLineAuthors({});
       }
-      
+
       // Update line locks from backend data
       if (content.line_locks && typeof content.line_locks === 'object') {
         console.log('🔒 Updating line locks:', content.line_locks);
@@ -209,8 +193,6 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
       }
     } else {
       console.log(`⏭️ Skipping update - currently saving`);
-      // Still update the server version to track what the server has
-      setServerVersion(newVersion);
     }
     
     setDocumentContent(content);
@@ -237,7 +219,7 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
     
     setIsLoading(false);
     setConnectionStatus('connected');
-  }, [documentId, serverVersion]);
+  }, [documentId]);
 
   // Save content to OpenAgents
   const saveContent = useCallback(async (content: string) => {
@@ -258,9 +240,8 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
       // Update line authorship for all modified lines
       // The backend will track authorship, but we can optimistically update the UI
       // Note: The real authorship will come from the next content update from the server
-      
+
       setHasUnsavedChanges(false);
-      setLocalVersion(prev => prev + 1);
       setLastSaveTime(Date.now()); // Record save time for grace period
       console.log('✅ Content saved successfully');
       
@@ -763,7 +744,7 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
           {/* Debug info */}
           {process.env.NODE_ENV === 'development' && (
             <div className="absolute bottom-2 right-2 text-xs opacity-50 bg-black text-white p-1 rounded">
-              Content: {textContent.length} chars | Server v{serverVersion} | Local v{localVersion} | {isSaving ? '💾 Saving...' : hasUnsavedChanges ? '✏️ Unsaved' : '✅ Saved'} {liveUpdateIndicator ? '🔄 Live Update' : ''}
+              Content: {textContent.length} chars | {isSaving ? '💾 Saving...' : hasUnsavedChanges ? '✏️ Unsaved' : '✅ Saved'} {liveUpdateIndicator ? '🔄 Live Update' : ''}
             </div>
           )}
         </div>

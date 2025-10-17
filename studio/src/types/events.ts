@@ -12,7 +12,7 @@ export interface EventResponse {
 export interface Event {
   event_id?: string;
   event_name: string;
-  source_id: string;
+  source_id?: string;
   destination_id?: string;
   payload?: any;
   metadata?: any;

@@ -21,6 +21,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { HttpEventConnector } from "@/services/eventConnector";
 import { useAuthStore } from "@/stores/authStore";
 import { useChatStore } from "@/stores/chatStore";
+import { useDocumentStore } from "@/stores/documentStore";
 import { eventRouter } from "@/services/eventRouter";
 import { notificationService } from "@/services/notificationService";
 
@@ -74,6 +75,7 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
 }) => {
   const { agentName, selectedNetwork, getPasswordHash } = useAuthStore();
   const { selectChannel, selectDirectMessage } = useChatStore();
+  const { setConnection, setupEventListeners, cleanupEventListeners } = useDocumentStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [connector, setConnector] = useState<HttpEventConnector | null>(null);
@@ -106,11 +108,14 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
         globalNotificationHandlerRef.current = null;
       }
 
+      // Cleanup document event listeners
+      cleanupEventListeners();
+
       connectorTemp.disconnect().catch((error) => {
         console.warn("Error during connector cleanup:", error);
       });
     }
-  }, []);
+  }, [cleanupEventListeners]);
 
   // Set up connection event listeners
   const setupConnectionListeners = useCallback(
@@ -124,6 +129,11 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
           originalAgentId: connector.getOriginalAgentId(),
           isUsingModifiedId: connector.isUsingModifiedId(),
         });
+
+        // Set up global document event listeners
+        console.log("🔧 Setting up global document event listeners");
+        setConnection(connector);
+        setupEventListeners();
       });
 
       // Connection disconnected
@@ -191,7 +201,7 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
       // Initialize event router with this connector
       eventRouter.initialize(connector);
     },
-    []
+    [setConnection, setupEventListeners]
   );
 
   // Set up global notification listener (only active on non-messaging pages)

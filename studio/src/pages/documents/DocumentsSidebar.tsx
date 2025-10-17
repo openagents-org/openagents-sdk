@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { DocumentInfo } from "@/types";
 import { formatRelativeDate } from "@/utils/utils";
 import { useDocumentStore } from "@/stores/documentStore";
@@ -54,7 +54,7 @@ const DocumentItem: React.FC<{
           </div>
           <div className="text-xs opacity-75 ml-6">
             <div className="truncate">
-              v{document.version} • {document.creator}
+              {document.creator}
             </div>
             <div className="mt-0.5">
               {formatRelativeDate(document.last_modified)}
@@ -89,19 +89,26 @@ const DocumentsSidebar: React.FC<DocumentsSidebarProps> = () => {
     setSelectedDocument(documentId);
   };
 
-  // Sort documents by last modified date (most recent first)
-  const sortedDocuments = [...documents].sort((a, b) => {
-    return (
-      new Date(b.last_modified).getTime() - new Date(a.last_modified).getTime()
-    );
-  });
+  // Get top 10 documents by active user count
+  const top10ActiveDocuments = useMemo(() => {
+    return [...documents]
+      .sort((a, b) => {
+        // First, sort by active user count (descending)
+        const activeCountDiff = b.active_agents.length - a.active_agents.length;
+        if (activeCountDiff !== 0) return activeCountDiff;
+
+        // If active count is the same, sort by last modified date
+        return new Date(b.last_modified).getTime() - new Date(a.last_modified).getTime();
+      })
+      .slice(0, 10); // Take only top 10
+  }, [documents]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Documents Section */}
-      <SectionHeader title="DOCUMENTS" />
+      <SectionHeader title="TOP 10 ACTIVE DOCUMENTS" />
       <div className="flex-1 overflow-y-auto px-3 custom-scrollbar">
-        {sortedDocuments.length === 0 ? (
+        {top10ActiveDocuments.length === 0 ? (
           <div className="text-center py-8">
             <div className="text-gray-400 dark:text-gray-500 text-sm">
               <svg
@@ -122,7 +129,7 @@ const DocumentsSidebar: React.FC<DocumentsSidebarProps> = () => {
           </div>
         ) : (
           <ul className="flex flex-col gap-1">
-            {sortedDocuments.map((doc) => (
+            {top10ActiveDocuments.map((doc) => (
               <DocumentItem
                 key={doc.document_id}
                 document={doc}

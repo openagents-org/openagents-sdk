@@ -40,27 +40,6 @@ const DocumentList: React.FC<DocumentListProps> = ({
     return date.toLocaleDateString();
   };
 
-  const getPermissionBadge = (permission: string) => {
-    const colors = {
-      admin: "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400",
-      read_write:
-        "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400",
-      read_only:
-        "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400",
-    };
-
-    return (
-      <span
-        className={`px-2 py-1 text-xs font-medium rounded-full ${
-          colors[permission as keyof typeof colors] ||
-          "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-        }`}
-      >
-        {permission.replace("_", " ")}
-      </span>
-    );
-  };
-
   const getActiveAgentsList = (activeAgents: string[]) => {
     if (activeAgents.length === 0) return "No active editors";
     if (activeAgents.length === 1) return `${activeAgents[0]} is editing`;
@@ -132,10 +111,9 @@ const DocumentList: React.FC<DocumentListProps> = ({
                     currentTheme === "dark" ? "text-gray-400" : "text-gray-600"
                   }`}
                 >
-                  v{document.version} • Created by {document.creator}
+                  Created by {document.creator}
                 </p>
               </div>
-              {getPermissionBadge(document.permission)}
             </div>
 
             {/* Last Modified */}
