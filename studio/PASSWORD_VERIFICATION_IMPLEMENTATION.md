@@ -1,42 +1,42 @@
 # Password Verification Implementation
 
-## 概述
+## Overview
 
-实现了基于 bcrypt 的密码验证功能，允许用户通过输入明文密码来验证其身份并加入相应的 agent group。
+Implemented bcrypt-based password verification functionality, allowing users to verify their identity and join the corresponding agent group by entering plaintext passwords.
 
-## 核心原理
+## Core Principles
 
-### bcrypt 工作原理
-- **每次 hash 都不同**：`bcrypt.hash("password")` 每次生成的 hash 都不同（因为使用随机 salt）
-- **验证机制**：使用 `bcrypt.compare(plaintext, hash)` 来验证密码是否匹配某个 hash
-- **单向函数**：无法从 hash 反推明文密码
+### bcrypt Working Mechanism
+- **Each hash is different**: `bcrypt.hash("password")` generates a different hash each time (due to random salt)
+- **Verification mechanism**: Use `bcrypt.compare(plaintext, hash)` to verify if the password matches a hash
+- **One-way function**: Cannot reverse-engineer plaintext password from hash
 
-### 实现流程
+### Implementation Flow
 
 ```
-1. 用户输入明文密码（例：ModSecure2024!）
+1. User inputs plaintext password (e.g.: ModSecure2024!)
                 ↓
-2. 从 /api/health 获取 group_config 数组
+2. Fetch group_config array from /api/health
    [{name: "moderators", password_hash: "$2b$12$p7CBrw9k..."}, ...]
                 ↓
-3. 调用 findMatchingGroup(password, group_config)
-   - 遍历每个 group 的 password_hash
-   - 使用 verifyPassword(password, hash) 验证
-   - 找到匹配的 group
+3. Call findMatchingGroup(password, group_config)
+   - Iterate through each group's password_hash
+   - Use verifyPassword(password, hash) to verify
+   - Find matching group
                 ↓
-4. 返回匹配结果
+4. Return match result
    {success: true, groupName: "moderators", passwordHash: "$2b$12$p7CBrw9k..."}
                 ↓
-5. 将匹配的 passwordHash 发送给后端进行注册
+5. Send matching passwordHash to backend for registration
 ```
 
-## 文件修改
+## File Modifications
 
 ### 1. `studio/src/utils/passwordHash.ts`
 
-添加了以下内容：
+Added the following content:
 
-- **GroupConfig 接口**：定义 group 配置结构
+- **GroupConfig Interface**: Defines group configuration structure
   ```typescript
   interface GroupConfig {
     name: string;
@@ -47,7 +47,7 @@
   }
   ```
 
-- **PasswordMatchResult 接口**：定义验证结果结构
+- **PasswordMatchResult Interface**: Defines verification result structure
   ```typescript
   interface PasswordMatchResult {
     success: boolean;
@@ -57,37 +57,37 @@
   }
   ```
 
-- **findMatchingGroup() 函数**：核心验证逻辑
+- **findMatchingGroup() Function**: Core verification logic
   ```typescript
   async function findMatchingGroup(
     password: string,
     groupConfigs: GroupConfig[]
   ): Promise<PasswordMatchResult>
   ```
-  
-  功能：
-  - 接收用户输入的明文密码
-  - 遍历所有 group 配置
-  - 使用 `verifyPassword()` 验证密码
-  - 返回匹配的 group 和对应的 hash
+
+  Functionality:
+  - Receives user-input plaintext password
+  - Iterates through all group configurations
+  - Uses `verifyPassword()` to verify password
+  - Returns matching group and corresponding hash
 
 ### 2. `studio/src/pages/AgentSetupPage.tsx`
 
-修改内容：
+Modifications:
 
-- **导入依赖**：
+- **Import Dependencies**:
   ```typescript
   import { findMatchingGroup, GroupConfig } from "@/utils/passwordHash";
   import { useOpenAgents } from "@/context/OpenAgentsProvider";
   ```
 
-- **状态管理**：
+- **State Management**:
   ```typescript
   const { connector } = useOpenAgents();
   const [groupConfigs, setGroupConfigs] = useState<GroupConfig[]>([]);
   ```
 
-- **获取 group_config**：
+- **Fetch group_config**:
   ```typescript
   useEffect(() => {
     const fetchGroupConfigs = async () => {
@@ -101,11 +101,11 @@
   }, [connector]);
   ```
 
-- **密码验证逻辑**：
+- **Password Verification Logic**:
   ```typescript
   const handlePasswordConfirm = async (password: string): Promise<string | null> => {
     const result = await findMatchingGroup(password, groupConfigs);
-    
+
     if (result.success && result.passwordHash) {
       console.log(`Password matched group: ${result.groupName}`);
       setIsPasswordModalOpen(false);
@@ -119,54 +119,54 @@
 
 ### 3. `studio/src/components/auth/PasswordModal.tsx`
 
-修改内容：
+Modifications:
 
-- **接口更新**：
+- **Interface Update**:
   ```typescript
   interface PasswordModalProps {
-    onConfirm: (password: string) => Promise<string | null>; // 异步验证
+    onConfirm: (password: string) => Promise<string | null>; // Async verification
   }
   ```
 
-- **状态管理**：
+- **State Management**:
   ```typescript
   const [isVerifying, setIsVerifying] = useState(false);
   ```
 
-- **异步验证**：
+- **Async Verification**:
   ```typescript
   const handleConfirm = async () => {
     setIsVerifying(true);
     const errorMessage = await onConfirm(password);
     if (errorMessage) {
-      setError(errorMessage); // 显示错误
+      setError(errorMessage); // Display error
     }
     setIsVerifying(false);
   };
   ```
 
-- **UI 改进**：
-  - 添加 loading 状态（"Verifying..."）
-  - 禁用按钮在验证期间
-  - 显示验证错误消息
+- **UI Improvements**:
+  - Added loading state ("Verifying...")
+  - Disabled button during verification
+  - Display verification error messages
 
-## 测试
+## Testing
 
-创建了单元测试文件 `studio/src/utils/__tests__/passwordHash.test.ts`：
+Created unit test file `studio/src/utils/__tests__/passwordHash.test.ts`:
 
-测试覆盖：
-- ✅ 验证正确密码
-- ✅ 拒绝错误密码
-- ✅ 处理空密码
-- ✅ 处理空 group 配置
-- ✅ 跳过没有 password_hash 的 group
-- ✅ 验证多个不同 group 的密码
+Test coverage:
+- ✅ Verify correct password
+- ✅ Reject incorrect password
+- ✅ Handle empty password
+- ✅ Handle empty group configuration
+- ✅ Skip groups without password_hash
+- ✅ Verify passwords for multiple different groups
 
-## 使用方法
+## Usage
 
-### 测试密码
+### Test Passwords
 
-根据 `examples/workspace_test.yaml` 配置，可以使用以下密码：
+According to `examples/workspace_test.yaml` configuration, the following passwords can be used:
 
 | Group        | Password              | Hash                                                          |
 |--------------|-----------------------|---------------------------------------------------------------|
@@ -175,25 +175,25 @@
 | researchers  | `ResearchAccess2024!` | `$2b$12$U2x0T4obqhhTCVRvdnQxUu0deCEsOTC3kKf.BJr3kCqgN9hD3C1QK` |
 | users        | `UserStandard2024!`   | `$2b$12$Mkk6zsut18qVjGNIUkDPjuswDtUqjaW/arJumrVTEcVmpA3gJhh/i` |
 
-### 运行测试
+### Run Tests
 
 ```bash
 cd studio
-npm run typecheck  # 类型检查
-npm test           # 运行单元测试（如果配置了测试框架）
+npm run typecheck  # Type checking
+npm test           # Run unit tests (if test framework is configured)
 ```
 
-## 安全性
+## Security
 
-- ✅ 明文密码不会被存储
-- ✅ 密码仅在内存中临时存在
-- ✅ 使用 bcrypt 进行安全验证
-- ✅ 支持 guest 模式（无密码连接）
-- ✅ 验证失败时提供友好错误信息
+- ✅ Plaintext passwords are not stored
+- ✅ Passwords only exist temporarily in memory
+- ✅ Use bcrypt for secure verification
+- ✅ Support guest mode (passwordless connection)
+- ✅ Provide friendly error messages on verification failure
 
-## API 响应结构
+## API Response Structure
 
-`/api/health` 端点返回的 `group_config` 结构：
+The `group_config` structure returned by the `/api/health` endpoint:
 
 ```json
 {
@@ -221,62 +221,62 @@ npm test           # 运行单元测试（如果配置了测试框架）
 }
 ```
 
-## 常见问题
+## FAQ
 
-### Q: 为什么每次 hash 同一个密码结果都不同？
-A: bcrypt 使用随机 salt，所以每次 hash 都不同。但是 `bcrypt.compare()` 能正确验证密码。
+### Q: Why does hashing the same password always produce different results?
+A: bcrypt uses random salt, so each hash is different. However, `bcrypt.compare()` can correctly verify the password.
 
-### Q: 如何生成新的密码 hash？
-A: 使用 Python：
+### Q: How to generate a new password hash?
+A: Using Python:
 ```python
 from openagents.utils.password_utils import hash_password
 hash_value = hash_password("your_password")
 ```
 
-或使用 TypeScript：
+Or using TypeScript:
 ```typescript
 import { hashPassword } from '@/utils/passwordHash';
 const hash = await hashPassword("your_password");
 ```
 
-### Q: 如果密码验证失败怎么办？
-A: 系统会显示错误消息 "Invalid password. Please check your credentials."，用户可以重新输入或选择 guest 模式。
+### Q: What happens if password verification fails?
+A: The system will display the error message "Invalid password. Please check your credentials.", and the user can re-enter or choose guest mode.
 
-## 后续改进
+## Future Improvements
 
-可能的增强功能：
-- [ ] 添加密码强度验证
-- [ ] 支持密码重置功能
-- [ ] 添加登录尝试限制
-- [ ] 记住上次使用的 group
-- [ ] 添加双因素认证（2FA）
+Possible enhancements:
+- [ ] Add password strength validation
+- [ ] Support password reset functionality
+- [ ] Add login attempt limiting
+- [ ] Remember last used group
+- [ ] Add two-factor authentication (2FA)
 
 
-## 重要修复记录
+## Important Fix Records
 
-### 2025-10-17: 修复 OpenAgentsProvider 错误
+### 2025-10-17: Fixed OpenAgentsProvider Error
 
-**问题**：`AgentSetupPage` 使用了 `useOpenAgents` hook，但该页面在路由中设置为 `requiresLayout: false`，不在 `OpenAgentsProvider` 包裹范围内，导致运行时错误：
+**Problem**: `AgentSetupPage` used the `useOpenAgents` hook, but the page was set with `requiresLayout: false` in the route, not wrapped by `OpenAgentsProvider`, causing a runtime error:
 ```
 ERROR: useOpenAgents must be used within an OpenAgentsProvider
 ```
 
-**原因**：
-- `AgentSetupPage` 是 setup 阶段的页面，在用户还未连接到网络时渲染
-- `OpenAgentsProvider` 只在 `RootLayout` 中初始化，且需要 `selectedNetwork` 和 `agentName` 都存在
-- Setup 页面不应该依赖已连接的 OpenAgents context
+**Cause**:
+- `AgentSetupPage` is a setup phase page, rendered when the user has not yet connected to the network
+- `OpenAgentsProvider` is only initialized in `RootLayout`, and requires both `selectedNetwork` and `agentName` to exist
+- Setup pages should not depend on a connected OpenAgents context
 
-**解决方案**：
-改用 `networkFetch` 直接调用 `/api/health` API，而不是通过 `connector.getNetworkHealth()`
+**Solution**:
+Use `networkFetch` to directly call the `/api/health` API, instead of using `connector.getNetworkHealth()`
 
-**修改内容** (AgentSetupPage.tsx:53-83):
+**Modifications** (AgentSetupPage.tsx:53-83):
 ```typescript
-// ❌ 之前（错误）:
+// ❌ Before (incorrect):
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
 const { connector } = useOpenAgents();
 const healthData = await connector.getNetworkHealth();
 
-// ✅ 修改后（正确）:
+// ✅ After (correct):
 import { networkFetch } from "@/utils/httpClient";
 const response = await networkFetch(
   selectedNetwork.host,
@@ -291,8 +291,7 @@ const healthData = await response.json();
 const groupConfigs = healthData.data?.group_config || [];
 ```
 
-**测试**：
-- ✅ TypeScript 类型检查通过
-- ✅ 不再依赖 OpenAgentsProvider
-- ✅ 在 setup 阶段就能获取 group 配置
-
+**Testing**:
+- ✅ TypeScript type checking passed
+- ✅ No longer depends on OpenAgentsProvider
+- ✅ Can fetch group configuration during setup phase
