@@ -11,8 +11,7 @@ import {
 import { useAuthStore } from "@/stores/authStore";
 import { useNavigate } from "react-router-dom";
 import { PasswordModal } from "@/components/auth/PasswordModal";
-import { findMatchingGroup, GroupConfig } from "@/utils/passwordHash";
-import { networkFetch } from "@/utils/httpClient";
+import { verifyPasswordWithBackend } from "@/utils/passwordHash";
 
 const AgentNamePicker: React.FC = () => {
   const navigate = useNavigate();
@@ -27,7 +26,6 @@ const AgentNamePicker: React.FC = () => {
   const [pageAgentName, setPageAgentName] = useState<string | null>(null);
   const [savedAgentName, setSavedAgentName] = useState<string | null>(null);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [groupConfigs, setGroupConfigs] = useState<GroupConfig[]>([]);
 
   const handleRandomize = useCallback(() => {
     setPageAgentName(generateRandomAgentName());
@@ -49,38 +47,8 @@ const AgentNamePicker: React.FC = () => {
     }
   }, [selectedNetwork, handleRandomize, setPageAgentName]);
 
-  // Fetch group configurations from network health endpoint
-  useEffect(() => {
-    const fetchGroupConfigs = async () => {
-      if (!selectedNetwork) return;
-
-      try {
-        const response = await networkFetch(
-          selectedNetwork.host,
-          selectedNetwork.port,
-          "/api/health",
-          {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-            },
-          }
-        );
-
-        if (response.ok) {
-          const healthData = await response.json();
-          if (healthData.data && healthData.data.group_config) {
-            setGroupConfigs(healthData.data.group_config);
-            console.log('Loaded group configs:', healthData.data.group_config);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch group configs:', error);
-      }
-    };
-
-    fetchGroupConfigs();
-  }, [selectedNetwork]);
+  // Note: Password verification is now done server-side via backend API
+  // No need to fetch group configs on the client side
 
   const onBack = useCallback(() => {
     clearAgentName();
@@ -97,17 +65,25 @@ const AgentNamePicker: React.FC = () => {
   };
 
   const handlePasswordConfirm = async (password: string): Promise<string | null> => {
-    try {
-      // Verify password against group configs from network
-      const result = await findMatchingGroup(password, groupConfigs);
+    if (!selectedNetwork) {
+      return "Network not selected";
+    }
 
-      if (result.success && result.passwordHash) {
-        console.log(`Password matched group: ${result.groupName}`);
+    try {
+      // Verify password with backend API
+      const result = await verifyPasswordWithBackend(
+        password,
+        selectedNetwork.host,
+        selectedNetwork.port
+      );
+
+      if (result.success && result.valid && result.passwordHash) {
+        console.log(`Password verified - matched group: ${result.groupName}`);
 
         // Close modal
         setIsPasswordModalOpen(false);
 
-        // Proceed with connection using the matched password hash
+        // Proceed with connection using the verified password hash
         proceedWithConnection(result.passwordHash);
 
         return null; // Success - no error
@@ -117,7 +93,7 @@ const AgentNamePicker: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to verify password:", error);
-      return "Failed to process password. Please try again.";
+      return "Failed to connect to network. Please try again.";
     }
   };
 

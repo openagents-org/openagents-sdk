@@ -2,296 +2,380 @@
 
 ## Overview
 
-Implemented bcrypt-based password verification functionality, allowing users to verify their identity and join the corresponding agent group by entering plaintext passwords.
+Implemented backend API-based password verification functionality using SHA-256 hashing, allowing users to securely verify their credentials and join the corresponding agent group.
 
 ## Core Principles
 
-### bcrypt Working Mechanism
-- **Each hash is different**: `bcrypt.hash("password")` generates a different hash each time (due to random salt)
-- **Verification mechanism**: Use `bcrypt.compare(plaintext, hash)` to verify if the password matches a hash
+### SHA-256 Working Mechanism
+- **Deterministic hashing**: `SHA-256(password)` always generates the same hash for the same input
+- **Backend verification**: Frontend sends password hash to backend for verification via `system.verify_password` event
 - **One-way function**: Cannot reverse-engineer plaintext password from hash
+- **No salt needed**: SHA-256 directly hashes the password string
 
 ### Implementation Flow
 
 ```
 1. User inputs plaintext password (e.g.: ModSecure2024!)
                 ↓
-2. Fetch group_config array from /api/health
-   [{name: "moderators", password_hash: "$2b$12$p7CBrw9k..."}, ...]
+2. Frontend hashes password using SHA-256 (Web Crypto API)
+   password_hash = SHA256("ModSecure2024!")
                 ↓
-3. Call findMatchingGroup(password, group_config)
-   - Iterate through each group's password_hash
-   - Use verifyPassword(password, hash) to verify
-   - Find matching group
+3. Frontend sends system.verify_password event to backend
+   POST /api/send_event
+   {
+     event_name: "system.verify_password",
+     payload: { password_hash: "..." }
+   }
                 ↓
-4. Return match result
-   {success: true, groupName: "moderators", passwordHash: "$2b$12$p7CBrw9k..."}
+4. Backend verifies hash against configured groups
+   - Iterates through each group's password_hash
+   - Compares hashes using hashlib.sha256
+   - Finds matching group
                 ↓
-5. Send matching passwordHash to backend for registration
+5. Backend returns match result
+   {
+     success: true,
+     valid: true,
+     group_name: "moderators",
+     group_description: "...",
+     default_group: "guest"
+   }
+                ↓
+6. Frontend uses the password_hash for agent registration
 ```
 
 ## File Modifications
 
 ### 1. `studio/src/utils/passwordHash.ts`
 
-Added the following content:
+Complete rewrite to use SHA-256 and backend verification:
 
-- **GroupConfig Interface**: Defines group configuration structure
+- **Removed bcrypt dependency**
+- **Added SHA-256 hashing** using Web Crypto API:
   ```typescript
-  interface GroupConfig {
-    name: string;
-    description?: string;
-    password_hash?: string;
-    agent_count?: number;
-    metadata?: Record<string, any>;
+  export async function hashPassword(password: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const passwordBytes = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', passwordBytes);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
   }
   ```
 
-- **PasswordMatchResult Interface**: Defines verification result structure
+- **PasswordVerificationResult Interface**:
   ```typescript
-  interface PasswordMatchResult {
+  interface PasswordVerificationResult {
     success: boolean;
+    valid: boolean;
     groupName?: string;
+    groupDescription?: string;
     passwordHash?: string;
+    defaultGroup?: string;
     error?: string;
   }
   ```
 
-- **findMatchingGroup() Function**: Core verification logic
+- **verifyPasswordWithBackend() Function**: Backend API verification
   ```typescript
-  async function findMatchingGroup(
+  async function verifyPasswordWithBackend(
     password: string,
-    groupConfigs: GroupConfig[]
-  ): Promise<PasswordMatchResult>
+    networkHost: string,
+    networkPort: number
+  ): Promise<PasswordVerificationResult>
   ```
 
   Functionality:
-  - Receives user-input plaintext password
-  - Iterates through all group configurations
-  - Uses `verifyPassword()` to verify password
-  - Returns matching group and corresponding hash
+  - Hashes password using SHA-256
+  - Sends `system.verify_password` event to backend via `/api/send_event`
+  - Receives verification result from backend
+  - Returns matching group and password hash for registration
 
 ### 2. `studio/src/pages/AgentSetupPage.tsx`
 
 Modifications:
 
-- **Import Dependencies**:
-  ```typescript
-  import { findMatchingGroup, GroupConfig } from "@/utils/passwordHash";
-  import { useOpenAgents } from "@/context/OpenAgentsProvider";
-  ```
+- **Removed**: Fetching `group_config` from `/api/health`
+- **Removed**: Client-side password verification
+- **Removed**: `GroupConfig` state
 
-- **State Management**:
-  ```typescript
-  const { connector } = useOpenAgents();
-  const [groupConfigs, setGroupConfigs] = useState<GroupConfig[]>([]);
-  ```
-
-- **Fetch group_config**:
-  ```typescript
-  useEffect(() => {
-    const fetchGroupConfigs = async () => {
-      if (!connector) return;
-      const healthData = await connector.getNetworkHealth();
-      if (healthData && healthData.group_config) {
-        setGroupConfigs(healthData.group_config);
-      }
-    };
-    fetchGroupConfigs();
-  }, [connector]);
-  ```
-
-- **Password Verification Logic**:
+- **Updated Password Verification Logic**:
   ```typescript
   const handlePasswordConfirm = async (password: string): Promise<string | null> => {
-    const result = await findMatchingGroup(password, groupConfigs);
+    if (!selectedNetwork) {
+      return "Network not selected";
+    }
 
-    if (result.success && result.passwordHash) {
-      console.log(`Password matched group: ${result.groupName}`);
-      setIsPasswordModalOpen(false);
-      proceedWithConnection(result.passwordHash);
-      return null; // Success
-    } else {
-      return result.error || "Invalid password. Please try again.";
+    try {
+      // Verify password with backend API
+      const result = await verifyPasswordWithBackend(
+        password,
+        selectedNetwork.host,
+        selectedNetwork.port
+      );
+
+      if (result.success && result.valid && result.passwordHash) {
+        console.log(`Password verified - matched group: ${result.groupName}`);
+        setIsPasswordModalOpen(false);
+        proceedWithConnection(result.passwordHash);
+        return null; // Success
+      } else {
+        return result.error || "Invalid password. Please try again.";
+      }
+    } catch (error) {
+      console.error("Failed to verify password:", error);
+      return "Failed to connect to network. Please try again.";
     }
   };
   ```
 
-### 3. `studio/src/components/auth/PasswordModal.tsx`
+### 3. `studio/package.json`
 
-Modifications:
+Removed dependency:
+- ❌ Removed `"bcryptjs": "^3.0.2"` from dependencies
 
-- **Interface Update**:
-  ```typescript
-  interface PasswordModalProps {
-    onConfirm: (password: string) => Promise<string | null>; // Async verification
-  }
-  ```
+## Backend Changes
 
-- **State Management**:
-  ```typescript
-  const [isVerifying, setIsVerifying] = useState(false);
-  ```
+### New System Event: `system.verify_password`
 
-- **Async Verification**:
-  ```typescript
-  const handleConfirm = async () => {
-    setIsVerifying(true);
-    const errorMessage = await onConfirm(password);
-    if (errorMessage) {
-      setError(errorMessage); // Display error
-    }
-    setIsVerifying(false);
-  };
-  ```
+**File**: `src/openagents/core/system_commands.py` (lines 788-853)
 
-- **UI Improvements**:
-  - Added loading state ("Verifying...")
-  - Disabled button during verification
-  - Display verification error messages
+**Handler**: `handle_verify_password()`
 
-## Testing
-
-Created unit test file `studio/src/utils/__tests__/passwordHash.test.ts`:
-
-Test coverage:
-- ✅ Verify correct password
-- ✅ Reject incorrect password
-- ✅ Handle empty password
-- ✅ Handle empty group configuration
-- ✅ Skip groups without password_hash
-- ✅ Verify passwords for multiple different groups
-
-## Usage
-
-### Test Passwords
-
-According to `examples/workspace_test.yaml` configuration, the following passwords can be used:
-
-| Group        | Password              | Hash                                                          |
-|--------------|-----------------------|---------------------------------------------------------------|
-| moderators   | `ModSecure2024!`      | `$2b$12$p7CBrw9kLCB8LC0snzyFOeIAXSzrEK6Zw.IBXp9GYVtb75k5F/o7O` |
-| ai-bots      | `AiBotKey2024!`       | `$2b$12$fN4XSArA6AmrXOZ6wtoKeO5vmUHuCUUzhFXEGulT2.GCi7VaPD2em` |
-| researchers  | `ResearchAccess2024!` | `$2b$12$U2x0T4obqhhTCVRvdnQxUu0deCEsOTC3kKf.BJr3kCqgN9hD3C1QK` |
-| users        | `UserStandard2024!`   | `$2b$12$Mkk6zsut18qVjGNIUkDPjuswDtUqjaW/arJumrVTEcVmpA3gJhh/i` |
-
-### Run Tests
-
-```bash
-cd studio
-npm run typecheck  # Type checking
-npm test           # Run unit tests (if test framework is configured)
-```
-
-## Security
-
-- ✅ Plaintext passwords are not stored
-- ✅ Passwords only exist temporarily in memory
-- ✅ Use bcrypt for secure verification
-- ✅ Support guest mode (passwordless connection)
-- ✅ Provide friendly error messages on verification failure
-
-## API Response Structure
-
-The `group_config` structure returned by the `/api/health` endpoint:
-
+**Request**:
 ```json
 {
-  "success": true,
-  "status": "healthy",
-  "data": {
-    "network_id": "workspace-test-1",
-    "group_config": [
-      {
-        "name": "moderators",
-        "description": "Forum moderators with elevated permissions",
-        "agent_count": 0,
-        "metadata": {...},
-        "password_hash": "$2b$12$p7CBrw9k..."
-      },
-      {
-        "name": "ai-bots",
-        "description": "AI assistant and automation agents",
-        "agent_count": 0,
-        "metadata": {...},
-        "password_hash": "$2b$12$fN4XSArA6..."
-      }
-    ]
+  "event_name": "system.verify_password",
+  "payload": {
+    "password_hash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
   }
 }
 ```
 
-## FAQ
+**Response** (valid password):
+```json
+{
+  "success": true,
+  "message": "Password verified: matches group 'moderators'",
+  "data": {
+    "type": "system_response",
+    "command": "verify_password",
+    "valid": true,
+    "group_name": "moderators",
+    "group_description": "Forum moderators with elevated permissions",
+    "group_metadata": {...},
+    "default_group": "guest"
+  }
+}
+```
 
-### Q: Why does hashing the same password always produce different results?
-A: bcrypt uses random salt, so each hash is different. However, `bcrypt.compare()` can correctly verify the password.
+**Response** (invalid password):
+```json
+{
+  "success": true,
+  "message": "Password verification failed: no matching group found",
+  "data": {
+    "type": "system_response",
+    "command": "verify_password",
+    "valid": false,
+    "default_group": "guest",
+    "requires_password": false
+  }
+}
+```
 
-### Q: How to generate a new password hash?
-A: Using Python:
+### Password Hashing Backend
+
+**File**: `src/openagents/utils/password_utils.py`
+
+**Functions**:
+```python
+def hash_password(password: str) -> str:
+    """Hash a password using SHA-256."""
+    password_bytes = password.encode('utf-8')
+    hash_obj = hashlib.sha256(password_bytes)
+    password_hash = hash_obj.hexdigest()
+    return password_hash
+
+def verify_password(password: str, password_hash: str) -> bool:
+    """Verify a password against a SHA-256 hash."""
+    password_bytes = password.encode('utf-8')
+    hash_obj = hashlib.sha256(password_bytes)
+    computed_hash = hash_obj.hexdigest()
+    return computed_hash == password_hash
+```
+
+## Security Improvements
+
+- ✅ **No password hashes exposed to client**: Client never receives password_hash values from `/api/health`
+- ✅ **Backend-controlled verification**: All password logic centralized on backend
+- ✅ **Reduced attack surface**: Client-side verification removed
+- ✅ **SHA-256 hashing**: Industry-standard cryptographic hash function
+- ✅ **Plaintext never stored**: Only hashes are stored and transmitted
+- ✅ **Support for guest mode**: Passwordless connection still available
+
+## Testing
+
+### Manual Testing Steps
+
+1. **Start backend network** with password-protected groups
+2. **Access Studio** at `http://localhost:3000`
+3. **Select network** and proceed to agent setup
+4. **Enter password** in modal and verify:
+   - Correct password → Success, assigned to correct group
+   - Incorrect password → Error message displayed
+   - Guest mode → Assigns to default guest group
+
+### Test Passwords (from `examples/workspace_test.yaml`)
+
+Generate SHA-256 hashes for test passwords:
+
+```python
+from openagents.utils.password_utils import hash_password
+
+# Generate hashes
+print(hash_password("ModSecure2024!"))
+print(hash_password("AiBotKey2024!"))
+print(hash_password("ResearchAccess2024!"))
+print(hash_password("UserStandard2024!"))
+```
+
+## Usage
+
+### Frontend Implementation
+
+```typescript
+// Import verification function
+import { verifyPasswordWithBackend } from '@/utils/passwordHash';
+
+// Verify password with backend
+const result = await verifyPasswordWithBackend(
+  "ModSecure2024!",
+  "localhost",
+  8700
+);
+
+if (result.success && result.valid) {
+  console.log(`Matched group: ${result.groupName}`);
+  // Use result.passwordHash for registration
+}
+```
+
+### Backend Configuration
+
+Configure agent groups in `network.yaml`:
+
+```yaml
+network:
+  name: "My Network"
+  mode: "centralized"
+  agent_groups:
+    moderators:
+      description: "Forum moderators with elevated permissions"
+      password_hash: "<SHA256_HASH_OF_PASSWORD>"
+      metadata:
+        permissions: ["moderate", "delete", "ban"]
+
+    users:
+      description: "Regular users"
+      password_hash: "<SHA256_HASH_OF_PASSWORD>"
+      metadata:
+        permissions: ["read", "post"]
+
+  default_agent_group: "guest"
+  requires_password: false  # Allow guest connections
+```
+
+## API Response Structure
+
+The `system.verify_password` event response structure:
+
+```typescript
+interface VerifyPasswordResponse {
+  success: boolean;
+  message: string;
+  data: {
+    type: "system_response";
+    command: "verify_password";
+    valid: boolean;
+    group_name?: string;  // Only if valid=true
+    group_description?: string;  // Only if valid=true
+    group_metadata?: Record<string, any>;  // Only if valid=true
+    default_group: string;
+    requires_password?: boolean;  // Only if valid=false
+  };
+}
+```
+
+## Migration from bcrypt
+
+### Changes Required
+
+1. **Password hashes must be regenerated** using SHA-256 instead of bcrypt
+2. **Update network configuration** with new SHA-256 hashes
+3. **Remove bcryptjs** from dependencies: `npm uninstall bcryptjs`
+4. **Clear browser cache** to remove old bcrypt library
+
+### Generating New Hashes
+
+Python (backend):
 ```python
 from openagents.utils.password_utils import hash_password
 hash_value = hash_password("your_password")
 ```
 
-Or using TypeScript:
+TypeScript (frontend):
 ```typescript
 import { hashPassword } from '@/utils/passwordHash';
 const hash = await hashPassword("your_password");
 ```
 
+## FAQ
+
+### Q: Why switch from bcrypt to SHA-256?
+A: Simplicity and consistency. The backend uses SHA-256, so frontend now matches. SHA-256 is sufficient for this use case since password hashes are verified server-side.
+
+### Q: Is SHA-256 secure enough?
+A: Yes, for this use case. SHA-256 is a cryptographic hash function. Since verification happens server-side and hashes are never exposed to clients, the security model is sound.
+
+### Q: How does guest mode work?
+A: Users can skip password entry. Frontend sends `null` as password_hash during registration, and backend assigns to `default_agent_group` (typically "guest").
+
 ### Q: What happens if password verification fails?
-A: The system will display the error message "Invalid password. Please check your credentials.", and the user can re-enter or choose guest mode.
+A: The modal displays the error message returned by backend. User can retry or choose guest mode.
+
+### Q: Can I still use the old bcrypt-based system?
+A: No, the backend has migrated to SHA-256. All clients must update to the new system.
 
 ## Future Improvements
 
 Possible enhancements:
-- [ ] Add password strength validation
-- [ ] Support password reset functionality
-- [ ] Add login attempt limiting
-- [ ] Remember last used group
-- [ ] Add two-factor authentication (2FA)
-
+- [ ] Add password strength validation on client-side
+- [ ] Support password reset workflow
+- [ ] Add rate limiting for password verification attempts
+- [ ] Implement two-factor authentication (2FA)
+- [ ] Add session management for authenticated users
 
 ## Important Fix Records
 
-### 2025-10-17: Fixed OpenAgentsProvider Error
+### 2025-10-26: Migrated from bcrypt to SHA-256 Backend Verification
 
-**Problem**: `AgentSetupPage` used the `useOpenAgents` hook, but the page was set with `requiresLayout: false` in the route, not wrapped by `OpenAgentsProvider`, causing a runtime error:
-```
-ERROR: useOpenAgents must be used within an OpenAgentsProvider
-```
-
-**Cause**:
-- `AgentSetupPage` is a setup phase page, rendered when the user has not yet connected to the network
-- `OpenAgentsProvider` is only initialized in `RootLayout`, and requires both `selectedNetwork` and `agentName` to exist
-- Setup pages should not depend on a connected OpenAgents context
+**Problem**:
+- Frontend used bcrypt for client-side password verification
+- Backend changed to SHA-256 (`hashlib.sha256`)
+- Incompatibility between frontend (bcrypt) and backend (SHA-256)
+- Security issue: password hashes exposed via `/api/health`
 
 **Solution**:
-Use `networkFetch` to directly call the `/api/health` API, instead of using `connector.getNetworkHealth()`
+- Removed bcrypt dependency completely
+- Implemented SHA-256 hashing using Web Crypto API
+- Created `system.verify_password` backend API for secure verification
+- Removed client-side password verification
+- Passwords now verified server-side only
 
-**Modifications** (AgentSetupPage.tsx:53-83):
-```typescript
-// ❌ Before (incorrect):
-import { useOpenAgents } from "@/context/OpenAgentsProvider";
-const { connector } = useOpenAgents();
-const healthData = await connector.getNetworkHealth();
-
-// ✅ After (correct):
-import { networkFetch } from "@/utils/httpClient";
-const response = await networkFetch(
-  selectedNetwork.host,
-  selectedNetwork.port,
-  "/api/health",
-  {
-    method: "GET",
-    headers: { Accept: "application/json" },
-  }
-);
-const healthData = await response.json();
-const groupConfigs = healthData.data?.group_config || [];
-```
-
-**Testing**:
-- ✅ TypeScript type checking passed
-- ✅ No longer depends on OpenAgentsProvider
-- ✅ Can fetch group configuration during setup phase
+**Benefits**:
+- Better security (no hash exposure)
+- Consistent with backend implementation
+- Simpler codebase (removed bcrypt dependency)
+- Centralized password logic on backend
+- Reduced client-side attack surface

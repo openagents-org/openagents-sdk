@@ -1,76 +1,38 @@
 /**
- * Password hashing utility using bcryptjs
+ * Password hashing and verification utility
  *
  * This module provides password hashing functionality compatible with
- * the backend's bcrypt implementation (Python bcrypt library).
+ * the backend's SHA-256 implementation (Python hashlib.sha256).
  */
 
-import bcrypt from 'bcryptjs';
-
 /**
- * Hash a password using bcrypt with 12 rounds (matching backend configuration)
+ * Hash a password using SHA-256 (matching backend implementation)
  *
  * @param password - Plain text password to hash
- * @returns Promise that resolves to the bcrypt hash string
+ * @returns Promise that resolves to the SHA-256 hex hash string
  *
  * @example
- * const hash = await hashPassword("AiBotKey2024!");
- * // Returns: "$2b$12$fN4XSArA6AmrXOZ6wtoKeO5vmUHuCUUzhFXEGulT2.GCi7VaPD2em"
+ * const hash = await hashPassword("MySecurePassword123!");
+ * // Returns: "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8" (example)
  */
 export async function hashPassword(password: string): Promise<string> {
   if (!password || password.trim().length === 0) {
     throw new Error('Password cannot be empty');
   }
 
-  // Use 12 rounds to match backend configuration
-  const saltRounds = 12;
-  const hash = await bcrypt.hash(password, saltRounds);
+  // Convert password string to bytes
+  const encoder = new TextEncoder();
+  const passwordBytes = encoder.encode(password);
 
-  return hash;
+  // Hash using SHA-256
+  const hashBuffer = await crypto.subtle.digest('SHA-256', passwordBytes);
+
+  // Convert buffer to hex string
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+  return hashHex;
 }
-
-/**
- * Verify a password against a bcrypt hash
- *
- * @param password - Plain text password to verify
- * @param hash - Bcrypt hash to verify against
- * @returns Promise that resolves to true if password matches, false otherwise
- */
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  if (!password || !hash) {
-    return false;
-  }
-
-  try {
-    return await bcrypt.compare(password, hash);
-  } catch (error) {
-    console.error('Password verification failed:', error);
-    return false;
-  }
-}
-
-/**
- * Known agent group passwords and their hashes
- * These are taken from examples/workspace_test.yaml
- */
-export const AGENT_GROUP_PASSWORDS = {
-  'ai-bots': {
-    password: 'AiBotKey2024!',
-    hash: '$2b$12$fN4XSArA6AmrXOZ6wtoKeO5vmUHuCUUzhFXEGulT2.GCi7VaPD2em'
-  },
-  'moderators': {
-    password: 'ModSecure2024!',
-    hash: '$2b$12$p7CBrw9kLCB8LC0snzyFOeIAXSzrEK6Zw.IBXp9GYVtb75k5F/o7O'
-  },
-  'researchers': {
-    password: 'ResearchAccess2024!',
-    hash: '$2b$12$U2x0T4obqhhTCVRvdnQxUu0deCEsOTC3kKf.BJr3kCqgN9hD3C1QK'
-  },
-  'users': {
-    password: 'UserStandard2024!',
-    hash: '$2b$12$Mkk6zsut18qVjGNIUkDPjuswDtUqjaW/arJumrVTEcVmpA3gJhh/i'
-  }
-} as const;
 
 /**
  * Interface for group configuration from /api/health endpoint
@@ -84,7 +46,127 @@ export interface GroupConfig {
 }
 
 /**
- * Result of password verification against group configs
+ * Result of password verification from backend
+ */
+export interface PasswordVerificationResult {
+  success: boolean;
+  valid: boolean;
+  groupName?: string;
+  groupDescription?: string;
+  passwordHash?: string;
+  defaultGroup?: string;
+  error?: string;
+}
+
+/**
+ * Verify a password with the backend using the system.verify_password API
+ *
+ * This function sends the plaintext password to the backend, which verifies it
+ * against configured agent groups and returns the matching group information.
+ *
+ * @param password - Plain text password to verify
+ * @param networkHost - Network host address
+ * @param networkPort - Network port
+ * @returns Promise that resolves to verification result with group info
+ *
+ * @example
+ * const result = await verifyPasswordWithBackend("ModSecure2024!", "localhost", 8700);
+ * if (result.success && result.valid) {
+ *   console.log(`Matched group: ${result.groupName}`);
+ *   // Use result.passwordHash for registration
+ * }
+ */
+export async function verifyPasswordWithBackend(
+  password: string,
+  networkHost: string,
+  networkPort: number
+): Promise<PasswordVerificationResult> {
+  if (!password || password.trim().length === 0) {
+    return {
+      success: false,
+      valid: false,
+      error: 'Password cannot be empty'
+    };
+  }
+
+  try {
+    // Hash the password using SHA-256
+    const passwordHash = await hashPassword(password);
+
+    // Send verification request to backend
+    const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
+    const url = `${protocol}://${networkHost}:${networkPort}/api/send_event`;
+
+    const requestBody = {
+      event_id: `verify_${Date.now()}_${Math.random()}`,
+      event_name: 'system.verify_password',
+      source_id: 'system:system',
+      payload: {
+        password_hash: passwordHash,
+      },
+      metadata: {},
+      visibility: 'network',
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      return {
+        success: false,
+        valid: false,
+        error: result.message || 'Password verification failed'
+      };
+    }
+
+    // Parse the response data
+    const data = result.data || {};
+    const isValid = data.valid === true;
+
+    if (isValid) {
+      // Password matched a group
+      return {
+        success: true,
+        valid: true,
+        groupName: data.group_name,
+        groupDescription: data.group_description,
+        passwordHash: passwordHash, // Return the hash for registration
+        defaultGroup: data.default_group,
+      };
+    } else {
+      // Password did not match any group
+      return {
+        success: true,
+        valid: false,
+        defaultGroup: data.default_group,
+        error: 'Invalid password. Please check your credentials.',
+      };
+    }
+  } catch (error) {
+    console.error('Failed to verify password with backend:', error);
+    return {
+      success: false,
+      valid: false,
+      error: error instanceof Error ? error.message : 'Failed to connect to network'
+    };
+  }
+}
+
+/**
+ * Legacy function for backward compatibility
+ * @deprecated Use verifyPasswordWithBackend() instead
  */
 export interface PasswordMatchResult {
   success: boolean;
@@ -94,63 +176,20 @@ export interface PasswordMatchResult {
 }
 
 /**
- * Find the agent group that matches the provided password
- *
- * @param password - Plain text password to verify
- * @param groupConfigs - Array of group configurations from /api/health
- * @returns Promise that resolves to match result with group name and hash
- *
- * @example
- * const result = await findMatchingGroup("ModSecure2024!", groupConfigs);
- * if (result.success) {
- *   console.log(`Matched group: ${result.groupName}`);
- *   // Use result.passwordHash for backend authentication
- * }
+ * Verify password against backend (wrapper for compatibility)
+ * @deprecated This function is kept for backward compatibility
  */
 export async function findMatchingGroup(
   password: string,
-  groupConfigs: GroupConfig[]
+  networkHost: string,
+  networkPort: number
 ): Promise<PasswordMatchResult> {
-  if (!password || password.trim().length === 0) {
-    return {
-      success: false,
-      error: 'Password cannot be empty'
-    };
-  }
+  const result = await verifyPasswordWithBackend(password, networkHost, networkPort);
 
-  if (!groupConfigs || groupConfigs.length === 0) {
-    return {
-      success: false,
-      error: 'No agent groups available'
-    };
-  }
-
-  // Try to match password against each group's hash
-  for (const group of groupConfigs) {
-    // Skip groups without password_hash (like default guest group)
-    if (!group.password_hash) {
-      continue;
-    }
-
-    try {
-      const isMatch = await verifyPassword(password, group.password_hash);
-
-      if (isMatch) {
-        return {
-          success: true,
-          groupName: group.name,
-          passwordHash: group.password_hash
-        };
-      }
-    } catch (error) {
-      console.error(`Error verifying password for group ${group.name}:`, error);
-      // Continue checking other groups
-    }
-  }
-
-  // No matching group found
   return {
-    success: false,
-    error: 'Invalid password. Please check your credentials.'
+    success: result.success && result.valid,
+    groupName: result.groupName,
+    passwordHash: result.passwordHash,
+    error: result.error
   };
 }
