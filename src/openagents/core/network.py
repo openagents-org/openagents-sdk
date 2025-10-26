@@ -504,7 +504,7 @@ class AgentNetwork:
                 groups[group_name] = []
             groups[group_name].append(agent_id)
 
-        # Build group config info (now includes password_hash for frontend)
+        # Build group config info
         group_config = []
         added_group_names = set()
         for group_name, group_cfg in self.config.agent_groups.items():
@@ -514,7 +514,6 @@ class AgentNetwork:
                 "description": group_cfg.description,
                 "agent_count": len(groups.get(group_name, [])),
                 "metadata": group_cfg.metadata,
-                "password_hash": group_cfg.password_hash,  # Include password_hash for frontend authentication
             })
 
         # Add default group info if it has agents

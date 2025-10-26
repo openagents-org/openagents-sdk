@@ -1,25 +1,24 @@
 """
 Password utilities for OpenAgents network security.
 
-This module provides secure password hashing and verification using bcrypt.
+This module provides secure password hashing and verification using SHA-256.
 """
 
-import bcrypt
+import hashlib
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 
 def hash_password(password: str) -> str:
     """
-    Hash a password using bcrypt.
+    Hash a password using SHA-256.
     
     Args:
         password: Plain text password to hash
         
     Returns:
-        str: Bcrypt hash of the password
+        str: SHA-256 hash of the password
         
     Raises:
         ValueError: If password is empty or None
@@ -27,22 +26,21 @@ def hash_password(password: str) -> str:
     if not password:
         raise ValueError("Password cannot be empty")
         
-    # Generate salt and hash the password
-    salt = bcrypt.gensalt()
+    # Hash the password
     password_bytes = password.encode('utf-8')
-    hashed = bcrypt.hashpw(password_bytes, salt)
+    hash_obj = hashlib.sha256(password_bytes)
+    password_hash = hash_obj.hexdigest()
     
-    # Return as string for storage
-    return hashed.decode('utf-8')
+    return password_hash
 
 
 def verify_password(password: str, password_hash: str) -> bool:
     """
-    Verify a password against a bcrypt hash.
+    Verify a password against a SHA-256 hash.
     
     Args:
         password: Plain text password to verify
-        password_hash: Bcrypt hash to verify against
+        password_hash: SHA-256 hash to verify against
         
     Returns:
         bool: True if password matches hash, False otherwise
@@ -51,9 +49,13 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
         
     try:
+        # Hash the provided password
         password_bytes = password.encode('utf-8')
-        hash_bytes = password_hash.encode('utf-8')
-        return bcrypt.checkpw(password_bytes, hash_bytes)
+        hash_obj = hashlib.sha256(password_bytes)
+        computed_hash = hash_obj.hexdigest()
+        
+        # Compare hashes
+        return computed_hash == password_hash
     except Exception as e:
         logger.warning(f"Password verification failed: {e}")
         return False
@@ -70,7 +72,7 @@ def generate_password_hash_for_config(password: str) -> str:
         password: Plain text password
         
     Returns:
-        str: Bcrypt hash suitable for configuration storage
+        str: SHA-256 hash suitable for configuration storage
         
     Example:
         >>> hash_value = generate_password_hash_for_config("my_secure_password")

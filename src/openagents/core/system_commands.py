@@ -28,6 +28,7 @@ from openagents.config.globals import (
     SYSTEM_EVENT_GET_CHANNEL_MEMBERS,
     SYSTEM_EVENT_REMOVE_CHANNEL,
     SYSTEM_EVENT_LIST_CHANNELS,
+    SYSTEM_EVENT_VERIFY_PASSWORD,
 )
 from openagents.models.event import Event
 from openagents.models.event_response import EventResponse
@@ -72,6 +73,7 @@ class SystemCommandProcessor:
             SYSTEM_EVENT_GET_CHANNEL_MEMBERS: self.handle_get_channel_members,
             SYSTEM_EVENT_REMOVE_CHANNEL: self.handle_remove_channel,
             SYSTEM_EVENT_LIST_CHANNELS: self.handle_list_channels,
+            SYSTEM_EVENT_VERIFY_PASSWORD: self.handle_verify_password,
         }
 
     async def process_command(self, system_event: Event) -> Optional[EventResponse]:
@@ -781,4 +783,71 @@ class SystemCommandProcessor:
                 "command": "list_channels",
                 "channels": channels,
             },
+        )
+
+    async def handle_verify_password(self, event: Event) -> EventResponse:
+        """Handle the verify_password command.
+        
+        Verifies a password hash against configured agent groups and returns
+        the matching group information.
+        """
+        password_hash = event.payload.get("password_hash")
+        
+        if not password_hash:
+            return EventResponse(
+                success=False,
+                message="Missing password_hash parameter",
+                data={
+                    "type": "system_response",
+                    "command": "verify_password",
+                    "valid": False,
+                }
+            )
+        
+        # Check against configured agent groups
+        for group_name, group_config in self.network.config.agent_groups.items():
+            if group_config.password_hash and password_hash == group_config.password_hash:
+                # Password matches this group
+                response_data = {
+                    "type": "system_response",
+                    "command": "verify_password",
+                    "valid": True,
+                    "group_name": group_name,
+                    "group_description": group_config.description,
+                    "group_metadata": group_config.metadata,
+                    "default_group": self.network.config.default_agent_group,
+                }
+                
+                # Include request_id if provided
+                if "request_id" in event.payload:
+                    response_data["request_id"] = event.payload["request_id"]
+                
+                return EventResponse(
+                    success=True,
+                    message=f"Password verified: matches group '{group_name}'",
+                    data=response_data,
+                )
+        
+        # No matching group found
+        response_data = {
+            "type": "system_response", 
+            "command": "verify_password",
+            "valid": False,
+            "default_group": self.network.config.default_agent_group,
+            "requires_password": self.network.config.requires_password,
+        }
+        
+        # Include request_id if provided
+        if "request_id" in event.payload:
+            response_data["request_id"] = event.payload["request_id"]
+        
+        if self.network.config.requires_password:
+            message = "Password verification failed: no matching group found (registration would be rejected)"
+        else:
+            message = f"Password verification failed: no matching group found (would assign to default group '{self.network.config.default_agent_group}')"
+        
+        return EventResponse(
+            success=True,
+            message=message,
+            data=response_data,
         )
