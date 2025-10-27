@@ -5,6 +5,8 @@
  * the backend's SHA-256 implementation (Python hashlib.sha256).
  */
 
+import { networkFetch } from './httpClient';
+
 /**
  * Hash a password using SHA-256 (matching backend implementation)
  *
@@ -93,10 +95,7 @@ export async function verifyPasswordWithBackend(
     // Hash the password using SHA-256
     const passwordHash = await hashPassword(password);
 
-    // Send verification request to backend
-    const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
-    const url = `${protocol}://${networkHost}:${networkPort}/api/send_event`;
-
+    // Send verification request to backend using networkFetch (with automatic proxy support)
     const requestBody = {
       event_id: `verify_${Date.now()}_${Math.random()}`,
       event_name: 'system.verify_password',
@@ -108,14 +107,19 @@ export async function verifyPasswordWithBackend(
       visibility: 'network',
     };
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
+    const response = await networkFetch(
+      networkHost,
+      networkPort,
+      '/api/send_event',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
