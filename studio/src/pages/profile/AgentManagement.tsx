@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
 import { useConfirm } from "@/context/ConfirmContext";
 import { useAuthStore } from "@/stores/authStore";
+import { toast } from "sonner";
 
 interface AgentInfo {
   agent_id: string;
@@ -108,10 +109,14 @@ const AgentManagement: React.FC = () => {
           )
         );
 
+        toast.success(`Successfully kicked ${targetAgentId}`, {
+          description: "The agent has been removed from the network",
+        });
+
         // Refresh agents list after a short delay to get updated data
-        setTimeout(() => {
-          fetchAgents();
-        }, 2000);
+        // setTimeout(() => {
+        //   fetchAgents();
+        // }, 2000);
       } else {
         console.error(`❌ Failed to kick agent: ${response.message}`);
         setError(response.message || "Failed to kick agent");
