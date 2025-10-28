@@ -78,9 +78,11 @@ SYSTEM_EVENT_GET_CHANNEL_MEMBERS = "system.get_channel_members"
 SYSTEM_EVENT_REMOVE_CHANNEL = "system.remove_channel"
 SYSTEM_EVENT_LIST_CHANNELS = "system.list_channels"
 SYSTEM_EVENT_VERIFY_PASSWORD = "system.verify_password"
+SYSTEM_EVENT_KICK_AGENT = "system.kick_agent"
 
 SYSTEM_NOTIFICAITON_REGISTER_AGENT = "system.notification.register_agent"
 SYSTEM_NOTIFICAITON_UNREGISTER_AGENT = "system.notification.unregister_agent"
+SYSTEM_NOTIFICATION_AGENT_KICKED = "system.agent_kicked"
 
 AGENT_EVENT_MESSAGE = "agent.message"
 
