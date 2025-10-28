@@ -437,9 +437,9 @@ export class HttpEventConnector {
     }
   }
 
-  // removeAllListeners(): void {
-  //   this.eventHandlers.clear();
-  // }
+  removeAllListeners(): void {
+    this.eventHandlers.clear();
+  }
 
   private emit(eventName: string, data: any): void {
     const handlers = this.eventHandlers.get(eventName);
