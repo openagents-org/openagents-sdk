@@ -80,7 +80,9 @@
         "direct_message",
         "channel_message",
         "agent.connected",
-        "agent.disconnected"
+        "agent.disconnected",
+        "thread.announcement.set",
+        "thread.announcement.get"
     ],
     "generate_events": [
         "file_upload_response",
