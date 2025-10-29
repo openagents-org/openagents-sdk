@@ -8,47 +8,47 @@ import {
 import { eventRouter } from "@/services/eventRouter";
 import { notificationService } from "@/services/notificationService";
 
-// 消息发送状态
+// Message sending status
 export type MessageStatus = "sending" | "sent" | "failed";
 
-// 乐观更新消息接口
+// Optimistic update message interface
 export interface OptimisticMessage extends UnifiedMessage {
   isOptimistic?: boolean;
   status?: MessageStatus;
   tempId?: string;
   originalId?: string;
-  tempReactionId?: string; // 临时反应ID，用于标识和回滚乐观反应更新
-  originalReactionCount?: number; // 原始反应计数，用于移除反应时的回滚
+  tempReactionId?: string; // Temporary reaction ID for identifying and rolling back optimistic reaction updates
+  originalReactionCount?: number; // Original reaction count for rollback when removing reactions
 }
 
-// Chat Store 接口
+// Chat Store interface
 interface ChatState {
-  // 连接 - 现在通过 context 获取
-  // connection: any | null;  // 已移除，使用 context
+  // Connection - now obtained through context
+  // connection: any | null;  // Removed, use context
 
   currentChannel: string | null;
   currentDirectMessage: string | null;
 
-  // 持久化选择状态 - 用于页面刷新后恢复选择
+  // Persisted selection state - for restoring selection after page refresh
   persistedSelectionType: "channel" | "agent" | null;
   persistedSelectionId: string | null;
 
-  // Channels 状态
+  // Channels state
   channels: ThreadChannel[];
   channelsLoading: boolean;
   channelsError: string | null;
   channelsLoaded: boolean;
 
-  // Messages 状态 - 按 channel/targetAgentId 分组存储
+  // Messages state - stored grouped by channel/targetAgentId
   channelMessages: Map<string, OptimisticMessage[]>;
   directMessages: Map<string, OptimisticMessage[]>;
   messagesLoading: boolean;
   messagesError: string | null;
 
-  // 消息ID映射 - 临时ID到真实ID的映射
+  // Message ID mapping - temporary ID to real ID mapping
   tempIdToRealIdMap: Map<string, string>;
 
-  // Agents 状态
+  // Agents state
   agents: AgentInfo[];
   agentsLoading: boolean;
   agentsError: string | null;
@@ -121,7 +121,7 @@ interface ChatState {
     updates: Partial<OptimisticMessage>
   ) => void;
 
-  // 乐观更新方法
+  // Optimistic update methods
   addOptimisticChannelMessage: (
     channel: string,
     content: string,
@@ -154,20 +154,20 @@ interface ChatState {
   generateTempMessageId: () => string;
 }
 
-// 全局 context 引用，用于在 store 中访问
+// Global context reference for accessing in store
 let globalOpenAgentsContext: any = null;
 
-// localStorage 键名
+// localStorage key name
 const CHAT_SELECTION_STORAGE_KEY = "openagents_chat_selection";
 
-// 持久化选择数据结构
+// Persisted selection data structure
 interface PersistedSelection {
   type: "channel" | "agent";
   id: string;
   timestamp: number;
 }
 
-// localStorage 工具函数
+// localStorage utility functions
 const ChatSelectionStorage = {
   save: (type: "channel" | "agent", id: string) => {
     try {
@@ -191,7 +191,7 @@ const ChatSelectionStorage = {
       const stored = localStorage.getItem(CHAT_SELECTION_STORAGE_KEY);
       if (stored) {
         const data: PersistedSelection = JSON.parse(stored);
-        // 检查数据是否过期（30天）
+        // Check if data is expired (30 days)
         if (Date.now() - data.timestamp < 30 * 24 * 60 * 60 * 1000) {
           console.log(
             `ChatStore: Loaded selection from localStorage: ${data.type}:${data.id}`
@@ -245,7 +245,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   messagesLoading: false,
   messagesError: null,
 
-  // 消息ID映射
+  // Message ID mapping
   tempIdToRealIdMap: new Map(),
 
   // Agents state
@@ -271,12 +271,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     console.log(`ChatStore: Selecting channel #${channel}`);
     set({
       currentChannel: channel,
-      currentDirectMessage: null, // 切换到频道时清除私信选择
+      currentDirectMessage: null, // Clear direct message selection when switching to channel
       persistedSelectionType: "channel",
       persistedSelectionId: channel,
     });
 
-    // 保存到 localStorage
+    // Save to localStorage
     get().saveSelectionToStorage("channel", channel);
   },
 
@@ -284,12 +284,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     console.log(`ChatStore: Selecting direct message with ${targetAgentId}`);
     set({
       currentDirectMessage: targetAgentId,
-      currentChannel: null, // 切换到私信时清除频道选择
+      currentChannel: null, // Clear channel selection when switching to direct message
       persistedSelectionType: "agent",
       persistedSelectionId: targetAgentId,
     });
 
-    // 保存到 localStorage
+    // Save to localStorage
     get().saveSelectionToStorage("agent", targetAgentId);
   },
 
@@ -302,7 +302,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       persistedSelectionId: null,
     });
 
-    // 清除 localStorage
+    // Clear localStorage
     get().clearPersistedSelection();
   },
 
@@ -337,7 +337,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       agentsLoaded: false,
     });
 
-    // 清除 localStorage
+    // Clear localStorage
     get().clearPersistedSelection();
   },
 
@@ -346,7 +346,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const state = get();
     const connection = state.getConnection();
 
-    // 防止重复调用
+    // Prevent duplicate calls
     if (state.channelsLoading || state.channelsLoaded) {
       console.log("ChatStore: Channels already loading or loaded, skipping");
       return;
@@ -434,12 +434,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
           `ChatStore: Loaded ${response.data.messages.length} messages for channel #${channel}`
         );
 
-        // 转换原始消息为统一格式
+        // Convert raw messages to unified format
         const rawMessages: RawThreadMessage[] = response.data.messages;
         const unifiedMessages =
           MessageAdapter.fromRawThreadMessages(rawMessages);
 
-        // 过滤掉内容为空的消息（这些可能是历史数据问题）
+        // Filter out messages with empty content (these may be historical data issues)
         const validMessages = unifiedMessages.filter((msg) => {
           if (!msg.content || msg.content.trim() === "") {
             console.warn(
@@ -464,7 +464,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           } empty messages)`
         );
 
-        // 存储到 channelMessages Map 中
+        // Store to channelMessages Map
         set((state) => {
           const newChannelMessages = new Map(state.channelMessages);
           newChannelMessages.set(channel, optimisticMessages);
@@ -530,12 +530,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
           response.data.messages
         );
 
-        // // 转换原始消息为统一格式
+        // Convert raw messages to unified format
         const rawMessages: RawThreadMessage[] = response.data.messages;
         const unifiedMessages =
           MessageAdapter.fromRawThreadMessages(rawMessages);
 
-        // 过滤掉内容为空的消息（这些可能是历史数据问题）
+        // Filter out messages with empty content (these may be historical data issues)
         const validMessages = unifiedMessages.filter((msg) => {
           console.log(msg);
           if (!msg.content || msg.content.trim() === "") {
@@ -563,7 +563,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           } empty messages)`
         );
 
-        // 存储到 directMessages Map 中
+        // Store to directMessages Map
         set((state) => {
           const newDirectMessages = new Map(state.directMessages);
           newDirectMessages.set(targetAgentId, optimisticMessages);
@@ -606,7 +606,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     console.log(`ChatStore: Sending message to #${channel}: "${content}"`);
 
-    // 1. 立即添加乐观更新消息
+    // 1. Immediately add optimistic update message
     const tempId = get().addOptimisticChannelMessage(
       channel,
       content.trim(),
@@ -614,19 +614,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
     );
 
     try {
-      // 构建payload
+      // Build payload
       const payload: any = {
         channel: channel,
         content: { text: content.trim() },
         message_type: replyToId ? "reply_message" : "channel_message",
       };
 
-      // 如果是回复消息，添加回复相关字段
+      // If it's a reply message, add reply-related fields
       if (replyToId) {
         payload.reply_to_id = replyToId;
-        payload.thread_level = 1; // 设置线程层级
+        payload.thread_level = 1; // Set thread level
 
-        // 调试：输出发送的回复payload
+        // Debug: output reply payload being sent
         console.log(`ChatStore: Sending reply payload:`, {
           event_name: EventNames.THREAD_REPLY_SENT,
           destination_id: `channel:${channel}`,
@@ -646,25 +646,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
       if (response.success) {
         console.log(`ChatStore: Message sent successfully to #${channel}`);
 
-        // 2. 成功后，检查后端返回的数据结构
+        // 2. After success, check backend response data structure
         console.log(
           `ChatStore: Backend response for channel message:`,
           response
         );
 
-        // 尝试从不同路径获取message_id
+        // Try to get message_id from different paths
         let realMessageId: string | null = null;
         if (response.data && response.data.message_id) {
           realMessageId = response.data.message_id;
         } else if (response.event_id) {
-          // 如果没有message_id，使用event_id作为真实ID
+          // If no message_id, use event_id as real ID
           realMessageId = response.event_id;
         } else if (response.data && response.data.event_id) {
           realMessageId = response.data.event_id;
         }
 
         if (realMessageId) {
-          // 使用后端返回的真实ID更新乐观消息
+          // Update optimistic message with real ID returned from backend
           console.log(
             `ChatStore: Updating optimistic message ${tempId} with real ID ${realMessageId}`
           );
@@ -674,7 +674,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             isOptimistic: false,
           });
 
-          // 记录ID映射
+          // Record ID mapping
           set((state) => {
             const newTempIdToRealIdMap = new Map(state.tempIdToRealIdMap);
             newTempIdToRealIdMap.set(tempId, realMessageId!);
@@ -684,7 +684,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             };
           });
         } else {
-          // 如果没有返回真实ID，只更新状态
+          // If no real ID returned, only update status
           console.log(
             `ChatStore: No real message ID found in response, keeping temp ID ${tempId}`
           );
@@ -698,7 +698,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           response.message
         );
 
-        // 3. 发送失败，标记为失败状态
+        // 3. Send failed, mark as failed state
         get().markMessageAsFailed(tempId);
         set({ messagesError: response.message || "Failed to send message" });
         return false;
@@ -706,7 +706,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     } catch (error) {
       console.error(`ChatStore: Failed to send message to #${channel}:`, error);
 
-      // 4. 网络错误，标记为失败状态
+      // 4. Network error, mark as failed state
       get().markMessageAsFailed(tempId);
       set({ messagesError: "Failed to send message" });
       return false;
@@ -721,7 +721,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       `ChatStore: Sending direct message to ${targetAgentId}: "${content}"`
     );
 
-    // 1. 立即添加乐观更新消息
+    // 1. Immediately add optimistic update message
     const tempId = get().addOptimisticDirectMessage(
       targetAgentId,
       content.trim()
@@ -744,25 +744,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
           `ChatStore: Direct message sent successfully to ${targetAgentId}`
         );
 
-        // 2. 成功后，检查后端返回的数据结构
+        // 2. After success, check backend response data structure
         console.log(
           `ChatStore: Backend response for direct message:`,
           response
         );
 
-        // 尝试从不同路径获取message_id
+        // Try to get message_id from different paths
         let realMessageId: string | null = null;
         if (response.data && response.data.message_id) {
           realMessageId = response.data.message_id;
         } else if (response.event_id) {
-          // 如果没有message_id，使用event_id作为真实ID
+          // If no message_id, use event_id as real ID
           realMessageId = response.event_id;
         } else if (response.data && response.data.event_id) {
           realMessageId = response.data.event_id;
         }
 
         if (realMessageId) {
-          // 使用后端返回的真实ID更新乐观消息
+          // Update optimistic message with real ID returned from backend
           console.log(
             `ChatStore: Updating optimistic direct message ${tempId} with real ID ${realMessageId}`
           );
@@ -772,7 +772,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             isOptimistic: false,
           });
 
-          // 记录ID映射
+          // Record ID mapping
           set((state) => {
             const newTempIdToRealIdMap = new Map(state.tempIdToRealIdMap);
             newTempIdToRealIdMap.set(tempId, realMessageId!);
@@ -782,7 +782,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             };
           });
         } else {
-          // 如果没有返回真实ID，只更新状态
+          // If no real ID returned, only update status
           console.log(
             `ChatStore: No real message ID found in response, keeping temp ID ${tempId}`
           );
@@ -796,7 +796,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           response.message
         );
 
-        // 3. 发送失败，标记为失败状态
+        // 3. Send failed, mark as failed state
         get().markMessageAsFailed(tempId);
         set({
           messagesError: response.message || "Failed to send direct message",
@@ -809,7 +809,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         error
       );
 
-      // 4. 网络错误，标记为失败状态
+      // 4. Network error, mark as failed state
       get().markMessageAsFailed(tempId);
       set({ messagesError: "Failed to send direct message" });
       return false;
@@ -825,7 +825,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const state = get();
     const connection = state.getConnection();
 
-    // 防止重复调用
+    // Prevent duplicate calls
     // if (state.agentsLoading || state.agentsLoaded) {
     //   console.log("ChatStore: Agents already loading or loaded, skipping");
     //   return;
@@ -845,7 +845,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ agentsLoading: true, agentsError: null });
 
     try {
-      // 使用 eventConnector 的 getConnectedAgents 方法
+      // Use eventConnector's getConnectedAgents method
       const agents = await connection.getConnectedAgents();
 
       console.log("ChatStore: Loaded agents:", agents.length);
@@ -867,16 +867,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ agentsError: null });
   },
 
-  // 辅助方法：查找真实消息ID
+  // Helper method: find real message ID
   findRealMessageId: (messageId: string) => {
     const state = get();
 
-    // 如果已经是真实ID，直接返回
+    // If already a real ID, return directly
     if (!messageId.startsWith("temp_")) {
       return messageId;
     }
 
-    // 从临时ID映射中查找真实ID
+    // Find real ID from temporary ID mapping
     const realId = state.tempIdToRealIdMap.get(messageId);
     if (realId) {
       console.log(
@@ -885,10 +885,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return realId;
     }
 
-    // 如果没有映射，检查是否已经被替换
+    // If no mapping, check if already replaced
     let foundRealId: string | null = null;
 
-    // 在频道消息中查找
+    // Search in channel messages
     for (const [channel, messages] of Array.from(
       state.channelMessages.entries()
     )) {
@@ -905,7 +905,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     }
 
-    // 在私信中查找
+    // Search in direct messages
     if (!foundRealId) {
       for (const [targetId, messages] of Array.from(
         state.directMessages.entries()
@@ -924,7 +924,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     }
 
-    return foundRealId || messageId; // 如果找不到，返回原始ID
+    return foundRealId || messageId; // If not found, return original ID
   },
 
   // Reactions management
@@ -936,22 +936,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const connection = get().getConnection();
     if (!connection) return false;
 
-    // 查找真实消息ID
+    // Find real message ID
     const realMessageId = get().findRealMessageId(messageId);
     console.log(
       `ChatStore: Adding reaction ${reactionType} to message ${messageId} (real ID: ${realMessageId})`
     );
 
-    // 1. 立即添加乐观更新反应
+    // 1. Immediately add optimistic update reaction
     const tempReactionId = `temp_reaction_${Date.now()}_${Math.random()
       .toString(36)
       .slice(2, 11)}`;
 
-    // 查找消息并添加乐观反应
+    // Find message and add optimistic reaction
     const state = get();
     let messageUpdated = false;
 
-    // 更新频道消息的反应
+    // Update channel message reactions
     const newChannelMessages = new Map(state.channelMessages);
     for (const [ch, messages] of Array.from(newChannelMessages.entries())) {
       const messageIndex = messages.findIndex(
@@ -961,7 +961,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         const message = messages[messageIndex];
         const currentReactions = { ...(message.reactions || {}) };
 
-        // 添加或增加反应计数
+        // Add or increment reaction count
         if (currentReactions[reactionType]) {
           currentReactions[reactionType] += 1;
         } else {
@@ -972,7 +972,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         updatedMessages[messageIndex] = {
           ...message,
           reactions: currentReactions,
-          tempReactionId: tempReactionId, // 记录临时反应ID用于后续替换
+          tempReactionId: tempReactionId, // Record temporary reaction ID for later replacement
         };
         newChannelMessages.set(ch, updatedMessages);
         messageUpdated = true;
@@ -983,7 +983,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     }
 
-    // 更新私信消息的反应
+    // Update direct message reactions
     if (!messageUpdated) {
       const newDirectMessages = new Map(state.directMessages);
       for (const [targetId, messages] of Array.from(
@@ -996,7 +996,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           const message = messages[messageIndex];
           const currentReactions = { ...(message.reactions || {}) };
 
-          // 添加或增加反应计数
+          // Add or increment reaction count
           if (currentReactions[reactionType]) {
             currentReactions[reactionType] += 1;
           } else {
@@ -1007,7 +1007,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           updatedMessages[messageIndex] = {
             ...message,
             reactions: currentReactions,
-            tempReactionId: tempReactionId, // 记录临时反应ID用于后续替换
+            tempReactionId: tempReactionId, // Record temporary reaction ID for later replacement
           };
           newDirectMessages.set(targetId, updatedMessages);
           messageUpdated = true;
@@ -1043,7 +1043,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         },
       });
 
-      // 检查双层success结构
+      // Check double-layer success structure
       const isActualSuccess =
         response.success && (!response.data || response.data.success !== false);
 
@@ -1052,7 +1052,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           `ChatStore: Reaction ${reactionType} added successfully to message ${realMessageId}`
         );
 
-        // 2. 成功后，如果后端返回了真实反应数据，替换临时数据
+        // 2. After success, if backend returns real reaction data, replace temporary data
         if (response.data && response.data.reactions) {
           console.log(
             `ChatStore: Updating reactions with backend response for message ${realMessageId}:`,
@@ -1060,7 +1060,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           );
           get().updateMessage(realMessageId, {
             reactions: response.data.reactions,
-            tempReactionId: undefined, // 清除临时反应ID
+            tempReactionId: undefined, // Clear temporary reaction ID
           });
         }
 
@@ -1071,13 +1071,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
           response.message
         );
 
-        // 3. 发送失败，回滚乐观更新
+        // 3. Send failed, rollback optimistic update
         console.log(
           `ChatStore: Rolling back optimistic reaction for message ${realMessageId}`
         );
         const currentState = get();
 
-        // 回滚频道消息的反应
+        // Rollback channel message reactions
         const rollbackChannelMessages = new Map(currentState.channelMessages);
         for (const [ch, messages] of Array.from(
           rollbackChannelMessages.entries()
@@ -1111,7 +1111,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           }
         }
 
-        // 回滚私信消息的反应
+        // Rollback direct message reactions
         const rollbackDirectMessages = new Map(currentState.directMessages);
         for (const [targetId, messages] of Array.from(
           rollbackDirectMessages.entries()
@@ -1159,13 +1159,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
         error
       );
 
-      // 4. 网络错误，回滚乐观更新（同上逻辑）
+      // 4. Network error, rollback optimistic update (same logic as above)
       console.log(
         `ChatStore: Rolling back optimistic reaction due to network error for message ${realMessageId}`
       );
       const currentState = get();
 
-      // 回滚频道消息的反应
+      // Rollback channel message reactions
       const rollbackChannelMessages = new Map(currentState.channelMessages);
       for (const [ch, messages] of Array.from(
         rollbackChannelMessages.entries()
@@ -1199,7 +1199,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
       }
 
-      // 回滚私信消息的反应
+      // Rollback direct message reactions
       const rollbackDirectMessages = new Map(currentState.directMessages);
       for (const [targetId, messages] of Array.from(
         rollbackDirectMessages.entries()
@@ -1251,23 +1251,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const connection = get().getConnection();
     if (!connection) return false;
 
-    // 查找真实消息ID
+    // Find real message ID
     const realMessageId = get().findRealMessageId(messageId);
     console.log(
       `ChatStore: Removing reaction ${reactionType} from message ${messageId} (real ID: ${realMessageId})`
     );
 
-    // 1. 立即移除乐观更新反应
+    // 1. Immediately remove optimistic reaction
     const tempReactionId = `temp_reaction_remove_${Date.now()}_${Math.random()
       .toString(36)
       .slice(2, 11)}`;
 
-    // 查找消息并移除乐观反应
+    // Find message and remove optimistic reaction
     const state = get();
     let messageUpdated = false;
     let originalReactionCount = 0;
 
-    // 更新频道消息的反应
+    // Update channel message reactions
     const newChannelMessages = new Map(state.channelMessages);
     for (const [ch, messages] of Array.from(newChannelMessages.entries())) {
       const messageIndex = messages.findIndex(
@@ -1278,7 +1278,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         const currentReactions = { ...(message.reactions || {}) };
         originalReactionCount = currentReactions[reactionType] || 0;
 
-        // 减少或移除反应计数
+        // Decrease or remove reaction count
         if (
           currentReactions[reactionType] &&
           currentReactions[reactionType] > 1
@@ -1293,7 +1293,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           ...message,
           reactions: currentReactions,
           tempReactionId: tempReactionId,
-          originalReactionCount: originalReactionCount, // 记录原始计数用于回滚
+          originalReactionCount: originalReactionCount, // Record original count for rollback
         };
         newChannelMessages.set(ch, updatedMessages);
         messageUpdated = true;
@@ -1304,7 +1304,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     }
 
-    // 更新私信消息的反应
+    // Update direct message reactions
     if (!messageUpdated) {
       const newDirectMessages = new Map(state.directMessages);
       for (const [targetId, messages] of Array.from(
@@ -1318,7 +1318,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           const currentReactions = { ...(message.reactions || {}) };
           originalReactionCount = currentReactions[reactionType] || 0;
 
-          // 减少或移除反应计数
+          // Decrease or remove reaction count
           if (
             currentReactions[reactionType] &&
             currentReactions[reactionType] > 1
@@ -1333,7 +1333,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             ...message,
             reactions: currentReactions,
             tempReactionId: tempReactionId,
-            originalReactionCount: originalReactionCount, // 记录原始计数用于回滚
+            originalReactionCount: originalReactionCount, // Record original count for rollback
           };
           newDirectMessages.set(targetId, updatedMessages);
           messageUpdated = true;
@@ -1369,7 +1369,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         },
       });
 
-      // 检查双层success结构
+      // Check double-layer success structure
       const isActualSuccess =
         response.success && (!response.data || response.data.success !== false);
 
@@ -1378,7 +1378,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           `ChatStore: Reaction ${reactionType} removed successfully from message ${realMessageId}`
         );
 
-        // 2. 成功后，如果后端返回了真实反应数据，替换临时数据
+        // 2. After success, if backend returns real reaction data, replace temporary data
         if (response.data && response.data.reactions) {
           console.log(
             `ChatStore: Updating reactions with backend response for message ${realMessageId}:`,
@@ -1387,7 +1387,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           get().updateMessage(realMessageId, {
             reactions: response.data.reactions,
             tempReactionId: undefined,
-            originalReactionCount: undefined, // 清除临时数据
+            originalReactionCount: undefined, // Clear temporary data
           });
         }
 
@@ -1398,13 +1398,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
           response.message
         );
 
-        // 3. 发送失败，回滚乐观更新
+        // 3. Send failed, rollback optimistic update
         console.log(
           `ChatStore: Rolling back optimistic reaction removal for message ${realMessageId}`
         );
         const currentState = get();
 
-        // 回滚频道消息的反应
+        // Rollback channel message reactions
         const rollbackChannelMessages = new Map(currentState.channelMessages);
         for (const [ch, messages] of Array.from(
           rollbackChannelMessages.entries()
@@ -1418,7 +1418,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             const message = messages[messageIndex];
             const rollbackReactions = { ...message.reactions };
 
-            // 恢复原始反应计数
+            // Restore original reaction count
             if (
               message.originalReactionCount &&
               message.originalReactionCount > 0
@@ -1438,7 +1438,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           }
         }
 
-        // 回滚私信消息的反应
+        // Rollback direct message reactions
         const rollbackDirectMessages = new Map(currentState.directMessages);
         for (const [targetId, messages] of Array.from(
           rollbackDirectMessages.entries()
@@ -1452,7 +1452,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             const message = messages[messageIndex];
             const rollbackReactions = { ...message.reactions };
 
-            // 恢复原始反应计数
+            // Restore original reaction count
             if (
               message.originalReactionCount &&
               message.originalReactionCount > 0
@@ -1486,13 +1486,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
         error
       );
 
-      // 4. 网络错误，回滚乐观更新（同上逻辑）
+      // 4. Network error, rollback optimistic update (same logic as above)
       console.log(
         `ChatStore: Rolling back optimistic reaction removal due to network error for message ${realMessageId}`
       );
       const currentState = get();
 
-      // 回滚频道消息的反应
+      // Rollback channel message reactions
       const rollbackChannelMessages = new Map(currentState.channelMessages);
       for (const [ch, messages] of Array.from(
         rollbackChannelMessages.entries()
@@ -1506,7 +1506,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           const message = messages[messageIndex];
           const rollbackReactions = { ...message.reactions };
 
-          // 恢复原始反应计数
+          // Restore original reaction count
           if (
             message.originalReactionCount &&
             message.originalReactionCount > 0
@@ -1526,7 +1526,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
       }
 
-      // 回滚私信消息的反应
+      // Rollback direct message reactions
       const rollbackDirectMessages = new Map(currentState.directMessages);
       for (const [targetId, messages] of Array.from(
         rollbackDirectMessages.entries()
@@ -1540,7 +1540,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           const message = messages[messageIndex];
           const rollbackReactions = { ...message.reactions };
 
-          // 恢复原始反应计数
+          // Restore original reaction count
           if (
             message.originalReactionCount &&
             message.originalReactionCount > 0
@@ -1570,12 +1570,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  // 生成临时消息ID
+  // Generate temporary message ID
   generateTempMessageId: () => {
     return `temp_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   },
 
-  // 乐观更新 - 添加频道消息
+  // Optimistic update - add channel message
   addOptimisticChannelMessage: (
     channel: string,
     content: string,
@@ -1592,7 +1592,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       type: replyToId ? "reply_message" : "channel_message",
       channel: channel,
       replyToId: replyToId,
-      threadLevel: replyToId ? 1 : undefined, // 添加线程层级
+      threadLevel: replyToId ? 1 : undefined, // Add thread level
       isOptimistic: true,
       status: "sending" as MessageStatus,
       tempId: tempId,
@@ -1602,7 +1602,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     return tempId;
   },
 
-  // 乐观更新 - 添加私信消息
+  // Optimistic update - add direct message
   addOptimisticDirectMessage: (targetAgentId: string, content: string) => {
     const connection = get().getConnection();
     const tempId = get().generateTempMessageId();
@@ -1623,10 +1623,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     return tempId;
   },
 
-  // 替换乐观更新消息为真实消息
+  // Replace optimistic message with real message
   replaceOptimisticMessage: (tempId: string, realMessage: UnifiedMessage) => {
     set((state) => {
-      // 在频道消息中查找并替换
+      // Find and replace in channel messages
       const newChannelMessages = new Map(state.channelMessages);
       let messageReplaced = false;
 
@@ -1667,7 +1667,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           newChannelMessages.set(channel, updatedMessages);
           messageReplaced = true;
 
-          // 记录ID映射
+          // Record ID mapping
           const newTempIdToRealIdMap = new Map(state.tempIdToRealIdMap);
           newTempIdToRealIdMap.set(tempId, realMessage.id);
 
@@ -1685,7 +1685,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
       }
 
-      // 在私信消息中查找并替换
+      // Find and replace in direct messages
       if (!messageReplaced) {
         const newDirectMessages = new Map(state.directMessages);
         for (const [targetAgentId, messages] of Array.from(
@@ -1724,7 +1724,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             };
             newDirectMessages.set(targetAgentId, updatedMessages);
 
-            // 记录ID映射
+            // Record ID mapping
             const newTempIdToRealIdMap = new Map(state.tempIdToRealIdMap);
             newTempIdToRealIdMap.set(tempId, realMessage.id);
 
@@ -1750,21 +1750,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
   },
 
-  // 标记消息为失败
+  // Mark message as failed
   markMessageAsFailed: (tempId: string) => {
     get().updateMessage(tempId, { status: "failed" as MessageStatus });
   },
 
-  // 重试消息
+  // Retry message
   retryMessage: async (tempId: string) => {
     const state = get();
 
-    // 查找消息
+    // Find message
     let messageToRetry: OptimisticMessage | undefined;
     let channel: string | undefined;
     let targetAgentId: string | undefined;
 
-    // 在频道消息中查找
+    // Find in channel messages
     for (const [ch, messages] of Array.from(state.channelMessages.entries())) {
       const msg = messages.find((m) => m.tempId === tempId || m.id === tempId);
       if (msg) {
@@ -1774,7 +1774,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     }
 
-    // 在私信消息中查找
+    // Find in direct messages
     if (!messageToRetry) {
       for (const [agentId, messages] of Array.from(
         state.directMessages.entries()
@@ -1795,10 +1795,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return false;
     }
 
-    // 更新状态为发送中
+    // Update status to sending
     get().updateMessage(tempId, { status: "sending" as MessageStatus });
 
-    // 重新发送
+    // Resend
     try {
       if (channel) {
         return await get().sendChannelMessage(
@@ -1829,10 +1829,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const newChannelMessages = new Map(state.channelMessages);
       const currentMessages = newChannelMessages.get(channel) || [];
 
-      // 强化的消息去重机制
+      // Enhanced message deduplication mechanism
       const messageToAdd = message as OptimisticMessage;
       const exists = currentMessages.some((msg) => {
-        // 1. 直接ID匹配
+        // 1. Direct ID match
         if (msg.id === messageToAdd.id) {
           console.log(
             `ChatStore: Message with ID ${messageToAdd.id} already exists in channel #${channel} (ID match)`
@@ -1840,7 +1840,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           return true;
         }
 
-        // 2. 临时ID匹配
+        // 2. Temporary ID match
         if (messageToAdd.tempId && msg.tempId === messageToAdd.tempId) {
           console.log(
             `ChatStore: Message with tempId ${messageToAdd.tempId} already exists in channel #${channel} (tempId match)`
@@ -1848,20 +1848,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
           return true;
         }
 
-        // 3. 内容和时间匹配（防止相同内容的重复消息）
+        // 3. Content and time match (prevent duplicate messages with same content)
         if (
           msg.content === messageToAdd.content &&
           msg.senderId === messageToAdd.senderId &&
-          msg.type === messageToAdd.type &&
-          msg.replyToId === messageToAdd.replyToId &&
-          msg.id === messageToAdd.id
+          msg.type === messageToAdd.type
         ) {
           const timeDiff = Math.abs(
             new Date(msg.timestamp).getTime() -
               new Date(messageToAdd.timestamp).getTime()
           );
           if (timeDiff < 2000) {
-            // 2秒内的相同消息认为是重复
+            // Messages within 2 seconds with same content are considered duplicates
             console.log(
               `ChatStore: Duplicate message detected in channel #${channel} (content+time match, ${timeDiff}ms apart)`
             );
@@ -1876,7 +1874,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         return state;
       }
 
-      // 添加新消息到末尾
+      // Add new message to the end
       const optimisticMessage: OptimisticMessage = {
         ...message,
         isOptimistic: (message as OptimisticMessage).isOptimistic || false,
@@ -1923,10 +1921,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const newDirectMessages = new Map(state.directMessages);
       const currentMessages = newDirectMessages.get(targetAgentId) || [];
 
-      // 强化的私信消息去重机制
+      // Enhanced direct message deduplication mechanism
       const messageToAdd = message as OptimisticMessage;
       const exists = currentMessages.some((msg) => {
-        // 1. 直接ID匹配
+        // 1. Direct ID match
         if (msg.id === messageToAdd.id) {
           console.log(
             `ChatStore: Direct message with ID ${messageToAdd.id} already exists with ${targetAgentId} (ID match)`
@@ -1934,7 +1932,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           return true;
         }
 
-        // 2. 临时ID匹配
+        // 2. Temporary ID match
         if (messageToAdd.tempId && msg.tempId === messageToAdd.tempId) {
           console.log(
             `ChatStore: Direct message with tempId ${messageToAdd.tempId} already exists with ${targetAgentId} (tempId match)`
@@ -1942,20 +1940,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
           return true;
         }
 
-        // 3. 内容和时间匹配（防止相同内容的重复消息）
+        // 3. Content and time match (prevent duplicate messages with same content)
         if (
           msg.content === messageToAdd.content &&
           msg.senderId === messageToAdd.senderId &&
-          msg.type === messageToAdd.type &&
-          msg.replyToId === messageToAdd.replyToId &&
-          msg.id === messageToAdd.id
+          msg.type === messageToAdd.type
         ) {
           const timeDiff = Math.abs(
             new Date(msg.timestamp).getTime() -
               new Date(messageToAdd.timestamp).getTime()
           );
           if (timeDiff < 2000) {
-            // 2秒内的相同消息认为是重复
+            // Messages within 2 seconds with same content are considered duplicates
             console.log(
               `ChatStore: Duplicate direct message detected with ${targetAgentId} (content+time match, ${timeDiff}ms apart)`
             );
@@ -1970,7 +1966,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         return state;
       }
 
-      // 添加新消息到末尾
+      // Add new message to the end
       const optimisticMessage: OptimisticMessage = {
         ...message,
         isOptimistic: (message as OptimisticMessage).isOptimistic || false,
@@ -1995,7 +1991,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set((state) => {
       let messageUpdated = false;
 
-      // 更新 channel messages
+      // Update channel messages
       const newChannelMessages = new Map(state.channelMessages);
       for (const [channel, messages] of Array.from(
         newChannelMessages.entries()
@@ -2019,7 +2015,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
       }
 
-      // 更新 direct messages
+      // Update direct messages
       const newDirectMessages = new Map(state.directMessages);
       if (!messageUpdated) {
         for (const [targetAgentId, messages] of Array.from(
@@ -2070,7 +2066,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const { directMessages } = get();
     const messages = directMessages.get(targetAgentId) || [];
 
-    // 过滤属于当前会话的消息
+    // Filter messages belonging to current conversation
     return messages.filter(
       (message) =>
         message.type === "direct_message" &&
@@ -2078,7 +2074,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           message.targetUserId === targetAgentId) ||
           (message.senderId === targetAgentId &&
             message.targetUserId === currentAgentId) ||
-          message.senderId === targetAgentId) // 兼容旧格式
+          message.senderId === targetAgentId) // Compatible with old format
     );
   },
 
@@ -2089,11 +2085,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     console.log("ChatStore: Setting up chat event listeners");
 
-    // 使用事件路由器监听chat相关事件
+    // Use event router to listen to chat-related events
     const chatEventHandler = (event: any) => {
       console.log("ChatStore: Received chat event:", event.event_name, event);
 
-      // 处理频道消息通知
+      // Handle channel message notifications
       if (
         event.event_name === "thread.channel_message.notification" &&
         event.payload
@@ -2102,9 +2098,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
         const messageData = event.payload;
 
-        // 显示系统通知
+        // Show system notification
         if (messageData.channel && messageData.content) {
-          const senderName = event.sender_id || event.source_id || "未知用户";
+          const senderName =
+            event.sender_id || event.source_id || "Unknown user";
           const content =
             typeof messageData.content === "string"
               ? messageData.content
@@ -2119,7 +2116,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
 
         if (messageData.channel && messageData.content) {
-          // 构造统一消息格式
+          // Construct unified message format
           const unifiedMessage: UnifiedMessage = {
             id:
               event.event_id ||
@@ -2137,12 +2134,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
             reactions: messageData.reactions,
           };
 
-          // 检查是否是自己发送的消息（可能需要替换乐观更新消息）
+          // Check if it's own message (may need to replace optimistic update message)
           // const connection = get().getConnection();
           // const currentUserId = connection?.getAgentId();
 
           // if (unifiedMessage.senderId === currentUserId) {
-          //   // 这是自己发送的消息，查找并替换对应的乐观更新消息
+          //   // This is own message, find and replace corresponding optimistic update message
           //   console.log("ChatStore: This is own message, looking for optimistic message to replace");
 
           //   const state = get();
@@ -2152,22 +2149,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
           //     msg.content === unifiedMessage.content &&
           //     msg.senderId === unifiedMessage.senderId &&
           //     msg.type === unifiedMessage.type &&
-          //     Math.abs(new Date(msg.timestamp).getTime() - new Date(unifiedMessage.timestamp).getTime()) < 30000 // 30秒内
+          //     Math.abs(new Date(msg.timestamp).getTime() - new Date(unifiedMessage.timestamp).getTime()) < 30000 // Within 30 seconds
           //   );
 
           //   if (optimisticMsg && optimisticMsg.tempId) {
           //     console.log(`ChatStore: Found matching optimistic message ${optimisticMsg.tempId}, replacing with real message ${unifiedMessage.id}`);
           //     get().replaceOptimisticMessage(optimisticMsg.tempId, unifiedMessage);
-          //     return; // 不再执行 addMessageToChannel
+          //     return; // Do not execute addMessageToChannel
           //   }
           // }
 
-          // 如果不是自己的消息或没找到对应的乐观更新消息，直接添加
+          // If not own message or no corresponding optimistic update message found, add directly
           get().addMessageToChannel(messageData.channel, unifiedMessage);
         }
       }
 
-      // 处理回复消息通知
+      // Handle reply message notifications
       else if (
         event.event_name === "thread.reply.notification" &&
         event.payload
@@ -2176,7 +2173,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
         const messageData = event.payload;
 
-        // 详细调试：检查payload结构
+        // Detailed debugging: check payload structure
         console.log("ChatStore: Reply notification payload structure:", {
           message_id: event.event_id,
           event_source_id: event.source_id,
@@ -2192,9 +2189,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
         });
 
         if (messageData.channel && messageData.content) {
-          // 构造统一消息格式
-          // 修复：使用正确的发送者ID - event.source_id 或 event.sender_id 是实际的回复作者
-          // messageData.original_sender 指的是被回复消息的原作者，不是回复的发送者
+          // Construct unified message format
+          // Fix: use correct sender ID - event.source_id or event.sender_id is the actual reply author
+          // messageData.original_sender refers to the original author of the replied message, not the reply sender
           const unifiedMessage: UnifiedMessage = {
             id:
               event.event_id ||
@@ -2212,7 +2209,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             reactions: messageData.reactions,
           };
 
-          // 调试：检查构造的消息对象
+          // Debug: check constructed message object
           console.log("ChatStore: Constructed reply message:", {
             id: unifiedMessage.id,
             senderId: unifiedMessage.senderId,
@@ -2223,12 +2220,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
             channel: unifiedMessage.channel,
           });
 
-          // 检查是否是自己发送的回复消息
+          // Check if it's own reply message
           const myUserId = get().getConnection()?.getAgentId();
 
-          // 显示系统通知
+          // Show system notification
           if (messageData.channel && messageData.content) {
-            const senderName = event.sender_id || event.source_id || "未知用户";
+            const senderName =
+              event.sender_id || event.source_id || "Unknown user";
             const content =
               typeof messageData.content === "string"
                 ? messageData.content
@@ -2243,13 +2241,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
           }
 
           // if (unifiedMessage.senderId === currentUserId) {
-          //   // 这是自己发送的回复消息，查找并替换对应的乐观更新消息
+          //   // This is own reply message, find and replace corresponding optimistic update message
           //   console.log("ChatStore: This is own reply message, looking for optimistic message to replace");
 
           //   const state = get();
           //   const channelMessages = state.channelMessages.get(messageData.channel) || [];
 
-          //   // 更精确的回复消息匹配逻辑
+          //   // More precise reply message matching logic
           //   const optimisticMsg = channelMessages.find(msg => {
           //     if (!msg.isOptimistic || msg.status !== 'sending') return false;
 
@@ -2258,7 +2256,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           //     const typeMatch = msg.type === unifiedMessage.type;
           //     const replyMatch = msg.replyToId === unifiedMessage.replyToId;
 
-          //     // 缩短时间窗口到 5 秒
+          //     // Shorten time window to 5 seconds
           //     const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(unifiedMessage.timestamp).getTime());
           //     const timeMatch = timeDiff < 5000;
 
@@ -2276,7 +2274,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           //   }
           // }
 
-          // 检查是否是回复当前用户的消息
+          // Check if it's a reply to current user's message
           const connection = get().getConnection();
           const currentUserId = connection?.getAgentId();
 
@@ -2285,7 +2283,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             currentUserId &&
             unifiedMessage.senderId !== currentUserId
           ) {
-            // 查找被回复的原始消息
+            // Find the original message being replied to
             const state = get();
             const channelMessages =
               state.channelMessages.get(messageData.channel) || [];
@@ -2293,12 +2291,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
               (msg) => msg.id === unifiedMessage.replyToId
             );
 
-            // 如果找到原始消息且是当前用户发送的，显示回复通知
+            // If found original message and sent by current user, show reply notification
             if (originalMessage && originalMessage.senderId === currentUserId) {
               console.log(
                 `ChatStore: Detected reply to current user's message. Showing notification.`
               );
-              const senderName = unifiedMessage.senderId || "未知用户";
+              const senderName = unifiedMessage.senderId || "Unknown user";
               const content = unifiedMessage.content || "";
 
               notificationService.showReplyNotification(
@@ -2313,7 +2311,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
       }
 
-      // 处理私信消息通知
+      // Handle direct message notifications
       else if (
         event.event_name === "thread.direct_message.notification" &&
         event.payload
@@ -2322,10 +2320,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
         const messageData = event.payload;
 
-        // 显示系统通知 - 私信
+        // Show system notification - direct message
         if (messageData.content) {
           const senderName =
-            event.source_id || messageData.sender_id || "未知用户";
+            event.source_id || messageData.sender_id || "Unknown user";
           const content =
             typeof messageData.content === "string"
               ? messageData.content
@@ -2340,7 +2338,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
 
         if (messageData.content) {
-          // 构造统一消息格式
+          // Construct unified message format
           const unifiedMessage: UnifiedMessage = {
             id:
               event.event_id ||
@@ -2356,7 +2354,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             reactions: messageData.reactions,
           };
 
-          // 确定对话的目标 agent
+          // Determine the target agent for the conversation
           const connection = get().getConnection();
           const currentAgentId = connection.getAgentId();
           const targetAgentId =
@@ -2365,15 +2363,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
               : messageData.sender_id;
 
           if (targetAgentId) {
-            // // 检查是否是自己发送的私信消息
+            // // Check if it's own direct message
             // if (unifiedMessage.senderId === currentAgentId) {
-            //   // 这是自己发送的私信消息，查找并替换对应的乐观更新消息
+            //   // This is own direct message, find and replace corresponding optimistic update message
             //   console.log("ChatStore: This is own direct message, looking for optimistic message to replace");
 
             //   const state = get();
             //   const directMessages = state.directMessages.get(targetAgentId) || [];
 
-            //   // 更精确的私信消息匹配逻辑
+            //   // More precise direct message matching logic
             //   const optimisticMsg = directMessages.find(msg => {
             //     if (!msg.isOptimistic || msg.status !== 'sending') return false;
 
@@ -2381,7 +2379,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             //     const senderMatch = msg.senderId === unifiedMessage.senderId;
             //     const typeMatch = msg.type === unifiedMessage.type;
 
-            //     // 缩短时间窗口到 5 秒
+            //     // Shorten time window to 5 seconds
             //     const timeDiff = Math.abs(new Date(msg.timestamp).getTime() - new Date(unifiedMessage.timestamp).getTime());
             //     const timeMatch = timeDiff < 5000;
 
@@ -2404,7 +2402,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
       }
 
-      // 处理反应通知
+      // Handle reaction notifications
       else if (
         event.event_name === "thread.reaction.notification" &&
         event.payload
@@ -2421,12 +2419,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
             `ChatStore: Processing reaction update for message ${reactionData.target_message_id}: ${reactionData.action} ${reactionData.reaction_type} (total: ${reactionData.total_reactions})`
           );
 
-          // 查找目标消息并更新反应
+          // Find target message and update reactions
           const state = get();
           console.log(`ChatStore: State:`, state);
           let messageFound = false;
 
-          // 增强的消息查找函数
+          // Enhanced message search function
           const findMessageInAllStores = (targetMessageId: string) => {
             const results = {
               found: false,
@@ -2437,10 +2435,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
               message: null as any,
             };
 
-            // 首先检查ID映射表，看看是否有从真实ID到临时ID的映射
+            // First check ID mapping table to see if there's a mapping from real ID to temporary ID
             let searchIds = [targetMessageId];
 
-            // 添加可能的临时ID（通过反向查找映射表）
+            // Add possible temporary IDs (by reverse lookup in mapping table)
             for (const [tempId, realId] of Array.from(
               state.tempIdToRealIdMap.entries()
             )) {
@@ -2455,7 +2453,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               )}`
             );
 
-            // 在所有频道消息中搜索
+            // Search in all channel messages
             for (const [channel, messages] of Array.from(
               state.channelMessages.entries()
             )) {
@@ -2464,7 +2462,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               );
               for (let i = 0; i < messages.length; i++) {
                 const msg = messages[i];
-                // 检查多种ID匹配可能性
+                // Check multiple ID matching possibilities
                 if (
                   searchIds.includes(msg.id) ||
                   (msg.tempId && searchIds.includes(msg.tempId)) ||
@@ -2483,7 +2481,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               }
             }
 
-            // 在所有私信中搜索
+            // Search in all direct messages
             for (const [targetId, messages] of Array.from(
               state.directMessages.entries()
             )) {
@@ -2492,7 +2490,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               );
               for (let i = 0; i < messages.length; i++) {
                 const msg = messages[i];
-                // 检查多种ID匹配可能性
+                // Check multiple ID matching possibilities
                 if (
                   searchIds.includes(msg.id) ||
                   (msg.tempId && searchIds.includes(msg.tempId)) ||
@@ -2511,7 +2509,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               }
             }
 
-            // 如果没找到，输出调试信息
+            // If not found, output debug information
             console.log(
               `ChatStore: Message not found. Current message store status:`
             );
@@ -2537,7 +2535,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             return results;
           };
 
-          // 使用增强的查找函数
+          // Use enhanced search function
           const searchResult = findMessageInAllStores(
             reactionData.target_message_id
           );
@@ -2548,7 +2546,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               ...(searchResult.message.reactions || {}),
             };
 
-            // 根据action更新反应
+            // Update reactions based on action
             if (reactionData.action === "added") {
               currentReactions[reactionData.reaction_type] =
                 reactionData.total_reactions || 1;
@@ -2564,11 +2562,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
               }
             }
 
-            // 更新消息
+            // Update message
             const updatedMessage = {
               ...searchResult.message,
               reactions: currentReactions,
-              tempReactionId: undefined, // 清除临时反应ID，因为这是来自后端的真实数据
+              tempReactionId: undefined, // Clear temporary reaction ID as this is real data from backend
             };
 
             if (searchResult.location === "channel") {
@@ -2621,7 +2619,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
       }
 
-      // 处理频道列表响应
+      // Handle channel list response
       else if (
         event.event_name === "thread.channels.list_response" &&
         event.payload
@@ -2637,7 +2635,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
       }
 
-      // 处理频道消息检索响应
+      // Handle channel messages retrieve response
       else if (
         event.event_name === "thread.channel_messages.retrieve_response" &&
         event.payload
@@ -2649,7 +2647,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
         const { channel, messages } = event.payload;
         if (channel && messages) {
-          // 转换原始消息为统一格式
+          // Convert raw messages to unified format
           const rawMessages: RawThreadMessage[] = messages;
           const unifiedMessages =
             MessageAdapter.fromRawThreadMessages(rawMessages);
@@ -2661,7 +2659,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             })
           );
 
-          // 存储到 channelMessages Map 中
+          // Store in channelMessages Map
           set((state) => {
             const newChannelMessages = new Map(state.channelMessages);
             newChannelMessages.set(channel, optimisticMessages);
@@ -2674,7 +2672,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
       }
 
-      // 处理私信检索响应
+      // Handle direct messages retrieve response
       else if (
         event.event_name === "thread.direct_messages.retrieve_response" &&
         event.payload
@@ -2686,7 +2684,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
         const { target_agent_id, messages } = event.payload;
         if (target_agent_id && messages) {
-          // 转换原始消息为统一格式
+          // Convert raw messages to unified format
           const rawMessages: RawThreadMessage[] = messages;
           const unifiedMessages =
             MessageAdapter.fromRawThreadMessages(rawMessages);
@@ -2698,7 +2696,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             })
           );
 
-          // 存储到 directMessages Map 中
+          // Store in directMessages Map
           set((state) => {
             const newDirectMessages = new Map(state.directMessages);
             newDirectMessages.set(target_agent_id, optimisticMessages);
@@ -2711,20 +2709,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
       }
 
-      // 处理文件上传响应
+      // Handle file upload response
       else if (
         event.event_name === "thread.file.upload_response" &&
         event.payload
       ) {
         console.log("ChatStore: Received file upload response:", event);
-        // 可以在这里处理文件上传成功的逻辑
+        // Can handle file upload success logic here
       }
     };
 
-    // 注册到事件路由器
+    // Register to event router
     eventRouter.onChatEvent(chatEventHandler);
 
-    // 保存handler引用以便清理
+    // Save handler reference for cleanup
     set({ eventHandler: chatEventHandler });
   },
 
@@ -2761,7 +2759,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const state = get();
 
     if (stored.type === "channel") {
-      // 检查频道是否存在
+      // Check if channel exists
       const channelExists = state.channels.some((ch) => ch.name === stored.id);
       if (channelExists) {
         console.log(`ChatStore: Restoring channel selection: #${stored.id}`);
@@ -2771,7 +2769,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           persistedSelectionType: "channel",
           persistedSelectionId: stored.id,
         });
-        // 加载频道消息
+        // Load channel messages
         await get().loadChannelMessages(stored.id);
       } else {
         console.log(
@@ -2780,7 +2778,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         get().clearPersistedSelection();
       }
     } else if (stored.type === "agent") {
-      // 检查代理是否存在
+      // Check if agent exists
       const agentExists = state.agents.some(
         (agent) => agent.agent_id === stored.id
       );
@@ -2792,7 +2790,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           persistedSelectionType: "agent",
           persistedSelectionId: stored.id,
         });
-        // 加载私信消息
+        // Load direct messages
         await get().loadDirectMessages(stored.id);
       } else {
         console.log(
@@ -2806,7 +2804,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   initializeWithDefaultSelection: async () => {
     const state = get();
 
-    // 等待频道和代理数据加载完成
+    // Wait for channels and agents data to load
     if (!state.channelsLoaded || !state.agentsLoaded) {
       console.log(
         "ChatStore: Waiting for channels and agents to load before initializing default selection"
@@ -2814,7 +2812,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return;
     }
 
-    // 如果已经有选择，不执行默认选择
+    // If already has selection, skip default selection
     if (state.currentChannel || state.currentDirectMessage) {
       console.log(
         "ChatStore: Already has selection, skipping default initialization"
@@ -2824,14 +2822,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     console.log("ChatStore: Initializing with default selection");
 
-    // 优先选择第一个频道
+    // Prioritize selecting first channel
     if (state.channels.length > 0) {
       const firstChannel = state.channels[0].name;
       console.log(`ChatStore: Selecting first channel: #${firstChannel}`);
       get().selectChannel(firstChannel);
       await get().loadChannelMessages(firstChannel);
     }
-    // 如果没有频道，选择第一个代理
+    // If no channels, select first agent
     else if (state.agents.length > 0) {
       const firstAgent = state.agents[0].agent_id;
       console.log(
@@ -2847,7 +2845,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 }));
 
-// Helper function 用于设置全局 context 引用
+// Helper function to set global context reference
 export const setChatStoreContext = (context: any) => {
   globalOpenAgentsContext = context;
 };

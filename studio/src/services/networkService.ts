@@ -158,6 +158,16 @@ export const fetchNetworkById = async (
     const result = await response.json();
 
     if (result.code === 200 && result.data) {
+      // Check if network is offline
+      if (result.data.status === 'offline') {
+        const networkName = result.data.profile?.name || networkId;
+        return {
+          success: false,
+          error: `Network '${networkName}' is currently offline`,
+          network: result.data,
+        };
+      }
+
       return {
         success: true,
         network: result.data,

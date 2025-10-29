@@ -104,6 +104,7 @@ const ForumSidebar: React.FC = () => {
 
   const {
     topics,
+    groupsData,
     setConnection,
     loadTopics,
     getPopularTopics,
@@ -118,7 +119,9 @@ const ForumSidebar: React.FC = () => {
       "ForumSidebar: Popular topics recalculated. Total topics:",
       topics.length,
       "Popular count:",
-      popular.length
+      popular.length,
+      "groupsData:",
+      groupsData
     );
     console.log(
       "ForumSidebar: Popular topics:",
@@ -129,7 +132,7 @@ const ForumSidebar: React.FC = () => {
       }))
     );
     return popular;
-  }, [topics, getPopularTopics]);
+  }, [topics, getPopularTopics, groupsData]);
 
   // 检查当前是否在某个话题详情页
   const currentTopicId = location.pathname.match(/^\/forum\/([^/]+)$/)?.[1];
@@ -201,7 +204,13 @@ const ForumSidebar: React.FC = () => {
       {/* Popular Topics Section */}
       <SectionHeader title="POPULAR 10 TOPICS" />
       <div className="flex-1 overflow-y-auto px-3 custom-scrollbar">
-        {popularTopics.length === 0 ? (
+        {!groupsData ? (
+          <div className="text-center py-4">
+            <p className="text-gray-500 dark:text-gray-400 text-sm">
+              Loading...
+            </p>
+          </div>
+        ) : popularTopics.length === 0 ? (
           <div className="text-center py-4">
             <p className="text-gray-500 dark:text-gray-400 text-sm">
               No topics yet

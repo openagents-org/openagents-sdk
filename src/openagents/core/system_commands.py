@@ -28,6 +28,9 @@ from openagents.config.globals import (
     SYSTEM_EVENT_GET_CHANNEL_MEMBERS,
     SYSTEM_EVENT_REMOVE_CHANNEL,
     SYSTEM_EVENT_LIST_CHANNELS,
+    SYSTEM_EVENT_VERIFY_PASSWORD,
+    SYSTEM_EVENT_KICK_AGENT,
+    SYSTEM_NOTIFICATION_AGENT_KICKED,
 )
 from openagents.models.event import Event
 from openagents.models.event_response import EventResponse
@@ -72,6 +75,8 @@ class SystemCommandProcessor:
             SYSTEM_EVENT_GET_CHANNEL_MEMBERS: self.handle_get_channel_members,
             SYSTEM_EVENT_REMOVE_CHANNEL: self.handle_remove_channel,
             SYSTEM_EVENT_LIST_CHANNELS: self.handle_list_channels,
+            SYSTEM_EVENT_VERIFY_PASSWORD: self.handle_verify_password,
+            SYSTEM_EVENT_KICK_AGENT: self.handle_kick_agent,
         }
 
     async def process_command(self, system_event: Event) -> Optional[EventResponse]:
@@ -782,3 +787,201 @@ class SystemCommandProcessor:
                 "channels": channels,
             },
         )
+
+    async def handle_verify_password(self, event: Event) -> EventResponse:
+        """Handle the verify_password command.
+        
+        Verifies a password hash against configured agent groups and returns
+        the matching group information.
+        """
+        password_hash = event.payload.get("password_hash")
+        
+        if not password_hash:
+            return EventResponse(
+                success=False,
+                message="Missing password_hash parameter",
+                data={
+                    "type": "system_response",
+                    "command": "verify_password",
+                    "valid": False,
+                }
+            )
+        
+        # Check against configured agent groups
+        for group_name, group_config in self.network.config.agent_groups.items():
+            if group_config.password_hash and password_hash == group_config.password_hash:
+                # Password matches this group
+                response_data = {
+                    "type": "system_response",
+                    "command": "verify_password",
+                    "valid": True,
+                    "group_name": group_name,
+                    "group_description": group_config.description,
+                    "group_metadata": group_config.metadata,
+                    "default_group": self.network.config.default_agent_group,
+                }
+                
+                # Include request_id if provided
+                if "request_id" in event.payload:
+                    response_data["request_id"] = event.payload["request_id"]
+                
+                return EventResponse(
+                    success=True,
+                    message=f"Password verified: matches group '{group_name}'",
+                    data=response_data,
+                )
+        
+        # No matching group found
+        response_data = {
+            "type": "system_response", 
+            "command": "verify_password",
+            "valid": False,
+            "default_group": self.network.config.default_agent_group,
+            "requires_password": self.network.config.requires_password,
+        }
+        
+        # Include request_id if provided
+        if "request_id" in event.payload:
+            response_data["request_id"] = event.payload["request_id"]
+        
+        if self.network.config.requires_password:
+            message = "Password verification failed: no matching group found (registration would be rejected)"
+        else:
+            message = f"Password verification failed: no matching group found (would assign to default group '{self.network.config.default_agent_group}')"
+        
+        return EventResponse(
+            success=True,
+            message=message,
+            data=response_data,
+        )
+
+    async def handle_kick_agent(self, event: Event) -> EventResponse:
+        """Handle the kick_agent command.
+        
+        Only agents in the 'admin' group can kick other agents.
+        Takes target_agent_id from the payload and removes the agent from the network.
+        """
+        requesting_agent_id = event.payload.get("agent_id", event.source_id)
+        target_agent_id = event.payload.get("target_agent_id")
+        
+        if not requesting_agent_id:
+            return EventResponse(
+                success=False,
+                message="Missing requesting agent_id",
+                data={
+                    "type": "system_response",
+                    "command": "kick_agent",
+                }
+            )
+        
+        if not target_agent_id:
+            return EventResponse(
+                success=False,
+                message="Missing target_agent_id parameter",
+                data={
+                    "type": "system_response",
+                    "command": "kick_agent",
+                }
+            )
+        
+        # Check if requesting agent is in admin group
+        requesting_group = self.network.topology.agent_group_membership.get(requesting_agent_id)
+        if requesting_group != "admin":
+            self.logger.warning(f"Unauthorized kick attempt by {requesting_agent_id} (group: {requesting_group})")
+            return EventResponse(
+                success=False,
+                message="Unauthorized: Admin privileges required to kick agents",
+                data={
+                    "type": "system_response",
+                    "command": "kick_agent",
+                    "requesting_agent": requesting_agent_id,
+                    "requesting_group": requesting_group,
+                }
+            )
+        
+        # Check if target agent exists
+        agent_registry = self.network.get_agent_registry()
+        if target_agent_id not in agent_registry:
+            return EventResponse(
+                success=False,
+                message=f"Target agent '{target_agent_id}' not found",
+                data={
+                    "type": "system_response",
+                    "command": "kick_agent",
+                    "target_agent_id": target_agent_id,
+                }
+            )
+        
+        # Don't allow kicking yourself
+        if requesting_agent_id == target_agent_id:
+            return EventResponse(
+                success=False,
+                message="Cannot kick yourself",
+                data={
+                    "type": "system_response",
+                    "command": "kick_agent",
+                    "target_agent_id": target_agent_id,
+                }
+            )
+        
+        try:
+            # Get target agent's group before removal for notification
+            target_group = self.network.topology.agent_group_membership.get(target_agent_id, "unknown")
+            
+            # Remove the agent from the network
+            unregister_response = await self.network.unregister_agent(target_agent_id)
+            
+            if unregister_response.success:
+                self.logger.info(f"Agent {target_agent_id} kicked by admin {requesting_agent_id}")
+                
+                # Create and broadcast the agent_kicked notification event
+                kick_notification = Event(
+                    event_name=SYSTEM_NOTIFICATION_AGENT_KICKED,
+                    source_id="system",
+                    destination_id="agent:broadcast",  # Broadcast to all agents
+                    payload={
+                        "target_agent_id": target_agent_id,
+                        "kicked_by": requesting_agent_id,
+                        "target_group": target_group,
+                        "reason": "Kicked by admin",
+                        "timestamp": int(time.time()),
+                    },
+                    text_representation=f"Agent {target_agent_id} was kicked by admin {requesting_agent_id}"
+                )
+                
+                # Broadcast the notification to all connected agents
+                await self.network.event_gateway.process_event(kick_notification)
+                
+                return EventResponse(
+                    success=True,
+                    message=f"Successfully kicked agent '{target_agent_id}'",
+                    data={
+                        "type": "system_response",
+                        "command": "kick_agent",
+                        "target_agent_id": target_agent_id,
+                        "kicked_by": requesting_agent_id,
+                        "target_group": target_group,
+                    }
+                )
+            else:
+                return EventResponse(
+                    success=False,
+                    message=f"Failed to kick agent '{target_agent_id}': {unregister_response.message}",
+                    data={
+                        "type": "system_response",
+                        "command": "kick_agent",
+                        "target_agent_id": target_agent_id,
+                    }
+                )
+                
+        except Exception as e:
+            self.logger.error(f"Error kicking agent {target_agent_id}: {e}")
+            return EventResponse(
+                success=False,
+                message=f"Internal error while kicking agent: {str(e)}",
+                data={
+                    "type": "system_response",
+                    "command": "kick_agent",
+                    "target_agent_id": target_agent_id,
+                }
+            )

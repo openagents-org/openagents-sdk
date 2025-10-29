@@ -13,7 +13,7 @@ import DocumentsMainPage from "@/pages/documents/DocumentsMainPage";
 import ProfileMainPage from "@/pages/profile/ProfileMainPage";
 // import McpMainPage from "@/pages/mcp/McpMainPage";
 
-// 导航图标组件
+// Navigation icon components
 export const NavigationIcons = {
   Messages: React.memo(() =>
     React.createElement("svg",
@@ -135,27 +135,27 @@ export const NavigationIcons = {
   // ),
 };
 
-// 路由配置接口
+// Route configuration interface
 export interface RouteConfig {
   path: string;
   element: React.ComponentType;
   requiresAuth?: boolean;
-  requiresLayout?: boolean; // 是否需要 RootLayout（包含 sidebar）
+  requiresLayout?: boolean; // Whether RootLayout (including sidebar) is required
   title?: string;
-  // ModSidebar 配置
+  // ModSidebar configuration
   navigationConfig?: {
     key: PLUGIN_NAME_ENUM;
     label: string;
     icon: keyof typeof NavigationIcons;
     visible: boolean;
-    order: number; // 排序权重
-    group: 'primary' | 'secondary'; // 主要功能 | 次要功能
+    order: number; // Sort weight
+    group: 'primary' | 'secondary'; // Primary function | Secondary function
   };
 }
 
-// 动态路由配置 - 可以通过接口或配置文件动态调整
+// Dynamic route configuration - can be dynamically adjusted through interface or configuration file
 export const dynamicRouteConfig: RouteConfig[] = [
-  // 认证相关路由 - 这些页面不需要 sidebar 和完整布局
+  // Authentication-related routes - these pages don't need sidebar and full layout
   {
     path: "/",
     element: NetworkSelectionPage,
@@ -169,7 +169,7 @@ export const dynamicRouteConfig: RouteConfig[] = [
     requiresLayout: false,
   },
 
-  // 主功能路由 - 这些页面需要完整的 sidebar 布局
+  // Main feature routes - these pages need full sidebar layout
   {
     path: "/messaging/*",
     element: MessagingMainPage,
@@ -231,7 +231,7 @@ export const dynamicRouteConfig: RouteConfig[] = [
     },
   },
 
-  // 设置相关路由 - 这些页面需要完整的 sidebar 布局
+  // Settings-related routes - these pages need full sidebar layout
   // {
   //   path: "/settings/*",
   //   element: SettingsMainPage,
@@ -279,7 +279,7 @@ export const dynamicRouteConfig: RouteConfig[] = [
   // },
 ];
 
-// // 快捷操作配置 - 独立于路由的快速操作
+// // Quick action configuration - quick actions independent of routes
 // export interface QuickActionConfig {
 //   id: string;
 //   title: string;
@@ -352,37 +352,37 @@ export const dynamicRouteConfig: RouteConfig[] = [
 //   },
 // ];
 
-// 工具函数：获取可见的导航路由
+// Utility function: get visible navigation routes
 export const getVisibleNavigationRoutes = () => {
   return dynamicRouteConfig
     .filter(route => route.navigationConfig?.visible)
     .sort((a, b) => (a.navigationConfig?.order || 0) - (b.navigationConfig?.order || 0));
 };
 
-// 工具函数：根据分组获取导航路由
+// Utility function: get navigation routes by group
 export const getNavigationRoutesByGroup = (group: 'primary' | 'secondary') => {
   return getVisibleNavigationRoutes()
     .filter(route => route.navigationConfig?.group === group);
 };
 
-// // 工具函数：获取可见的快捷操作
+// // Utility function: get visible quick actions
 // export const getVisibleQuickActions = () => {
 //   return quickActionConfig
 //     .filter(action => action.visible)
 //     .sort((a, b) => a.order - b.order);
 // };
 
-// 工具函数：获取所有需要注册的路由
+// Utility function: get all routes that need to be registered
 export const getAllRoutes = () => {
   return dynamicRouteConfig;
 };
 
-// 特殊路由（重定向等）
+// Special routes (redirects, etc.)
 export const specialRoutes = [
   // No special routes needed - NetworkSelectionPage is served directly under /
 ];
 
-// 动态配置更新函数 - 可以通过接口调用来更新配置
+// Dynamic configuration update function - can update configuration through interface calls
 export const updateRouteVisibility = (pluginKey: PLUGIN_NAME_ENUM, visible: boolean) => {
   const route = dynamicRouteConfig.find(r => r.navigationConfig?.key === pluginKey);
   if (route?.navigationConfig) {

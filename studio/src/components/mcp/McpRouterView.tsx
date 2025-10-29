@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import McpCard from './McpCard';
 import { marketplaceService, MarketplaceServer } from '../../utils/mcp/marketplaceService';
 import { getAuth } from 'firebase/auth';
-import { useToast } from '../../context/ToastContext';
+import { toast } from "sonner";
 
 interface McpRouterViewProps {
   onServerAdded?: () => void;
@@ -26,7 +26,7 @@ const McpRouterView: React.FC<McpRouterViewProps> = ({ onServerAdded }) => {
   const [adding, setAdding] = useState(false);
   const [marketplaceServers, setMarketplaceServers] = useState<MarketplaceServer[]>([]);
   const [loading, setLoading] = useState(true);
-  const toast = useToast();
+  // Toast is imported from sonner
   
   // Fetch marketplace data on component mount
   useEffect(() => {

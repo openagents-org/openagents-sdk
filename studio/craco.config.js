@@ -12,7 +12,7 @@ module.exports = {
         target: 'http://cur2.acenta.ai:9572',
         changeOrigin: true,
         secure: false,
-        timeout: 60000, // 60秒超时
+        timeout: 60000, // 60 second timeout
         proxyTimeout: 60000,
       },
     },

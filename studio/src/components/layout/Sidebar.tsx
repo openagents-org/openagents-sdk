@@ -9,7 +9,7 @@ import { useThemeStore } from "@/stores/themeStore";
 import SidebarContent from "./SidebarContent";
 import { useAuthStore } from "@/stores/authStore";
 
-// Header Component - 缓存组件，因为内容是静态的
+// Header Component - cached component because content is static
 const SidebarHeader: React.FC = React.memo(() => (
   <div className="flex flex-col px-4 py-2">
     <div className="flex items-center justify-center">
@@ -22,7 +22,7 @@ const SidebarHeader: React.FC = React.memo(() => (
 ));
 SidebarHeader.displayName = "SidebarHeader";
 
-// // Quick Action Button Component - 缓存组件，避免不必要的重新渲染
+// // Quick Action Button Component - cached component to avoid unnecessary re-renders
 // const QuickActionButton: React.FC<{
 //   isActive: boolean;
 //   onClick: () => void;
@@ -77,23 +77,23 @@ SidebarHeader.displayName = "SidebarHeader";
 // );
 // QuickActionButton.displayName = "QuickActionButton";
 
-// Footer Component - 缓存组件，只有主题改变时才重新渲染
+// Footer Component - cached component, only re-renders when theme changes
 const SidebarFooter: React.FC<{
   toggleTheme: () => void;
   theme: string;
 }> = React.memo(({ toggleTheme, theme }) => {
   const navigate = useNavigate();
-  const { agentName, selectedNetwork, clearNetwork, clearAgentName } =
+  const { agentName, selectedNetwork, clearNetwork, clearAgentName, clearPasswordHash } =
     useAuthStore();
   const { clearAllChatData } = useChatStore();
   const { confirm } = useConfirm();
 
-  // 登出处理函数
+  // Logout handler function
   const handleLogout = async () => {
     console.log("🚪 Logout button clicked - showing confirmation dialog");
 
     try {
-      // 显示确认对话框
+      // Show confirmation dialog
       const confirmed = await confirm(
         "Logout Confirmation",
         "Are you sure you want to logout? You will need to reconnect to continue using the application.",
@@ -111,19 +111,20 @@ const SidebarFooter: React.FC<{
 
       console.log("✅ Logout confirmed - starting logout process");
 
-      // 清空网络状态
+      // Clear network state
       clearNetwork();
       clearAgentName();
-      console.log("🧹 Network state cleared");
+      clearPasswordHash(); // Explicitly clear password hash
+      console.log("🧹 Network state and password hash cleared");
 
-      // 清空 chat store 数据
+      // Clear chat store data
       clearAllChatData();
       console.log("🧹 Chat store data cleared");
 
-      // 清空 OpenAgents 相关的所有数据（保留主题设置）
+      // Clear all OpenAgents-related data (preserve theme settings)
       clearAllOpenAgentsDataForLogout();
 
-      // 跳转到网络选择页面
+      // Navigate to network selection page
       console.log("🔄 Navigating to network selection");
       navigate("/network-selection", { replace: true });
     } catch (error) {
@@ -152,7 +153,7 @@ const SidebarFooter: React.FC<{
           </div>
         </div>
         <div className="flex items-center space-x-1">
-          {/* 主题切换按钮 */}
+          {/* Theme toggle button */}
           <button
             onClick={toggleTheme}
             className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all duration-200"
@@ -189,7 +190,7 @@ const SidebarFooter: React.FC<{
             )}
           </button>
 
-          {/* 登出按钮 */}
+          {/* Logout button */}
           <button
             onClick={handleLogout}
             className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 group"
@@ -216,9 +217,9 @@ const SidebarFooter: React.FC<{
 });
 SidebarFooter.displayName = "SidebarFooter";
 
-// 简化的 Sidebar Props - 只包含基础的UI状态，不包含业务数据
+// Simplified Sidebar Props - only includes basic UI state, no business data
 interface SidebarProps {
-  // 基础UI状态 - 如果需要的话
+  // Basic UI state - if needed
   className?: string;
 }
 
@@ -226,25 +227,25 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
   // const navigate = useNavigate();
   const { theme, toggleTheme } = useThemeStore();
 
-  // 获取动态的快捷操作配置
+  // Get dynamic quick action configuration
   // const quickActions = getVisibleQuickActions();
 
   return (
     <div
       className={`sidebar h-full flex flex-col transition-all duration-200 bg-slate-100 dark:bg-gray-900 ${
         className || ""
-      } flex flex-col overflow-y-hidden`}
+      } flex flex-col overflow-hidden`}
       style={{ width: "19rem" }}
     >
-      {/* 上：Header */}
+      {/* Top: Header */}
       <SidebarHeader />
 
-      {/* 中：Dynamic Content - 由 SidebarContent 根据路由自动管理 */}
+      {/* Middle: Dynamic Content - automatically managed by SidebarContent based on route */}
       <div className="flex-1 overflow-y-hidden">
         <SidebarContent />
       </div>
 
-      {/* Quick Actions - 动态渲染 */}
+      {/* Quick Actions - dynamically rendered */}
       {/* {quickActions.map((action) => (
         <div key={action.id} className="px-4 pt-2">
           <QuickActionButton
@@ -260,7 +261,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
         </div>
       ))} */}
 
-      {/* 下：Footer */}
+      {/* Bottom: Footer */}
       <SidebarFooter toggleTheme={toggleTheme} theme={theme} />
     </div>
   );

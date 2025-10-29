@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useWikiStore } from '@/stores/wikiStore';
-import { useToast } from '@/context/ToastContext';
+import { toast } from "sonner";
 import WikiEditor from './WikiEditor';
 
 interface WikiCreateModalProps {
@@ -14,9 +14,8 @@ const WikiCreateModal: React.FC<WikiCreateModalProps> = ({ isOpen, onClose }) =>
   const [content, setContent] = useState('');
 
   const { createPage } = useWikiStore();
-  const { error: showErrorToast } = useToast();
 
-  // 重置表单当模态框打开/关闭时
+  // Reset form when modal opens/closes
   useEffect(() => {
     if (isOpen) {
       setPagePath('');
@@ -33,8 +32,8 @@ const WikiCreateModal: React.FC<WikiCreateModalProps> = ({ isOpen, onClose }) =>
     if (success) {
       onClose();
     } else {
-      // createPage会返回错误信息，通过toast显示
-      showErrorToast('Failed to create wiki page. Page may already exist.');
+      // Show error toast
+      toast.error('Failed to create wiki page. Page may already exist.');
     }
   };
 

@@ -5,13 +5,13 @@ import { HealthResponse } from "@/utils/moduleUtils";
 import { useMemo } from "react";
 
 interface ProfileState {
-  // 健康数据状态
+  // Health data state
   healthData: HealthResponse | null;
   loading: boolean;
   error: string | null;
   lastUpdated: Date | null;
 
-  // 额外的状态信息
+  // Additional state information
   connectionLatency: number | null;
   isOnline: boolean;
 
@@ -32,7 +32,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   connectionLatency: null,
   isOnline: false,
 
-  // 获取 Profile 数据
+  // Fetch Profile data
   fetchProfileData: async () => {
     const { selectedNetwork } = useAuthStore.getState();
 
@@ -83,7 +83,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     }
   },
 
-  // 清除 Profile 数据
+  // Clear Profile data
   clearProfileData: () => {
     console.log("ProfileStore: Clearing profile data");
     set({
@@ -96,26 +96,26 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     });
   },
 
-  // 刷新数据
+  // Refresh data
   refreshData: async () => {
     console.log("ProfileStore: Refreshing profile data");
     await get().fetchProfileData();
   },
 
-  // 设置加载状态
+  // Set loading state
   setLoading: (loading: boolean) => {
     set({ loading });
   },
 
-  // 设置错误状态
+  // Set error state
   setError: (error: string | null) => {
     set({ error });
   },
 }));
 
-// 导出状态选择器，方便组件使用
+// Export state selectors for convenient component usage
 export const profileSelectors = {
-  // 基础状态
+  // Basic state
   useHealthData: () => useProfileStore((state) => state.healthData),
   useLoading: () => useProfileStore((state) => state.loading),
   useError: () => useProfileStore((state) => state.error),
@@ -123,7 +123,7 @@ export const profileSelectors = {
   useConnectionLatency: () => useProfileStore((state) => state.connectionLatency),
   useIsOnline: () => useProfileStore((state) => state.isOnline),
 
-  // 计算状态 - 使用 useMemo 缓存计算结果
+  // Computed state - use useMemo to cache calculation results
   useNetworkInfo: () => {
     const healthData = useProfileStore((state) => state.healthData);
     return useMemo(() => {

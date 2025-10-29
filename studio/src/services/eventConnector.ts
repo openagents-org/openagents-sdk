@@ -5,12 +5,16 @@
  * It provides immediate EventResponse feedback via HTTP transport.
  */
 
+import { clearAllOpenAgentsDataForLogout } from "@/utils/cookies";
 import { Event, EventResponse, EventNames, AgentInfo } from "../types/events";
 import {
   buildNetworkUrl,
   buildNetworkHeaders,
   networkFetch,
 } from "../utils/httpClient";
+import { useAuthStore } from "@/stores/authStore";
+import { useChatStore } from "@/stores/chatStore";
+import { toast } from "sonner";
 
 export interface ConnectionOptions {
   host: string;
@@ -18,6 +22,7 @@ export interface ConnectionOptions {
   agentId: string;
   metadata?: any;
   timeout?: number;
+  passwordHash?: string | null;
 }
 
 export interface EventHandler {
@@ -39,11 +44,13 @@ export class HttpEventConnector {
   private maxReconnectAttempts = 5;
   private timeout: number;
   private secret: string | null = null;
+  private passwordHash: string | null = null;
 
   constructor(options: ConnectionOptions) {
     this.agentId = options.agentId;
     this.originalAgentId = options.agentId;
     this.timeout = options.timeout || 30000;
+    this.passwordHash = options.passwordHash || null;
 
     // Store host and port for network requests
     this.baseUrl = `http://${options.host}:${options.port}/api`;
@@ -95,6 +102,7 @@ export class HttpEventConnector {
             user_agent: navigator.userAgent,
             platform: "web",
           },
+          password_hash: this.passwordHash || undefined,
         }
       );
 
@@ -429,6 +437,10 @@ export class HttpEventConnector {
     }
   }
 
+  removeAllListeners(): void {
+    this.eventHandlers.clear();
+  }
+
   private emit(eventName: string, data: any): void {
     const handlers = this.eventHandlers.get(eventName);
     if (handlers) {
@@ -481,6 +493,34 @@ export class HttpEventConnector {
       ) {
         for (const event of response.messages) {
           this.handleIncomingEvent(event);
+        }
+      } else {
+        // when kick off need login again
+        if (
+          !response.success &&
+          response.error_message === "Agent not registered"
+        ) {
+          toast.error("You have been kicked from network, please login again", {
+            description: "You will be redirected to network selection",
+          });
+          // const timer = setTimeout(() => {
+          // clearTimeout(timer);
+          // Clear network state
+          useAuthStore.getState().clearNetwork();
+          useAuthStore.getState().clearAgentName();
+          useAuthStore.getState().clearPasswordHash(); // Explicitly clear password hash
+          console.log("🧹 Network state and password hash cleared");
+
+          // Clear chat store data
+          useChatStore.getState().clearAllChatData();
+          console.log("🧹 Chat store data cleared");
+
+          // Clear all OpenAgents-related data (preserve theme settings)
+          clearAllOpenAgentsDataForLogout();
+
+          // Navigate to network selection page
+          console.log("🔄 Navigating to network selection");
+          // }, 1000);
         }
       }
     } catch (error) {

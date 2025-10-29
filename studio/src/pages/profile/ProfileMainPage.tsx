@@ -9,6 +9,7 @@ import NetworkInfoCard from "./components/NetworkInfoCard";
 import ModulesInfoCard from "./components/ModulesInfoCard";
 import AgentInfoCard from "./components/AgentInfoCard";
 import SystemInfoCard from "./components/SystemInfoCard";
+import AgentManagement from "./AgentManagement";
 
 /**
  * 个人资料主页面 - 处理个人资料相关的所有功能
@@ -48,6 +49,9 @@ const ProfileMainPage: React.FC = () => {
           </div>
         }
       />
+
+      {/* Agent Management 子页面 - Admin only */}
+      <Route path="agent-management" element={<AgentManagement />} />
     </Routes>
   );
 };

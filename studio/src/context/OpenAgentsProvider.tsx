@@ -1,11 +1,11 @@
 /**
- * 简化的 OpenAgents Provider - 专注于连接状态管理
+ * Simplified OpenAgents Provider - focused on connection state management
  *
- * 职责：
- * 1. 维护单一的 HttpEventConnector 实例
- * 2. 监听和管理连接状态变化
- * 3. 提供连接状态给组件使用
- * 4. 暴露connector实例供其他组件直接使用
+ * Responsibilities:
+ * 1. Maintain a single HttpEventConnector instance
+ * 2. Listen and manage connection state changes
+ * 3. Provide connection state to components
+ * 4. Expose connector instance for direct use by other components
  */
 
 import React, {
@@ -21,10 +21,12 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { HttpEventConnector } from "@/services/eventConnector";
 import { useAuthStore } from "@/stores/authStore";
 import { useChatStore } from "@/stores/chatStore";
+import { useDocumentStore } from "@/stores/documentStore";
 import { eventRouter } from "@/services/eventRouter";
 import { notificationService } from "@/services/notificationService";
+import { toast } from "sonner";
 
-// 简化的连接状态枚举
+// Simplified connection state enum
 export enum ConnectionState {
   DISCONNECTED = "disconnected",
   CONNECTING = "connecting",
@@ -33,7 +35,7 @@ export enum ConnectionState {
   ERROR = "error",
 }
 
-// 连接状态详情
+// Connection status details
 export interface ConnectionStatus {
   state: ConnectionState;
   agentId?: string;
@@ -44,20 +46,20 @@ export interface ConnectionStatus {
   maxReconnectAttempts?: number;
 }
 
-// Context 接口
+// Context interface
 interface OpenAgentsContextType {
-  // 核心connector实例
+  // Core connector instance
   connector: HttpEventConnector | null;
 
-  // 连接状态
+  // Connection status
   connectionStatus: ConnectionStatus;
   isConnected: boolean;
 
-  // 连接管理
+  // Connection management
   connect: () => Promise<boolean>;
   disconnect: () => Promise<void>;
 
-  // 错误处理
+  // Error handling
   clearError: () => void;
 }
 
@@ -72,8 +74,10 @@ interface OpenAgentsProviderProps {
 export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
   children,
 }) => {
-  const { agentName, selectedNetwork } = useAuthStore();
+  const { agentName, selectedNetwork, getPasswordHash } = useAuthStore();
   const { selectChannel, selectDirectMessage } = useChatStore();
+  const { setConnection, setupEventListeners, cleanupEventListeners } =
+    useDocumentStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [connector, setConnector] = useState<HttpEventConnector | null>(null);
@@ -82,9 +86,11 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
   });
 
   const connectorRef = useRef<HttpEventConnector | null>(null);
-  const globalNotificationHandlerRef = useRef<((event: any) => void) | null>(null);
+  const globalNotificationHandlerRef = useRef<((event: any) => void) | null>(
+    null
+  );
 
-  // 清理connector
+  // Clean up connector
   const cleanUpConnector = useCallback(() => {
     if (connectorRef.current) {
       console.log("🔧 Cleaning up OpenAgents connector");
@@ -92,7 +98,7 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
       connectorRef.current = null;
       setConnector(null);
 
-      // 重置连接状态
+      // Reset connection status
       setConnectionStatus({
         state: ConnectionState.DISCONNECTED,
       });
@@ -106,16 +112,19 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
         globalNotificationHandlerRef.current = null;
       }
 
+      // Cleanup document event listeners
+      cleanupEventListeners();
+
       connectorTemp.disconnect().catch((error) => {
         console.warn("Error during connector cleanup:", error);
       });
     }
-  }, []);
+  }, [cleanupEventListeners]);
 
-  // 设置连接事件监听器
+  // Set up connection event listeners
   const setupConnectionListeners = useCallback(
     (connector: HttpEventConnector) => {
-      // 连接成功
+      // Connection successful
       connector.on("connected", (data: any) => {
         console.log("✅ Connected to OpenAgents network:", data);
         setConnectionStatus({
@@ -124,9 +133,14 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
           originalAgentId: connector.getOriginalAgentId(),
           isUsingModifiedId: connector.isUsingModifiedId(),
         });
+
+        // Set up global document event listeners
+        console.log("🔧 Setting up global document event listeners");
+        setConnection(connector);
+        setupEventListeners();
       });
 
-      // 连接断开
+      // Connection disconnected
       connector.on("disconnected", (data: any) => {
         console.log("🔌 Disconnected from OpenAgents network:", data);
         setConnectionStatus((prev) => ({
@@ -136,7 +150,7 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
         }));
       });
 
-      // 连接错误
+      // Connection error
       connector.on("connectionError", (data: any) => {
         console.error("❌ Connection error:", data);
         setConnectionStatus((prev) => ({
@@ -146,7 +160,7 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
         }));
       });
 
-      // 重连中
+      // Reconnecting
       connector.on("reconnecting", (data: any) => {
         console.log("🔄 Reconnecting...", data);
         setConnectionStatus((prev) => ({
@@ -165,7 +179,7 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
         }
       });
 
-      // 重连成功
+      // Reconnection successful
       connector.on("reconnected", (data: any) => {
         console.log("🔄 ✅ Reconnected successfully:", data);
         setConnectionStatus({
@@ -178,7 +192,7 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
         });
       });
 
-      // 连接丢失
+      // Connection lost
       connector.on("connectionLost", (data: any) => {
         console.error("💔 Connection lost:", data);
         setConnectionStatus((prev) => ({
@@ -188,37 +202,76 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
         }));
       });
 
+      // Kicked from network
+      connector.on("system.kicked", (event: any) => {
+        const kickedBy = event.payload?.kicked_by || event.kicked_by || "admin";
+        console.error("🚨 Kicked from network:", event);
+
+        // Show toast notification
+        toast.error(`You have been kicked by ${kickedBy}`, {
+          description: "You will be redirected to network selection",
+        });
+
+        // Clean up and logout
+        setTimeout(() => {
+          // Clear stores
+          useAuthStore.getState().clearNetwork();
+          useAuthStore.getState().clearAgentName();
+          useAuthStore.getState().clearPasswordHash();
+          useChatStore.getState().clearAllChatData();
+
+          // Navigate to network selection
+          navigate("/network-selection", { replace: true });
+        }, 2000); // 2 second delay to show notification
+      });
+
       // Initialize event router with this connector
       eventRouter.initialize(connector);
     },
-    []
+    [setConnection, setupEventListeners, navigate]
   );
 
-  // 设置全局通知监听器（仅在非 messaging 页面时激活）
+  // Set up global notification listener (only active on non-messaging pages)
   const setupGlobalNotificationListener = useCallback(() => {
-    const isMessagingPage = location.pathname === '/messaging' || location.pathname.startsWith('/messaging/');
+    const isMessagingPage =
+      location.pathname === "/messaging" ||
+      location.pathname.startsWith("/messaging/");
 
-    // 清理现有的全局监听器
+    // Clean up existing global listener
     if (globalNotificationHandlerRef.current) {
       eventRouter.offChatEvent(globalNotificationHandlerRef.current);
       globalNotificationHandlerRef.current = null;
     }
 
-    // 只在非 messaging 页面且已连接时设置全局通知监听器
-    if (!isMessagingPage && connectionStatus.state === ConnectionState.CONNECTED) {
-      console.log("🔔 Setting up global notification listener (not on messaging page)");
+    // Only set up global notification listener on non-messaging pages when connected
+    if (
+      !isMessagingPage &&
+      connectionStatus.state === ConnectionState.CONNECTED
+    ) {
+      console.log(
+        "🔔 Setting up global notification listener (not on messaging page)"
+      );
 
       const globalNotificationHandler = (event: any) => {
-        console.log("🔔 Global notification handler received event:", event.event_name, event);
+        console.log(
+          "🔔 Global notification handler received event:",
+          event.event_name,
+          event
+        );
 
-        // 处理频道消息通知
-        if (event.event_name === "thread.channel_message.notification" && event.payload) {
+        // Handle channel message notifications
+        if (
+          event.event_name === "thread.channel_message.notification" &&
+          event.payload
+        ) {
           const messageData = event.payload;
           if (messageData.channel && messageData.content) {
-            const senderName = event.sender_id || event.source_id || "未知用户";
-            const content = typeof messageData.content === 'string'
-              ? messageData.content
-              : messageData.content.text || "";
+            const senderName =
+              event.sender_id || event.source_id || "Unknown user";
+            const content =
+              typeof messageData.content === "string"
+                ? messageData.content
+                : messageData.content.text || "";
 
             notificationService.showChatNotification(
               senderName,
@@ -229,25 +282,34 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
           }
         }
 
-        // 处理回复消息通知
-        else if (event.event_name === "thread.reply.notification" && event.payload) {
+        // Handle reply message notifications
+        else if (
+          event.event_name === "thread.reply.notification" &&
+          event.payload
+        ) {
           const messageData = event.payload;
           if (messageData.channel && messageData.content) {
-            const senderName = messageData.original_sender || event.source_id || "未知用户";
-            const content = typeof messageData.content === 'string'
-              ? messageData.content
-              : messageData.content.text || "";
+            const senderName =
+              messageData.original_sender || event.source_id || "Unknown user";
+            const content =
+              typeof messageData.content === "string"
+                ? messageData.content
+                : messageData.content.text || "";
 
-            // 检查是否是回复当前用户的消息
+            // Check if this is a reply to the current user's message
             const currentUserId = connectionStatus.agentId || agentName;
-            if (messageData.reply_to_id && currentUserId && messageData.original_sender !== currentUserId) {
+            if (
+              messageData.reply_to_id &&
+              currentUserId &&
+              messageData.original_sender !== currentUserId
+            ) {
               notificationService.showReplyNotification(
                 senderName,
                 messageData.channel,
                 content
               );
             } else {
-              // 普通回复消息通知
+              // Regular reply message notification
               notificationService.showChatNotification(
                 senderName,
                 messageData.channel,
@@ -258,16 +320,24 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
           }
         }
 
-        // 处理私信消息通知
-        else if (event.event_name === "thread.direct_message.notification" && event.payload) {
+        // Handle direct message notifications
+        else if (
+          event.event_name === "thread.direct_message.notification" &&
+          event.payload
+        ) {
           const messageData = event.payload;
           if (messageData.content) {
-            const senderName = event.source_id || messageData.sender_id || "未知用户";
-            const content = typeof messageData.content === 'string'
-              ? messageData.content
-              : messageData.content.text || "";
+            const senderName =
+              event.source_id || messageData.sender_id || "Unknown user";
+            const content =
+              typeof messageData.content === "string"
+                ? messageData.content
+                : messageData.content.text || "";
 
-            notificationService.showDirectMessageNotification(senderName, content);
+            notificationService.showDirectMessageNotification(
+              senderName,
+              content
+            );
           }
         }
       };
@@ -275,11 +345,18 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
       globalNotificationHandlerRef.current = globalNotificationHandler;
       eventRouter.onChatEvent(globalNotificationHandler);
     } else if (isMessagingPage) {
-      console.log("🔔 On messaging page, global notification listener disabled (chatStore handles notifications)");
+      console.log(
+        "🔔 On messaging page, global notification listener disabled (chatStore handles notifications)"
+      );
     }
-  }, [location.pathname, connectionStatus.state, connectionStatus.agentId, agentName]);
+  }, [
+    location.pathname,
+    connectionStatus.state,
+    connectionStatus.agentId,
+    agentName,
+  ]);
 
-  // 初始化connector
+  // Initialize connector
   const initializeConnector = useCallback(() => {
     if (!agentName || !selectedNetwork?.host || !selectedNetwork?.port) {
       console.log("🔧 Missing connection parameters:", {
@@ -290,25 +367,30 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
       return;
     }
 
+    // Decrypt password hash before passing to connector
+    const passwordHash = getPasswordHash();
+
     console.log("🔧 Initializing OpenAgents connector...", {
       agentId: agentName,
       host: selectedNetwork.host,
       port: selectedNetwork.port,
+      hasPasswordHash: !!passwordHash,
     });
 
     const newConnector = new HttpEventConnector({
       agentId: agentName,
       host: selectedNetwork.host,
       port: selectedNetwork.port,
+      passwordHash: passwordHash,
     });
 
-    // 设置连接状态监听器
+    // Set up connection status listeners
     setupConnectionListeners(newConnector);
 
     connectorRef.current = newConnector;
     setConnector(newConnector);
 
-    // 自动连接
+    // Auto-connect
     newConnector.connect().catch((error) => {
       console.error("Auto-connect failed:", error);
       setConnectionStatus((prev) => ({
@@ -321,10 +403,11 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
     agentName,
     selectedNetwork?.host,
     selectedNetwork?.port,
+    getPasswordHash,
     setupConnectionListeners,
   ]);
 
-  // 初始化和清理
+  // Initialize and cleanup
   useEffect(() => {
     cleanUpConnector();
     initializeConnector();
@@ -336,12 +419,12 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
     };
   }, [cleanUpConnector]);
 
-  // 监听路由变化和连接状态，自动设置/清理全局通知监听器
+  // Listen to route changes and connection status, auto setup/cleanup global notification listener
   useEffect(() => {
     setupGlobalNotificationListener();
   }, [setupGlobalNotificationListener]);
 
-  // API 方法
+  // API methods
   const connect = useCallback(async (): Promise<boolean> => {
     if (!connector) {
       console.warn("No connector available for connection");
@@ -392,52 +475,67 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
     }));
   }, []);
 
-  // 全局通知点击处理
-  const handleNotificationClick = useCallback((event: CustomEvent) => {
-    const { channel, sender } = event.detail;
+  // Global notification click handling
+  const handleNotificationClick = useCallback(
+    (event: CustomEvent) => {
+      const { channel, sender } = event.detail;
 
-    console.log('🔔 Global notification clicked:', { channel, sender, currentPath: location.pathname });
+      console.log("🔔 Global notification clicked:", {
+        channel,
+        sender,
+        currentPath: location.pathname,
+      });
 
-    // 确保在 messaging 页面
-    if (location.pathname !== '/messaging' && !location.pathname.startsWith('/messaging/')) {
-      console.log('🔄 Navigating to messaging page from global handler...');
-      navigate('/messaging');
+      // Ensure on messaging page
+      if (
+        location.pathname !== "/messaging" &&
+        !location.pathname.startsWith("/messaging/")
+      ) {
+        console.log("🔄 Navigating to messaging page from global handler...");
+        navigate("/messaging");
 
-      // 等待页面加载后再进行选择
-      setTimeout(() => {
+        // Wait for page to load before selecting
+        setTimeout(() => {
+          if (channel) {
+            console.log(`🔄 Selecting channel from global handler: ${channel}`);
+            selectChannel(channel);
+          } else if (sender) {
+            console.log(
+              `🔄 Selecting direct message from global handler: ${sender}`
+            );
+            selectDirectMessage(sender);
+          }
+        }, 100);
+      } else {
+        // Already on messaging page, select directly
         if (channel) {
-          console.log(`🔄 Selecting channel from global handler: ${channel}`);
+          console.log(`🔄 Selecting channel: ${channel}`);
           selectChannel(channel);
         } else if (sender) {
-          console.log(`🔄 Selecting direct message from global handler: ${sender}`);
+          console.log(`🔄 Selecting direct message: ${sender}`);
           selectDirectMessage(sender);
         }
-      }, 100);
-    } else {
-      // 已经在 messaging 页面，直接选择
-      if (channel) {
-        console.log(`🔄 Selecting channel: ${channel}`);
-        selectChannel(channel);
-      } else if (sender) {
-        console.log(`🔄 Selecting direct message: ${sender}`);
-        selectDirectMessage(sender);
       }
-    }
-  }, [location.pathname, navigate, selectChannel, selectDirectMessage]);
+    },
+    [location.pathname, navigate, selectChannel, selectDirectMessage]
+  );
 
-  // 全局通知点击事件监听器
+  // Global notification click event listener
   useEffect(() => {
     const handleNotificationClickEvent = (event: Event) => {
-      console.log('🔔 Notification clicked event:', event);
+      console.log("🔔 Notification clicked event:", event);
       handleNotificationClick(event as CustomEvent);
     };
 
-    console.log('🔔 Setting up global notification-click listener');
-    window.addEventListener('notification-click', handleNotificationClickEvent);
+    console.log("🔔 Setting up global notification-click listener");
+    window.addEventListener("notification-click", handleNotificationClickEvent);
 
     return () => {
-      console.log('🔔 Cleaning up global notification-click listener');
-      window.removeEventListener('notification-click', handleNotificationClickEvent);
+      console.log("🔔 Cleaning up global notification-click listener");
+      window.removeEventListener(
+        "notification-click",
+        handleNotificationClickEvent
+      );
     };
   }, [handleNotificationClick]);
 

@@ -12,7 +12,7 @@ export interface EventResponse {
 export interface Event {
   event_id?: string;
   event_name: string;
-  source_id: string;
+  source_id?: string;
   destination_id?: string;
   payload?: any;
   metadata?: any;
@@ -52,7 +52,9 @@ export enum EventNames {
   SYSTEM_REGISTER_AGENT = 'system.register_agent',
   SYSTEM_UNREGISTER_AGENT = 'system.unregister_agent',
   SYSTEM_HEALTH_CHECK = 'system.health_check',
-  SYSTEM_POLL_MESSAGES = 'system.poll_messages'
+  SYSTEM_POLL_MESSAGES = 'system.poll_messages',
+  SYSTEM_KICK_AGENT = 'system.kick_agent',
+  SYSTEM_KICKED = 'system.kicked'
 }
 
 /**

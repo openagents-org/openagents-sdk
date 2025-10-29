@@ -94,9 +94,7 @@ export interface DocumentInfo {
   creator: string;
   created: string;
   last_modified: string;
-  version: number;
   active_agents: string[];
-  permission: string;
 }
 
 export interface DocumentComment {

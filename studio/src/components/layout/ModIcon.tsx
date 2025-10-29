@@ -57,5 +57,5 @@ const ModIcon: React.FC<ModIconProps> = ({
   );
 };
 
-// 缓存 ModIcon 组件
+// Cache ModIcon component
 export default React.memo(ModIcon);

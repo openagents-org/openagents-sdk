@@ -35,36 +35,14 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const effectiveSelectedDocument =
     sharedSelectedDocumentId || selectedDocument;
 
-  // Initialize public shared document if empty
-  useEffect(() => {
-    if (effectiveDocuments.length === 0) {
-      // Create a fixed public document that all users can see and collaborate on
-      const publicDocument: DocumentInfo[] = [
-        {
-          document_id: "shared-public-doc",
-          name: "🌐 Public Collaboration Document",
-          creator: "System",
-          created: new Date().toISOString(),
-          last_modified: new Date().toISOString(),
-          version: 1,
-          active_agents: [],
-          permission: "read_write",
-        },
-      ];
-
-      setStoreDocuments(publicDocument);
-    }
-  }, [effectiveDocuments.length, setStoreDocuments]);
-
-  // Load documents (no-op for now, using store)
+  // Load documents (documents are loaded by DocumentsMainPage from backend)
   const loadDocuments = useCallback(async () => {
-    console.log("📤 Documents loaded from store:", effectiveDocuments.length);
+    console.log("📤 Documents in store:", effectiveDocuments.length);
   }, [effectiveDocuments]);
 
   const handleCreateDocument = async (
     name: string,
-    content: string,
-    permissions: Record<string, string>
+    content: string
   ) => {
     try {
       const documentId = await createDocument(name, content);
@@ -196,7 +174,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                 currentTheme === "dark" ? "text-gray-400" : "text-gray-600"
               }`}
             >
-              Open the same document in different browser windows to start real-time collaborative editing
+              Open the same document in different browser windows to start
+              real-time collaborative editing
             </p>
           </div>
           <button

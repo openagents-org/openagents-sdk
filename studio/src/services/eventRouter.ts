@@ -4,9 +4,11 @@ interface EventRouter {
   onForumEvent: (handler: (event: any) => void) => void;
   onChatEvent: (handler: (event: any) => void) => void;
   onWikiEvent: (handler: (event: any) => void) => void;
+  onDocumentEvent: (handler: (event: any) => void) => void;
   offForumEvent: (handler: (event: any) => void) => void;
   offChatEvent: (handler: (event: any) => void) => void;
   offWikiEvent: (handler: (event: any) => void) => void;
+  offDocumentEvent: (handler: (event: any) => void) => void;
 }
 
 class EventRouterImpl implements EventRouter {
@@ -15,6 +17,7 @@ class EventRouterImpl implements EventRouter {
   private forumHandlers = new Set<(event: any) => void>();
   private chatHandlers = new Set<(event: any) => void>();
   private wikiHandlers = new Set<(event: any) => void>();
+  private documentHandlers = new Set<(event: any) => void>();
   private rawEventHandler: ((event: any) => void) | null = null;
 
   initialize(connection: any) {
@@ -88,6 +91,15 @@ class EventRouterImpl implements EventRouter {
           console.error(`EventRouter: Error in wiki event handler:`, error);
         }
       });
+    } else if (eventName.startsWith('document.')) {
+      console.log(`EventRouter: Routing document event: ${eventName}`);
+      this.documentHandlers.forEach(handler => {
+        try {
+          handler(event);
+        } catch (error) {
+          console.error(`EventRouter: Error in document event handler:`, error);
+        }
+      });
     } else {
       console.log(`EventRouter: Unhandled event type: ${eventName}`);
     }
@@ -115,6 +127,11 @@ class EventRouterImpl implements EventRouter {
     console.log(`EventRouter: Added wiki event handler. Total: ${this.wikiHandlers.size}`);
   }
 
+  onDocumentEvent(handler: (event: any) => void) {
+    this.documentHandlers.add(handler);
+    console.log(`EventRouter: Added document event handler. Total: ${this.documentHandlers.size}`);
+  }
+
   offForumEvent(handler: (event: any) => void) {
     this.forumHandlers.delete(handler);
     console.log(`EventRouter: Removed forum event handler. Total: ${this.forumHandlers.size}`);
@@ -128,6 +145,11 @@ class EventRouterImpl implements EventRouter {
   offWikiEvent(handler: (event: any) => void) {
     this.wikiHandlers.delete(handler);
     console.log(`EventRouter: Removed wiki event handler. Total: ${this.wikiHandlers.size}`);
+  }
+
+  offDocumentEvent(handler: (event: any) => void) {
+    this.documentHandlers.delete(handler);
+    console.log(`EventRouter: Removed document event handler. Total: ${this.documentHandlers.size}`);
   }
 }
 

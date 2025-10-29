@@ -35,15 +35,15 @@ export const useRecentPagesStore = create<RecentPagesState>()(
         };
 
         set((state) => {
-          // 移除已存在的相同页面
+          // remove existing page with same path
           const filteredPages = state.recentPages.filter(
             (p) => p.page_path !== page.page_path
           );
 
-          // 添加到顶部
+          // add to top
           const newRecentPages = [recentPage, ...filteredPages];
 
-          // 限制最多保留10条记录
+          // limit to maximum 10 records
           return {
             recentPages: newRecentPages.slice(0, MAX_RECENT_PAGES)
           };
