@@ -20,28 +20,22 @@ import MessageInput from "./components/MessageInput";
 import NotificationPermissionOverlay from "./components/NotificationPermissionOverlay";
 import { useThemeStore } from "@/stores/themeStore";
 import { CONNECTED_STATUS_COLOR } from "@/constants/chatConstants";
-import { toast } from "sonner";
 import { useAuthStore } from "@/stores/authStore";
+import { toast } from "sonner";
+import { networkFetch } from "@/utils/httpClient";
 
 const ThreadMessagingViewEventBased: React.FC = () => {
-  const { agentName } = useAuthStore();
+  const { agentName, selectedNetwork } = useAuthStore();
   // Use theme from store
   const { theme: currentTheme } = useThemeStore();
 
   // 从 chatStore 获取当前选择状态和选择方法
-  const {
-    currentChannel,
-    currentDirectMessage,
-    selectChannel,
-    selectDirectMessage,
-  } = useChatStore();
+  const { currentChannel, currentDirectMessage, selectChannel, selectDirectMessage } = useChatStore();
 
   // 调试日志：监听选择状态变化
   useEffect(() => {
     console.log(
-      `📋 Selection changed: channel="${currentChannel || ""}", direct="${
-        currentDirectMessage || ""
-      }"`
+      `📋 Selection changed: channel="${currentChannel || ""}", direct="${currentDirectMessage || ""}"`
     );
   }, [currentChannel, currentDirectMessage]);
 
@@ -102,6 +96,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
     text: string;
     author: string;
   } | null>(null);
+  const [announcement, setAnnouncement] = useState<string>("111111111");
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -114,38 +109,78 @@ const ThreadMessagingViewEventBased: React.FC = () => {
     if (currentChannel) {
       // 直接从 Map 中获取数据
       const msgs = channelMessages.get(currentChannel) || [];
-      console.log(
-        `MessagingView: Channel #${currentChannel} has ${msgs.length} messages`
-      );
+      console.log(`MessagingView: Channel #${currentChannel} has ${msgs.length} messages`);
       return msgs;
     } else if (currentDirectMessage) {
       const currentAgentId = connectionStatus.agentId || agentName;
       const directMsgs = directMessages.get(currentDirectMessage) || [];
 
       // 过滤属于当前会话的消息
-      const filteredMsgs = directMsgs.filter(
-        (message) =>
-          message.type === "direct_message" &&
-          ((message.senderId === currentAgentId &&
-            message.targetUserId === currentDirectMessage) ||
-            (message.senderId === currentDirectMessage &&
-              message.targetUserId === currentAgentId) ||
-            message.senderId === currentDirectMessage) // 兼容旧格式
+      const filteredMsgs = directMsgs.filter(message =>
+        (message.type === 'direct_message') &&
+        ((message.senderId === currentAgentId && message.targetUserId === currentDirectMessage) ||
+          (message.senderId === currentDirectMessage && message.targetUserId === currentAgentId) ||
+          (message.senderId === currentDirectMessage))  // 兼容旧格式
       );
-      console.log(
-        `MessagingView: Direct messages with ${currentDirectMessage}: ${filteredMsgs.length} messages`
-      );
+      console.log(`MessagingView: Direct messages with ${currentDirectMessage}: ${filteredMsgs.length} messages`);
       return filteredMsgs;
     }
     return [];
-  }, [
-    currentChannel,
-    currentDirectMessage,
-    channelMessages,
-    directMessages,
-    connectionStatus.agentId,
-    agentName,
-  ]);
+  }, [currentChannel, currentDirectMessage, channelMessages, directMessages, connectionStatus.agentId, agentName]);
+
+  // 加载当前频道的公告
+  useEffect(() => {
+    const loadAnnouncement = async () => {
+
+      if (!currentChannel || !isConnected || !selectedNetwork) {
+        console.log(`1111111111111111111`);
+        setAnnouncement("");
+        return;
+      }
+
+      console.log(`2222222222222222222`);
+
+      try {
+        console.log(`📢 Loading announcement for channel: ${currentChannel}`);
+        
+        // 直接调用 RESTful API
+        // agent_id 仅用于日志，可选参数，不传也行（后端会默认 "anonymous"）
+        const response = await networkFetch(
+          selectedNetwork.host,
+          selectedNetwork.port,
+          `/api/get_announcement?channel=${currentChannel}`,
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+            },
+          }
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            const text = result.data.text || "";
+            setAnnouncement(text);
+            console.log(`✅ Loaded announcement for channel ${currentChannel}:`, text);
+          } else {
+            setAnnouncement("");
+            console.log(`No announcement found for channel ${currentChannel}`);
+          }
+        } else {
+          setAnnouncement("");
+          console.log(`Failed to load announcement: HTTP ${response.status}`);
+        }
+      } catch (error) {
+        console.error("Failed to load announcement:", error);
+        setAnnouncement("");
+      }
+    };
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadAnnouncement();
+    
+  }, [currentChannel, isConnected, selectedNetwork]);
 
   // 设置事件监听器
   useEffect(() => {
@@ -158,6 +193,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
   }, [isConnected, setupEventListeners, cleanupEventListeners]);
 
   // 通知点击处理已移至全局（OpenAgentsProvider），这里不再需要重复监听
+
 
   // Smart auto-scroll: only scroll to bottom if user is already near the bottom
   useEffect(() => {
@@ -180,9 +216,9 @@ const ThreadMessagingViewEventBased: React.FC = () => {
       // Calculate where user was relative to the bottom before content height changed
       const { scrollTop, clientHeight } = container;
       const heightDifference = currentScrollHeight - previousScrollHeight;
-      const originalDistanceFromBottom =
-        previousScrollHeight - scrollTop - clientHeight;
+      const originalDistanceFromBottom = previousScrollHeight - scrollTop - clientHeight;
       const isNearBottom = originalDistanceFromBottom < 100;
+
 
       if (isNearBottom) {
         // User was near bottom before new message, auto-scroll to new message
@@ -195,10 +231,11 @@ const ThreadMessagingViewEventBased: React.FC = () => {
     }
   }, [messages]);
 
+
   // 获取过滤后的 agents（排除当前用户）
   const filteredAgents = useMemo(() => {
     const currentUserId = connectionStatus.agentId || agentName || "";
-    return agents.filter((agent) => agent.agent_id !== currentUserId);
+    return agents.filter(agent => agent.agent_id !== currentUserId);
   }, [agents, connectionStatus.agentId, agentName]);
 
   // Load initial data function
@@ -218,9 +255,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
       }
 
       console.log(`📋 Loaded ${channels.length} channels`);
-      console.log(
-        `👥 Loaded ${filteredAgents.length} agents (excluding current user)`
-      );
+      console.log(`👥 Loaded ${filteredAgents.length} agents (excluding current user)`);
 
       // 智能频道选择逻辑
       if (channels.length > 0) {
@@ -289,12 +324,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
           selectChannel(selectedChannel);
         } else if (selectedChannel === currentChannel) {
           console.log(`✅ 保持当前频道选择: ${selectedChannel}`);
-        } else if (
-          currentDirectMessage &&
-          filteredAgents.some(
-            (agent) => agent.agent_id === currentDirectMessage
-          )
-        ) {
+        } else if (currentDirectMessage && filteredAgents.some(agent => agent.agent_id === currentDirectMessage)) {
           console.log(`✅ 保持当前直接消息选择: ${currentDirectMessage}`);
         }
       }
@@ -363,6 +393,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
     loadDirectMessages,
   ]);
 
+
   // Handle sending messages
   const handleSendMessage = useCallback(
     async (
@@ -384,11 +415,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
       try {
         let success = false;
         if (currentChannel) {
-          success = await sendChannelMessage(
-            currentChannel,
-            content,
-            replyToId
-          );
+          success = await sendChannelMessage(currentChannel, content, replyToId);
         } else if (currentDirectMessage) {
           success = await sendDirectMessage(currentDirectMessage, content);
         } else {
@@ -450,39 +477,24 @@ const ThreadMessagingViewEventBased: React.FC = () => {
       action: "add" | "remove" = "add"
     ) => {
       try {
-        const success =
-          action === "add"
-            ? await addReaction(
-                messageId,
-                reactionType,
-                currentChannel || undefined
-              )
-            : await removeReaction(
-                messageId,
-                reactionType,
-                currentChannel || undefined
-              );
+        const success = action === "add"
+          ? await addReaction(messageId, reactionType, currentChannel || undefined)
+          : await removeReaction(messageId, reactionType, currentChannel || undefined);
 
         if (success) {
           console.log(
-            `${
-              action === "add" ? "➕" : "➖"
-            } Reaction ${reactionType} ${action}ed to message ${messageId}`
+            `${action === "add" ? "➕" : "➖"} Reaction ${reactionType} ${action}ed to message ${messageId}`
           );
           // 反应更新会通过事件监听器自动同步到 store 中
         } else {
           console.error(`Failed to ${action} reaction`);
-          // Show error toast
-          toast.error(
-            `Failed to ${action} reaction "${reactionType}". Please try again.`
-          );
+          // 显示错误toast
+          toast.error(`Failed to ${action} reaction "${reactionType}". Please try again.`);
         }
       } catch (error) {
         console.error(`Failed to ${action} reaction:`, error);
-        // Show network error toast
-        toast.error(
-          `Network error while ${action}ing reaction "${reactionType}". Please check your connection and try again.`
-        );
+        // 显示网络错误toast
+        toast.error(`Network error while ${action}ing reaction "${reactionType}". Please check your connection and try again.`);
       }
     },
     [addReaction, removeReaction, currentChannel]
@@ -558,11 +570,27 @@ const ThreadMessagingViewEventBased: React.FC = () => {
       {/* Content Area */}
       <div className="flex-1 flex flex-col min-h-0">
         <>
+          {/* Announcement Banner */}
+          {announcement && (
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-3 shadow-md">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span className="text-lg">📢</span>
+                  <span className="font-medium">{announcement}</span>
+                </div>
+                <button
+                  onClick={() => setAnnouncement("")}
+                  className="text-white hover:text-gray-200 transition-colors"
+                  aria-label="Close announcement"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Messages */}
-          <div
-            ref={messagesContainerRef}
-            className="flex-1 overflow-y-auto p-4"
-          >
+          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4">
             {(() => {
               // Filter messages based on current channel or direct message
               const filteredMessages = messages.filter((message) => {
@@ -593,17 +621,16 @@ const ThreadMessagingViewEventBased: React.FC = () => {
 
                   // For direct messages, match the target agent or sender
                   // Include messages where current user is sender or receiver
-                  const currentUserId =
-                    connectionStatus.agentId || agentName || "";
-                  // console.log('🔧 Filtering direct message:', {
-                  //   messageId: message.id,
-                  //   messageType,
-                  //   targetUserId,
-                  //   senderId,
-                  //   currentDirectMessage,
-                  //   currentUserId,
-                  //   message
-                  // });
+                  const currentUserId = connectionStatus.agentId || agentName || "";
+                  console.log('🔧 Filtering direct message:', {
+                    messageId: message.id,
+                    messageType,
+                    targetUserId,
+                    senderId,
+                    currentDirectMessage,
+                    currentUserId,
+                    message
+                  });
 
                   return (
                     messageType === "direct_message" &&
@@ -622,24 +649,23 @@ const ThreadMessagingViewEventBased: React.FC = () => {
                     {currentChannel
                       ? `No messages in #${currentChannel} yet. Start the conversation!`
                       : currentDirectMessage
-                      ? `No messages with ${currentDirectMessage} yet.`
-                      : "Select a channel to start chatting."}
+                        ? `No messages with ${currentDirectMessage} yet.`
+                        : "Select a channel to start chatting."}
                   </div>
                 );
               }
 
               // Sort messages by timestamp (oldest first, newest last)
               const sortedMessages = filteredMessages.sort((a, b) => {
-                const parseTimestamp = (timestamp: string | number): number => {
+                const parseTimestamp = (
+                  timestamp: string | number
+                ): number => {
                   if (!timestamp) return 0;
 
                   const timestampStr = String(timestamp);
 
                   // Handle ISO string format (e.g., '2025-09-22T20:20:09.000Z')
-                  if (
-                    timestampStr.includes("T") ||
-                    timestampStr.includes("-")
-                  ) {
+                  if (timestampStr.includes("T") || timestampStr.includes("-")) {
                     const time = new Date(timestampStr).getTime();
                     return isNaN(time) ? 0 : time;
                   }
@@ -650,8 +676,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
 
                   // If timestamp appears to be in seconds (typical range: 10 digits)
                   // Convert to milliseconds. Otherwise assume it's already in milliseconds
-                  if (num < 10000000000) {
-                    // Less than 10 billion = seconds
+                  if (num < 10000000000) { // Less than 10 billion = seconds
                     return num * 1000;
                   } else {
                     return num; // Already in milliseconds
@@ -670,16 +695,10 @@ const ThreadMessagingViewEventBased: React.FC = () => {
                   key="all-messages"
                   messages={sortedMessages}
                   currentUserId={connectionStatus.agentId || agentName || ""}
-                  onReaction={(
-                    messageId: string,
-                    reactionType: string,
-                    action?: "add" | "remove"
-                  ) => {
+                  onReaction={(messageId: string, reactionType: string, action?: "add" | "remove") => {
                     // 如果MessageRenderer没有指定action，则默认为add
                     const finalAction = action || "add";
-                    console.log(
-                      `🔧 Reaction click: ${finalAction} ${reactionType} for message ${messageId}`
-                    );
+                    console.log(`🔧 Reaction click: ${finalAction} ${reactionType} for message ${messageId}`);
                     handleReaction(messageId, reactionType, finalAction);
                   }}
                   onReply={startReply}
@@ -727,15 +746,17 @@ const ThreadMessagingViewEventBased: React.FC = () => {
                   handleSendMessage(text);
                 }
               }}
-              disabled={sendingMessage || !isConnected}
+              disabled={
+                sendingMessage || !isConnected
+              }
               placeholder={
                 sendingMessage
                   ? "Sending..."
                   : currentChannel
-                  ? `Message #${currentChannel}`
-                  : currentDirectMessage
-                  ? `Message ${currentDirectMessage}`
-                  : "Select a channel to start typing..."
+                    ? `Message #${currentChannel}`
+                    : currentDirectMessage
+                      ? `Message ${currentDirectMessage}`
+                      : "Select a channel to start typing..."
               }
               currentTheme={currentTheme}
               currentChannel={currentChannel || undefined}
