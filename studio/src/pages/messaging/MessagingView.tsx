@@ -22,10 +22,9 @@ import { useThemeStore } from "@/stores/themeStore";
 import { CONNECTED_STATUS_COLOR } from "@/constants/chatConstants";
 import { useAuthStore } from "@/stores/authStore";
 import { toast } from "sonner";
-import { networkFetch } from "@/utils/httpClient";
 
 const ThreadMessagingViewEventBased: React.FC = () => {
-  const { agentName, selectedNetwork } = useAuthStore();
+  const { agentName } = useAuthStore();
   // Use theme from store
   const { theme: currentTheme } = useThemeStore();
 
@@ -96,7 +95,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
     text: string;
     author: string;
   } | null>(null);
-  const [announcement, setAnnouncement] = useState<string>("111111111");
+  const [announcement, setAnnouncement] = useState<string>("");
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -132,55 +131,27 @@ const ThreadMessagingViewEventBased: React.FC = () => {
   useEffect(() => {
     const loadAnnouncement = async () => {
 
-      if (!currentChannel || !isConnected || !selectedNetwork) {
-        console.log(`1111111111111111111`);
+      if (!currentChannel || !isConnected || !connector) {
         setAnnouncement("");
         return;
       }
 
-      console.log(`2222222222222222222`);
-
       try {
-        console.log(`📢 Loading announcement for channel: ${currentChannel}`);
-        
-        // 直接调用 RESTful API
-        // agent_id 仅用于日志，可选参数，不传也行（后端会默认 "anonymous"）
-        const response = await networkFetch(
-          selectedNetwork.host,
-          selectedNetwork.port,
-          `/api/get_announcement?channel=${currentChannel}`,
-          {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-            },
-          }
-        );
-
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.data) {
-            const text = result.data.text || "";
-            setAnnouncement(text);
-            console.log(`✅ Loaded announcement for channel ${currentChannel}:`, text);
-          } else {
-            setAnnouncement("");
-            console.log(`No announcement found for channel ${currentChannel}`);
-          }
+        const response = await connector.getChannelAnnouncement(currentChannel);
+        if (response?.success && response?.data) {
+          const text = response.data.text || "";
+          setAnnouncement(text);
         } else {
           setAnnouncement("");
-          console.log(`Failed to load announcement: HTTP ${response.status}`);
         }
       } catch (error) {
-        console.error("Failed to load announcement:", error);
         setAnnouncement("");
       }
     };
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     loadAnnouncement();
-    
-  }, [currentChannel, isConnected, selectedNetwork]);
+
+  }, [currentChannel, isConnected, connector]);
 
   // 设置事件监听器
   useEffect(() => {
@@ -574,18 +545,35 @@ const ThreadMessagingViewEventBased: React.FC = () => {
           {announcement && (
             <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-3 shadow-md">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <span className="text-lg">📢</span>
-                  <span className="font-medium">{announcement}</span>
+                <div className="flex-1 min-w-0 pr-3 overflow-hidden">
+                  <div className="oa-marquee">
+                    <div className="oa-marquee__track">
+                      <span className="font-medium mr-8">{announcement}</span>
+                    </div>
+                  </div>
                 </div>
                 <button
                   onClick={() => setAnnouncement("")}
-                  className="text-white hover:text-gray-200 transition-colors"
+                  className="text-white hover:text-gray-200 transition-colors flex-shrink-0"
                   aria-label="Close announcement"
                 >
                   ✕
                 </button>
               </div>
+              <style>{`
+                .oa-marquee { position: relative; overflow: hidden; }
+                .oa-marquee__track {
+                  display: inline-block;
+                  white-space: nowrap;
+                  will-change: transform;
+                  animation: oa-marquee 35s linear infinite;
+                }
+                .oa-marquee__track:hover { animation-play-state: paused; }
+                @keyframes oa-marquee {
+                  0% { transform: translateX(0); }
+                  100% { transform: translateX(-50%); }
+                }
+              `}</style>
             </div>
           )}
 

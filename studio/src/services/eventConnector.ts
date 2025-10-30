@@ -381,6 +381,15 @@ export class HttpEventConnector {
     });
   }
 
+  async getChannelAnnouncement(channel: string): Promise<EventResponse> {
+    return this.sendEvent({
+      event_name: "thread.announcement.get",
+      source_id: this.agentId,
+      // destination_id: "mod:openagents.mods.workspace.messaging",
+      payload: { channel },
+    });
+  }
+
   async getNetworkHealth(): Promise<any> {
     try {
       const response = await this.sendHttpRequest("/api/health", "GET");
