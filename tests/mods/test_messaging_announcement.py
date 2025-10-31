@@ -140,9 +140,7 @@ async def test_non_admin_cannot_set_announcement(regular_client):
     )
 
     print("📤 Regular user attempting to set announcement...")
-    response = await regular_client.send_event_and_wait_for_response(
-        set_event, timeout=5.0
-    )
+    response = await regular_client.send_event(set_event)
 
     # Verify response indicates forbidden
     assert response is not None, "Should receive a response"
@@ -174,9 +172,7 @@ async def test_admin_can_set_and_get_announcement(admin_client):
     )
 
     print("📤 Admin user setting announcement...")
-    set_response = await admin_client.send_event_and_wait_for_response(
-        set_event, timeout=5.0
-    )
+    set_response = await admin_client.send_event(set_event)
 
     # Verify set was successful
     assert set_response is not None, "Should receive a response for set"
@@ -201,9 +197,7 @@ async def test_admin_can_set_and_get_announcement(admin_client):
     )
 
     print("📤 Admin user retrieving announcement...")
-    get_response = await admin_client.send_event_and_wait_for_response(
-        get_event, timeout=5.0
-    )
+    get_response = await admin_client.send_event(get_event)
 
     # Verify get was successful and text matches
     assert get_response is not None, "Should receive a response for get"
@@ -237,9 +231,7 @@ async def test_regular_user_can_get_announcement(admin_client, regular_client):
     )
 
     print("📤 Admin user setting announcement...")
-    set_response = await admin_client.send_event_and_wait_for_response(
-        set_event, timeout=5.0
-    )
+    set_response = await admin_client.send_event(set_event)
     assert set_response.success == True, "Admin should be able to set announcement"
 
     # Regular user retrieves announcement
@@ -253,9 +245,7 @@ async def test_regular_user_can_get_announcement(admin_client, regular_client):
     )
 
     print("📤 Regular user retrieving announcement...")
-    get_response = await regular_client.send_event_and_wait_for_response(
-        get_event, timeout=5.0
-    )
+    get_response = await regular_client.send_event(get_event)
 
     # Verify regular user can retrieve announcement
     assert get_response is not None, "Should receive a response"
@@ -286,9 +276,7 @@ async def test_get_nonexistent_announcement(regular_client):
     )
 
     print("📤 Regular user retrieving non-existent announcement...")
-    get_response = await regular_client.send_event_and_wait_for_response(
-        get_event, timeout=5.0
-    )
+    get_response = await regular_client.send_event(get_event)
 
     # Verify returns success with empty text
     assert get_response is not None, "Should receive a response"
@@ -320,9 +308,7 @@ async def test_admin_can_update_announcement(admin_client):
     )
 
     print("📤 Admin user setting initial announcement...")
-    set_response = await admin_client.send_event_and_wait_for_response(
-        set_event, timeout=5.0
-    )
+    set_response = await admin_client.send_event(set_event)
     assert set_response.success == True, "Admin should be able to set initial announcement"
 
     # Admin updates announcement
@@ -338,9 +324,7 @@ async def test_admin_can_update_announcement(admin_client):
     )
 
     print("📤 Admin user updating announcement...")
-    update_response = await admin_client.send_event_and_wait_for_response(
-        update_event, timeout=5.0
-    )
+    update_response = await admin_client.send_event(update_event)
     assert update_response.success == True, "Admin should be able to update announcement"
 
     # Verify announcement is updated
@@ -353,9 +337,7 @@ async def test_admin_can_update_announcement(admin_client):
         relevant_mod="openagents.mods.workspace.messaging",
     )
 
-    get_response = await admin_client.send_event_and_wait_for_response(
-        get_event, timeout=5.0
-    )
+    get_response = await admin_client.send_event(get_event)
     assert get_response.success == True, "Should be able to get updated announcement"
     assert get_response.data.get("text") == updated_text, f"Should get updated text: expected '{updated_text}', got '{get_response.data.get('text')}'"
 
@@ -383,9 +365,7 @@ async def test_admin_can_clear_announcement(admin_client):
     )
 
     print("📤 Admin user setting announcement...")
-    set_response = await admin_client.send_event_and_wait_for_response(
-        set_event, timeout=5.0
-    )
+    set_response = await admin_client.send_event(set_event)
     assert set_response.success == True, "Admin should be able to set announcement"
 
     # Admin clears announcement by setting empty text
@@ -400,9 +380,7 @@ async def test_admin_can_clear_announcement(admin_client):
     )
 
     print("📤 Admin user clearing announcement...")
-    clear_response = await admin_client.send_event_and_wait_for_response(
-        clear_event, timeout=5.0
-    )
+    clear_response = await admin_client.send_event(clear_event)
     assert clear_response.success == True, "Admin should be able to clear announcement"
 
     # Verify announcement is cleared
@@ -415,9 +393,7 @@ async def test_admin_can_clear_announcement(admin_client):
         relevant_mod="openagents.mods.workspace.messaging",
     )
 
-    get_response = await admin_client.send_event_and_wait_for_response(
-        get_event, timeout=5.0
-    )
+    get_response = await admin_client.send_event(get_event)
     assert get_response.success == True, "Should be able to get announcement"
     assert get_response.data.get("text") == "", f"Announcement should be cleared: got '{get_response.data.get('text')}'"
 
