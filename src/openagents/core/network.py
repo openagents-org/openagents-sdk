@@ -527,7 +527,16 @@ class AgentNetwork:
                 "metadata": {},
             })
 
-        return {
+        # Include network_profile if available
+        network_profile_data = None
+        if hasattr(self.config, "network_profile") and self.config.network_profile:
+            profile = self.config.network_profile
+            if hasattr(profile, "model_dump"):
+                network_profile_data = profile.model_dump(mode="json", exclude_none=False)
+            elif isinstance(profile, dict):
+                network_profile_data = profile
+        
+        stats = {
             "network_id": self.network_id,
             "network_name": self.network_name,
             "is_running": self.is_running,
@@ -560,6 +569,11 @@ class AgentNetwork:
             "recommended_transport": self.config.recommended_transport,
             "max_connections": self.config.max_connections,
         }
+        
+        if network_profile_data:
+            stats["network_profile"] = network_profile_data
+        
+        return stats
 
     async def process_external_event(self, event: Event) -> EventResponse:
         """Handle incoming transport messages.
