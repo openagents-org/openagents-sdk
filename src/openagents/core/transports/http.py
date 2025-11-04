@@ -49,9 +49,6 @@ class HttpTransport(Transport):
         self.app.router.add_post("/api/unregister", self.unregister_agent)
         self.app.router.add_get("/api/poll", self.poll_messages)
         self.app.router.add_post("/api/send_event", self.send_message)
-        
-        # Messaging mod endpoints
-        self.app.router.add_get("/api/get_announcement", self.get_announcement)
 
     @web.middleware
     async def cors_middleware(self, request, handler):
@@ -533,57 +530,6 @@ class HttpTransport(Transport):
         self.is_listening = True
         self.site = site  # Store the site for shutdown
         return True
-
-    async def get_announcement(self, request):
-        """Handle getting announcement for a channel."""
-        try:
-            channel = request.query.get("channel")
-            if not channel:
-                return web.json_response(
-                    {
-                        "success": False,
-                        "error_message": "channel query parameter is required",
-                    },
-                    status=400,
-                )
-            
-            # Get agent_id from query or headers
-            agent_id = request.query.get("agent_id", "anonymous")
-            
-            logger.debug(f"HTTP get announcement for channel: {channel}")
-            
-            # Create event and route it through the event handler
-            event = Event(
-                event_name="thread.announcement.get",
-                source_id=agent_id,
-                destination_id="mod:openagents.mods.workspace.messaging",
-                payload={"channel": channel},
-                timestamp=int(time.time()),
-            )
-            
-            # Route through unified handler
-            event_response = await self._handle_sent_event(event)
-            
-            if event_response and event_response.success:
-                response_data = event_response.data if event_response.data else {}
-                return web.json_response({
-                    "success": True,
-                    "data": response_data
-                })
-            else:
-                return web.json_response(
-                    {
-                        "success": False,
-                        "error_message": event_response.message if event_response else "Failed to get announcement",
-                    },
-                    status=500,
-                )
-                
-        except Exception as e:
-            logger.error(f"Error in HTTP get_announcement: {e}")
-            return web.json_response(
-                {"success": False, "error_message": str(e)}, status=500
-            )
 
 
 # Convenience function for creating HTTP transport
