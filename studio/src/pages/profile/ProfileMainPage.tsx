@@ -10,13 +10,16 @@ import ModulesInfoCard from "./components/ModulesInfoCard";
 import AgentInfoCard from "./components/AgentInfoCard";
 import SystemInfoCard from "./components/SystemInfoCard";
 import AgentManagement from "./AgentManagement";
+import NetworkProfile from "./NetworkProfile";
 
 /**
  * 个人资料主页面 - 处理个人资料相关的所有功能
  */
 const ProfileMainPage: React.FC = () => {
   return (
+
     <Routes>
+
       {/* 默认个人资料视图 */}
       <Route index element={<ProfileDashboard />} />
 
@@ -52,6 +55,8 @@ const ProfileMainPage: React.FC = () => {
 
       {/* Agent Management 子页面 - Admin only */}
       <Route path="agent-management" element={<AgentManagement />} />
+      <Route path="network-profile" element={<NetworkProfile />} />
+      
     </Routes>
   );
 };
@@ -186,6 +191,7 @@ const ProfileDashboard: React.FC = () => {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
         {/* Network Information */}
         <NetworkInfoCard />
 
@@ -197,7 +203,9 @@ const ProfileDashboard: React.FC = () => {
 
         {/* System Settings */}
         <SystemInfoCard />
+
       </div>
+
     </div>
   );
 };
