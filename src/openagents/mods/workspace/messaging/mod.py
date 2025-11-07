@@ -32,6 +32,8 @@ from .thread_messages import (
     ChannelInfoMessage,
     MessageRetrievalMessage,
     ReactionMessage,
+    AnnouncementSetMessage,
+    AnnouncementGetMessage,
 )
 
 logger = logging.getLogger(__name__)
@@ -149,6 +151,9 @@ class ThreadMessagingNetworkMod(BaseMod):
 
         # File management
         self.files: Dict[str, Dict[str, Any]] = {}  # file_id -> file_info
+
+        # Announcement management
+        self.channel_announcements: Dict[str, str] = {}  # channel_name -> announcement_text
 
         # Initialize default channels (will be created after network binding)
 
@@ -2208,3 +2213,83 @@ class ThreadMessagingNetworkMod(BaseMod):
             return f"{author}: {text}"
         else:
             return f"[Quoted message {quoted_message_id} not found]"
+
+    @mod_event_handler("thread.announcement.set")
+    async def _handle_announcement_set(self, event: Event) -> Optional[EventResponse]:
+        """Handle setting a channel announcement.
+        
+        Only agents in the admin agent group can execute this.
+        
+        Args:
+            event: The announcement set event
+            
+        Returns:
+            EventResponse: success=False with "forbidden" if not admin,
+                         success=True with "ok" if successful
+        """
+        agent_id = event.source_id
+        
+        # Check if agent is in admin group
+        agent_group = self.network.topology.agent_group_membership.get(agent_id)
+        if agent_group != "admin":
+            logger.warning(f"Agent {agent_id} (group: {agent_group}) attempted to set announcement but is not admin")
+            return EventResponse(
+                success=False,
+                message="forbidden",
+                data={"error": "Only admin agents can set announcements"}
+            )
+        
+        # Extract channel and text from payload
+        channel = event.payload.get("channel", "") if event.payload else ""
+        text = event.payload.get("text", "") if event.payload else ""
+        
+        if not channel:
+            return EventResponse(
+                success=False,
+                message="Channel name is required",
+                data={"error": "Channel name is required"}
+            )
+        
+        # Save announcement
+        self.channel_announcements[channel] = text
+        logger.info(f"Admin {agent_id} set announcement for channel {channel}: {text[:50]}...")
+        
+        return EventResponse(
+            success=True,
+            message="ok",
+            data={"channel": channel, "text": text}
+        )
+    
+    @mod_event_handler("thread.announcement.get")
+    async def _handle_announcement_get(self, event: Event) -> Optional[EventResponse]:
+        """Handle getting a channel announcement.
+        
+        Any agent can retrieve announcements.
+        
+        Args:
+            event: The announcement get event
+            
+        Returns:
+            EventResponse: success=True with "ok" and text field containing
+                         the announcement (or empty string if not set)
+        """
+        # Extract channel from payload
+        channel = event.payload.get("channel", "") if event.payload else ""
+        
+        if not channel:
+            return EventResponse(
+                success=False,
+                message="Channel name is required",
+                data={"error": "Channel name is required", "text": ""}
+            )
+        
+        # Retrieve announcement (empty string if not set)
+        text = self.channel_announcements.get(channel, "")
+        
+        logger.debug(f"Agent {event.source_id} retrieved announcement for channel {channel}")
+        
+        return EventResponse(
+            success=True,
+            message="ok",
+            data={"channel": channel, "text": text}
+        )

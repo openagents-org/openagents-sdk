@@ -28,6 +28,8 @@ from openagents.mods.workspace.messaging.thread_messages import (
     ChannelInfoMessage,
     MessageRetrievalMessage,
     ReactionMessage,
+    AnnouncementSetMessage,
+    AnnouncementGetMessage,
 )
 
 __all__ = [
@@ -41,4 +43,6 @@ __all__ = [
     "ChannelInfoMessage",
     "MessageRetrievalMessage",
     "ReactionMessage",
+    "AnnouncementSetMessage",
+    "AnnouncementGetMessage",
 ]
