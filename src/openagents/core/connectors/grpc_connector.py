@@ -290,7 +290,7 @@ class GRPCNetworkConnector(NetworkConnector):
                 logger.error(
                     f"Failed to send gRPC event {message.event_id}: {response.message}"
                 )
-                return self._create_error_response(response.message)
+                return EventResponse(success=False, message=response.message, data=response_data)
 
         except Exception as e:
             # Handle gRPC-specific errors
