@@ -8,8 +8,6 @@
 import { clearAllOpenAgentsDataForLogout } from "@/utils/cookies";
 import { Event, EventResponse, EventNames, AgentInfo } from "../types/events";
 import {
-  buildNetworkUrl,
-  buildNetworkHeaders,
   networkFetch,
 } from "../utils/httpClient";
 import { useAuthStore } from "@/stores/authStore";

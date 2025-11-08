@@ -29,7 +29,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
   const { theme: currentTheme } = useThemeStore();
 
   // 从 chatStore 获取当前选择状态和选择方法
-  const { currentChannel, currentDirectMessage, selectChannel, selectDirectMessage } = useChatStore();
+  const { currentChannel, currentDirectMessage, selectChannel } = useChatStore();
 
   // 调试日志：监听选择状态变化
   useEffect(() => {
@@ -186,7 +186,6 @@ const ThreadMessagingViewEventBased: React.FC = () => {
       // For new messages, we need to check if user was near bottom BEFORE the new content was added
       // Calculate where user was relative to the bottom before content height changed
       const { scrollTop, clientHeight } = container;
-      const heightDifference = currentScrollHeight - previousScrollHeight;
       const originalDistanceFromBottom = previousScrollHeight - scrollTop - clientHeight;
       const isNearBottom = originalDistanceFromBottom < 100;
 
@@ -314,9 +313,6 @@ const ThreadMessagingViewEventBased: React.FC = () => {
     currentChannel,
     currentDirectMessage,
     selectChannel,
-    selectDirectMessage,
-    connectionStatus.agentId,
-    agentName,
   ]);
 
   // Load initial data when connected

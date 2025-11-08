@@ -1,5 +1,4 @@
 import React from "react";
-import { Navigate } from "react-router-dom";
 import { PLUGIN_NAME_ENUM } from "@/types/plugins";
 
 // Pages
