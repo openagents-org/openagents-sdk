@@ -19,9 +19,6 @@ class UniversalNotificationService {
   private fallbackContainer: HTMLElement | null = null;
   private isInitialized = false;
 
-  constructor() {
-    // this.initFallbackContainer(); // 注释掉：只使用系统通知
-  }
 
   // /**
   //  * Initialize the fallback notification container for in-browser notifications

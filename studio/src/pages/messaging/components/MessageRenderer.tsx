@@ -9,7 +9,7 @@
  * 5. 支持多种渲染模式
  */
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { UnifiedMessage } from "@/types/message";
 import { ThreadMessage } from "@/types/events";
 import {
@@ -47,19 +47,6 @@ interface MessageRendererProps {
   isDMChat?: boolean;
 }
 
-// 检查用户是否已经对该消息添加了特定的reaction
-const checkIfUserReacted = (reactions: any, reactionType: string, userId: string): boolean => {
-  // 如果没有reactions数据，用户肯定没有添加过
-  if (!reactions || typeof reactions !== 'object') {
-    return false;
-  }
-
-  // 检查该reaction类型是否存在且计数大于0
-  // 注意：这里假设如果reaction存在就表示当前用户添加过
-  // 在实际应用中，可能需要更复杂的逻辑来跟踪具体是哪些用户添加的reaction
-  const reactionCount = reactions[reactionType];
-  return reactionCount && reactionCount > 0;
-};
 
 const MessageRenderer: React.FC<MessageRendererProps> = ({
   messages = [],

@@ -31,7 +31,7 @@ const ConnectionLoadingOverlay: React.FC = () => {
     // } else {
       window.location.reload();
     // }
-  }, [context]);
+  }, []);
 
 
 

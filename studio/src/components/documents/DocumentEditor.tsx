@@ -103,21 +103,6 @@ const DocumentEditor: React.FC = () => {
     };
   }, [documentId, leaveDocument]);
 
-  // Format last saved time
-  const formatLastSaved = (date: Date | null) => {
-    if (!date) return "";
-
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffSecs = Math.floor(diffMs / 1000);
-    const diffMins = Math.floor(diffSecs / 60);
-
-    if (diffSecs < 10) return "Just saved";
-    if (diffSecs < 60) return `Saved ${diffSecs} seconds ago`;
-    if (diffMins < 60) return `Saved ${diffMins} minutes ago`;
-
-    return date.toLocaleTimeString();
-  };
 
   if (isLoading) {
     return (

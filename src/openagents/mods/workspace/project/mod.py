@@ -1,0 +1,821 @@
+"""
+Network-level project mod for OpenAgents workspace functionality.
+
+This mod provides comprehensive project management including:
+- Template-based project creation
+- Project lifecycle management  
+- State and artifact management
+- Private channel integration
+- Permission-based access control
+"""
+
+import logging
+import asyncio
+import time
+from typing import Dict, Any, List, Optional, Set
+from openagents.core.base_mod import BaseMod
+from openagents.models.event import Event, EventVisibility
+from openagents.models.event_response import EventResponse
+from openagents.workspace.project import Project, ProjectTemplate, ProjectStatus
+from openagents.workspace.project_messages import *
+
+logger = logging.getLogger(__name__)
+
+
+class DefaultProjectNetworkMod(BaseMod):
+    """Network-level mod for project management functionality."""
+
+    def __init__(self, mod_name: str = "project.default"):
+        """Initialize the project network mod."""
+        super().__init__(mod_name=mod_name)
+
+        # Project and template storage
+        self.projects: Dict[str, Project] = {}
+        self.templates: Dict[str, ProjectTemplate] = {}
+        
+        # Agent tracking
+        self.agent_projects: Dict[str, Set[str]] = {}  # agent_id -> project_ids
+        
+        # Configuration
+        self.max_concurrent_projects = 10
+        self.template_config = {}
+
+        logger.info(f"Initializing Project network mod")
+
+    def initialize(self) -> bool:
+        """Initialize the mod with configuration."""
+        config = self.config or {}
+        
+        # Load basic config
+        self.max_concurrent_projects = config.get("max_concurrent_projects", 10)
+        
+        # Load project templates from network configuration
+        self.template_config = config.get("project_templates", {})
+        self._load_templates()
+
+        logger.info(f"Project mod initialized with {len(self.templates)} templates")
+        return True
+
+    def _load_templates(self) -> None:
+        """Load project templates from configuration."""
+        for template_id, template_data in self.template_config.items():
+            try:
+                template = ProjectTemplate(
+                    template_id=template_id,
+                    name=template_data.get("name", template_id),
+                    description=template_data.get("description", ""),
+                    agent_groups=template_data.get("agent_groups", []),
+                    context=template_data.get("context", "")
+                )
+                self.templates[template_id] = template
+                logger.info(f"Loaded template: {template_id}")
+            except Exception as e:
+                logger.error(f"Failed to load template {template_id}: {e}")
+
+    def shutdown(self) -> bool:
+        """Shutdown the mod gracefully."""
+        # Stop all running projects
+        for project in self.projects.values():
+            if project.is_active():
+                project.stop()
+
+        self.projects.clear()
+        self.templates.clear()
+        self.agent_projects.clear()
+
+        logger.info("Project mod shutdown completed")
+        return True
+
+    def handle_register_agent(self, agent_id: str, metadata: Dict[str, Any]) -> None:
+        """Register an agent with the project mod."""
+        if agent_id not in self.agent_projects:
+            self.agent_projects[agent_id] = set()
+        logger.info(f"Registered agent {agent_id} with Project mod")
+
+    def handle_unregister_agent(self, agent_id: str) -> None:
+        """Unregister an agent from the project mod."""
+        if agent_id in self.agent_projects:
+            # Remove agent from all their projects
+            project_ids = self.agent_projects[agent_id].copy()
+            for project_id in project_ids:
+                if project_id in self.projects:
+                    project = self.projects[project_id]
+                    if agent_id in project.authorized_agents:
+                        project.authorized_agents.remove(agent_id)
+                    if agent_id in project.collaborators:
+                        project.collaborators.remove(agent_id)
+
+            del self.agent_projects[agent_id]
+        logger.info(f"Unregistered agent {agent_id} from Project mod")
+
+    async def process_system_message(self, message: Event) -> Optional[EventResponse]:
+        """Process a project mod message with granular event routing."""
+        try:
+            event_name = message.event_name
+            source_id = message.source_id
+            
+            logger.info(f"🔧 PROJECT MOD: Received event: {event_name} from {source_id}")
+
+            # Route to specific handlers based on event name
+            if event_name == "project.template.list":
+                return await self._handle_template_list(message)
+            elif event_name == "project.start":
+                return await self._handle_project_start(message)
+            elif event_name == "project.stop":
+                return await self._handle_project_stop(message)
+            elif event_name == "project.complete":
+                return await self._handle_project_complete(message)
+            elif event_name == "project.get":
+                return await self._handle_project_get(message)
+            elif event_name == "project.message.send":
+                return await self._handle_project_message_send(message)
+            elif event_name == "project.global_state.set":
+                return await self._handle_global_state_set(message)
+            elif event_name == "project.global_state.get":
+                return await self._handle_global_state_get(message)
+            elif event_name == "project.global_state.list":
+                return await self._handle_global_state_list(message)
+            elif event_name == "project.global_state.delete":
+                return await self._handle_global_state_delete(message)
+            elif event_name == "project.agent_state.set":
+                return await self._handle_agent_state_set(message)
+            elif event_name == "project.agent_state.get":
+                return await self._handle_agent_state_get(message)
+            elif event_name == "project.agent_state.list":
+                return await self._handle_agent_state_list(message)
+            elif event_name == "project.agent_state.delete":
+                return await self._handle_agent_state_delete(message)
+            elif event_name == "project.artifact.set":
+                return await self._handle_artifact_set(message)
+            elif event_name == "project.artifact.get":
+                return await self._handle_artifact_get(message)
+            elif event_name == "project.artifact.list":
+                return await self._handle_artifact_list(message)
+            elif event_name == "project.artifact.delete":
+                return await self._handle_artifact_delete(message)
+            else:
+                logger.warning(f"Unknown project event: {event_name}")
+                return EventResponse(
+                    success=False,
+                    message=f"Unknown event: {event_name}",
+                    data={"error": "Unknown event type"}
+                )
+
+        except Exception as e:
+            logger.error(f"Error processing project mod message: {e}")
+            import traceback
+            traceback.print_exc()
+            return EventResponse(
+                success=False,
+                message=f"Error processing project event: {str(e)}",
+                data={"error": str(e)}
+            )
+
+    # Template Management Handlers
+
+    async def _handle_template_list(self, message: Event) -> EventResponse:
+        """Handle project template list request."""
+        templates_data = []
+        for template in self.templates.values():
+            templates_data.append({
+                "template_id": template.template_id,
+                "name": template.name,
+                "description": template.description,
+                "agent_groups": template.agent_groups,
+                "context": template.context
+            })
+
+        return EventResponse(
+            success=True,
+            message="Templates listed successfully",
+            data={"templates": templates_data}
+        )
+
+    # Project Lifecycle Handlers
+
+    async def _handle_project_start(self, message: Event) -> EventResponse:
+        """Handle project start request."""
+        payload = message.payload or {}
+        template_id = payload.get("template_id")
+        goal = payload.get("goal")
+        name = payload.get("name")
+        collaborators = payload.get("collaborators", [])
+
+        # Validate template exists
+        if template_id not in self.templates:
+            return EventResponse(
+                success=False,
+                message=f"Template {template_id} not found",
+                data={"error": "Template not found"}
+            )
+
+        # Check concurrent project limit
+        active_projects = sum(1 for p in self.projects.values() if p.is_active())
+        if active_projects >= self.max_concurrent_projects:
+            return EventResponse(
+                success=False,
+                message=f"Maximum concurrent projects ({self.max_concurrent_projects}) reached",
+                data={"error": "Project limit exceeded"}
+            )
+
+        template = self.templates[template_id]
+
+        # Create project
+        project = Project(
+            goal=goal,
+            template_id=template_id,
+            initiator_agent_id=message.source_id,
+            name=name,
+            context=template.context,
+            collaborators=collaborators,
+            agent_groups=template.agent_groups.copy()
+        )
+
+        # Resolve authorized agents
+        authorized_agents = await self._resolve_authorized_agents(project)
+        project.authorized_agents = authorized_agents
+
+        # Store project
+        self.projects[project.project_id] = project
+
+        # Update agent tracking
+        for agent_id in authorized_agents:
+            if agent_id not in self.agent_projects:
+                self.agent_projects[agent_id] = set()
+            self.agent_projects[agent_id].add(project.project_id)
+
+        # Start the project
+        project.start()
+
+        # Send notifications to all authorized agents
+        await self._send_project_started_notifications(project)
+
+        logger.info(f"Started project {project.project_id} with {len(authorized_agents)} authorized agents")
+
+        return EventResponse(
+            success=True,
+            message="Project started successfully",
+            data={
+                "project_id": project.project_id,
+                "authorized_agents": authorized_agents
+            }
+        )
+
+    async def _handle_project_stop(self, message: Event) -> EventResponse:
+        """Handle project stop request."""
+        payload = message.payload or {}
+        project_id = payload.get("project_id")
+        reason = payload.get("reason")
+
+        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
+        if error_response:
+            return error_response
+
+        project.stop()
+
+        # Send notifications
+        await self._send_project_stopped_notifications(project, message.source_id, reason)
+
+        logger.info(f"Stopped project {project_id}")
+
+        return EventResponse(
+            success=True,
+            message="Project stopped successfully",
+            data={
+                "project_id": project_id,
+                "stopped_timestamp": project.completed_timestamp
+            }
+        )
+
+    async def _handle_project_complete(self, message: Event) -> EventResponse:
+        """Handle project complete request."""
+        payload = message.payload or {}
+        project_id = payload.get("project_id")
+        summary = payload.get("summary")
+
+        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
+        if error_response:
+            return error_response
+
+        project.complete(summary)
+
+        # Send notifications
+        await self._send_project_completed_notifications(project, message.source_id, summary)
+
+        logger.info(f"Completed project {project_id}")
+
+        return EventResponse(
+            success=True,
+            message="Project completed successfully",
+            data={
+                "project_id": project_id,
+                "completed_timestamp": project.completed_timestamp
+            }
+        )
+
+    async def _handle_project_get(self, message: Event) -> EventResponse:
+        """Handle project get request."""
+        payload = message.payload or {}
+        project_id = payload.get("project_id")
+
+        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
+        if error_response:
+            return error_response
+
+        return EventResponse(
+            success=True,
+            message="Project retrieved successfully",
+            data={
+                "project": {
+                    "project_id": project.project_id,
+                    "goal": project.goal,
+                    "context": project.context,
+                    "template_id": project.template_id,
+                    "status": project.status.value,
+                    "initiator_agent_id": project.initiator_agent_id,
+                    "collaborators": project.collaborators,
+                    "authorized_agents": project.authorized_agents,
+                    "created_timestamp": project.created_timestamp,
+                    "started_timestamp": project.started_timestamp,
+                    "artifacts": project.artifacts
+                }
+            }
+        )
+
+    # Messaging Handler
+
+    async def _handle_project_message_send(self, message: Event) -> EventResponse:
+        """Handle project message send request."""
+        payload = message.payload or {}
+        project_id = payload.get("project_id")
+        content = payload.get("content")
+        reply_to_id = payload.get("reply_to_id")
+        attachments = payload.get("attachments", [])
+
+        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
+        if error_response:
+            return error_response
+
+        # Generate message ID
+        message_id = f"msg_{int(time.time())}_{message.source_id[:8]}"
+        timestamp = int(time.time())
+
+        # Send via messaging system (integrate with messaging mod)
+        await self._send_to_messaging_system(project, message.source_id, content, reply_to_id, attachments, message_id)
+
+        # Send notifications to other authorized agents
+        await self._send_message_received_notifications(project, message.source_id, message_id, content, reply_to_id, timestamp)
+
+        return EventResponse(
+            success=True,
+            message="Message sent successfully",
+            data={
+                "message_id": message_id,
+                "timestamp": timestamp
+            }
+        )
+
+    # Global State Handlers
+
+    async def _handle_global_state_set(self, message: Event) -> EventResponse:
+        """Handle global state set request."""
+        payload = message.payload or {}
+        project_id = payload.get("project_id")
+        key = payload.get("key")
+        value = payload.get("value")
+
+        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
+        if error_response:
+            return error_response
+
+        previous_value = project.set_global_state(key, value)
+
+        data = {"key": key}
+        if previous_value is not None:
+            data["previous_value"] = previous_value
+
+        return EventResponse(
+            success=True,
+            message="Global state set successfully",
+            data=data
+        )
+
+    async def _handle_global_state_get(self, message: Event) -> EventResponse:
+        """Handle global state get request."""
+        payload = message.payload or {}
+        project_id = payload.get("project_id")
+        key = payload.get("key")
+
+        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
+        if error_response:
+            return error_response
+
+        value = project.get_global_state(key)
+
+        return EventResponse(
+            success=True,
+            message="Global state retrieved successfully",
+            data={
+                "key": key,
+                "value": value
+            }
+        )
+
+    async def _handle_global_state_list(self, message: Event) -> EventResponse:
+        """Handle global state list request."""
+        payload = message.payload or {}
+        project_id = payload.get("project_id")
+
+        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
+        if error_response:
+            return error_response
+
+        return EventResponse(
+            success=True,
+            message="Global state listed successfully",
+            data={"state": project.global_state}
+        )
+
+    async def _handle_global_state_delete(self, message: Event) -> EventResponse:
+        """Handle global state delete request."""
+        payload = message.payload or {}
+        project_id = payload.get("project_id")
+        key = payload.get("key")
+
+        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
+        if error_response:
+            return error_response
+
+        deleted_value = project.delete_global_state(key)
+
+        return EventResponse(
+            success=True,
+            message="Global state deleted successfully",
+            data={
+                "key": key,
+                "deleted_value": deleted_value
+            }
+        )
+
+    # Agent State Handlers
+
+    async def _handle_agent_state_set(self, message: Event) -> EventResponse:
+        """Handle agent state set request."""
+        payload = message.payload or {}
+        project_id = payload.get("project_id")
+        key = payload.get("key")
+        value = payload.get("value")
+
+        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
+        if error_response:
+            return error_response
+
+        previous_value = project.set_agent_state(message.source_id, key, value)
+
+        return EventResponse(
+            success=True,
+            message="Agent state set successfully",
+            data={
+                "agent_id": message.source_id,
+                "key": key
+            }
+        )
+
+    async def _handle_agent_state_get(self, message: Event) -> EventResponse:
+        """Handle agent state get request."""
+        payload = message.payload or {}
+        project_id = payload.get("project_id")
+        key = payload.get("key")
+        agent_id = payload.get("agent_id", message.source_id)
+
+        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
+        if error_response:
+            return error_response
+
+        # Only allow reading own state or if authorized
+        if agent_id != message.source_id:
+            return EventResponse(
+                success=False,
+                message="Cannot access other agents' state",
+                data={"error": "Access denied"}
+            )
+
+        value = project.get_agent_state(agent_id, key)
+
+        return EventResponse(
+            success=True,
+            message="Agent state retrieved successfully",
+            data={
+                "agent_id": agent_id,
+                "key": key,
+                "value": value
+            }
+        )
+
+    async def _handle_agent_state_list(self, message: Event) -> EventResponse:
+        """Handle agent state list request."""
+        payload = message.payload or {}
+        project_id = payload.get("project_id")
+        agent_id = payload.get("agent_id", message.source_id)
+
+        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
+        if error_response:
+            return error_response
+
+        # Only allow reading own state
+        if agent_id != message.source_id:
+            return EventResponse(
+                success=False,
+                message="Cannot access other agents' state",
+                data={"error": "Access denied"}
+            )
+
+        state = project.get_agent_state_dict(agent_id)
+
+        return EventResponse(
+            success=True,
+            message="Agent state listed successfully",
+            data={
+                "agent_id": agent_id,
+                "state": state
+            }
+        )
+
+    async def _handle_agent_state_delete(self, message: Event) -> EventResponse:
+        """Handle agent state delete request."""
+        payload = message.payload or {}
+        project_id = payload.get("project_id")
+        key = payload.get("key")
+
+        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
+        if error_response:
+            return error_response
+
+        deleted_value = project.delete_agent_state(message.source_id, key)
+
+        return EventResponse(
+            success=True,
+            message="Agent state deleted successfully",
+            data={
+                "agent_id": message.source_id,
+                "key": key,
+                "deleted_value": deleted_value
+            }
+        )
+
+    # Artifact Handlers
+
+    async def _handle_artifact_set(self, message: Event) -> EventResponse:
+        """Handle artifact set request."""
+        payload = message.payload or {}
+        project_id = payload.get("project_id")
+        key = payload.get("key")
+        value = payload.get("value")
+
+        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
+        if error_response:
+            return error_response
+
+        previous_value = project.set_artifact(key, value)
+
+        # Send artifact updated notification
+        await self._send_artifact_updated_notifications(project, message.source_id, key, "set")
+
+        data = {"key": key}
+        if previous_value is not None:
+            data["previous_value"] = previous_value
+
+        return EventResponse(
+            success=True,
+            message="Artifact set successfully",
+            data=data
+        )
+
+    async def _handle_artifact_get(self, message: Event) -> EventResponse:
+        """Handle artifact get request."""
+        payload = message.payload or {}
+        project_id = payload.get("project_id")
+        key = payload.get("key")
+
+        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
+        if error_response:
+            return error_response
+
+        value = project.get_artifact(key)
+
+        return EventResponse(
+            success=True,
+            message="Artifact retrieved successfully",
+            data={
+                "key": key,
+                "value": value
+            }
+        )
+
+    async def _handle_artifact_list(self, message: Event) -> EventResponse:
+        """Handle artifact list request."""
+        payload = message.payload or {}
+        project_id = payload.get("project_id")
+
+        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
+        if error_response:
+            return error_response
+
+        artifacts = project.list_artifacts()
+
+        return EventResponse(
+            success=True,
+            message="Artifacts listed successfully",
+            data={"artifacts": artifacts}
+        )
+
+    async def _handle_artifact_delete(self, message: Event) -> EventResponse:
+        """Handle artifact delete request."""
+        payload = message.payload or {}
+        project_id = payload.get("project_id")
+        key = payload.get("key")
+
+        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
+        if error_response:
+            return error_response
+
+        deleted_value = project.delete_artifact(key)
+
+        # Send artifact updated notification
+        await self._send_artifact_updated_notifications(project, message.source_id, key, "delete")
+
+        return EventResponse(
+            success=True,
+            message="Artifact deleted successfully",
+            data={
+                "key": key,
+                "deleted_value": deleted_value
+            }
+        )
+
+    # Utility Methods
+
+    async def _get_project_with_permission(self, project_id: str, agent_id: str) -> tuple[Optional[Project], Optional[EventResponse]]:
+        """Get project and verify agent has permission."""
+        if project_id not in self.projects:
+            error_response = EventResponse(
+                success=False,
+                message=f"Project {project_id} not found",
+                data={"error": "Project not found"}
+            )
+            return None, error_response
+
+        project = self.projects[project_id]
+        if agent_id not in project.authorized_agents:
+            error_response = EventResponse(
+                success=False,
+                message=f"Access denied to project {project_id}",
+                data={"error": "Access denied"}
+            )
+            return None, error_response
+
+        return project, None
+
+    async def _resolve_authorized_agents(self, project: Project) -> List[str]:
+        """Resolve agent groups to actual agent IDs and combine with collaborators."""
+        authorized = set([project.initiator_agent_id])
+        authorized.update(project.collaborators)
+
+        # Resolve agent groups from network configuration
+        if hasattr(self, 'network') and self.network:
+            agent_groups = getattr(self.network, 'agent_groups', {})
+            for group_name in project.agent_groups:
+                if group_name in agent_groups:
+                    # Get agents in this group from network
+                    group_agents = self._get_agents_in_group(group_name)
+                    authorized.update(group_agents)
+
+        return list(authorized)
+
+    def _get_agents_in_group(self, group_name: str) -> List[str]:
+        """Get all agent IDs in a specific group."""
+        # This would integrate with the network's agent management
+        # For now, return empty list as implementation depends on network setup
+        return []
+
+
+    # Notification Methods
+
+    async def _send_project_started_notifications(self, project: Project) -> None:
+        """Send project started notifications to all authorized agents."""
+        for agent_id in project.authorized_agents:
+            notification = Event(
+                event_name="project.notification.started",
+                source_id="network",
+                destination_id=agent_id,
+                payload={
+                    "project_id": project.project_id,
+                    "goal": project.goal,
+                    "context": project.context,
+                    "initiator_agent_id": project.initiator_agent_id,
+                    "template_id": project.template_id,
+                    "started_timestamp": project.started_timestamp
+                }
+            )
+            if hasattr(self, 'network') and self.network:
+                await self.network.send_message(notification)
+
+    async def _send_project_stopped_notifications(self, project: Project, stopped_by: str, reason: Optional[str]) -> None:
+        """Send project stopped notifications."""
+        for agent_id in project.authorized_agents:
+            notification = Event(
+                event_name="project.notification.stopped",
+                source_id="network",
+                destination_id=agent_id,
+                payload={
+                    "project_id": project.project_id,
+                    "stopped_by": stopped_by,
+                    "reason": reason,
+                    "stopped_timestamp": project.completed_timestamp
+                }
+            )
+            if hasattr(self, 'network') and self.network:
+                await self.network.send_message(notification)
+
+    async def _send_project_completed_notifications(self, project: Project, completed_by: str, summary: str) -> None:
+        """Send project completed notifications."""
+        for agent_id in project.authorized_agents:
+            notification = Event(
+                event_name="project.notification.completed",
+                source_id="network",
+                destination_id=agent_id,
+                payload={
+                    "project_id": project.project_id,
+                    "completed_by": completed_by,
+                    "summary": summary,
+                    "completed_timestamp": project.completed_timestamp
+                }
+            )
+            if hasattr(self, 'network') and self.network:
+                await self.network.send_message(notification)
+
+    async def _send_message_received_notifications(self, project: Project, sender_id: str, message_id: str, content: Dict[str, Any], reply_to_id: Optional[str], timestamp: int) -> None:
+        """Send message received notifications."""
+        for agent_id in project.authorized_agents:
+            if agent_id != sender_id:  # Don't notify sender
+                notification = Event(
+                    event_name="project.notification.message_received",
+                    source_id="network",
+                    destination_id=agent_id,
+                    payload={
+                        "project_id": project.project_id,
+                        "message_id": message_id,
+                        "sender_id": sender_id,
+                        "content": content,
+                        "reply_to_id": reply_to_id,
+                        "timestamp": timestamp
+                    }
+                )
+                if hasattr(self, 'network') and self.network:
+                    await self.network.send_message(notification)
+
+    async def _send_artifact_updated_notifications(self, project: Project, updated_by: str, key: str, action: str) -> None:
+        """Send artifact updated notifications."""
+        for agent_id in project.authorized_agents:
+            if agent_id != updated_by:  # Don't notify updater
+                notification = Event(
+                    event_name="project.notification.artifact_updated",
+                    source_id="network",
+                    destination_id=agent_id,
+                    payload={
+                        "project_id": project.project_id,
+                        "updated_by": updated_by,
+                        "key": key,
+                        "action": action,
+                        "timestamp": int(time.time())
+                    }
+                )
+                if hasattr(self, 'network') and self.network:
+                    await self.network.send_message(notification)
+
+    async def _send_to_messaging_system(self, project: Project, sender_id: str, content: Dict[str, Any], reply_to_id: Optional[str], attachments: List[Dict[str, Any]], message_id: str) -> None:
+        """Send message to messaging system for project channel."""
+        # This would integrate with the messaging mod
+        # For now, just log the message sending
+        logger.info(f"Sending message {message_id} to project {project.project_id} channel from {sender_id}")
+        
+        # In a real implementation, this would:
+        # 1. Create or get the project's private channel
+        # 2. Send the message via the messaging mod
+        # 3. Handle attachments appropriately
+
+    def get_state(self) -> Dict[str, Any]:
+        """Get the current state of the project mod."""
+        active_projects = sum(1 for p in self.projects.values() if p.is_active())
+        completed_projects = sum(1 for p in self.projects.values() if p.status in [ProjectStatus.COMPLETED, ProjectStatus.FAILED, ProjectStatus.STOPPED])
+
+        return {
+            "total_projects": len(self.projects),
+            "active_projects": active_projects,
+            "completed_projects": completed_projects,
+            "total_templates": len(self.templates),
+            "agents_with_projects": len(self.agent_projects),
+            "config": {
+                "max_concurrent_projects": self.max_concurrent_projects,
+            },
+        }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -24,6 +24,22 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const [isVisible, setIsVisible] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
 
+  const handleClose = useCallback((callback: () => void) => {
+    setIsLeaving(true);
+    setTimeout(() => {
+      setIsVisible(false);
+      callback();
+    }, 200); // Animation duration
+  }, []);
+
+  const handleConfirm = useCallback(() => {
+    handleClose(onConfirm);
+  }, [handleClose, onConfirm]);
+
+  const handleCancel = useCallback(() => {
+    handleClose(onCancel);
+  }, [handleClose, onCancel]);
+
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
@@ -39,23 +55,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         document.removeEventListener('keydown', handleEscapeKey);
       };
     }
-  }, [isOpen]);
-
-  const handleClose = (callback: () => void) => {
-    setIsLeaving(true);
-    setTimeout(() => {
-      setIsVisible(false);
-      callback();
-    }, 200); // Animation duration
-  };
-
-  const handleConfirm = () => {
-    handleClose(onConfirm);
-  };
-
-  const handleCancel = () => {
-    handleClose(onCancel);
-  };
+  }, [isOpen, handleCancel]);
 
   if (!isVisible) return null;
 

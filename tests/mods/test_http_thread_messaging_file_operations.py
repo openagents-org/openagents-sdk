@@ -12,7 +12,6 @@ No mocks - uses real HTTP clients and network infrastructure.
 
 import pytest
 import asyncio
-import random
 import base64
 import tempfile
 from pathlib import Path
@@ -21,6 +20,7 @@ from openagents.core.client import AgentClient
 from openagents.core.network import create_network
 from openagents.launchers.network_launcher import load_network_config
 from openagents.models.event import Event
+from openagents.utils.port_allocator import get_port_pair, release_port, wait_for_port_free
 
 
 @pytest.fixture
@@ -30,12 +30,12 @@ async def test_network():
         Path(__file__).parent.parent.parent / "examples" / "workspace_test.yaml"
     )
 
-    # Load config and use random port to avoid conflicts
+    # Load config and use dynamic port allocation to avoid conflicts
     config = load_network_config(str(config_path))
 
-    # Update the gRPC and HTTP transport ports to avoid conflicts - HTTP file ops test range: 36000-37999
-    grpc_port = random.randint(36000, 37999)
-    http_port = grpc_port + 2000  # HTTP port should be different
+    # Get two guaranteed free ports for gRPC and HTTP transports
+    grpc_port, http_port = get_port_pair()
+    print(f"🔧 HTTP file operations test using ports: gRPC={grpc_port}, HTTP={http_port}")
 
     for transport in config.network.transports:
         if transport.type == "grpc":
@@ -51,21 +51,41 @@ async def test_network():
     await asyncio.sleep(1.0)
 
     # Extract gRPC and HTTP ports for client connections
-    grpc_port = None
-    http_port = None
+    actual_grpc_port = None
+    actual_http_port = None
     for transport in config.network.transports:
         if transport.type == "grpc":
-            grpc_port = transport.config.get("port")
+            actual_grpc_port = transport.config.get("port")
         elif transport.type == "http":
-            http_port = transport.config.get("port")
+            actual_http_port = transport.config.get("port")
 
-    yield network, config, grpc_port, http_port
+    yield network, config, actual_grpc_port, actual_http_port
 
     # Cleanup
     try:
         await network.shutdown()
+        
+        # Wait for ports to be fully released by the OS
+        print(f"🧹 Waiting for ports to be released: gRPC={grpc_port}, HTTP={http_port}")
+        await asyncio.sleep(0.5)
+        
+        grpc_released = wait_for_port_free(grpc_port, timeout=5.0)
+        http_released = wait_for_port_free(http_port, timeout=5.0)
+        
+        if grpc_released and http_released:
+            print(f"✅ Ports successfully released: gRPC={grpc_port}, HTTP={http_port}")
+        else:
+            print(f"⚠️  Port release timeout - gRPC: {'✅' if grpc_released else '❌'}, HTTP: {'✅' if http_released else '❌'}")
+        
+        # Release ports from allocator
+        release_port(grpc_port)
+        release_port(http_port)
+        
     except Exception as e:
         print(f"Error during network shutdown: {e}")
+        # Still try to release ports
+        release_port(grpc_port)
+        release_port(http_port)
 
 
 @pytest.fixture
@@ -74,11 +94,27 @@ async def http_client_alice(test_network):
     network, config, grpc_port, http_port = test_network
 
     client = AgentClient(agent_id="alice")
-    # Use enforce_transport_type to force HTTP transport selection
-    await client.connect("localhost", http_port, enforce_transport_type="http")
+    
+    # Add retry logic with exponential backoff for client connection
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            # Use enforce_transport_type to force HTTP transport selection
+            await client.connect("localhost", http_port, enforce_transport_type="http")
+            print(f"✅ Alice client connected successfully on attempt {attempt + 1}")
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait_time = 0.5 * (2 ** attempt)  # Exponential backoff
+                print(f"⚠️  Alice connection attempt {attempt + 1} failed: {e}")
+                print(f"🔄 Retrying in {wait_time}s...")
+                await asyncio.sleep(wait_time)
+            else:
+                print(f"❌ Alice failed to connect after {max_retries} attempts")
+                raise
 
-    # Give client time to connect
-    await asyncio.sleep(1.0)
+    # Give client time to fully establish connection
+    await asyncio.sleep(0.5)
 
     yield client
 
@@ -95,11 +131,27 @@ async def http_client_bob(test_network):
     network, config, grpc_port, http_port = test_network
 
     client = AgentClient(agent_id="bob")
-    # Use enforce_transport_type to force HTTP transport selection
-    await client.connect("localhost", http_port, enforce_transport_type="http")
+    
+    # Add retry logic with exponential backoff for client connection
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            # Use enforce_transport_type to force HTTP transport selection
+            await client.connect("localhost", http_port, enforce_transport_type="http")
+            print(f"✅ Bob client connected successfully on attempt {attempt + 1}")
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait_time = 0.5 * (2 ** attempt)  # Exponential backoff
+                print(f"⚠️  Bob connection attempt {attempt + 1} failed: {e}")
+                print(f"🔄 Retrying in {wait_time}s...")
+                await asyncio.sleep(wait_time)
+            else:
+                print(f"❌ Bob failed to connect after {max_retries} attempts")
+                raise
 
-    # Give client time to connect
-    await asyncio.sleep(1.0)
+    # Give client time to fully establish connection
+    await asyncio.sleep(0.5)
 
     yield client
 
