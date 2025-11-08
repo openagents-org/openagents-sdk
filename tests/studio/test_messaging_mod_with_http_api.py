@@ -35,6 +35,7 @@ from typing import Dict, List, Any, Optional
 
 from openagents.core.network import create_network
 from openagents.launchers.network_launcher import load_network_config
+from openagents.utils.port_allocator import get_port_pair, release_port, wait_for_port_free
 
 # Configure logging to file
 logging.basicConfig(
@@ -73,10 +74,18 @@ class HTTPClient:
             self.session = aiohttp.ClientSession()
 
     async def close(self):
-        """Close the session."""
-        if self.session:
-            await self.session.close()
-            self.session = None
+        """Close the session with proper cleanup."""
+        if self.session and not self.session.closed:
+            try:
+                # Add small delay before closing to allow pending requests to complete
+                await asyncio.sleep(0.1)
+                await self.session.close()
+                # Wait for underlying connections to close
+                await asyncio.sleep(0.1)
+            except Exception as e:
+                print(f"Warning: Error closing session for {self.agent_id}: {e}")
+            finally:
+                self.session = None
 
     async def register(self) -> bool:
         """Register the agent with the network."""
@@ -377,9 +386,9 @@ async def test_network():
     # Load config and use random port to avoid conflicts
     config = load_network_config(str(config_path))
 
-    # Update the HTTP transport port to use random port
-    http_port = random.randint(47000, 48000)
-    grpc_port = http_port + 100  # Ensure different ports
+    # Use dynamic port allocation to avoid conflicts
+    grpc_port, http_port = get_port_pair()
+    print(f"🔧 Studio messaging test using ports: gRPC={grpc_port}, HTTP={http_port}")
 
     for transport in config.network.transports:
         if transport.type == "http":
@@ -392,15 +401,34 @@ async def test_network():
     await network.initialize()
 
     # Give network time to start up and mods to initialize
-    await asyncio.sleep(5.0)
+    await asyncio.sleep(3.0)
 
     yield network, http_port
 
-    # Cleanup
+    # Enhanced cleanup with graceful shutdown
     try:
-        await network.shutdown()
+        print(f"🧹 Starting network shutdown...")
+        await asyncio.wait_for(network.shutdown(), timeout=10.0)
+        print(f"✅ Network shutdown completed")
+        
+        # Wait for ports to be fully released by the OS
+        await asyncio.sleep(0.5)
+        grpc_released = wait_for_port_free(grpc_port, timeout=5.0)
+        http_released = wait_for_port_free(http_port, timeout=5.0)
+        
+        if grpc_released and http_released:
+            print(f"✅ Ports successfully released: gRPC={grpc_port}, HTTP={http_port}")
+        else:
+            print(f"⚠️ Port release timeout - gRPC: {'✅' if grpc_released else '❌'}, HTTP: {'✅' if http_released else '❌'}")
+            
+    except asyncio.TimeoutError:
+        print(f"⚠️ Network shutdown timeout after 10s")
     except Exception as e:
-        print(f"Error during network shutdown: {e}")
+        print(f"❌ Error during network shutdown: {e}")
+    finally:
+        # Always release ports from allocator
+        release_port(grpc_port)
+        release_port(http_port)
 
 
 @pytest.fixture
@@ -417,9 +445,14 @@ async def client_a(base_url):
     try:
         yield client
     finally:
-        if client.registered:
-            await client.unregister()
-        await client.close()
+        try:
+            if client.registered:
+                await client.unregister()
+                await asyncio.sleep(0.1)  # Small delay after unregister
+        except Exception as e:
+            print(f"Warning: Error unregistering {client.agent_id}: {e}")
+        finally:
+            await client.close()
 
 
 @pytest.fixture
@@ -429,9 +462,14 @@ async def client_b(base_url):
     try:
         yield client
     finally:
-        if client.registered:
-            await client.unregister()
-        await client.close()
+        try:
+            if client.registered:
+                await client.unregister()
+                await asyncio.sleep(0.1)  # Small delay after unregister
+        except Exception as e:
+            print(f"Warning: Error unregistering {client.agent_id}: {e}")
+        finally:
+            await client.close()
 
 
 class TestMessagingFlow:
