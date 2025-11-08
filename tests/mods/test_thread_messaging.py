@@ -29,6 +29,7 @@ from openagents.core.client import AgentClient
 from openagents.core.network import create_network
 from openagents.launchers.network_launcher import load_network_config
 from openagents.models.event import Event
+from openagents.utils.port_allocator import get_port_pair, release_port, wait_for_port_free
 
 
 @pytest.fixture
@@ -38,12 +39,12 @@ async def thread_messaging_network():
         Path(__file__).parent.parent.parent / "examples" / "workspace_test.yaml"
     )
 
-    # Load config and use random port to avoid conflicts
+    # Load config and use dynamic port allocation to avoid conflicts
     config = load_network_config(str(config_path))
 
-    # Update the gRPC transport port to avoid conflicts - Thread messaging test range: 40000-41999
-    grpc_port = random.randint(40000, 41999)
-    http_port = grpc_port + 2000  # HTTP port should be different
+    # Get two guaranteed free ports for gRPC and HTTP transports
+    grpc_port, http_port = get_port_pair()
+    print(f"🔧 Thread messaging test using ports: gRPC={grpc_port}, HTTP={http_port}")
 
     for transport in config.network.transports:
         if transport.type == "grpc":
@@ -53,27 +54,71 @@ async def thread_messaging_network():
 
     # Create and initialize network
     network = create_network(config.network)
-    await network.initialize()
+    
+    try:
+        await network.initialize()
+        print(f"✅ Network initialized successfully on ports {grpc_port}, {http_port}")
+    except Exception as e:
+        print(f"❌ Network initialization failed: {e}")
+        # Clean up ports and re-raise
+        release_port(grpc_port)
+        release_port(http_port)
+        raise
 
-    # Give network time to start up
+    # Give network time to start up and verify services are responding
     await asyncio.sleep(1.0)
+    
+    # Verify network is actually ready
+    max_retries = 10
+    for attempt in range(max_retries):
+        try:
+            # Try to make a basic connection to verify the network is ready
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                try:
+                    async with session.get(f"http://localhost:{http_port}/api/health", timeout=1) as resp:
+                        if resp.status == 200:
+                            print(f"✅ Network health check passed on attempt {attempt + 1}")
+                            break
+                except:
+                    pass
+        except:
+            pass
+        
+        if attempt < max_retries - 1:
+            await asyncio.sleep(0.5)
+            print(f"⏳ Network not ready, retrying... (attempt {attempt + 1}/{max_retries})")
+        else:
+            print(f"⚠️ Network may not be fully ready after {max_retries} attempts, proceeding anyway...")
+            break
 
-    # Extract gRPC and HTTP ports for client connections
-    grpc_port = None
-    http_port = None
-    for transport in config.network.transports:
-        if transport.type == "grpc":
-            grpc_port = transport.config.get("port")
-        elif transport.type == "http":
-            http_port = transport.config.get("port")
+    # Ports are already assigned above - grpc_port and http_port variables are ready for use
 
     yield network, config, grpc_port, http_port
 
     # Cleanup
     try:
         await network.shutdown()
+        print(f"🧹 Network shutdown complete, releasing ports {grpc_port}, {http_port}")
+        
+        # Wait for ports to be freed by the OS
+        await asyncio.gather(
+            asyncio.create_task(asyncio.to_thread(wait_for_port_free, grpc_port, 'localhost', 5.0)),
+            asyncio.create_task(asyncio.to_thread(wait_for_port_free, http_port, 'localhost', 5.0))
+        )
+        
+        # Release ports from our allocator
+        release_port(grpc_port)
+        release_port(http_port)
+        
+        # Small additional delay to ensure full cleanup
+        await asyncio.sleep(0.2)
+        
     except Exception as e:
         print(f"Error during network shutdown: {e}")
+        # Still try to release ports even if shutdown failed
+        release_port(grpc_port)
+        release_port(http_port)
 
 
 @pytest.fixture
@@ -82,7 +127,22 @@ async def alice_client(thread_messaging_network):
     network, config, grpc_port, http_port = thread_messaging_network
 
     client = AgentClient(agent_id="alice")
-    await client.connect("localhost", http_port)
+    
+    # Retry connection with exponential backoff
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            await client.connect("localhost", http_port)
+            print(f"✅ Alice client connected successfully on attempt {attempt + 1}")
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait_time = 0.5 * (2 ** attempt)  # Exponential backoff
+                print(f"⏳ Alice connection failed (attempt {attempt + 1}), retrying in {wait_time}s: {e}")
+                await asyncio.sleep(wait_time)
+            else:
+                print(f"❌ Alice connection failed after {max_retries} attempts: {e}")
+                raise
 
     # Give client time to connect and register with thread messaging mod
     await asyncio.sleep(1.0)
@@ -92,6 +152,7 @@ async def alice_client(thread_messaging_network):
     # Cleanup
     try:
         await client.disconnect()
+        print("🧹 Alice client disconnected")
     except Exception as e:
         print(f"Error disconnecting alice: {e}")
 
@@ -102,7 +163,22 @@ async def bob_client(thread_messaging_network):
     network, config, grpc_port, http_port = thread_messaging_network
 
     client = AgentClient(agent_id="bob")
-    await client.connect("localhost", http_port)
+    
+    # Retry connection with exponential backoff
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            await client.connect("localhost", http_port)
+            print(f"✅ Bob client connected successfully on attempt {attempt + 1}")
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait_time = 0.5 * (2 ** attempt)  # Exponential backoff
+                print(f"⏳ Bob connection failed (attempt {attempt + 1}), retrying in {wait_time}s: {e}")
+                await asyncio.sleep(wait_time)
+            else:
+                print(f"❌ Bob connection failed after {max_retries} attempts: {e}")
+                raise
 
     # Give client time to connect and register with thread messaging mod
     await asyncio.sleep(1.0)
@@ -112,6 +188,7 @@ async def bob_client(thread_messaging_network):
     # Cleanup
     try:
         await client.disconnect()
+        print("🧹 Bob client disconnected")
     except Exception as e:
         print(f"Error disconnecting bob: {e}")
 
@@ -122,7 +199,22 @@ async def charlie_client(thread_messaging_network):
     network, config, grpc_port, http_port = thread_messaging_network
 
     client = AgentClient(agent_id="charlie")
-    await client.connect("localhost", http_port)
+    
+    # Retry connection with exponential backoff
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            await client.connect("localhost", http_port)
+            print(f"✅ Charlie client connected successfully on attempt {attempt + 1}")
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait_time = 0.5 * (2 ** attempt)  # Exponential backoff
+                print(f"⏳ Charlie connection failed (attempt {attempt + 1}), retrying in {wait_time}s: {e}")
+                await asyncio.sleep(wait_time)
+            else:
+                print(f"❌ Charlie connection failed after {max_retries} attempts: {e}")
+                raise
 
     # Give client time to connect and register with thread messaging mod
     await asyncio.sleep(1.0)
@@ -132,6 +224,7 @@ async def charlie_client(thread_messaging_network):
     # Cleanup
     try:
         await client.disconnect()
+        print("🧹 Charlie client disconnected")
     except Exception as e:
         print(f"Error disconnecting charlie: {e}")
 
