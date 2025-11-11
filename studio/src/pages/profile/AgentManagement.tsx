@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
 import { useConfirm } from "@/context/ConfirmContext";
 import { useAuthStore } from "@/stores/authStore";
@@ -21,7 +21,7 @@ const AgentManagement: React.FC = () => {
   const { agentName: currentAgentName } = useAuthStore();
 
   // Fetch agents from /api/health
-  const fetchAgents = async () => {
+  const fetchAgents = useCallback(async () => {
     if (!connector) {
       setError("Not connected to network");
       setLoading(false);
@@ -54,11 +54,11 @@ const AgentManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [connector]);
 
   useEffect(() => {
     fetchAgents();
-  }, [connector]);
+  }, [fetchAgents]);
 
   // Handle kick agent
   const handleKickAgent = async (targetAgentId: string) => {

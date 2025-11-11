@@ -8,8 +8,6 @@
 import { clearAllOpenAgentsDataForLogout } from "@/utils/cookies";
 import { Event, EventResponse, EventNames, AgentInfo } from "../types/events";
 import {
-  buildNetworkUrl,
-  buildNetworkHeaders,
   networkFetch,
 } from "../utils/httpClient";
 import { useAuthStore } from "@/stores/authStore";
@@ -378,6 +376,15 @@ export class HttpEventConnector {
         limit: limit,
         offset: offset,
       },
+    });
+  }
+
+  async getChannelAnnouncement(channel: string): Promise<EventResponse> {
+    return this.sendEvent({
+      event_name: "thread.announcement.get",
+      source_id: this.agentId,
+      // destination_id: "mod:openagents.mods.workspace.messaging",
+      payload: { channel },
     });
   }
 

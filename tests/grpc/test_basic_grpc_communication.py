@@ -20,6 +20,7 @@ from openagents.launchers.network_launcher import load_network_config
 from openagents.models.event import Event
 from openagents.models.network_config import NetworkMode
 from openagents.core.topology import NetworkMode as TopologyNetworkMode
+from openagents.utils.port_allocator import get_port_pair, release_port, wait_for_port_free
 
 
 @pytest.fixture
@@ -32,12 +33,14 @@ async def test_network():
     # Load config and use random port to avoid conflicts
     config = load_network_config(str(config_path))
 
-    # Retry network initialization with different ports if there's a conflict
+    # Use dynamic port allocation to avoid conflicts
+    grpc_port, http_port = get_port_pair()
+    print(f"🔧 Basic gRPC communication test using ports: gRPC={grpc_port}, HTTP={http_port}")
+
+    # Try network initialization with retry logic
     network = None
-    max_retries = 5
+    max_retries = 3
     for attempt in range(max_retries):
-        grpc_port = random.randint(47000, 48000)
-        http_port = grpc_port + 100  # HTTP port should be different
 
         for transport in config.network.transports:
             if transport.type == "grpc":

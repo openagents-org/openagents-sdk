@@ -2221,7 +2221,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           });
 
           // Check if it's own reply message
-          const myUserId = get().getConnection()?.getAgentId();
+          // const myUserId = get().getConnection()?.getAgentId();
 
           // Show system notification
           if (messageData.channel && messageData.content) {

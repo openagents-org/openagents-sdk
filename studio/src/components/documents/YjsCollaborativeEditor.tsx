@@ -105,7 +105,7 @@ export const YjsCollaborativeEditor: React.FC<YjsCollaborativeEditorProps> = ({
 
       hasInitialized.current = false;
     };
-  }, [connection, documentId]); // Only depend on connection and documentId
+  }, [connection, documentId, initialContent]);
 
   /**
    * Handle Monaco editor mount

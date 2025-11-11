@@ -1,7 +1,5 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
-import { useThemeStore } from "@/stores/themeStore";
-import { useAuthStore } from "@/stores/authStore";
 import { useProfileData } from "./hooks/useProfileData";
 
 // Components (to be created)
@@ -65,8 +63,6 @@ const ProfileMainPage: React.FC = () => {
  * 主要的 Profile Dashboard 组件
  */
 const ProfileDashboard: React.FC = () => {
-  const { theme } = useThemeStore();
-  const { agentName, selectedNetwork } = useAuthStore();
   const {
     loading,
     error,

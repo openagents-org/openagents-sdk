@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { DocumentsViewProps, DocumentInfo } from "../../types";
+import React, { useState } from "react";
+import { DocumentsViewProps } from "../../types";
 import { useThemeStore } from "@/stores/themeStore";
 import { useDocumentStore } from "@/stores/documentStore";
 import DocumentList from "./DocumentList";
-import DocumentViewer from "./DocumentViewer";
 import CreateDocumentModal from "./CreateDocumentModal";
 
 const DocumentsView: React.FC<DocumentsViewProps> = ({
@@ -21,13 +20,11 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const {
     documents: storeDocuments,
     createDocument,
-    setDocuments: setStoreDocuments,
   } = useDocumentStore();
 
-  const [documents, setDocuments] = useState<DocumentInfo[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading] = useState(false);
+  const [error] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Use shared state if available, otherwise use store state
@@ -35,10 +32,6 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const effectiveSelectedDocument =
     sharedSelectedDocumentId || selectedDocument;
 
-  // Load documents (documents are loaded by DocumentsMainPage from backend)
-  const loadDocuments = useCallback(async () => {
-    console.log("📤 Documents in store:", effectiveDocuments.length);
-  }, [effectiveDocuments]);
 
   const handleCreateDocument = async (
     name: string,

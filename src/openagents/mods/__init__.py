@@ -3,6 +3,6 @@
 from . import communication
 from . import discovery
 from . import work
-from . import project
+from . import workspace
 
-__all__ = ["communication", "discovery", "work", "project"]
+__all__ = ["communication", "discovery", "work", "workspace"]

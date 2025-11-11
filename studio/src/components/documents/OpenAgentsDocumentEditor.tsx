@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { DocumentContent, DocumentComment, AgentPresence } from '../../types';
 // TODO: Implement with HTTP event system
 
@@ -63,10 +63,10 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
   const PRESENCE_UPDATE_INTERVAL = 5000; // Update presence every 5 seconds
 
   // User colors for collaborative editing
-  const USER_COLORS = [
+  const USER_COLORS = useMemo(() => [
     '#3B82F6', '#EF4444', '#10B981', '#F59E0B', 
     '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'
-  ];
+  ], []);
   
   // Get author color and info
   const getAuthorInfo = useCallback((agentId: string) => {
@@ -74,7 +74,7 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
     const color = USER_COLORS[colorIndex];
     const initials = agentId.length >= 2 ? agentId.substring(0, 2).toUpperCase() : agentId.toUpperCase();
     return { color, initials, agentId };
-  }, []);
+  }, [USER_COLORS]);
 
   // Handle document content received via events
   const handleDocumentContentReceived = useCallback((content: any) => {
@@ -219,7 +219,7 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
     
     setIsLoading(false);
     setConnectionStatus('connected');
-  }, [documentId]);
+  }, [documentId, USER_COLORS, hasUnsavedChanges, isSaving, lastSaveTime]);
 
   // Save content to OpenAgents
   const saveContent = useCallback(async (content: string) => {
@@ -397,9 +397,13 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
-      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const syncTimeout = syncTimeoutRef.current;
+      const saveTimeout = saveTimeoutRef.current;
+      const pollInterval = pollIntervalRef.current;
+      if (syncTimeout) clearTimeout(syncTimeout);
+      if (saveTimeout) clearTimeout(saveTimeout);
+      if (pollInterval) clearInterval(pollInterval);
     };
   }, []);
 
@@ -664,7 +668,6 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
               const lineNumber = index + 1;
               const authorId = lineAuthors[lineNumber];
               const lockerId = lineLocks[lineNumber];
-              const prevAuthorId = index > 0 ? lineAuthors[index] : null;
               const showAuthor = authorId && (index === 0 || authorId !== lineAuthors[index]);
               
               // Show lock indicator if line is locked

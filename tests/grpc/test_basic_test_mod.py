@@ -24,6 +24,7 @@ from openagents.launchers.network_launcher import load_network_config
 from openagents.models.event import Event
 from openagents.models.network_config import NetworkMode
 from openagents.core.topology import NetworkMode as TopologyNetworkMode
+from openagents.utils.port_allocator import get_port_pair, release_port, wait_for_port_free
 
 
 @pytest.fixture
@@ -36,18 +37,20 @@ async def test_network():
     # Load config and use random port to avoid conflicts
     config = load_network_config(str(config_path))
 
-    # Retry network initialization with different ports if there's a conflict
-    network = None
-    max_retries = 5
-    for attempt in range(max_retries):
-        grpc_port = random.randint(47000, 48000)
-        http_port = grpc_port + 100  # HTTP port should be different
+    # Use dynamic port allocation to avoid conflicts
+    grpc_port, http_port = get_port_pair()
+    print(f"🔧 Basic test mod using ports: gRPC={grpc_port}, HTTP={http_port}")
 
-        for transport in config.network.transports:
-            if transport.type == "grpc":
-                transport.config["port"] = grpc_port
-            elif transport.type == "http":
-                transport.config["port"] = http_port
+    for transport in config.network.transports:
+        if transport.type == "grpc":
+            transport.config["port"] = grpc_port
+        elif transport.type == "http":
+            transport.config["port"] = http_port
+
+    # Try network initialization with retry logic
+    network = None
+    max_retries = 3
+    for attempt in range(max_retries):
 
         # Create and initialize network
         network = create_network(config.network)
@@ -76,11 +79,30 @@ async def test_network():
         "config": config,
     }
 
-    # Cleanup
+    # Enhanced cleanup with graceful shutdown
     try:
-        await network.shutdown()
+        print(f"🧹 Starting network shutdown...")
+        await asyncio.wait_for(network.shutdown(), timeout=10.0)
+        print(f"✅ Network shutdown completed")
+        
+        # Wait for ports to be fully released by the OS
+        await asyncio.sleep(0.5)
+        grpc_released = wait_for_port_free(grpc_port, timeout=5.0)
+        http_released = wait_for_port_free(http_port, timeout=5.0)
+        
+        if grpc_released and http_released:
+            print(f"✅ Ports successfully released: gRPC={grpc_port}, HTTP={http_port}")
+        else:
+            print(f"⚠️ Port release timeout - gRPC: {'✅' if grpc_released else '❌'}, HTTP: {'✅' if http_released else '❌'}")
+            
+    except asyncio.TimeoutError:
+        print(f"⚠️ Network shutdown timeout after 10s")
     except Exception as e:
-        print(f"Error during network shutdown: {e}")
+        print(f"❌ Error during network shutdown: {e}")
+    finally:
+        # Always release ports from allocator
+        release_port(grpc_port)
+        release_port(http_port)
 
 
 @pytest.fixture

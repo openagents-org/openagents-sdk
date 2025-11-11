@@ -35,6 +35,7 @@ from typing import Dict, List, Any, Optional
 
 from openagents.core.network import create_network
 from openagents.launchers.network_launcher import load_network_config
+from openagents.utils.port_allocator import get_port_pair, release_port, wait_for_port_free
 
 # Configure logging to file
 logging.basicConfig(
@@ -73,10 +74,18 @@ class ForumHTTPClient:
             self.session = aiohttp.ClientSession()
 
     async def close(self):
-        """Close the session."""
-        if self.session:
-            await self.session.close()
-            self.session = None
+        """Close the session with proper cleanup."""
+        if self.session and not self.session.closed:
+            try:
+                # Add small delay before closing to allow pending requests to complete
+                await asyncio.sleep(0.1)
+                await self.session.close()
+                # Wait for underlying connections to close
+                await asyncio.sleep(0.1)
+            except Exception as e:
+                print(f"Warning: Error closing session for {self.agent_id}: {e}")
+            finally:
+                self.session = None
 
     async def register(self) -> bool:
         """Register the agent with the network."""
@@ -484,9 +493,9 @@ async def test_network():
     # Load config and use random port to avoid conflicts
     config = load_network_config(str(config_path))
 
-    # Update the HTTP transport port to use random port
-    http_port = random.randint(25000, 26000)
-    grpc_port = http_port + 100  # Ensure different ports
+    # Use dynamic port allocation to avoid conflicts
+    grpc_port, http_port = get_port_pair()
+    print(f"🔧 Studio forum test using ports: gRPC={grpc_port}, HTTP={http_port}")
 
     for transport in config.network.transports:
         if transport.type == "http":

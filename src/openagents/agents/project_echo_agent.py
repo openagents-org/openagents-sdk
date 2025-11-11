@@ -8,7 +8,7 @@ from openagents.models.event_thread import EventThread
 from openagents.models.messages import Event, EventNames
 from openagents.models.event import Event
 from openagents.models.event_context import EventContext
-from openagents.workspace.project_messages import ProjectNotificationMessage
+from openagents.workspace.project_messages import ProjectCompleteMessage
 
 logger = logging.getLogger(__name__)
 
@@ -345,16 +345,12 @@ class ProjectEchoAgentRunner(AgentRunner):
             f"Completing project {project_id} with response: {customized_response}"
         )
 
-        # Send project completion notification
-        completion_message = ProjectNotificationMessage(
-            sender_id=self.client.agent_id,
+        # Send project completion notification using new event system
+        completion_summary = f"Project completed successfully by {self.echo_prefix} agent. Results: {customized_response}"
+        completion_message = ProjectCompleteMessage(
             project_id=project_id,
-            notification_type="completion",
-            content={
-                "results": customized_response,
-                "completed_by": self.client.agent_id,
-                "completion_summary": f"Project completed successfully by {self.echo_prefix} agent",
-            },
+            summary=completion_summary,
+            source_id=self.client.agent_id
         )
 
         try:
