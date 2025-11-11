@@ -113,7 +113,7 @@ const AgentNamePicker: React.FC = () => {
           selectedNetwork.port
         );
 
-        if (!result.success || !result.valid) {
+        if (!result.success) {
           setPasswordError(
             result.error || "Invalid password. Please check your credentials."
           );

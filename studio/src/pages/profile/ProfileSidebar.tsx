@@ -105,7 +105,7 @@ const ProfileSidebar: React.FC = () => {
       </div>
 
       {/* Network Management Section - Only visible for admin */}
-      {!isLoading  && (
+      {(!isLoading && isAdmin)  && (
         <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
           {/* Section Header */}
           <div className="flex items-center px-2 mb-2">
