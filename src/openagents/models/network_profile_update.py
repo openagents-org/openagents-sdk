@@ -2,8 +2,11 @@
 
 import re
 from typing import List, Optional, Any, Dict
-from pydantic import BaseModel, Field, field_validator, HttpUrl
+
 from packaging import version as pkg_version
+from pydantic import BaseModel, Field, field_validator, HttpUrl
+
+from openagents.models.network_profile import NetworkAuthentication
 
 
 def normalize_string_list(items: List[str]) -> List[str]:
@@ -97,14 +100,19 @@ class NetworkProfilePatch(BaseModel):
             raise ValueError(f"Invalid host address: {v}")
         
         return v
-
-
 class NetworkProfileComplete(BaseModel):
     """Complete network profile for final validation after merge."""
     
     model_config = {"extra": "forbid"}
     
     discoverable: bool
+    network_discovery_server: Optional[HttpUrl] = None
+    network_id: str = Field(min_length=1, max_length=128)
+    management_code: Optional[str] = None
+    management_token: Optional[str] = None
+    authentication: NetworkAuthentication = Field(
+        default_factory=NetworkAuthentication
+    )
     name: str = Field(min_length=1, max_length=128)
     description: str = Field(max_length=2048)
     icon: Optional[HttpUrl] = None
