@@ -29,6 +29,26 @@ def normalize_string_list(items: List[str]) -> List[str]:
     return result
 
 
+def validate_string_list_value(value: Optional[Any]) -> Optional[List[str]]:
+    if value is None:
+        return value
+    if not isinstance(value, (list, tuple)):
+        raise TypeError("Value must be a list of strings")
+    
+    values = list(value)
+    for item in values:
+        if not isinstance(item, str):
+            raise ValueError("All items must be strings")
+        item_stripped = item.strip()
+        if len(item_stripped) < 1 or len(item_stripped) > 64:
+            raise ValueError("Each item must be 1-64 characters (after trim)")
+    
+    normalized = normalize_string_list(values)
+    if len(normalized) != len(values):
+        raise ValueError("Items must be unique (case-insensitive)")
+    return normalized
+
+
 class NetworkProfilePatch(BaseModel):
     """Partial network profile update (forbids unknown fields)."""
     
@@ -47,26 +67,10 @@ class NetworkProfilePatch(BaseModel):
     host: Optional[str] = None
     port: Optional[int] = Field(None, ge=1, le=65535)
     
-    @field_validator("tags", "categories")
+    @field_validator("tags", "categories", mode="before")
     @classmethod
-    def validate_string_list(cls, v: Optional[List[str]]) -> Optional[List[str]]:
-        if v is None:
-            return v
-        
-        # Check each item length
-        for item in v:
-            if not isinstance(item, str):
-                raise ValueError("All items must be strings")
-            item_stripped = item.strip()
-            if len(item_stripped) < 1 or len(item_stripped) > 64:
-                raise ValueError(f"Each item must be 1-64 characters (after trim)")
-        
-        # Normalize
-        normalized = normalize_string_list(v)
-        if len(normalized) != len(v):
-            raise ValueError("Items must be unique (case-insensitive)")
-        
-        return normalized
+    def validate_string_list(cls, v: Optional[Any]) -> Optional[List[str]]:
+        return validate_string_list_value(v)
     
     @field_validator("required_openagents_version")
     @classmethod
@@ -125,14 +129,18 @@ class NetworkProfileComplete(BaseModel):
     host: str
     port: int = Field(ge=1, le=65535, default=8700)
     
-    # Reuse validators
-    _validate_tags_categories = field_validator("tags", "categories")(
-        NetworkProfilePatch.validate_string_list
-    )
-    _validate_version = field_validator("required_openagents_version")(
-        NetworkProfilePatch.validate_version
-    )
-    _validate_host = field_validator("host")(
-        NetworkProfilePatch.validate_host
-    )
+    @field_validator("tags", "categories", mode="before")
+    @classmethod
+    def validate_string_list(cls, v: Optional[Any]) -> Optional[List[str]]:
+        return validate_string_list_value(v)
+    
+    @field_validator("required_openagents_version")
+    @classmethod
+    def validate_version(cls, v: Optional[str]):
+        return NetworkProfilePatch.validate_version(v)
+    
+    @field_validator("host")
+    @classmethod
+    def validate_host(cls, v: Optional[str]):
+        return NetworkProfilePatch.validate_host(v)
 
