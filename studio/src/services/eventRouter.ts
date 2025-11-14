@@ -73,8 +73,8 @@ class EventRouterImpl implements EventRouter {
           console.error(`EventRouter: Error in forum event handler:`, error);
         }
       });
-    } else if (eventName.startsWith('chat.') || eventName.startsWith('messaging.') || eventName.startsWith('thread.')) {
-      console.log(`EventRouter: Routing chat event: ${eventName}`);
+    } else if (eventName.startsWith('chat.') || eventName.startsWith('messaging.') || eventName.startsWith('thread.') || eventName.startsWith('project.')) {
+      console.log(`EventRouter: Routing chat/project event: ${eventName}`);
       this.chatHandlers.forEach(handler => {
         try {
           handler(event);

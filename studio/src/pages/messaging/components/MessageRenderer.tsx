@@ -45,6 +45,10 @@ interface MessageRendererProps {
   maxThreadDepth?: number;
   // 是否为直接消息聊天（DM）
   isDMChat?: boolean;
+  // 是否禁用反应功能（用于项目频道）
+  disableReactions?: boolean;
+  // 是否禁用引用功能（用于项目频道）
+  disableQuotes?: boolean;
 }
 
 
@@ -57,6 +61,8 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
   renderMode = 'threaded',
   maxThreadDepth = 4,
   isDMChat = false,
+  disableReactions = false,
+  disableQuotes = false,
 }) => {
   const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
   const [hoveredMessage, setHoveredMessage] = useState<string | null>(null);
@@ -452,20 +458,26 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
                 ↩️
               </button>
             )}
-            <button
-              className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
-              onClick={(event) => handleReactionPickerToggle(message.id, event)}
-              title="Add reaction"
-            >
-              😊
-            </button>
-            <button
-              className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
-              onClick={() => onQuote(message.id, message.content, message.senderId)}
-              title="Quote message"
-            >
-              💬
-            </button>
+            {/* 反应按钮 - 在项目频道中禁用 */}
+            {!disableReactions && (
+              <button
+                className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
+                onClick={(event) => handleReactionPickerToggle(message.id, event)}
+                title="Add reaction"
+              >
+                😊
+              </button>
+            )}
+            {/* 引用按钮 - 在项目频道中禁用 */}
+            {!disableQuotes && (
+              <button
+                className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
+                onClick={() => onQuote(message.id, message.content, message.senderId)}
+                title="Quote message"
+              >
+                💬
+              </button>
+            )}
           </div>
 
           {/* 反应选择器 */}
