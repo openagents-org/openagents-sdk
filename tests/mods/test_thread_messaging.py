@@ -817,13 +817,15 @@ async def test_channel_info_and_message_retrieval(alice_client, bob_client):
             f"   - {channel['name']}: {channel['description']} ({channel['agent_count']} agents)"
         )
 
-    # Verify expected channels exist (actual channels loaded by the mod)
+    # Verify expected channels exist (actual channels from workspace_test.yaml)
     channel_names = [ch["name"] for ch in channels]
     expected_channels = [
         "general",
-        "development",
-        "support",
-    ]  # These are the actual default channels
+        "ai-news",
+        "research",
+        "tools",
+        "announcements",
+    ]  # These are the actual default channels from workspace_test.yaml
 
     for expected_channel in expected_channels:
         assert (
