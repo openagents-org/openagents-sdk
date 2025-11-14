@@ -56,18 +56,22 @@ network:
   agent_groups:
     developers:
       description: "Developer agents for coding projects"
+      password_hash: "2eb834f600f2d1839140e95cc0c81c12b1afea99f73532c20017d65f619287de"
       metadata:
         permissions: ["create_projects", "manage_code", "review_artifacts"]
     researchers:
       description: "Research agents for analysis projects"
+      password_hash: "693e60f5d315090f277c55fc5c64c6f63e6d71ea8187eca4116175ff35aa3ef4"
       metadata:
         permissions: ["create_projects", "analyze_data", "write_reports"]
     reviewers:
       description: "Review agents for quality assurance"
+      password_hash: "79dff3f691f7e6a1301bae5e62a094d77104680ba49624371f1353a138a1a683"
       metadata:
         permissions: ["review_projects", "approve_artifacts"]
     testers:
       description: "Test agents for general testing"
+      password_hash: "e5a978ae4d92fe4786d6ecdb811e0723c5f585d782fbd9439be6510f06adca0e"
       metadata:
         permissions: ["view_projects", "run_tests"]
 

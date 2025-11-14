@@ -45,10 +45,10 @@ class DefaultProjectNetworkMod(BaseMod):
     def initialize(self) -> bool:
         """Initialize the mod with configuration."""
         config = self.config or {}
-        
+
         # Load basic config
         self.max_concurrent_projects = config.get("max_concurrent_projects", 10)
-        
+
         # Load project templates from network configuration
         self.template_config = config.get("project_templates", {})
         self._load_templates()
@@ -86,13 +86,14 @@ class DefaultProjectNetworkMod(BaseMod):
         logger.info("Project mod shutdown completed")
         return True
 
-    def handle_register_agent(self, agent_id: str, metadata: Dict[str, Any]) -> None:
+    async def handle_register_agent(self, agent_id: str, metadata: Dict[str, Any]) -> Optional[EventResponse]:
         """Register an agent with the project mod."""
         if agent_id not in self.agent_projects:
             self.agent_projects[agent_id] = set()
         logger.info(f"Registered agent {agent_id} with Project mod")
+        return None
 
-    def handle_unregister_agent(self, agent_id: str) -> None:
+    async def handle_unregister_agent(self, agent_id: str) -> Optional[EventResponse]:
         """Unregister an agent from the project mod."""
         if agent_id in self.agent_projects:
             # Remove agent from all their projects
@@ -107,6 +108,17 @@ class DefaultProjectNetworkMod(BaseMod):
 
             del self.agent_projects[agent_id]
         logger.info(f"Unregistered agent {agent_id} from Project mod")
+        return None
+
+    async def process_event(self, event: Event) -> Optional[EventResponse]:
+        """Process an event and route to appropriate handler."""
+        # First, let the base class process registered event handlers
+        response = await super().process_event(event)
+        if response:
+            return response
+
+        # If no registered handler processed it, try our custom routing
+        return await self.process_system_message(event)
 
     async def process_system_message(self, message: Event) -> Optional[EventResponse]:
         """Process a project mod message with granular event routing."""
@@ -718,7 +730,7 @@ class DefaultProjectNetworkMod(BaseMod):
                 }
             )
             if hasattr(self, 'network') and self.network:
-                await self.network.send_message(notification)
+                await self.network.process_event(notification)
 
     async def _send_project_stopped_notifications(self, project: Project, stopped_by: str, reason: Optional[str]) -> None:
         """Send project stopped notifications."""
@@ -735,7 +747,7 @@ class DefaultProjectNetworkMod(BaseMod):
                 }
             )
             if hasattr(self, 'network') and self.network:
-                await self.network.send_message(notification)
+                await self.network.process_event(notification)
 
     async def _send_project_completed_notifications(self, project: Project, completed_by: str, summary: str) -> None:
         """Send project completed notifications."""
@@ -752,7 +764,7 @@ class DefaultProjectNetworkMod(BaseMod):
                 }
             )
             if hasattr(self, 'network') and self.network:
-                await self.network.send_message(notification)
+                await self.network.process_event(notification)
 
     async def _send_message_received_notifications(self, project: Project, sender_id: str, message_id: str, content: Dict[str, Any], reply_to_id: Optional[str], timestamp: int) -> None:
         """Send message received notifications."""
