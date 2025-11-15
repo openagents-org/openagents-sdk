@@ -23,6 +23,7 @@ import { CONNECTED_STATUS_COLOR } from "@/constants/chatConstants";
 import { useAuthStore } from "@/stores/authStore";
 import { toast } from "sonner";
 import { isProjectChannel, extractProjectIdFromChannel } from "@/utils/projectUtils";
+import ProjectChatRoom from "./components/ProjectChatRoom";
 
 const ThreadMessagingViewEventBased: React.FC = () => {
   const { agentName } = useAuthStore();
@@ -234,7 +235,15 @@ const ThreadMessagingViewEventBased: React.FC = () => {
       console.log(`👥 Loaded ${filteredAgents.length} agents (excluding current user)`);
 
       // 智能频道选择逻辑
-      if (channels.length > 0) {
+      // 首先检查是否是项目频道（独立于 channels 列表）
+      if (currentChannel && currentChannel.startsWith("project-")) {
+        // 项目频道独立于其他模组，不需要在 channels 列表中
+        // 直接保持选择，ProjectChatRoom 会处理显示
+        console.log(
+          `✅ Project channel "${currentChannel}" - keeping selection (independent of channel list)`
+        );
+        // 不需要做任何操作，保持当前选择
+      } else if (channels.length > 0) {
         console.log(`🔍 Channel selection logic:`, {
           currentChannel,
           currentDirectMessage,
@@ -247,7 +256,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
         let selectionReason = "";
 
         if (currentChannel) {
-          // 检查当前选择的频道是否仍然存在
+          // 检查当前选择的普通频道是否仍然存在
           const channelExists = channels.some(
             (channel) => channel.name === currentChannel
           );
@@ -259,7 +268,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
             selectedChannel = currentChannel;
             selectionReason = "恢复上次选择";
           } else {
-            selectedChannel = channels[0].name;
+            selectedChannel = channels.length > 0 ? channels[0].name : null;
             selectionReason = "上次频道不存在，回退到首个频道";
             console.warn(
               `⚠️ Previously selected channel "${currentChannel}" no longer exists, falling back to first channel`
@@ -602,6 +611,24 @@ const ThreadMessagingViewEventBased: React.FC = () => {
     if (currentDirectMessage) return `@${currentDirectMessage}`;
     return "Select a channel";
   }, [currentChannel, currentDirectMessage]);
+
+  // 检查是否是项目频道，如果是则使用 ProjectChatRoom 组件
+  const projectId = useMemo(() => {
+    if (currentChannel && isProjectChannelActive) {
+      return extractProjectIdFromChannel(currentChannel);
+    }
+    return null;
+  }, [currentChannel, isProjectChannelActive]);
+
+  // 如果是项目频道，渲染 ProjectChatRoom 组件
+  if (projectId && currentChannel) {
+    return (
+      <ProjectChatRoom
+        channelName={currentChannel}
+        projectId={projectId}
+      />
+    );
+  }
 
   return (
     <div className="thread-messaging-view h-full flex flex-col bg-white dark:bg-gray-900">
