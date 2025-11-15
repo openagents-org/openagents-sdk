@@ -39,7 +39,12 @@ jobs:
     - name: Test with pytest (unit tests)
       env:
         SOME_ENV_VAR: "value"
+        # Enforce sequential execution and stability
+        PYTHONHASHSEED: "0"
+        GRPC_ENABLE_FORK_SUPPORT: "1"
+        GRPC_POLL_STRATEGY: "poll"
       run: |
+        # Run tests sequentially (no -n flag to ensure no parallelism)
         pytest --asyncio-mode=auto --tb=short --maxfail=5 -v tests/ -m "not integration"
         
     - name: Test integration tests (slower)
