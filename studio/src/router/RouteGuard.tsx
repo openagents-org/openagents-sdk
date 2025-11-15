@@ -235,7 +235,11 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     }
 
     // Check if route is available in enabled modules
-    if (isModulesLoaded && !isRouteAvailable(currentPath, enabledModules)) {
+    // Special case: project chat room routes (/messaging/project/:projectId) are always available
+    // as they are part of the messaging module but don't require the messaging mod to be enabled
+    const isProjectChatRoomRoute = currentPath.startsWith("/messaging/project/");
+    
+    if (isModulesLoaded && !isProjectChatRoomRoute && !isRouteAvailable(currentPath, enabledModules)) {
       console.log(
         `🔄 Route ${currentPath} not available in enabled modules, redirecting to ${defaultRoute}`
       );

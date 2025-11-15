@@ -387,6 +387,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         set({
           channels: [],
           channelsLoading: false,
+          channelsLoaded: true, // Mark as loaded even on failure to prevent infinite loops
           channelsError: response.message || "Failed to load channels",
         });
       }
@@ -395,6 +396,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({
         channelsError: "Failed to load channels",
         channelsLoading: false,
+        channelsLoaded: true, // Mark as loaded even on error to prevent infinite loops
       });
     }
   },
@@ -2710,6 +2712,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
           set({
             channels: event.payload.channels,
             channelsLoading: false,
+            channelsLoaded: true, // Mark as loaded to prevent infinite loops
+            channelsError: null,
+          });
+        } else {
+          // Even if no channels, mark as loaded to prevent retry loops
+          set({
+            channelsLoading: false,
+            channelsLoaded: true,
             channelsError: null,
           });
         }

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { HealthResponse } from "@/utils/moduleUtils";
 import { ProjectTemplate } from "@/utils/projectUtils";
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
-import { useChatStore } from "@/stores/chatStore";
 import { toast } from "sonner";
 
 interface ProjectTemplateDialogProps {
@@ -14,8 +14,8 @@ const ProjectTemplateDialog: React.FC<ProjectTemplateDialogProps> = ({
   onClose,
   healthData,
 }) => {
+  const navigate = useNavigate();
   const { connector, connectionStatus } = useOpenAgents();
-  const { selectChannel } = useChatStore();
   const [selectedTemplate, setSelectedTemplate] =
     useState<ProjectTemplate | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -127,15 +127,15 @@ const ProjectTemplateDialog: React.FC<ProjectTemplateDialogProps> = ({
       }
 
       const projectId = startResponse.data.project_id;
-      const channelName = `project-${selectedTemplate.template_id}-${projectId}`;
 
-      // Select the project channel (it should be created by the project mod)
-      selectChannel(channelName);
-
-      // Close the dialog
+      // Close the dialog first
       onClose();
 
-      toast.success("Project created, please enter initial prompt");
+      // Project private chat room has independent route, navigate directly to /messaging/project/:projectId
+      // Does not depend on channel selection logic or health module
+      navigate(`/messaging/project/${projectId}`);
+
+      toast.success("Project created successfully, entering project private chat room");
     } catch (error: any) {
       console.error("Failed to create project:", error);
       toast.error(`Failed to create project: ${error.message || "Unknown error"}`);
