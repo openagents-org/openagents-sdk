@@ -45,14 +45,7 @@ jobs:
         GRPC_POLL_STRATEGY: "poll"
       run: |
         # Run tests sequentially (no -n flag to ensure no parallelism)
-        pytest --asyncio-mode=auto --tb=short --maxfail=5 -v tests/ -m "not integration"
-        
-    - name: Test integration tests (slower)
-      env:
-        SOME_ENV_VAR: "value"
-      run: |
-        pytest --asyncio-mode=auto --tb=short -v tests/ -m "integration" || echo "Integration tests failed but continuing..."
-      continue-on-error: true  # Don't fail the entire job if these tests fail
+        pytest --tb=short --maxfail=5 -v tests
         
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
