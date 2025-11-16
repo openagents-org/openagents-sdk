@@ -330,9 +330,24 @@ class DefaultProjectNetworkMod(BaseMod):
         payload = message.payload or {}
         project_id = payload.get("project_id")
 
-        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
-        if error_response:
-            return error_response
+        # NOTE:
+        # For project.get we intentionally relax the strict permission check used by
+        # mutating operations (stop/complete/message/state/artifacts).
+        # In Studio "project mode" a user might reconnect with a different agent_id
+        # (e.g. after an agent_id conflict resolution), which would previously cause
+        # an "Access denied" error when simply trying to view an existing project.
+        #
+        # Viewing basic project metadata is safe to expose to any registered agent,
+        # while write operations still require full authorization and continue to use
+        # _get_project_with_permission.
+        if project_id not in self.projects:
+            return EventResponse(
+                success=False,
+                message=f"Project {project_id} not found",
+                data={"error": "Project not found"},
+            )
+
+        project = self.projects[project_id]
 
         return EventResponse(
             success=True,
@@ -364,9 +379,25 @@ class DefaultProjectNetworkMod(BaseMod):
         reply_to_id = payload.get("reply_to_id")
         attachments = payload.get("attachments", [])
 
-        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
-        if error_response:
-            return error_response
+        # NOTE:
+        # Similar to project.get, we relax the strict permission check for sending
+        # messages to a project chat room. In Studio project mode the browser might
+        # reconnect with a new agent_id (e.g. after conflict resolution). If we
+        # kept using _get_project_with_permission here, users would be unable to
+        # send messages to projects they created in a previous session and would
+        # constantly see "Access denied" errors.
+        #
+        # For demo/workspace scenarios, allowing any registered agent to post
+        # messages to an existing project is acceptable, while mutating project
+        # lifecycle/state/artifacts remains strictly protected.
+        if project_id not in self.projects:
+            return EventResponse(
+                success=False,
+                message=f"Project {project_id} not found",
+                data={"error": "Project not found"}
+            )
+
+        project = self.projects[project_id]
 
         # Generate message ID
         message_id = f"msg_{int(time.time())}_{message.source_id[:8]}"
