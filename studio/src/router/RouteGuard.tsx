@@ -204,14 +204,22 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   const isAuthenticatedRoute = routes.some((route) => {
     if (!route.requiresAuth) return false;
 
+    const routePath = route.path;
+
     // Handle wildcard paths (e.g. "/forum/*")
-    if (route.path.endsWith("/*")) {
-      const basePath = route.path.slice(0, -2); // Remove "/*"
+    if (routePath.endsWith("/*")) {
+      const basePath = routePath.slice(0, -2); // Remove "/*"
+      return currentPath === basePath || currentPath.startsWith(basePath + "/");
+    }
+
+    // Handle parameterized paths (e.g. "/project/:projectId")
+    if (routePath.includes(":")) {
+      const basePath = routePath.split("/:")[0];
       return currentPath === basePath || currentPath.startsWith(basePath + "/");
     }
 
     // Exact match
-    return currentPath === route.path;
+    return currentPath === routePath;
   });
 
   if (isAuthenticatedRoute) {
@@ -235,9 +243,9 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     }
 
     // Check if route is available in enabled modules
-    // Special case: project chat room routes (/messaging/project/:projectId) are always available
+    // Special case: project chat room routes (/project/:projectId) are always available
     // as they are part of the messaging module but don't require the messaging mod to be enabled
-    const isProjectChatRoomRoute = currentPath.startsWith("/messaging/project/");
+    const isProjectChatRoomRoute = currentPath.startsWith("/project/");
     
     if (isModulesLoaded && !isProjectChatRoomRoute && !isRouteAvailable(currentPath, enabledModules)) {
       console.log(

@@ -131,9 +131,9 @@ const ProjectTemplateDialog: React.FC<ProjectTemplateDialogProps> = ({
       // Close the dialog first
       onClose();
 
-      // Project private chat room has independent route, navigate directly to /messaging/project/:projectId
+      // Project private chat room has independent route, navigate directly to /project/:projectId
       // Does not depend on channel selection logic or health module
-      navigate(`/messaging/project/${projectId}`);
+      navigate(`/project/${projectId}`);
 
       toast.success("Project created successfully, entering project private chat room");
     } catch (error: any) {

@@ -442,10 +442,6 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
                 disableReactions={true}
                 disableQuotes={true}
                 renderMode="flat"
-                onReply={() => {
-                  // Reply is not supported in project chat room
-                  toast.error("Reply is not allowed in project chat room");
-                }}
                 onQuote={() => {
                   // Quote is not supported in project chat room
                   toast.error("Quote is not allowed in project chat room");

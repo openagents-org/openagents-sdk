@@ -36,7 +36,8 @@ type SupportedMessage = UnifiedMessage | ThreadMessage;
 interface MessageRendererProps {
   messages: SupportedMessage[];
   currentUserId: string;
-  onReply: (messageId: string, text: string, author: string) => void;
+  // 回复回调（可选）- 若未提供，则不显示回复按钮
+  onReply?: (messageId: string, text: string, author: string) => void;
   onQuote: (messageId: string, text: string, author: string) => void;
   onReaction: (messageId: string, reactionType: string, action?: "add" | "remove") => void;
   // 渲染模式：flat（平铺）或 threaded（线程）
@@ -309,7 +310,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             }`}
           >
             {/* 回复按钮 - 在 DM 聊天中不显示 */}
-            {!isDMChat && (
+            {!isDMChat && onReply && (
               <button
                 className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
                 onClick={() => onReply(messageId, messageProps.content, messageProps.senderId)}
@@ -449,7 +450,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             }`}
           >
             {/* 回复按钮 - 在 DM 聊天中不显示 */}
-            {!isDMChat && (
+            {!isDMChat && onReply && (
               <button
                 className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
                 onClick={() => onReply(message.id, message.content, message.senderId)}
