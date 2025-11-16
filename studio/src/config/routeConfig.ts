@@ -8,6 +8,7 @@ import MessagingMainPage from "@/pages/messaging/MessagingMainPage";
 import ForumMainPage from "@/pages/forum/ForumMainPage";
 import WikiMainPage from "@/pages/wiki/WikiMainPage";
 import DocumentsMainPage from "@/pages/documents/DocumentsMainPage";
+import ProjectChatRoom from "@/pages/messaging/components/ProjectChatRoom";
 // import SettingsMainPage from "@/pages/settings/SettingsMainPage";
 import ProfileMainPage from "@/pages/profile/ProfileMainPage";
 // import McpMainPage from "@/pages/mcp/McpMainPage";
@@ -183,6 +184,14 @@ export const dynamicRouteConfig: RouteConfig[] = [
       order: 1,
       group: 'primary',
     },
+  },
+  // Independent project chat room route (not nested under /messaging)
+  {
+    path: "/project/:projectId",
+    element: ProjectChatRoom,
+    title: "Project Chat Room",
+    requiresAuth: true,
+    requiresLayout: true,
   },
   {
     path: "/forum/*",
