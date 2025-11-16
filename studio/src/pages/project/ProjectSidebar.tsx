@@ -1,0 +1,297 @@
+import React, { useState, useEffect, useCallback } from "react"
+import { useNavigate, useLocation } from "react-router-dom"
+import { useOpenAgents } from "@/context/OpenAgentsProvider"
+import { useProfileStore } from "@/stores/profileStore"
+import ProjectTemplateDialog from "@/components/project/ProjectTemplateDialog"
+
+interface ProjectSummary {
+  project_id: string
+  name: string
+  goal: string
+  template_id: string
+  status: string
+  initiator_agent_id: string
+  created_timestamp: number
+  started_timestamp?: number
+  completed_timestamp?: number
+  summary?: string
+}
+
+/**
+ * Project Sidebar Component
+ *
+ * Displays on the left side of the project page, including:
+ * - New Project button at the top
+ * - Project list
+ */
+const ProjectSidebar: React.FC = () => {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { connector, connectionStatus, isConnected } = useOpenAgents()
+  const healthData = useProfileStore((state) => state.healthData)
+
+  // Project list state
+  const [projectList, setProjectList] = useState<ProjectSummary[]>([])
+  const [loadingProjects, setLoadingProjects] = useState<boolean>(false)
+
+  // New Project dialog state
+  const [showProjectDialog, setShowProjectDialog] = useState<boolean>(false)
+
+  // Get currently selected project ID (extract from URL)
+  const getCurrentProjectId = (): string | null => {
+    const match = location.pathname.match(/^\/project\/([^/]+)/)
+    return match ? match[1] : null
+  }
+
+  const currentProjectId = getCurrentProjectId()
+
+  // Load project list
+  const loadProjectList = useCallback(async () => {
+    if (!connector || !isConnected) return
+
+    setLoadingProjects(true)
+    try {
+      const agentId = connectionStatus.agentId || connector.getAgentId()
+      const response = await connector.sendEvent({
+        event_name: "project.list",
+        source_id: agentId,
+        destination_id: "mod:openagents.mods.workspace.project",
+        payload: {},
+      })
+
+      if (response.success && response.data?.projects) {
+        // Sort by creation time in descending order (newest first)
+        const sortedProjects = [...response.data.projects].sort(
+          (a, b) => b.created_timestamp - a.created_timestamp
+        )
+        setProjectList(sortedProjects)
+      } else {
+        console.error("Failed to load project list:", response.message)
+      }
+    } catch (error) {
+      console.error("Error loading project list:", error)
+    } finally {
+      setLoadingProjects(false)
+    }
+  }, [connector, isConnected, connectionStatus.agentId])
+
+  // Initial load of project list
+  useEffect(() => {
+    if (isConnected && connector) {
+      loadProjectList()
+    }
+  }, [isConnected, connector, loadProjectList])
+
+  // Listen for project notifications and refresh project list
+  useEffect(() => {
+    if (!isConnected || !connector) return
+
+    const handleProjectNotifications = (event: any) => {
+      if (
+        event.event_name === "project.notification.started" ||
+        event.event_name === "project.notification.completed" ||
+        event.event_name === "project.notification.stopped"
+      ) {
+        // Refresh project list
+        loadProjectList()
+      }
+    }
+
+    connector.on("rawEvent", handleProjectNotifications)
+    return () => {
+      connector.off("rawEvent", handleProjectNotifications)
+    }
+  }, [isConnected, connector, loadProjectList])
+
+  // Handle project click
+  const handleProjectClick = (projectId: string) => {
+    navigate(`/project/${projectId}`)
+  }
+
+  // Format timestamp display
+  const formatTimestamp = (timestamp: number) => {
+    const date = new Date(timestamp * 1000)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+
+    if (days === 0) {
+      return "Today"
+    } else if (days === 1) {
+      return "Yesterday"
+    } else if (days < 7) {
+      return `${days} days ago`
+    } else {
+      return date.toLocaleDateString()
+    }
+  }
+
+  // Get status badge style
+  const getStatusBadge = (status: string) => {
+    const statusColors: Record<
+      string,
+      { bg: string; text: string; label: string }
+    > = {
+      running: {
+        bg: "bg-green-100 dark:bg-green-900",
+        text: "text-green-800 dark:text-green-200",
+        label: "Running",
+      },
+      completed: {
+        bg: "bg-blue-100 dark:bg-blue-900",
+        text: "text-blue-800 dark:text-blue-200",
+        label: "Completed",
+      },
+      created: {
+        bg: "bg-gray-100 dark:bg-gray-700",
+        text: "text-gray-800 dark:text-gray-200",
+        label: "Created",
+      },
+      paused: {
+        bg: "bg-yellow-100 dark:bg-yellow-900",
+        text: "text-yellow-800 dark:text-yellow-200",
+        label: "Paused",
+      },
+      failed: {
+        bg: "bg-red-100 dark:bg-red-900",
+        text: "text-red-800 dark:text-red-200",
+        label: "Failed",
+      },
+      stopped: {
+        bg: "bg-gray-100 dark:bg-gray-700",
+        text: "text-gray-800 dark:text-gray-200",
+        label: "Stopped",
+      },
+    }
+
+    return statusColors[status] || statusColors.created
+  }
+
+  return (
+    <>
+      <div className="h-full flex flex-col bg-white dark:bg-gray-900">
+        {/* Top: New Project Button */}
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          {/* New Project Button - only shown when project mode is enabled */}
+          <button
+            onClick={() => setShowProjectDialog(true)}
+            className="mb-5 w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium text-white transition-all bg-gradient-to-r from-purple-600 via-purple-500 to-purple-400 hover:from-purple-700 hover:via-purple-600 hover:to-purple-500 shadow-md hover:shadow-lg mt-2"
+          >
+            {/* Rocket Icon */}
+            <svg
+              className="w-5 h-5 mr-3 flex-shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              {/* Rocket body - red */}
+              <path
+                d="M12 2L13.5 8L17.5 11.5L13.5 15L12 22L10.5 15L6.5 11.5L10.5 8L12 2Z"
+                fill="#EF4444"
+              />
+              {/* White body section */}
+              <rect
+                x="10"
+                y="8.5"
+                width="4"
+                height="6.5"
+                rx="0.5"
+                fill="white"
+              />
+              {/* Rocket window - white circle with red center */}
+              <circle cx="12" cy="11.5" r="1.5" fill="white" />
+              <circle cx="12" cy="11.5" r="0.8" fill="#EF4444" />
+              {/* Rocket nose cone - darker red */}
+              <path d="M12 2L13 5.5L12 8L11 5.5L12 2Z" fill="#DC2626" />
+              {/* Rocket fin - darker red */}
+              <path
+                d="M6.5 11.5L7.5 14.5L6.5 17.5L5.5 14.5L6.5 11.5Z"
+                fill="#DC2626"
+              />
+              {/* Rocket flames - yellow and orange */}
+              <path d="M10 18L12 20.5L14 18L12 22.5L10 18Z" fill="#FBBF24" />
+              <path d="M9 19L12 20.5L15 19L12 22.5L9 19Z" fill="#F59E0B" />
+              <path d="M8.5 20L12 21L15.5 20L12 23L8.5 20Z" fill="#F97316" />
+            </svg>
+            <span>New Project</span>
+          </button>
+        </div>
+
+        {/* Project List */}
+        <div className="flex-1 overflow-y-auto">
+          {loadingProjects ? (
+            <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+              Loading...
+            </div>
+          ) : projectList.length === 0 ? (
+            <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+              <div className="mb-2">
+                <svg
+                  className="w-12 h-12 mx-auto mb-2 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                  />
+                </svg>
+              </div>
+              <p className="text-sm">No projects</p>
+              <p className="text-xs mt-1">
+                Click the button above to create a new project
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-1 p-2">
+              {projectList.map((project) => (
+                <div
+                  key={project.project_id}
+                  onClick={() => handleProjectClick(project.project_id)}
+                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                    project.project_id === currentProjectId
+                      ? "bg-blue-100 dark:bg-blue-900/30 border-l-4 border-blue-500"
+                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-1">
+                    <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate flex-1">
+                      {project.name ||
+                        `Project ${project.project_id.slice(0, 8)}`}
+                    </h3>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ml-2 ${
+                        getStatusBadge(project.status).bg
+                      } ${getStatusBadge(project.status).text}`}
+                    >
+                      {getStatusBadge(project.status).label}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mb-1">
+                    {project.goal}
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    {formatTimestamp(project.created_timestamp)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* New Project 对话框 */}
+      {showProjectDialog && (
+        <ProjectTemplateDialog
+          onClose={() => setShowProjectDialog(false)}
+          healthData={healthData}
+        />
+      )}
+    </>
+  )
+}
+
+export default ProjectSidebar

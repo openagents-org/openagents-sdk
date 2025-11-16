@@ -1,15 +1,15 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { Navigate, useLocation } from "react-router-dom";
-import { useAuthStore } from "@/stores/authStore";
-import { useChatStore } from "@/stores/chatStore";
-import { routes } from "./routeConfig";
-import { useDynamicRoutes } from "@/hooks/useDynamicRoutes";
-import { isRouteAvailable } from "@/utils/moduleUtils";
-import { fetchNetworkById } from "@/services/networkService";
-import { clearAllOpenAgentsDataForLogout } from "@/utils/cookies";
+import React, { useEffect, useState, useCallback } from "react"
+import { Navigate, useLocation } from "react-router-dom"
+import { useAuthStore } from "@/stores/authStore"
+import { useChatStore } from "@/stores/chatStore"
+import { routes } from "./routeConfig"
+import { useDynamicRoutes } from "@/hooks/useDynamicRoutes"
+import { isRouteAvailable } from "@/utils/moduleUtils"
+import { fetchNetworkById } from "@/services/networkService"
+import { clearAllOpenAgentsDataForLogout } from "@/utils/cookies"
 
 interface RouteGuardProps {
-  children: React.ReactNode;
+  children: React.ReactNode
 }
 
 /**
@@ -17,116 +17,116 @@ interface RouteGuardProps {
  * Determines which page the user should be on based on current state
  */
 const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
-  const location = useLocation();
+  const location = useLocation()
   const { selectedNetwork, agentName, clearNetwork, clearAgentName } =
-    useAuthStore();
-  const { clearAllChatData } = useChatStore();
-  const { isModulesLoaded, defaultRoute, enabledModules } = useDynamicRoutes();
-  const currentPath = location.pathname;
+    useAuthStore()
+  const { clearAllChatData } = useChatStore()
+  const { isModulesLoaded, defaultRoute, enabledModules } = useDynamicRoutes()
+  const currentPath = location.pathname
 
-  const [networkIdChecking, setNetworkIdChecking] = useState(false);
-  const [networkIdChecked, setNetworkIdChecked] = useState(false);
+  const [networkIdChecking, setNetworkIdChecking] = useState(false)
+  const [networkIdChecked, setNetworkIdChecked] = useState(false)
 
   // Check for network-id URL parameter
-  const urlParams = new URLSearchParams(location.search);
-  const networkIdParam = urlParams.get("network-id");
+  const urlParams = new URLSearchParams(location.search)
+  const networkIdParam = urlParams.get("network-id")
 
   console.log(
     `🛡️ RouteGuard: path=${currentPath}, network=${!!selectedNetwork}, agent=${!!agentName}, modulesLoaded=${isModulesLoaded}, networkIdParam=${networkIdParam}`
-  );
+  )
 
   // Helper function to check if current network matches the requested network ID
   const checkNetworkIdMatch = useCallback(
     async (networkId: string): Promise<boolean> => {
-      if (!selectedNetwork) return false;
+      if (!selectedNetwork) return false
 
       try {
-        const networkResult = await fetchNetworkById(networkId);
-        if (!networkResult.success) return false;
+        const networkResult = await fetchNetworkById(networkId)
+        if (!networkResult.success) return false
 
-        const network = networkResult.network;
-        let targetHost = network.profile?.host;
-        let targetPort = network.profile?.port;
+        const network = networkResult.network
+        let targetHost = network.profile?.host
+        let targetPort = network.profile?.port
 
-        console.log(networkResult, "------");
+        console.log(networkResult, "------")
 
         // Extract host/port from connection endpoint if not directly available
         if (!targetHost || !targetPort) {
           if (network.profile?.connection?.endpoint) {
-            const endpoint = network.profile.connection.endpoint;
+            const endpoint = network.profile.connection.endpoint
 
             if (endpoint.startsWith("modbus://")) {
-              const url = new URL(endpoint);
-              targetHost = url.hostname;
-              targetPort = parseInt(url.port);
+              const url = new URL(endpoint)
+              targetHost = url.hostname
+              targetPort = parseInt(url.port)
             } else if (
               endpoint.startsWith("http://") ||
               endpoint.startsWith("https://")
             ) {
-              const url = new URL(endpoint);
-              targetHost = url.hostname;
+              const url = new URL(endpoint)
+              targetHost = url.hostname
               targetPort =
                 parseInt(url.port) ||
-                (endpoint.startsWith("https://") ? 443 : 80);
+                (endpoint.startsWith("https://") ? 443 : 80)
             } else {
-              const parts = endpoint.split(":");
+              const parts = endpoint.split(":")
               if (parts.length >= 2) {
-                targetHost = parts[0];
-                targetPort = parseInt(parts[1]);
+                targetHost = parts[0]
+                targetPort = parseInt(parts[1])
               }
             }
           }
         }
 
-        if (!targetPort) targetPort = 8700;
+        if (!targetPort) targetPort = 8700
 
-        console.log(selectedNetwork, targetHost, targetPort, "+++");
+        console.log(selectedNetwork, targetHost, targetPort, "+++")
 
         // Compare with current network
         return (
           selectedNetwork.host === targetHost &&
           selectedNetwork.port === targetPort
-        );
+        )
       } catch (error) {
-        console.error("Error checking network ID match:", error);
-        return false;
+        console.error("Error checking network ID match:", error)
+        return false
       }
     },
     [selectedNetwork]
-  );
+  )
 
   // Effect to handle network-id checking for logged-in users
   useEffect(() => {
     if (networkIdParam && selectedNetwork && agentName && currentPath === "/") {
-      setNetworkIdChecking(true);
-      setNetworkIdChecked(false);
+      setNetworkIdChecking(true)
+      setNetworkIdChecked(false)
       checkNetworkIdMatch(networkIdParam).then((matches) => {
         if (!matches) {
           console.log(
             `🚪 Network ID ${networkIdParam} doesn't match current network, triggering logout directly`
-          );
+          )
 
           // Execute logout logic directly in useEffect
-          clearNetwork();
-          clearAgentName();
-          console.log("🧹 Network and agent state cleared");
+          clearNetwork()
+          clearAgentName()
+          console.log("🧹 Network and agent state cleared")
 
-          clearAllChatData();
-          console.log("🧹 Chat store data cleared");
+          clearAllChatData()
+          console.log("🧹 Chat store data cleared")
 
-          clearAllOpenAgentsDataForLogout();
-          console.log("🧹 OpenAgents data cleared for logout");
+          clearAllOpenAgentsDataForLogout()
+          console.log("🧹 OpenAgents data cleared for logout")
         } else {
           console.log(
             `✅ Network ID ${networkIdParam} matches current network, no logout needed`
-          );
+          )
         }
-        setNetworkIdChecking(false);
-        setNetworkIdChecked(true);
-      });
+        setNetworkIdChecking(false)
+        setNetworkIdChecked(true)
+      })
     } else {
       // No network-id parameter or not on root path, mark as checked
-      setNetworkIdChecked(true);
+      setNetworkIdChecked(true)
     }
   }, [
     networkIdParam,
@@ -137,7 +137,7 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     clearNetwork,
     clearAgentName,
     clearAllChatData,
-  ]);
+  ])
 
   // Show loading while checking network ID match
   if (networkIdChecking) {
@@ -150,7 +150,7 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
           </p>
         </div>
       </div>
-    );
+    )
   }
 
   // Handle root path "/" - NetworkSelectionPage is now served directly under /
@@ -164,116 +164,120 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
         if (!networkIdChecked) {
           console.log(
             `🔄 Root path with network-id: Waiting for network check to complete...`
-          );
+          )
           // Don't redirect yet, wait for check to complete (loading screen is shown above)
-          return null;
+          return null
         }
 
         // Check completed and networks match (otherwise state would be cleared)
         console.log(
           `🔄 Root path with network-id: Network check passed, redirecting to ${defaultRoute}`
-        );
-        return <Navigate to={defaultRoute} replace />;
+        )
+        return <Navigate to={defaultRoute} replace />
       } else {
         // No network-id parameter, normal redirect to default route
         console.log(
           `🔄 Root path: User setup complete, redirecting to ${defaultRoute}`
-        );
-        return <Navigate to={defaultRoute} replace />;
+        )
+        return <Navigate to={defaultRoute} replace />
       }
     }
     // If user is not fully setup, show NetworkSelectionPage (which is served under /)
     // Return children to render the NetworkSelectionPage
-    console.log("🔄 Root path: Showing network selection page");
-    return <>{children}</>;
+    console.log("🔄 Root path: Showing network selection page")
+    return <>{children}</>
   }
 
   // Handle /agent-setup path access control
   if (currentPath === "/agent-setup") {
     if (!selectedNetwork) {
-      console.log("🔄 Agent setup accessed without network, redirecting to /");
-      return <Navigate to="/" replace />;
+      console.log("🔄 Agent setup accessed without network, redirecting to /")
+      return <Navigate to="/" replace />
     }
     // Has network selection, allow access to agent-setup
-    return <>{children}</>;
+    return <>{children}</>
   }
 
   // NetworkSelectionPage is now served under /, so no special handling needed here
 
   // Handle authenticated routes (ModSidebar related routes)
   const isAuthenticatedRoute = routes.some((route) => {
-    if (!route.requiresAuth) return false;
+    if (!route.requiresAuth) return false
 
-    const routePath = route.path;
+    const routePath = route.path
 
     // Handle wildcard paths (e.g. "/forum/*")
     if (routePath.endsWith("/*")) {
-      const basePath = routePath.slice(0, -2); // Remove "/*"
-      return currentPath === basePath || currentPath.startsWith(basePath + "/");
+      const basePath = routePath.slice(0, -2) // Remove "/*"
+      return currentPath === basePath || currentPath.startsWith(basePath + "/")
     }
 
     // Handle parameterized paths (e.g. "/project/:projectId")
     if (routePath.includes(":")) {
-      const basePath = routePath.split("/:")[0];
-      return currentPath === basePath || currentPath.startsWith(basePath + "/");
+      const basePath = routePath.split("/:")[0]
+      return currentPath === basePath || currentPath.startsWith(basePath + "/")
     }
 
     // Exact match
-    return currentPath === routePath;
-  });
+    return currentPath === routePath
+  })
 
   if (isAuthenticatedRoute) {
     // Accessing authenticated route, check if setup is complete
     if (!selectedNetwork) {
       console.log(
         `🔄 Authenticated route ${currentPath} accessed without network, redirecting to /`
-      );
+      )
       // Preserve network-id parameter if it exists
       const redirectUrl = networkIdParam
         ? `/?network-id=${encodeURIComponent(networkIdParam)}`
-        : "/";
-      return <Navigate to={redirectUrl} replace />;
+        : "/"
+      return <Navigate to={redirectUrl} replace />
     }
 
     if (!agentName) {
       console.log(
         `🔄 Authenticated route ${currentPath} accessed without agent, redirecting to /agent-setup`
-      );
-      return <Navigate to="/agent-setup" replace />;
+      )
+      return <Navigate to="/agent-setup" replace />
     }
 
     // Check if route is available in enabled modules
-    // Special case: project chat room routes (/project/:projectId) are always available
-    // as they are part of the messaging module but don't require the messaging mod to be enabled
-    const isProjectChatRoomRoute = currentPath.startsWith("/project/");
-    
-    if (isModulesLoaded && !isProjectChatRoomRoute && !isRouteAvailable(currentPath, enabledModules)) {
+    // Special case: project routes (/project and /project/:projectId) are always available
+    // as they provide project management and private chat room functionality
+    const isProjectRoute = currentPath.startsWith("/project")
+
+    if (
+      isModulesLoaded &&
+      !isProjectRoute &&
+      !isRouteAvailable(currentPath, enabledModules)
+    ) {
       console.log(
         `🔄 Route ${currentPath} not available in enabled modules, redirecting to ${defaultRoute}`
-      );
-      return <Navigate to={defaultRoute} replace />;
+      )
+      return <Navigate to={defaultRoute} replace />
     }
 
     // Setup complete, allow access to authenticated route
-    return <>{children}</>;
+    return <>{children}</>
   }
 
   // Handle invalid paths - redirect to appropriate page
   if (selectedNetwork && agentName) {
     console.log(
       `🔄 Invalid route ${currentPath} with complete setup, redirecting to ${defaultRoute}`
-    );
-    return <Navigate to={defaultRoute} replace />;
+    )
+    return <Navigate to={defaultRoute} replace />
   } else {
     console.log(
       `🔄 Invalid route ${currentPath} without setup, redirecting to /`
-    );
+    )
     // Preserve network-id parameter if it exists
     const redirectUrl = networkIdParam
       ? `/?network-id=${encodeURIComponent(networkIdParam)}`
-      : "/";
-    return <Navigate to={redirectUrl} replace />;
+      : "/"
+    return <Navigate to={redirectUrl} replace />
   }
-};
+}
 
-export default RouteGuard;
+export default RouteGuard

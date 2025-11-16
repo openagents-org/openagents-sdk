@@ -89,6 +89,10 @@ class Project(BaseModel):
         default_factory=dict,
         description="Project artifacts (key -> content)"
     )
+    messages: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Project message history"
+    )
     error_details: Optional[str] = None
 
     def __init__(self, goal: str, template_id: str, initiator_agent_id: str, name: Optional[str] = None, **data):
