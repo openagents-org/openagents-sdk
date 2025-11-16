@@ -1,24 +1,24 @@
-import React, { useState, useMemo } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { useIsAdmin } from "@/hooks/useIsAdmin";
-import { useProfileStore } from "@/stores/profileStore";
-import { isProjectModeEnabled } from "@/utils/projectUtils";
-import ProjectTemplateDialog from "@/components/project/ProjectTemplateDialog";
+import React, { useState, useMemo } from "react"
+import { useNavigate, useLocation } from "react-router-dom"
+import { useIsAdmin } from "@/hooks/useIsAdmin"
+import { useProfileStore } from "@/stores/profileStore"
+import { isProjectModeEnabled } from "@/utils/projectUtils"
+import ProjectTemplateDialog from "@/components/project/ProjectTemplateDialog"
 
 const ProfileSidebar: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { isAdmin, isLoading } = useIsAdmin();
-  const healthData = useProfileStore((state) => state.healthData);
-  const [showProjectDialog, setShowProjectDialog] = useState(false);
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { isAdmin, isLoading } = useIsAdmin()
+  const healthData = useProfileStore((state) => state.healthData)
+  const [showProjectDialog, setShowProjectDialog] = useState(false)
 
   // Check if project mode is enabled
   const projectModeEnabled = useMemo(
     () => isProjectModeEnabled(healthData),
     [healthData]
-  );
+  )
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => location.pathname === path
 
   const navItems = [
     {
@@ -41,7 +41,7 @@ const ProfileSidebar: React.FC = () => {
         </svg>
       ),
     },
-  ];
+  ]
 
   const adminNavItems = [
     {
@@ -64,7 +64,7 @@ const ProfileSidebar: React.FC = () => {
         </svg>
       ),
     },
-  ];
+  ]
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
@@ -192,7 +192,7 @@ const ProfileSidebar: React.FC = () => {
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default ProfileSidebar;
+export default ProfileSidebar

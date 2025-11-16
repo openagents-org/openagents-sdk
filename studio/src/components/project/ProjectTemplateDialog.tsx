@@ -1,86 +1,86 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { HealthResponse } from "@/utils/moduleUtils";
-import { ProjectTemplate } from "@/utils/projectUtils";
-import { useOpenAgents } from "@/context/OpenAgentsProvider";
-import { toast } from "sonner";
+import React, { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+import { HealthResponse } from "@/utils/moduleUtils"
+import { ProjectTemplate } from "@/utils/projectUtils"
+import { useOpenAgents } from "@/context/OpenAgentsProvider"
+import { toast } from "sonner"
 
 interface ProjectTemplateDialogProps {
-  onClose: () => void;
-  healthData: HealthResponse | null;
+  onClose: () => void
+  healthData: HealthResponse | null
 }
 
 const ProjectTemplateDialog: React.FC<ProjectTemplateDialogProps> = ({
   onClose,
   healthData,
 }) => {
-  const navigate = useNavigate();
-  const { connector, connectionStatus } = useOpenAgents();
+  const navigate = useNavigate()
+  const { connector, connectionStatus } = useOpenAgents()
   const [selectedTemplate, setSelectedTemplate] =
-    useState<ProjectTemplate | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
-  const [templates, setTemplates] = useState<ProjectTemplate[]>([]);
-  const [loadingTemplates, setLoadingTemplates] = useState(false);
+    useState<ProjectTemplate | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
+  const [templates, setTemplates] = useState<ProjectTemplate[]>([])
+  const [loadingTemplates, setLoadingTemplates] = useState(false)
 
   // Load templates using project.template.list event
   useEffect(() => {
     const loadTemplates = async () => {
-      if (!connector) return;
+      if (!connector) return
 
-      setLoadingTemplates(true);
+      setLoadingTemplates(true)
       try {
-        const agentId = connectionStatus.agentId || connector.getAgentId();
+        const agentId = connectionStatus.agentId || connector.getAgentId()
         console.log(2233, {
           event_name: "project.template.list",
           source_id: agentId,
           destination_id: "mod:openagents.mods.workspace.project",
           payload: {},
-        });
+        })
         const response = await connector.sendEvent({
           event_name: "project.template.list",
           source_id: agentId,
           destination_id: "mod:openagents.mods.workspace.project",
           payload: {},
-        });
+        })
 
         if (response.success && response.data?.templates) {
-          setTemplates(response.data.templates);
+          setTemplates(response.data.templates)
         } else {
-          console.error("Failed to load templates:", response.message);
+          console.error("Failed to load templates:", response.message)
           // Fallback to health data if API fails
-          const fallbackTemplates = getProjectTemplatesFromHealth(healthData);
-          setTemplates(fallbackTemplates);
+          const fallbackTemplates = getProjectTemplatesFromHealth(healthData)
+          setTemplates(fallbackTemplates)
         }
       } catch (error) {
-        console.error("Error loading templates:", error);
+        console.error("Error loading templates:", error)
         // Fallback to health data
-        const fallbackTemplates = getProjectTemplatesFromHealth(healthData);
-        setTemplates(fallbackTemplates);
+        const fallbackTemplates = getProjectTemplatesFromHealth(healthData)
+        setTemplates(fallbackTemplates)
       } finally {
-        setLoadingTemplates(false);
+        setLoadingTemplates(false)
       }
-    };
+    }
 
-    loadTemplates();
-  }, [connector, connectionStatus.agentId, healthData]);
+    loadTemplates()
+  }, [connector, connectionStatus.agentId, healthData])
 
   // Fallback function to get templates from health data
   const getProjectTemplatesFromHealth = (
     healthData: HealthResponse | null
   ): ProjectTemplate[] => {
     if (!healthData?.data?.mods) {
-      return [];
+      return []
     }
 
     const projectMod = healthData.data.mods.find(
       (mod) => mod.name === "openagents.mods.workspace.project" && mod.enabled
-    );
+    )
 
     if (!projectMod?.config?.project_templates) {
-      return [];
+      return []
     }
 
-    const templates = projectMod.config.project_templates;
+    const templates = projectMod.config.project_templates
     return Object.entries(templates).map(
       ([templateId, templateData]: [string, any]) => ({
         template_id: templateId,
@@ -89,23 +89,23 @@ const ProjectTemplateDialog: React.FC<ProjectTemplateDialogProps> = ({
         agent_groups: templateData.agent_groups || [],
         context: templateData.context || "",
       })
-    );
-  };
+    )
+  }
 
   const handleTemplateSelect = (template: ProjectTemplate) => {
-    setSelectedTemplate(template);
-  };
+    setSelectedTemplate(template)
+  }
 
   const handleCreateProject = async () => {
     if (!selectedTemplate || !connector) {
-      toast.error("Please select a project template");
-      return;
+      toast.error("Please select a project template")
+      return
     }
 
-    setIsCreating(true);
+    setIsCreating(true)
 
     try {
-      const agentId = connectionStatus.agentId || connector.getAgentId();
+      const agentId = connectionStatus.agentId || connector.getAgentId()
 
       // Call project.start to create the project
       // Note: According to API, goal is required, but we'll use a placeholder
@@ -120,29 +120,32 @@ const ProjectTemplateDialog: React.FC<ProjectTemplateDialogProps> = ({
           name: selectedTemplate.name,
           collaborators: [],
         },
-      });
+      })
 
       if (!startResponse.success || !startResponse.data?.project_id) {
-        throw new Error(startResponse.message || "Failed to start project");
+        throw new Error(startResponse.message || "Failed to start project")
       }
 
-      const projectId = startResponse.data.project_id;
+      const projectId = startResponse.data.project_id
 
       // Close the dialog first
-      onClose();
+      onClose()
 
-      // Project private chat room has independent route, navigate directly to /project/:projectId
-      // Does not depend on channel selection logic or health module
-      navigate(`/project/${projectId}`);
+      // Navigate to project chat room using the global project route
+      navigate(`/project/${projectId}`)
 
-      toast.success("Project created successfully, entering project private chat room");
+      toast.success(
+        "Project created successfully, entering project private chat room"
+      )
     } catch (error: any) {
-      console.error("Failed to create project:", error);
-      toast.error(`Failed to create project: ${error.message || "Unknown error"}`);
+      console.error("Failed to create project:", error)
+      toast.error(
+        `Failed to create project: ${error.message || "Unknown error"}`
+      )
     } finally {
-      setIsCreating(false);
+      setIsCreating(false)
     }
-  };
+  }
 
   if (loadingTemplates) {
     return (
@@ -156,7 +159,7 @@ const ProjectTemplateDialog: React.FC<ProjectTemplateDialogProps> = ({
           </p>
         </div>
       </div>
-    );
+    )
   }
 
   if (templates.length === 0) {
@@ -167,7 +170,8 @@ const ProjectTemplateDialog: React.FC<ProjectTemplateDialogProps> = ({
             Project Templates
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            No project templates available. Please ensure project mode is enabled in the network configuration and templates are configured.
+            No project templates available. Please ensure project mode is
+            enabled in the network configuration and templates are configured.
           </p>
           <button
             onClick={onClose}
@@ -177,17 +181,18 @@ const ProjectTemplateDialog: React.FC<ProjectTemplateDialogProps> = ({
           </button>
         </div>
       </div>
-    );
+    )
   }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 shadow-xl max-h-[80vh] overflow-y-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 shadow-xl max-h-[86vh] overflow-y-auto">
         <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-gray-100">
           Select Project Template
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Select a template to create a new project. After selection, a private channel will be created waiting for your initial prompt.
+          Select a template to create a new project. After selection, a private
+          channel will be created waiting for your initial prompt.
         </p>
 
         <div className="space-y-3 mb-6">
@@ -248,7 +253,7 @@ const ProjectTemplateDialog: React.FC<ProjectTemplateDialogProps> = ({
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default ProjectTemplateDialog;
+export default ProjectTemplateDialog

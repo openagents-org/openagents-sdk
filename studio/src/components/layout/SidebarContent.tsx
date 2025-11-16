@@ -1,38 +1,44 @@
-import React from "react";
-import { useLocation } from "react-router-dom";
-import DefaultSidebar from "./DefaultSidebar";
-import MessagingSidebar from "@/pages/messaging/MessagingSidebar";
-import DocumentsSidebar from "@/pages/documents/DocumentsSidebar";
-import ForumSidebar from "@/pages/forum/ForumSidebar";
-import WikiSidebar from "@/pages/wiki/WikiSidebar";
-import ProfileSidebar from "@/pages/profile/ProfileSidebar";
+import React from "react"
+import { useLocation } from "react-router-dom"
+import DefaultSidebar from "./DefaultSidebar"
+import MessagingSidebar from "@/pages/messaging/MessagingSidebar"
+import DocumentsSidebar from "@/pages/documents/DocumentsSidebar"
+import ForumSidebar from "@/pages/forum/ForumSidebar"
+import WikiSidebar from "@/pages/wiki/WikiSidebar"
+import ProfileSidebar from "@/pages/profile/ProfileSidebar"
+import ProjectSidebar from "@/pages/project/ProjectSidebar"
 
 // SidebarContent component - dynamically displays different sidebar content based on route
 // Each specific sidebar component manages its own data, no need to pass from outside
 const SidebarContent: React.FC = () => {
-  const location = useLocation();
+  const location = useLocation()
 
   // Decide which sidebar content to display based on current route
   const renderContent = () => {
-    const pathname = location.pathname;
+    const pathname = location.pathname
 
     if (pathname.startsWith("/messaging")) {
-      return <MessagingSidebar />;
+      return <MessagingSidebar />
+    }
+
+    if (pathname.startsWith("/project")) {
+      // ProjectSidebar gets needed data through hooks itself
+      return <ProjectSidebar />
     }
 
     if (pathname.startsWith("/forum")) {
       // ForumSidebar gets needed data through hooks itself
-      return <ForumSidebar />;
+      return <ForumSidebar />
     }
 
     if (pathname.startsWith("/wiki")) {
       // WikiSidebar gets needed data through hooks itself
-      return <WikiSidebar />;
+      return <WikiSidebar />
     }
 
     if (pathname.startsWith("/documents")) {
       // DocumentsSidebar gets needed data through hooks itself
-      return <DocumentsSidebar />;
+      return <DocumentsSidebar />
     }
 
     if (pathname.startsWith("/settings")) {
@@ -61,11 +67,11 @@ const SidebarContent: React.FC = () => {
             </svg>
           }
         />
-      );
+      )
     }
 
     if (pathname.startsWith("/profile")) {
-      return <ProfileSidebar />;
+      return <ProfileSidebar />
     }
 
     if (pathname.startsWith("/mcp")) {
@@ -88,14 +94,14 @@ const SidebarContent: React.FC = () => {
             </svg>
           }
         />
-      );
+      )
     }
 
     // Default case
-    return <DefaultSidebar />;
-  };
+    return <DefaultSidebar />
+  }
 
-  return <div className="h-full overflow-y-auto">{renderContent()}</div>;
-};
+  return <div className="h-full overflow-y-auto">{renderContent()}</div>
+}
 
-export default React.memo(SidebarContent);
+export default React.memo(SidebarContent)

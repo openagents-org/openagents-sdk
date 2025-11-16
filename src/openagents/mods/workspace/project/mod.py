@@ -131,6 +131,8 @@ class DefaultProjectNetworkMod(BaseMod):
             # Route to specific handlers based on event name
             if event_name == "project.template.list":
                 return await self._handle_template_list(message)
+            elif event_name == "project.list":
+                return await self._handle_project_list(message)
             elif event_name == "project.start":
                 return await self._handle_project_start(message)
             elif event_name == "project.stop":
@@ -201,6 +203,73 @@ class DefaultProjectNetworkMod(BaseMod):
             success=True,
             message="Templates listed successfully",
             data={"templates": templates_data}
+        )
+
+    # Project Query Handlers
+
+    async def _handle_project_list(self, message: Event) -> EventResponse:
+        """Handle project list request - returns all projects accessible by the requesting agent."""
+        source_id = message.source_id
+        payload = message.payload or {}
+        
+        # Optional filters
+        status_filter = payload.get("status")  # Filter by status (e.g., "running", "completed")
+        include_archived = payload.get("include_archived", True)  # Include completed/stopped/failed projects
+        
+        # Get all projects that the requesting agent has access to
+        accessible_projects = []
+        
+        for project in self.projects.values():
+            # Check if agent has access to this project
+            # For project listing, we use a relaxed permission check similar to project.get
+            # This allows agents to see projects they've been part of even if agent_id changed
+            has_access = (
+                source_id in project.authorized_agents or
+                source_id == project.initiator_agent_id or
+                source_id in project.collaborators
+            )
+            
+            if not has_access:
+                continue
+            
+            # Apply status filter if provided
+            if status_filter and project.status.value != status_filter:
+                continue
+            
+            # Apply archived filter
+            if not include_archived and project.is_completed():
+                continue
+            
+            # Build project summary
+            project_summary = {
+                "project_id": project.project_id,
+                "name": project.name,
+                "goal": project.goal,
+                "template_id": project.template_id,
+                "status": project.status.value,
+                "initiator_agent_id": project.initiator_agent_id,
+                "created_timestamp": project.created_timestamp,
+                "started_timestamp": project.started_timestamp,
+                "completed_timestamp": project.completed_timestamp,
+                "summary": project.summary,
+                "authorized_agents": project.authorized_agents,
+                "collaborators": project.collaborators,
+                "agent_groups": project.agent_groups,
+            }
+            accessible_projects.append(project_summary)
+        
+        # Sort by created_timestamp descending (most recent first)
+        accessible_projects.sort(key=lambda p: p["created_timestamp"], reverse=True)
+        
+        logger.info(f"Agent {source_id} listed {len(accessible_projects)} accessible projects")
+        
+        return EventResponse(
+            success=True,
+            message=f"Found {len(accessible_projects)} accessible projects",
+            data={
+                "projects": accessible_projects,
+                "total_count": len(accessible_projects)
+            }
         )
 
     # Project Lifecycle Handlers
@@ -364,7 +433,8 @@ class DefaultProjectNetworkMod(BaseMod):
                     "authorized_agents": project.authorized_agents,
                     "created_timestamp": project.created_timestamp,
                     "started_timestamp": project.started_timestamp,
-                    "artifacts": project.artifacts
+                    "artifacts": project.artifacts,
+                    "messages": project.messages
                 }
             }
         )
@@ -402,6 +472,18 @@ class DefaultProjectNetworkMod(BaseMod):
         # Generate message ID
         message_id = f"msg_{int(time.time())}_{message.source_id[:8]}"
         timestamp = int(time.time())
+
+        # Store message in project history
+        message_data = {
+            "message_id": message_id,
+            "sender_id": message.source_id,
+            "content": content,
+            "reply_to_id": reply_to_id,
+            "attachments": attachments,
+            "timestamp": timestamp
+        }
+        project.messages.append(message_data)
+        logger.info(f"Stored message {message_id} in project {project_id} history")
 
         # Send via messaging system (integrate with messaging mod)
         await self._send_to_messaging_system(project, message.source_id, content, reply_to_id, attachments, message_id)
