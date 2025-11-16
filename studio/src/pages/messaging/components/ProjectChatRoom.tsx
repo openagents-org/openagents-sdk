@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, useLocation, useNavigate } from "react-router-dom"
 import { useOpenAgents } from "@/context/OpenAgentsProvider"
 import MessageRenderer from "./MessageRenderer"
 import MessageInput from "./MessageInput"
@@ -15,6 +15,7 @@ import { CONNECTED_STATUS_COLOR } from "@/constants/chatConstants"
 import { useAuthStore } from "@/stores/authStore"
 import { toast } from "sonner"
 import { UnifiedMessage } from "@/types/message"
+import { ProjectTemplate } from "@/utils/projectUtils"
 
 interface ProjectChatRoomProps {
   channelName?: string
@@ -31,29 +32,57 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
   // 使用新的 OpenAgents context
   const { connector, connectionStatus, isConnected } = useOpenAgents()
 
+  // Router hooks for pending project support
+  const location = useLocation()
+  const navigate = useNavigate()
+
   // 从路由参数中获取 projectId（优先使用路由参数）
   const { projectId: routeProjectId } = useParams<{ projectId: string }>()
 
   // 优先使用路由参数，如果没有则使用 props
-  const projectId = routeProjectId || propProjectId
+  const routeOrPropProjectId = routeProjectId || propProjectId
+
+  // Check if this is a pending project (waiting for first message to start)
+  const pendingTemplate = (location.state as any)?.pendingTemplate as
+    | ProjectTemplate
+    | undefined
+  const isPendingProject =
+    routeOrPropProjectId === "new" && pendingTemplate !== undefined
+
+  // Actual projectId - null if pending
+  const projectId = isPendingProject ? null : routeOrPropProjectId
 
   // 如果没有提供 channelName，根据 projectId 生成（需要从后端获取完整信息）
   // 但为了保持独立，我们先尝试从 project.get 获取信息
   const [projectInfo, setProjectInfo] = useState<{
     channelName?: string
     name?: string
+    goal?: string
+    initiator_agent_id?: string
+    created_timestamp?: number
+    status?: string
+    summary?: string
+    completed_timestamp?: number
   } | null>(null)
 
   // 如果没有提供 channelName，尝试从项目信息获取
   const channelName =
     propChannelName ||
     projectInfo?.channelName ||
-    (projectId ? `project-${projectId}` : null)
+    (projectId ? `project-${projectId}` : null) ||
+    (isPendingProject ? `pending-${pendingTemplate?.template_id}` : null)
+
+  // Track if project is completed
+  const isProjectCompleted =
+    projectInfo?.status === "completed" ||
+    projectInfo?.status === "stopped" ||
+    projectInfo?.status === "failed"
 
   // 项目私密聊天室独立维护消息列表，不依赖messaging服务
   const [messages, setMessages] = useState<UnifiedMessage[]>([])
   const [sendingMessage, setSendingMessage] = useState<boolean>(false)
   const [messagesError, setMessagesError] = useState<string | null>(null)
+  const [isStartingProject, setIsStartingProject] = useState<boolean>(false)
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -79,21 +108,46 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
 
         if (response.success && response.data?.project) {
           const project = response.data.project
+          const projectChannelName =
+            project.channel_name ||
+            `project-${project.template_id || "unknown"}-${projectId}`
+
           setProjectInfo({
-            channelName:
-              project.channel_name ||
-              `project-${project.template_id || "unknown"}-${projectId}`,
+            channelName: projectChannelName,
             name: project.name,
+            goal: project.goal,
+            initiator_agent_id: project.initiator_agent_id,
+            created_timestamp: project.created_timestamp,
+            status: project.status,
+            summary: project.summary,
+            completed_timestamp: project.completed_timestamp,
           })
+
+          // Build messages list starting with the goal as the first message
+          const allMessages: UnifiedMessage[] = []
+
+          // Add goal as the first message
+          if (project.goal) {
+            const goalMessage: UnifiedMessage = {
+              id: `goal-${projectId}`,
+              senderId: project.initiator_agent_id || "",
+              content: project.goal,
+              timestamp: String(
+                project.started_timestamp ||
+                  project.created_timestamp ||
+                  Date.now()
+              ),
+              type: "channel_message",
+              channel: projectChannelName,
+            }
+            allMessages.push(goalMessage)
+          }
 
           // Load message history
           if (project.messages && Array.isArray(project.messages)) {
             console.log(
               `📜 Loading ${project.messages.length} messages from project history`
             )
-            const projectChannelName =
-              project.channel_name ||
-              `project-${project.template_id || "unknown"}-${projectId}`
 
             const historyMessages = project.messages.map((msg: any) => {
               let messageContent =
@@ -123,8 +177,28 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
               } as UnifiedMessage
             })
 
-            setMessages(historyMessages)
+            allMessages.push(...historyMessages)
           }
+
+          // Add summary as the last message if project is completed
+          if (
+            project.summary &&
+            (project.status === "completed" ||
+              project.status === "stopped" ||
+              project.status === "failed")
+          ) {
+            const summaryMessage: UnifiedMessage = {
+              id: `summary-${projectId}`,
+              senderId: "system",
+              content: `📋 **Project ${project.status === "completed" ? "Completed" : project.status === "stopped" ? "Stopped" : "Failed"}**\n\n${project.summary}`,
+              timestamp: String(project.completed_timestamp || Date.now()),
+              type: "channel_message",
+              channel: projectChannelName,
+            }
+            allMessages.push(summaryMessage)
+          }
+
+          setMessages(allMessages)
         }
       } catch (error) {
         console.error("Failed to load project info:", error)
@@ -277,12 +351,94 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
         const projectData = event.payload || {}
         const eventProjectId = projectData.project_id
         const summary = projectData.summary || "Project completed"
+        const completedTimestamp = projectData.completed_timestamp || Date.now()
 
         if (eventProjectId === projectId) {
           console.log(`🎉 Project ${projectId} completed: ${summary}`)
           toast.success(`Project completed`, {
             description: summary,
             duration: 10000,
+          })
+
+          // Update project status
+          setProjectInfo((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: "completed",
+                  summary: summary,
+                  completed_timestamp: completedTimestamp,
+                }
+              : prev
+          )
+
+          // Add summary as the last message
+          const summaryMessage: UnifiedMessage = {
+            id: `summary-${projectId}`,
+            senderId: "system",
+            content: `📋 **Project Completed**\n\n${summary}`,
+            timestamp: String(completedTimestamp),
+            type: "channel_message",
+            channel: channelName || "",
+          }
+
+          setMessages((prev) => {
+            // Check if summary message already exists
+            const summaryExists = prev.some(
+              (msg) => msg.id === `summary-${projectId}`
+            )
+            if (summaryExists) {
+              return prev
+            }
+            return [...prev, summaryMessage]
+          })
+        }
+      }
+
+      // 监听 project.notification.stopped 事件
+      if (event.event_name === "project.notification.stopped") {
+        const projectData = event.payload || {}
+        const eventProjectId = projectData.project_id
+        const reason = projectData.reason || "Project stopped"
+        const stoppedTimestamp = projectData.stopped_timestamp || Date.now()
+
+        if (eventProjectId === projectId) {
+          console.log(`⏹️ Project ${projectId} stopped: ${reason}`)
+          toast.info(`Project stopped`, {
+            description: reason,
+            duration: 10000,
+          })
+
+          // Update project status
+          setProjectInfo((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: "stopped",
+                  summary: reason,
+                  completed_timestamp: stoppedTimestamp,
+                }
+              : prev
+          )
+
+          // Add stopped message
+          const stoppedMessage: UnifiedMessage = {
+            id: `summary-${projectId}`,
+            senderId: "system",
+            content: `⏹️ **Project Stopped**\n\n${reason}`,
+            timestamp: String(stoppedTimestamp),
+            type: "channel_message",
+            channel: channelName || "",
+          }
+
+          setMessages((prev) => {
+            const summaryExists = prev.some(
+              (msg) => msg.id === `summary-${projectId}`
+            )
+            if (summaryExists) {
+              return prev
+            }
+            return [...prev, stoppedMessage]
           })
         }
       }
@@ -294,7 +450,7 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
     return () => {
       connector.off("rawEvent", handleProjectCompletion)
     }
-  }, [isConnected, connector, projectId])
+  }, [isConnected, connector, projectId, channelName])
 
   // 发送消息处理
   const handleSendMessage = useCallback(
@@ -308,6 +464,51 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
     ) => {
       if ((!content.trim() && !attachmentData) || sendingMessage || !connector)
         return
+
+      // Handle pending project - first message starts the project
+      if (isPendingProject && pendingTemplate) {
+        console.log("🚀 Starting project with first message as goal:", content)
+        setIsStartingProject(true)
+        setSendingMessage(true)
+
+        try {
+          const agentId = connectionStatus.agentId || connector.getAgentId()
+
+          // Send project.start with the first message as the goal
+          const startResponse = await connector.sendEvent({
+            event_name: "project.start",
+            source_id: agentId,
+            destination_id: "mod:openagents.mods.workspace.project",
+            payload: {
+              template_id: pendingTemplate.template_id,
+              goal: content.trim(),
+              name: pendingTemplate.name,
+              collaborators: [],
+            },
+          })
+
+          if (!startResponse.success || !startResponse.data?.project_id) {
+            throw new Error(startResponse.message || "Failed to start project")
+          }
+
+          const newProjectId = startResponse.data.project_id
+          console.log("✅ Project started:", newProjectId)
+
+          toast.success("Project started successfully!")
+
+          // Navigate to the actual project chat room
+          navigate(`/project/${newProjectId}`, { replace: true })
+        } catch (error: any) {
+          console.error("Failed to start project:", error)
+          toast.error(
+            `Failed to start project: ${error.message || "Unknown error"}`
+          )
+        } finally {
+          setIsStartingProject(false)
+          setSendingMessage(false)
+        }
+        return
+      }
 
       console.log("📤 Sending project message:", {
         content,
@@ -394,6 +595,9 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
       projectId,
       channelName,
       connectionStatus.agentId,
+      isPendingProject,
+      pendingTemplate,
+      navigate,
     ]
   )
 
@@ -444,8 +648,8 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
     })
   }, [messages])
 
-  // If no projectId, show selection prompt
-  if (!projectId) {
+  // If no projectId and not a pending project, show selection prompt
+  if (!projectId && !isPendingProject) {
     return (
       <div className="project-chat-room h-full flex items-center justify-center bg-white dark:bg-gray-900">
         <div className="text-center text-gray-500 dark:text-gray-400 py-8">
@@ -483,16 +687,36 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
           />
           <div className="flex items-center gap-2">
             <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {channelName
-                ? `#${
-                    channelName.startsWith("#")
-                      ? channelName.slice(1)
-                      : channelName
-                  }`
-                : `Project ${projectId?.slice(0, 8)}...`}
+              {isPendingProject
+                ? `New Project: ${pendingTemplate?.name || "Pending"}`
+                : channelName
+                  ? `#${
+                      channelName.startsWith("#")
+                        ? channelName.slice(1)
+                        : channelName
+                    }`
+                  : `Project ${projectId?.slice(0, 8)}...`}
             </span>
-            <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full dark:bg-blue-900 dark:text-blue-200">
-              Project Chat Room
+            <span
+              className={`px-2 py-1 text-xs font-medium rounded-full ${
+                isPendingProject
+                  ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                  : isProjectCompleted
+                    ? projectInfo?.status === "completed"
+                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                      : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+                    : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+              }`}
+            >
+              {isPendingProject
+                ? "Waiting for Goal"
+                : isProjectCompleted
+                  ? projectInfo?.status === "completed"
+                    ? "✓ Completed"
+                    : projectInfo?.status === "stopped"
+                      ? "⏹️ Stopped"
+                      : "Closed"
+                  : "Project Chat Room"}
             </span>
           </div>
         </div>
@@ -517,8 +741,41 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
         <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4">
           {sortedMessages.length === 0 ? (
             <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-              <p className="text-lg mb-2">Welcome to Project Chat Room</p>
-              <p className="text-sm">Send your first message!</p>
+              {isPendingProject ? (
+                <>
+                  <svg
+                    className="w-16 h-16 mx-auto mb-4 text-yellow-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                  <p className="text-lg mb-2 font-semibold">
+                    Ready to Start Project
+                  </p>
+                  <p className="text-sm mb-4">
+                    Template: <strong>{pendingTemplate?.name}</strong>
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Type your first message below to define the project goal and
+                    start the project.
+                  </p>
+                  <p className="text-xs mt-2 text-gray-400">
+                    Your message will be used as the project goal.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-lg mb-2">Welcome to Project Chat Room</p>
+                  <p className="text-sm">Send your first message!</p>
+                </>
+              )}
             </div>
           ) : (
             <>
@@ -546,38 +803,71 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
         </div>
 
         {/* Message Input */}
-        <MessageInput
-          agents={[]}
-          onSendMessage={(
-            text: string,
-            _replyTo?: string,
-            _quotedMessageId?: string,
-            attachmentData?: {
-              file_id: string
-              filename: string
-              size: number
+        {isProjectCompleted ? (
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
+            <div className="text-center text-gray-500 dark:text-gray-400 py-2">
+              <span className="inline-flex items-center gap-2">
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+                This project has been{" "}
+                {projectInfo?.status === "completed"
+                  ? "completed"
+                  : projectInfo?.status === "stopped"
+                    ? "stopped"
+                    : "closed"}
+                . No further messages can be sent.
+              </span>
+            </div>
+          </div>
+        ) : (
+          <MessageInput
+            agents={[]}
+            onSendMessage={(
+              text: string,
+              _replyTo?: string,
+              _quotedMessageId?: string,
+              attachmentData?: {
+                file_id: string
+                filename: string
+                size: number
+              }
+            ) => {
+              // Reply and quote are not supported in project chat room, send message directly
+              handleSendMessage(text, attachmentData)
+            }}
+            disabled={sendingMessage || isStartingProject || !isConnected}
+            placeholder={
+              isStartingProject
+                ? "Starting project..."
+                : sendingMessage
+                  ? "Sending..."
+                  : isPendingProject
+                    ? "Type your project goal to start the project..."
+                    : `Send a message in project chat room...`
             }
-          ) => {
-            // Reply and quote are not supported in project chat room, send message directly
-            handleSendMessage(text, attachmentData)
-          }}
-          disabled={sendingMessage || !isConnected}
-          placeholder={
-            sendingMessage
-              ? "Sending..."
-              : `Send a message in project chat room...`
-          }
-          currentTheme={currentTheme}
-          currentChannel={channelName}
-          currentAgentId={connectionStatus.agentId || agentName || ""}
-          replyingTo={null}
-          quotingMessage={null}
-          onCancelReply={() => {}}
-          onCancelQuote={() => {}}
-          disableEmoji={true}
-          disableMentions={true}
-          disableFileUpload={false}
-        />
+            currentTheme={currentTheme}
+            currentChannel={channelName}
+            currentAgentId={connectionStatus.agentId || agentName || ""}
+            replyingTo={null}
+            quotingMessage={null}
+            onCancelReply={() => {}}
+            onCancelQuote={() => {}}
+            disableEmoji={true}
+            disableMentions={true}
+            disableFileUpload={isPendingProject ? true : false}
+          />
+        )}
       </div>
     </div>
   )

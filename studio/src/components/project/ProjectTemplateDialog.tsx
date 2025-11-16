@@ -105,42 +105,28 @@ const ProjectTemplateDialog: React.FC<ProjectTemplateDialogProps> = ({
     setIsCreating(true)
 
     try {
-      const agentId = connectionStatus.agentId || connector.getAgentId()
-
-      // Call project.start to create the project
-      // Note: According to API, goal is required, but we'll use a placeholder
-      // The actual goal should be set from the first message content
-      const startResponse = await connector.sendEvent({
-        event_name: "project.start",
-        source_id: agentId,
-        destination_id: "mod:openagents.mods.workspace.project",
-        payload: {
-          template_id: selectedTemplate.template_id,
-          goal: `Project created from template: ${selectedTemplate.name}. Waiting for initial prompt.`,
-          name: selectedTemplate.name,
-          collaborators: [],
-        },
-      })
-
-      if (!startResponse.success || !startResponse.data?.project_id) {
-        throw new Error(startResponse.message || "Failed to start project")
-      }
-
-      const projectId = startResponse.data.project_id
+      // Don't send project.start yet - wait for first message
+      // Navigate to project chat room with template info in route state
+      // The first message will trigger project.start with that message as the goal
 
       // Close the dialog first
       onClose()
 
-      // Navigate to project chat room using the global project route
-      navigate(`/project/${projectId}`)
+      // Navigate to project chat room with pending template info
+      // Using "new" as projectId to indicate pending project
+      navigate(`/project/new`, {
+        state: {
+          pendingTemplate: selectedTemplate,
+        },
+      })
 
-      toast.success(
-        "Project created successfully, entering project private chat room"
+      toast.info(
+        "Template selected. Type your first message to start the project."
       )
     } catch (error: any) {
-      console.error("Failed to create project:", error)
+      console.error("Failed to prepare project:", error)
       toast.error(
-        `Failed to create project: ${error.message || "Unknown error"}`
+        `Failed to prepare project: ${error.message || "Unknown error"}`
       )
     } finally {
       setIsCreating(false)
