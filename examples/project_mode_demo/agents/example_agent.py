@@ -18,12 +18,11 @@ class ExampleProjectWorkerAgent(WorkerAgent):
             payload={
                 "project_id": context.incoming_event.payload["project_id"],
                 "content": {
-                    "type": "text",
-                    "message": f"Project started observed by {self.agent_id}. Goal: {goal_text}\n\nWhat is your name?",
+                    "text": f"Project started observed by {self.agent_id}. Goal: {goal_text}\n\nWhat is your name?",
                 }
             }
         ))
-    
+
     @on_event("project.notification.message_received")
     async def on_project_message_received(self, context: EventContext):
         for i in range(1, 4):
@@ -33,8 +32,7 @@ class ExampleProjectWorkerAgent(WorkerAgent):
                 payload={
                     "project_id": context.incoming_event.payload["project_id"],
                     "content": {
-                        "type": "text",
-                        "message": f"Working on the project... {i}/3",
+                        "text": f"Working on the project... {i}/3",
                     }
                 }
             ))

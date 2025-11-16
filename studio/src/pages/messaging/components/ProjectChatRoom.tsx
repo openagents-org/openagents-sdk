@@ -150,8 +150,7 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
             )
 
             const historyMessages = project.messages.map((msg: any) => {
-              let messageContent =
-                msg.content?.message || msg.content?.text || ""
+              let messageContent = msg.content?.text || ""
 
               // Add attachment info to message content (if any)
               if (
@@ -242,8 +241,7 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
           // 将项目消息转换为UnifiedMessage格式
           const messageId =
             messageData.message_id || `project-msg-${Date.now()}`
-          let messageContent =
-            messageData.content?.message || messageData.content?.text || ""
+          let messageContent = messageData.content?.text || ""
 
           // 添加附件信息到消息内容中（如果有附件）
           if (
@@ -525,8 +523,7 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
         const payload: any = {
           project_id: projectId,
           content: {
-            type: "text",
-            message: content.trim() || "",
+            text: content.trim() || "",
           },
         }
 
