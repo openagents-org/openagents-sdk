@@ -73,7 +73,7 @@ const ProfileSidebar: React.FC = () => {
         {projectModeEnabled && (
           <button
             onClick={() => setShowProjectDialog(true)}
-            className="mb-5 w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium text-white transition-all bg-gradient-to-r from-purple-600 via-purple-500 to-purple-400 hover:from-purple-700 hover:via-purple-600 hover:to-purple-500 shadow-md hover:shadow-lg mt-2"
+            className="mb-5 w-full flex items-center justify-center px-4 py-3 rounded-lg text-sm font-medium text-white transition-all bg-gradient-to-r from-purple-600 via-purple-500 to-purple-400 hover:from-purple-700 hover:via-purple-600 hover:to-purple-500 shadow-md hover:shadow-lg mt-2"
           >
             <span>New Project</span>
           </button>
