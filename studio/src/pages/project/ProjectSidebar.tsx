@@ -1,20 +1,20 @@
-import React, { useState, useEffect, useCallback } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
-import { useOpenAgents } from "@/context/OpenAgentsProvider"
-import { useProfileStore } from "@/stores/profileStore"
-import ProjectTemplateDialog from "@/components/project/ProjectTemplateDialog"
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useOpenAgents } from "@/context/OpenAgentsProvider";
+import { useProfileStore } from "@/stores/profileStore";
+import ProjectTemplateDialog from "@/components/project/ProjectTemplateDialog";
 
 interface ProjectSummary {
-  project_id: string
-  name: string
-  goal: string
-  template_id: string
-  status: string
-  initiator_agent_id: string
-  created_timestamp: number
-  started_timestamp?: number
-  completed_timestamp?: number
-  summary?: string
+  project_id: string;
+  name: string;
+  goal: string;
+  template_id: string;
+  status: string;
+  initiator_agent_id: string;
+  created_timestamp: number;
+  started_timestamp?: number;
+  completed_timestamp?: number;
+  summary?: string;
 }
 
 /**
@@ -25,66 +25,66 @@ interface ProjectSummary {
  * - Project list
  */
 const ProjectSidebar: React.FC = () => {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const { connector, connectionStatus, isConnected } = useOpenAgents()
-  const healthData = useProfileStore((state) => state.healthData)
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { connector, connectionStatus, isConnected } = useOpenAgents();
+  const healthData = useProfileStore((state) => state.healthData);
 
   // Project list state
-  const [projectList, setProjectList] = useState<ProjectSummary[]>([])
-  const [loadingProjects, setLoadingProjects] = useState<boolean>(false)
+  const [projectList, setProjectList] = useState<ProjectSummary[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState<boolean>(false);
 
   // New Project dialog state
-  const [showProjectDialog, setShowProjectDialog] = useState<boolean>(false)
+  const [showProjectDialog, setShowProjectDialog] = useState<boolean>(false);
 
   // Get currently selected project ID (extract from URL)
   const getCurrentProjectId = (): string | null => {
-    const match = location.pathname.match(/^\/project\/([^/]+)/)
-    return match ? match[1] : null
-  }
+    const match = location.pathname.match(/^\/project\/([^/]+)/);
+    return match ? match[1] : null;
+  };
 
-  const currentProjectId = getCurrentProjectId()
+  const currentProjectId = getCurrentProjectId();
 
   // Load project list
   const loadProjectList = useCallback(async () => {
-    if (!connector || !isConnected) return
+    if (!connector || !isConnected) return;
 
-    setLoadingProjects(true)
+    setLoadingProjects(true);
     try {
-      const agentId = connectionStatus.agentId || connector.getAgentId()
+      const agentId = connectionStatus.agentId || connector.getAgentId();
       const response = await connector.sendEvent({
         event_name: "project.list",
         source_id: agentId,
         destination_id: "mod:openagents.mods.workspace.project",
         payload: {},
-      })
+      });
 
       if (response.success && response.data?.projects) {
         // Sort by creation time in descending order (newest first)
         const sortedProjects = [...response.data.projects].sort(
           (a, b) => b.created_timestamp - a.created_timestamp
-        )
-        setProjectList(sortedProjects)
+        );
+        setProjectList(sortedProjects);
       } else {
-        console.error("Failed to load project list:", response.message)
+        console.error("Failed to load project list:", response.message);
       }
     } catch (error) {
-      console.error("Error loading project list:", error)
+      console.error("Error loading project list:", error);
     } finally {
-      setLoadingProjects(false)
+      setLoadingProjects(false);
     }
-  }, [connector, isConnected, connectionStatus.agentId])
+  }, [connector, isConnected, connectionStatus.agentId]);
 
   // Initial load of project list
   useEffect(() => {
     if (isConnected && connector) {
-      loadProjectList()
+      loadProjectList();
     }
-  }, [isConnected, connector, loadProjectList])
+  }, [isConnected, connector, loadProjectList]);
 
   // Listen for project notifications and refresh project list
   useEffect(() => {
-    if (!isConnected || !connector) return
+    if (!isConnected || !connector) return;
 
     const handleProjectNotifications = (event: any) => {
       if (
@@ -93,38 +93,38 @@ const ProjectSidebar: React.FC = () => {
         event.event_name === "project.notification.stopped"
       ) {
         // Refresh project list
-        loadProjectList()
+        loadProjectList();
       }
-    }
+    };
 
-    connector.on("rawEvent", handleProjectNotifications)
+    connector.on("rawEvent", handleProjectNotifications);
     return () => {
-      connector.off("rawEvent", handleProjectNotifications)
-    }
-  }, [isConnected, connector, loadProjectList])
+      connector.off("rawEvent", handleProjectNotifications);
+    };
+  }, [isConnected, connector, loadProjectList]);
 
   // Handle project click
   const handleProjectClick = (projectId: string) => {
-    navigate(`/project/${projectId}`)
-  }
+    navigate(`/project/${projectId}`);
+  };
 
   // Format timestamp display
   const formatTimestamp = (timestamp: number) => {
-    const date = new Date(timestamp * 1000)
-    const now = new Date()
-    const diff = now.getTime() - date.getTime()
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    const date = new Date(timestamp * 1000);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
     if (days === 0) {
-      return "Today"
+      return "Today";
     } else if (days === 1) {
-      return "Yesterday"
+      return "Yesterday";
     } else if (days < 7) {
-      return `${days} days ago`
+      return `${days} days ago`;
     } else {
-      return date.toLocaleDateString()
+      return date.toLocaleDateString();
     }
-  }
+  };
 
   // Get status badge style
   const getStatusBadge = (status: string) => {
@@ -162,57 +162,21 @@ const ProjectSidebar: React.FC = () => {
         text: "text-gray-800 dark:text-gray-200",
         label: "Stopped",
       },
-    }
+    };
 
-    return statusColors[status] || statusColors.created
-  }
+    return statusColors[status] || statusColors.created;
+  };
 
   return (
     <>
-      <div className="h-full flex flex-col bg-white dark:bg-gray-900">
+      <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-800">
         {/* Top: New Project Button */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="p-4">
           {/* New Project Button - only shown when project mode is enabled */}
           <button
             onClick={() => setShowProjectDialog(true)}
             className="mb-5 w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium text-white transition-all bg-gradient-to-r from-purple-600 via-purple-500 to-purple-400 hover:from-purple-700 hover:via-purple-600 hover:to-purple-500 shadow-md hover:shadow-lg mt-2"
           >
-            {/* Rocket Icon */}
-            <svg
-              className="w-5 h-5 mr-3 flex-shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              {/* Rocket body - red */}
-              <path
-                d="M12 2L13.5 8L17.5 11.5L13.5 15L12 22L10.5 15L6.5 11.5L10.5 8L12 2Z"
-                fill="#EF4444"
-              />
-              {/* White body section */}
-              <rect
-                x="10"
-                y="8.5"
-                width="4"
-                height="6.5"
-                rx="0.5"
-                fill="white"
-              />
-              {/* Rocket window - white circle with red center */}
-              <circle cx="12" cy="11.5" r="1.5" fill="white" />
-              <circle cx="12" cy="11.5" r="0.8" fill="#EF4444" />
-              {/* Rocket nose cone - darker red */}
-              <path d="M12 2L13 5.5L12 8L11 5.5L12 2Z" fill="#DC2626" />
-              {/* Rocket fin - darker red */}
-              <path
-                d="M6.5 11.5L7.5 14.5L6.5 17.5L5.5 14.5L6.5 11.5Z"
-                fill="#DC2626"
-              />
-              {/* Rocket flames - yellow and orange */}
-              <path d="M10 18L12 20.5L14 18L12 22.5L10 18Z" fill="#FBBF24" />
-              <path d="M9 19L12 20.5L15 19L12 22.5L9 19Z" fill="#F59E0B" />
-              <path d="M8.5 20L12 21L15.5 20L12 23L8.5 20Z" fill="#F97316" />
-            </svg>
             <span>New Project</span>
           </button>
         </div>
@@ -236,7 +200,7 @@ const ProjectSidebar: React.FC = () => {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
                   />
                 </svg>
               </div>
@@ -291,7 +255,7 @@ const ProjectSidebar: React.FC = () => {
         />
       )}
     </>
-  )
-}
+  );
+};
 
-export default ProjectSidebar
+export default ProjectSidebar;
