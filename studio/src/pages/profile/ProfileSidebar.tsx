@@ -1,11 +1,22 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useProfileStore } from "@/stores/profileStore";
+import { isProjectModeEnabled } from "@/utils/projectUtils";
+import ProjectTemplateDialog from "@/components/project/ProjectTemplateDialog";
 
 const ProfileSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAdmin, isLoading } = useIsAdmin();
+  const healthData = useProfileStore((state) => state.healthData);
+  const [showProjectDialog, setShowProjectDialog] = useState(false);
+
+  // Check if project mode is enabled
+  const projectModeEnabled = useMemo(
+    () => isProjectModeEnabled(healthData),
+    [healthData]
+  );
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -58,6 +69,15 @@ const ProfileSidebar: React.FC = () => {
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+        {/* New Project Button - only shown when project mode is enabled */}
+        {projectModeEnabled && (
+          <button
+            onClick={() => setShowProjectDialog(true)}
+            className="mb-5 w-full flex items-center justify-center px-4 py-3 rounded-lg text-sm font-medium text-white transition-all bg-gradient-to-r from-purple-600 via-purple-500 to-purple-400 hover:from-purple-700 hover:via-purple-600 hover:to-purple-500 shadow-md hover:shadow-lg mt-2"
+          >
+            <span>New Project</span>
+          </button>
+        )}
         {/* Section Header */}
         <div className="flex items-center px-2 mb-2">
           <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
@@ -83,6 +103,14 @@ const ProfileSidebar: React.FC = () => {
           </button>
         ))}
       </div>
+
+      {/* Project Template Selection Dialog */}
+      {showProjectDialog && (
+        <ProjectTemplateDialog
+          onClose={() => setShowProjectDialog(false)}
+          healthData={healthData}
+        />
+      )}
 
       {/* Network Management Section - Only visible for admin */}
       {!isLoading && isAdmin && (

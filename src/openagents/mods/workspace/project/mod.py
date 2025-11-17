@@ -131,6 +131,8 @@ class DefaultProjectNetworkMod(BaseMod):
             # Route to specific handlers based on event name
             if event_name == "project.template.list":
                 return await self._handle_template_list(message)
+            elif event_name == "project.list":
+                return await self._handle_project_list(message)
             elif event_name == "project.start":
                 return await self._handle_project_start(message)
             elif event_name == "project.stop":
@@ -203,6 +205,70 @@ class DefaultProjectNetworkMod(BaseMod):
             data={"templates": templates_data}
         )
 
+    # Project Query Handlers
+
+    async def _handle_project_list(self, message: Event) -> EventResponse:
+        """Handle project list request - returns all projects accessible by the requesting agent."""
+        source_id = message.source_id
+        payload = message.payload or {}
+
+        # Optional filters
+        status_filter = payload.get("status")  # Filter by status (e.g., "running", "completed")
+        include_archived = payload.get("include_archived", True)  # Include completed/stopped/failed projects
+
+        # Get all projects that the requesting agent has access to
+        accessible_projects = []
+
+        for project in self.projects.values():
+            # Resolve authorized agents dynamically
+            authorized_agents = self._resolve_authorized_agents_for_project(project)
+
+            # Check if agent has access to this project
+            has_access = source_id in authorized_agents
+
+            if not has_access:
+                continue
+
+            # Apply status filter if provided
+            if status_filter and project.status.value != status_filter:
+                continue
+
+            # Apply archived filter
+            if not include_archived and project.is_completed():
+                continue
+
+            # Build project summary
+            project_summary = {
+                "project_id": project.project_id,
+                "name": project.name,
+                "goal": project.goal,
+                "template_id": project.template_id,
+                "status": project.status.value,
+                "initiator_agent_id": project.initiator_agent_id,
+                "created_timestamp": project.created_timestamp,
+                "started_timestamp": project.started_timestamp,
+                "completed_timestamp": project.completed_timestamp,
+                "summary": project.summary,
+                "authorized_agents": authorized_agents,
+                "collaborators": project.collaborators,
+                "agent_groups": project.agent_groups,
+            }
+            accessible_projects.append(project_summary)
+
+        # Sort by created_timestamp descending (most recent first)
+        accessible_projects.sort(key=lambda p: p["created_timestamp"], reverse=True)
+
+        logger.info(f"Agent {source_id} listed {len(accessible_projects)} accessible projects")
+
+        return EventResponse(
+            success=True,
+            message=f"Found {len(accessible_projects)} accessible projects",
+            data={
+                "projects": accessible_projects,
+                "total_count": len(accessible_projects)
+            }
+        )
+
     # Project Lifecycle Handlers
 
     async def _handle_project_start(self, message: Event) -> EventResponse:
@@ -243,21 +309,14 @@ class DefaultProjectNetworkMod(BaseMod):
             agent_groups=template.agent_groups.copy()
         )
 
-        # Resolve authorized agents
-        authorized_agents = await self._resolve_authorized_agents(project)
-        project.authorized_agents = authorized_agents
-
         # Store project
         self.projects[project.project_id] = project
 
-        # Update agent tracking
-        for agent_id in authorized_agents:
-            if agent_id not in self.agent_projects:
-                self.agent_projects[agent_id] = set()
-            self.agent_projects[agent_id].add(project.project_id)
-
         # Start the project
         project.start()
+
+        # Resolve authorized agents dynamically (not cached)
+        authorized_agents = self._resolve_authorized_agents_for_project(project)
 
         # Send notifications to all authorized agents
         await self._send_project_started_notifications(project)
@@ -330,9 +389,26 @@ class DefaultProjectNetworkMod(BaseMod):
         payload = message.payload or {}
         project_id = payload.get("project_id")
 
-        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
-        if error_response:
-            return error_response
+        # NOTE:
+        # For project.get we intentionally relax the strict permission check used by
+        # mutating operations (stop/complete/message/state/artifacts).
+        # In Studio "project mode" a user might reconnect with a different agent_id
+        # (e.g. after an agent_id conflict resolution), which would previously cause
+        # an "Access denied" error when simply trying to view an existing project.
+        #
+        # Viewing basic project metadata is safe to expose to any registered agent,
+        # while write operations still require full authorization and continue to use
+        # _get_project_with_permission.
+        if project_id not in self.projects:
+            return EventResponse(
+                success=False,
+                message=f"Project {project_id} not found",
+                data={"error": "Project not found"},
+            )
+
+        project = self.projects[project_id]
+        # Resolve authorized agents dynamically
+        authorized_agents = self._resolve_authorized_agents_for_project(project)
 
         return EventResponse(
             success=True,
@@ -340,16 +416,20 @@ class DefaultProjectNetworkMod(BaseMod):
             data={
                 "project": {
                     "project_id": project.project_id,
+                    "name": project.name,
                     "goal": project.goal,
                     "context": project.context,
                     "template_id": project.template_id,
                     "status": project.status.value,
                     "initiator_agent_id": project.initiator_agent_id,
                     "collaborators": project.collaborators,
-                    "authorized_agents": project.authorized_agents,
+                    "authorized_agents": authorized_agents,
                     "created_timestamp": project.created_timestamp,
                     "started_timestamp": project.started_timestamp,
-                    "artifacts": project.artifacts
+                    "completed_timestamp": project.completed_timestamp,
+                    "summary": project.summary,
+                    "artifacts": project.artifacts,
+                    "messages": project.messages
                 }
             }
         )
@@ -364,13 +444,41 @@ class DefaultProjectNetworkMod(BaseMod):
         reply_to_id = payload.get("reply_to_id")
         attachments = payload.get("attachments", [])
 
-        project, error_response = await self._get_project_with_permission(project_id, message.source_id)
-        if error_response:
-            return error_response
+        # NOTE:
+        # Similar to project.get, we relax the strict permission check for sending
+        # messages to a project chat room. In Studio project mode the browser might
+        # reconnect with a new agent_id (e.g. after conflict resolution). If we
+        # kept using _get_project_with_permission here, users would be unable to
+        # send messages to projects they created in a previous session and would
+        # constantly see "Access denied" errors.
+        #
+        # For demo/workspace scenarios, allowing any registered agent to post
+        # messages to an existing project is acceptable, while mutating project
+        # lifecycle/state/artifacts remains strictly protected.
+        if project_id not in self.projects:
+            return EventResponse(
+                success=False,
+                message=f"Project {project_id} not found",
+                data={"error": "Project not found"}
+            )
+
+        project = self.projects[project_id]
 
         # Generate message ID
         message_id = f"msg_{int(time.time())}_{message.source_id[:8]}"
         timestamp = int(time.time())
+
+        # Store message in project history
+        message_data = {
+            "message_id": message_id,
+            "sender_id": message.source_id,
+            "content": content,
+            "reply_to_id": reply_to_id,
+            "attachments": attachments,
+            "timestamp": timestamp
+        }
+        project.messages.append(message_data)
+        logger.info(f"Stored message {message_id} in project {project_id} history")
 
         # Send via messaging system (integrate with messaging mod)
         await self._send_to_messaging_system(project, message.source_id, content, reply_to_id, attachments, message_id)
@@ -678,7 +786,9 @@ class DefaultProjectNetworkMod(BaseMod):
             return None, error_response
 
         project = self.projects[project_id]
-        if agent_id not in project.authorized_agents:
+        # Resolve authorized agents dynamically
+        authorized_agents = self._resolve_authorized_agents_for_project(project)
+        if agent_id not in authorized_agents:
             error_response = EventResponse(
                 success=False,
                 message=f"Access denied to project {project_id}",
@@ -688,37 +798,52 @@ class DefaultProjectNetworkMod(BaseMod):
 
         return project, None
 
-    async def _resolve_authorized_agents(self, project: Project) -> List[str]:
-        """Resolve agent groups to actual agent IDs and combine with collaborators."""
+    def _resolve_authorized_agents_for_project(self, project: Project) -> List[str]:
+        """Resolve agent groups to actual agent IDs and combine with collaborators.
+
+        This method always computes the authorized agents dynamically to ensure
+        newly registered agents in the groups are included.
+        """
         authorized = set([project.initiator_agent_id])
         authorized.update(project.collaborators)
 
         # Resolve agent groups from network configuration
-        if hasattr(self, 'network') and self.network:
-            agent_groups = getattr(self.network, 'agent_groups', {})
-            for group_name in project.agent_groups:
-                if group_name in agent_groups:
-                    # Get agents in this group from network
-                    group_agents = self._get_agents_in_group(group_name)
-                    authorized.update(group_agents)
+        for group_name in project.agent_groups:
+            # Get agents in this group from network
+            group_agents = self._get_agents_in_group(group_name)
+            authorized.update(group_agents)
 
         return list(authorized)
 
     def _get_agents_in_group(self, group_name: str) -> List[str]:
         """Get all agent IDs in a specific group."""
-        # This would integrate with the network's agent management
-        # For now, return empty list as implementation depends on network setup
-        return []
+        if not hasattr(self, 'network') or not self.network:
+            return []
+
+        if not hasattr(self.network, 'topology') or not self.network.topology:
+            return []
+
+        # agent_group_membership maps agent_id -> group_name
+        # We need to find all agents that belong to the specified group
+        agents_in_group = []
+        agent_group_membership = getattr(self.network.topology, 'agent_group_membership', {})
+
+        for agent_id, agent_group in agent_group_membership.items():
+            if agent_group == group_name:
+                agents_in_group.append(agent_id)
+
+        return agents_in_group
 
 
     # Notification Methods
 
     async def _send_project_started_notifications(self, project: Project) -> None:
         """Send project started notifications to all authorized agents."""
-        for agent_id in project.authorized_agents:
+        authorized_agents = self._resolve_authorized_agents_for_project(project)
+        for agent_id in authorized_agents:
             notification = Event(
                 event_name="project.notification.started",
-                source_id="network",
+                source_id="mod:openagents.mods.workspace.project",
                 destination_id=agent_id,
                 payload={
                     "project_id": project.project_id,
@@ -729,15 +854,15 @@ class DefaultProjectNetworkMod(BaseMod):
                     "started_timestamp": project.started_timestamp
                 }
             )
-            if hasattr(self, 'network') and self.network:
-                await self.network.process_event(notification)
+            await self.send_event(notification)
 
     async def _send_project_stopped_notifications(self, project: Project, stopped_by: str, reason: Optional[str]) -> None:
         """Send project stopped notifications."""
-        for agent_id in project.authorized_agents:
+        authorized_agents = self._resolve_authorized_agents_for_project(project)
+        for agent_id in authorized_agents:
             notification = Event(
                 event_name="project.notification.stopped",
-                source_id="network",
+                source_id="mod:openagents.mods.workspace.project",
                 destination_id=agent_id,
                 payload={
                     "project_id": project.project_id,
@@ -746,15 +871,15 @@ class DefaultProjectNetworkMod(BaseMod):
                     "stopped_timestamp": project.completed_timestamp
                 }
             )
-            if hasattr(self, 'network') and self.network:
-                await self.network.process_event(notification)
+            await self.send_event(notification)
 
     async def _send_project_completed_notifications(self, project: Project, completed_by: str, summary: str) -> None:
         """Send project completed notifications."""
-        for agent_id in project.authorized_agents:
+        authorized_agents = self._resolve_authorized_agents_for_project(project)
+        for agent_id in authorized_agents:
             notification = Event(
                 event_name="project.notification.completed",
-                source_id="network",
+                source_id="mod:openagents.mods.workspace.project",
                 destination_id=agent_id,
                 payload={
                     "project_id": project.project_id,
@@ -763,16 +888,16 @@ class DefaultProjectNetworkMod(BaseMod):
                     "completed_timestamp": project.completed_timestamp
                 }
             )
-            if hasattr(self, 'network') and self.network:
-                await self.network.process_event(notification)
+            await self.send_event(notification)
 
     async def _send_message_received_notifications(self, project: Project, sender_id: str, message_id: str, content: Dict[str, Any], reply_to_id: Optional[str], timestamp: int) -> None:
         """Send message received notifications."""
-        for agent_id in project.authorized_agents:
+        authorized_agents = self._resolve_authorized_agents_for_project(project)
+        for agent_id in authorized_agents:
             if agent_id != sender_id:  # Don't notify sender
                 notification = Event(
                     event_name="project.notification.message_received",
-                    source_id="network",
+                    source_id="mod:openagents.mods.workspace.project",
                     destination_id=agent_id,
                     payload={
                         "project_id": project.project_id,
@@ -783,16 +908,16 @@ class DefaultProjectNetworkMod(BaseMod):
                         "timestamp": timestamp
                     }
                 )
-                if hasattr(self, 'network') and self.network:
-                    await self.network.send_message(notification)
+                await self.send_event(notification)
 
     async def _send_artifact_updated_notifications(self, project: Project, updated_by: str, key: str, action: str) -> None:
         """Send artifact updated notifications."""
-        for agent_id in project.authorized_agents:
+        authorized_agents = self._resolve_authorized_agents_for_project(project)
+        for agent_id in authorized_agents:
             if agent_id != updated_by:  # Don't notify updater
                 notification = Event(
                     event_name="project.notification.artifact_updated",
-                    source_id="network",
+                    source_id="mod:openagents.mods.workspace.project",
                     destination_id=agent_id,
                     payload={
                         "project_id": project.project_id,
@@ -802,8 +927,7 @@ class DefaultProjectNetworkMod(BaseMod):
                         "timestamp": int(time.time())
                     }
                 )
-                if hasattr(self, 'network') and self.network:
-                    await self.network.send_message(notification)
+                await self.send_event(notification)
 
     async def _send_to_messaging_system(self, project: Project, sender_id: str, content: Dict[str, Any], reply_to_id: Optional[str], attachments: List[Dict[str, Any]], message_id: str) -> None:
         """Send message to messaging system for project channel."""

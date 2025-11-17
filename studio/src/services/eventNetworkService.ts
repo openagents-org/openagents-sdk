@@ -142,8 +142,7 @@ export class EventNetworkService {
       console.log(`✅ Reaction ${reactionType} added to message ${messageId}`);
     } else {
       console.error(
-        `❌ Failed to add reaction: ${
-          response.message || response.data?.message || "Unknown error"
+        `❌ Failed to add reaction: ${response.message || response.data?.message || "Unknown error"
         }`
       );
     }
@@ -175,8 +174,7 @@ export class EventNetworkService {
       );
     } else {
       console.error(
-        `❌ Failed to remove reaction: ${
-          response.message || response.data?.message || "Unknown error"
+        `❌ Failed to remove reaction: ${response.message || response.data?.message || "Unknown error"
         }`
       );
     }
@@ -270,10 +268,10 @@ export class EventNetworkService {
 
           // Safely extract reactions, checking multiple possible locations and nested structures
           const rawReactions = msg.payload?.reactions ||
-                               msg.reactions ||
-                               msg.payload?.metadata?.reactions ||
-                               msg.metadata?.reactions ||
-                               {};
+            msg.reactions ||
+            msg.payload?.metadata?.reactions ||
+            msg.metadata?.reactions ||
+            {};
 
           // Convert reactions format: array -> number count
           const reactions: { [key: string]: number } = {};
@@ -315,8 +313,8 @@ export class EventNetworkService {
             sender_id: msg.source_id || msg.sender_id || 'unknown',
             timestamp: msg.timestamp
               ? (typeof msg.timestamp === 'number' ?
-                  (msg.timestamp < 10000000000 ? msg.timestamp * 1000 : msg.timestamp).toString()
-                  : msg.timestamp)
+                (msg.timestamp < 10000000000 ? msg.timestamp * 1000 : msg.timestamp).toString()
+                : msg.timestamp)
               : Date.now().toString(),
             content: {
               text: msg.payload?.content?.text || msg.content?.text || ''

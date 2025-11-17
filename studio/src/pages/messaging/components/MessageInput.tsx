@@ -36,6 +36,10 @@ interface MessageInputProps {
   currentDirectMessage?: string;
   currentAgentId?: string;
   onCancelQuote?: () => void;
+  // Disable features for simple chat rooms (like project chat rooms)
+  disableEmoji?: boolean;
+  disableMentions?: boolean;
+  disableFileUpload?: boolean;
 }
 
 const styles = `
@@ -539,6 +543,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
   currentDirectMessage,
   currentAgentId,
   onCancelQuote,
+  disableEmoji = false,
+  disableMentions = false,
+  disableFileUpload = false,
 }) => {
   const [message, setMessage] = useState("");
   const [pendingAttachment, setPendingAttachment] = useState<{
@@ -755,14 +762,20 @@ const MessageInput: React.FC<MessageInputProps> = ({
       setMessage(newValue);
       adjustTextareaHeight();
 
-      // Check for mentions
-      const lastWord = newValue.split(" ").pop() || "";
-      if (lastWord.startsWith("@")) {
-        const filter = lastWord.substring(1); // Remove the @ symbol
-        setMentionFilter(filter);
-        setShowMentions(true);
-        setSelectedMentionIndex(0);
+      // Check for mentions (only if mentions are enabled)
+      if (!disableMentions) {
+        const lastWord = newValue.split(" ").pop() || "";
+        if (lastWord.startsWith("@")) {
+          const filter = lastWord.substring(1); // Remove the @ symbol
+          setMentionFilter(filter);
+          setShowMentions(true);
+          setSelectedMentionIndex(0);
+        } else {
+          setShowMentions(false);
+          setMentionFilter("");
+        }
       } else {
+        // If mentions are disabled, ensure they're not shown
         setShowMentions(false);
         setMentionFilter("");
       }
@@ -941,7 +954,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
       <form onSubmit={handleSubmit}>
         <div className="input-area">
-          {showMentions && filteredAgents.length > 0 && (
+          {!disableMentions && showMentions && filteredAgents.length > 0 && (
             <div className={`mention-suggestions ${currentTheme}`}>
               {filteredAgents.map((agent, index) => {
                 const displayName = agent.display_name || agent.agent_id;
@@ -980,25 +993,29 @@ const MessageInput: React.FC<MessageInputProps> = ({
           />
 
           <div className="input-actions">
-            <button
-              type="button"
-              className={`action-button ${currentTheme}`}
-              onClick={handleFileUpload}
-              disabled={disabled}
-              title="Upload file"
-            >
-              📎
-            </button>
+            {!disableFileUpload && (
+              <button
+                type="button"
+                className={`action-button ${currentTheme}`}
+                onClick={handleFileUpload}
+                disabled={disabled}
+                title="Upload file"
+              >
+                📎
+              </button>
+            )}
 
-            <button
-              type="button"
-              className={`action-button ${currentTheme}`}
-              disabled={disabled}
-              title="Add emoji"
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            >
-              😊
-            </button>
+            {!disableEmoji && (
+              <button
+                type="button"
+                className={`action-button ${currentTheme}`}
+                disabled={disabled}
+                title="Add emoji"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              >
+                😊
+              </button>
+            )}
 
             <button
               type="submit"
@@ -1011,7 +1028,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           </div>
 
           {/* Emoji Picker */}
-          {showEmojiPicker && (
+          {!disableEmoji && showEmojiPicker && (
             <div className={`emoji-picker ${currentTheme}`}>
               {Object.entries(emojiCategories).map(([category, emojis]) => (
                 <div key={category}>

@@ -387,6 +387,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         set({
           channels: [],
           channelsLoading: false,
+          channelsLoaded: true, // Mark as loaded even on failure to prevent infinite loops
           channelsError: response.message || "Failed to load channels",
         });
       }
@@ -395,6 +396,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({
         channelsError: "Failed to load channels",
         channelsLoading: false,
+        channelsLoaded: true, // Mark as loaded even on error to prevent infinite loops
       });
     }
   },
@@ -2164,6 +2166,86 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
       }
 
+      // Handle project notification events
+      else if (event.event_name === "project.notification.completed") {
+        console.log("ChatStore: Received project completion notification:", event);
+        
+        const projectData = event.payload || {};
+        const projectId = projectData.project_id;
+        const summary = projectData.summary || "项目已完成";
+        
+        if (projectId) {
+          console.log(`🎉 Project ${projectId} completed: ${summary}`);
+          
+          // Add a system message to the project channel
+          // Note: We need to find the channel name from project_id
+          // The channel format is: project-{template_id}-{project_id}
+          // For now, we'll try to find it from existing channels
+          const state = get();
+          let projectChannel: string | null = null;
+          
+          for (const [channelName] of Array.from(state.channelMessages.entries())) {
+            if (channelName.includes(projectId)) {
+              projectChannel = channelName;
+              break;
+            }
+          }
+          
+          if (projectChannel) {
+            const systemMessage: UnifiedMessage = {
+              id: `project-completion-${Date.now()}`,
+              senderId: "system",
+              timestamp: new Date().toISOString(),
+              content: `🎉 项目已完成\n\n${summary}`,
+              type: "channel_message",
+              channel: projectChannel,
+            };
+            
+            get().addMessageToChannel(projectChannel, systemMessage);
+          }
+        }
+      }
+      // Handle project message notifications
+      else if (event.event_name === "project.notification.message_received") {
+        console.log("ChatStore: Received project message notification:", event);
+        
+        const messageData = event.payload || {};
+        const projectId = messageData.project_id;
+        const senderId = messageData.sender_id;
+        const content = messageData.content;
+        
+        if (projectId && content) {
+          // Find the project channel
+          const state = get();
+          let projectChannel: string | null = null;
+          
+          for (const [channelName] of Array.from(state.channelMessages.entries())) {
+            if (channelName.includes(projectId)) {
+              projectChannel = channelName;
+              break;
+            }
+          }
+          
+          if (projectChannel) {
+            const messageText = typeof content === "string" 
+              ? content 
+              : content.message || content.text || "";
+            
+            const unifiedMessage: UnifiedMessage = {
+              id: messageData.message_id || `project-msg-${Date.now()}`,
+              senderId: senderId || "unknown",
+              timestamp: new Date(messageData.timestamp * 1000).toISOString() || new Date().toISOString(),
+              content: messageText,
+              type: "channel_message",
+              channel: projectChannel,
+              replyToId: messageData.reply_to_id,
+            };
+            
+            get().addMessageToChannel(projectChannel, unifiedMessage);
+          }
+        }
+      }
+
       // Handle reply message notifications
       else if (
         event.event_name === "thread.reply.notification" &&
@@ -2630,6 +2712,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
           set({
             channels: event.payload.channels,
             channelsLoading: false,
+            channelsLoaded: true, // Mark as loaded to prevent infinite loops
+            channelsError: null,
+          });
+        } else {
+          // Even if no channels, mark as loaded to prevent retry loops
+          set({
+            channelsLoading: false,
+            channelsLoaded: true,
             channelsError: null,
           });
         }
