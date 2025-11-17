@@ -7,6 +7,7 @@ System commands are used for network operations like registration, listing agent
 
 import logging
 import time
+import uuid
 from typing import TYPE_CHECKING, Dict, Any, List, Optional, Callable, Awaitable, Union
 from openagents.config.globals import (
     SYSTEM_EVENT_REGISTER_AGENT,
@@ -1090,7 +1091,21 @@ class SystemCommandProcessor:
             # Apply defaults if missing
             if "port" not in merged_profile or merged_profile["port"] is None:
                 merged_profile["port"] = 8700
-            
+
+            # Ensure network_id is preserved from current config
+            if "network_id" not in merged_profile or not merged_profile["network_id"]:
+                # Try to get network_id from network config
+                if hasattr(self.network.config, "network_profile") and self.network.config.network_profile:
+                    profile_obj = self.network.config.network_profile
+                    if hasattr(profile_obj, "network_id") and profile_obj.network_id:
+                        merged_profile["network_id"] = profile_obj.network_id
+                    elif isinstance(profile_obj, dict) and profile_obj.get("network_id"):
+                        merged_profile["network_id"] = profile_obj["network_id"]
+
+                # If still not found, generate a new one as fallback
+                if "network_id" not in merged_profile or not merged_profile["network_id"]:
+                    merged_profile["network_id"] = f"network-{uuid.uuid4().hex[:8]}"
+
             # Validate complete profile
             try:
                 complete_profile = NetworkProfileComplete(**merged_profile)

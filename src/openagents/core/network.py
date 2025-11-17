@@ -66,6 +66,7 @@ class AgentNetwork:
         self.config = config
         self.network_name = config.name
         self.network_id = config.node_id or f"network-{uuid.uuid4().hex[:8]}"
+        self.config_path: Optional[str] = None  # Set by load() if loaded from file
 
         # Workspace manager for persistent storage
         self.workspace_manager = None
@@ -266,6 +267,9 @@ class AgentNetwork:
                 network = AgentNetwork.create_from_config(
                     network_config, port, workspace_path
                 )
+
+                # Store the config file path for later use (e.g., saving updates)
+                network.config_path = str(config_path.resolve())
 
                 # Load metadata if specified in config
                 if "metadata" in config_dict:
