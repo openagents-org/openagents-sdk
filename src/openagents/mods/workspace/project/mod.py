@@ -328,6 +328,7 @@ class DefaultProjectNetworkMod(BaseMod):
             data={
                 "project": {
                     "project_id": project.project_id,
+                    "name": project.name,
                     "goal": project.goal,
                     "context": project.context,
                     "template_id": project.template_id,
@@ -337,6 +338,8 @@ class DefaultProjectNetworkMod(BaseMod):
                     "authorized_agents": project.authorized_agents,
                     "created_timestamp": project.created_timestamp,
                     "started_timestamp": project.started_timestamp,
+                    "completed_timestamp": project.completed_timestamp,
+                    "summary": project.summary,
                     "artifacts": project.artifacts
                 }
             }
@@ -694,15 +697,25 @@ class DefaultProjectNetworkMod(BaseMod):
 
     def _get_agents_in_group(self, group_name: str) -> List[str]:
         """Get all agent IDs in a specific group."""
-        # This would integrate with the network's agent management
-        # For now, return empty list as implementation depends on network setup
-        return []
+        if not hasattr(self, 'network') or not self.network:
+            return []
+        if not hasattr(self.network, 'topology') or not self.network.topology:
+            return []
+
+        agents_in_group = []
+        agent_group_membership = getattr(self.network.topology, 'agent_group_membership', {})
+        for agent_id, agent_group in agent_group_membership.items():
+            if agent_group == group_name:
+                agents_in_group.append(agent_id)
+        return agents_in_group
 
 
     # Notification Methods
 
     async def _send_project_started_notifications(self, project: Project) -> None:
         """Send project started notifications to all authorized agents."""
+        if not hasattr(self, 'network') or not self.network:
+            return
         for agent_id in project.authorized_agents:
             notification = Event(
                 event_name="project.notification.started",
@@ -717,11 +730,12 @@ class DefaultProjectNetworkMod(BaseMod):
                     "started_timestamp": project.started_timestamp
                 }
             )
-            if hasattr(self, 'network') and self.network:
-                await self.network.send_message(notification)
+            self.send_event(notification)
 
     async def _send_project_stopped_notifications(self, project: Project, stopped_by: str, reason: Optional[str]) -> None:
         """Send project stopped notifications."""
+        if not hasattr(self, 'network') or not self.network:
+            return
         for agent_id in project.authorized_agents:
             notification = Event(
                 event_name="project.notification.stopped",
@@ -734,11 +748,12 @@ class DefaultProjectNetworkMod(BaseMod):
                     "stopped_timestamp": project.completed_timestamp
                 }
             )
-            if hasattr(self, 'network') and self.network:
-                await self.network.send_message(notification)
+            self.send_event(notification)
 
     async def _send_project_completed_notifications(self, project: Project, completed_by: str, summary: str) -> None:
         """Send project completed notifications."""
+        if not hasattr(self, 'network') or not self.network:
+            return
         for agent_id in project.authorized_agents:
             notification = Event(
                 event_name="project.notification.completed",
@@ -751,11 +766,12 @@ class DefaultProjectNetworkMod(BaseMod):
                     "completed_timestamp": project.completed_timestamp
                 }
             )
-            if hasattr(self, 'network') and self.network:
-                await self.network.send_message(notification)
+            self.send_event(notification)
 
     async def _send_message_received_notifications(self, project: Project, sender_id: str, message_id: str, content: Dict[str, Any], reply_to_id: Optional[str], timestamp: int) -> None:
         """Send message received notifications."""
+        if not hasattr(self, 'network') or not self.network:
+            return
         for agent_id in project.authorized_agents:
             if agent_id != sender_id:  # Don't notify sender
                 notification = Event(
@@ -771,11 +787,12 @@ class DefaultProjectNetworkMod(BaseMod):
                         "timestamp": timestamp
                     }
                 )
-                if hasattr(self, 'network') and self.network:
-                    await self.network.send_message(notification)
+                self.send_event(notification)
 
     async def _send_artifact_updated_notifications(self, project: Project, updated_by: str, key: str, action: str) -> None:
         """Send artifact updated notifications."""
+        if not hasattr(self, 'network') or not self.network:
+            return
         for agent_id in project.authorized_agents:
             if agent_id != updated_by:  # Don't notify updater
                 notification = Event(
@@ -790,8 +807,7 @@ class DefaultProjectNetworkMod(BaseMod):
                         "timestamp": int(time.time())
                     }
                 )
-                if hasattr(self, 'network') and self.network:
-                    await self.network.send_message(notification)
+                self.send_event(notification)
 
     async def _send_to_messaging_system(self, project: Project, sender_id: str, content: Dict[str, Any], reply_to_id: Optional[str], attachments: List[Dict[str, Any]], message_id: str) -> None:
         """Send message to messaging system for project channel."""
