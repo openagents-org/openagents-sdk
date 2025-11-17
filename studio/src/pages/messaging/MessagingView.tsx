@@ -22,6 +22,8 @@ import { useThemeStore } from "@/stores/themeStore";
 import { CONNECTED_STATUS_COLOR } from "@/constants/chatConstants";
 import { useAuthStore } from "@/stores/authStore";
 import { toast } from "sonner";
+import { isProjectChannel, extractProjectIdFromChannel } from "@/utils/projectUtils";
+import ProjectChatRoom from "./components/ProjectChatRoom";
 
 const ThreadMessagingViewEventBased: React.FC = () => {
   const { agentName } = useAuthStore();
@@ -30,6 +32,11 @@ const ThreadMessagingViewEventBased: React.FC = () => {
 
   // 从 chatStore 获取当前选择状态和选择方法
   const { currentChannel, currentDirectMessage, selectChannel } = useChatStore();
+
+  // 检查当前频道是否为项目频道
+  const isProjectChannelActive = useMemo(() => {
+    return currentChannel ? isProjectChannel(currentChannel) : false;
+  }, [currentChannel]);
 
   // 调试日志：监听选择状态变化
   useEffect(() => {
@@ -228,7 +235,15 @@ const ThreadMessagingViewEventBased: React.FC = () => {
       console.log(`👥 Loaded ${filteredAgents.length} agents (excluding current user)`);
 
       // 智能频道选择逻辑
-      if (channels.length > 0) {
+      // 首先检查是否是项目频道（独立于 channels 列表）
+      if (currentChannel && currentChannel.startsWith("project-")) {
+        // 项目频道独立于其他模组，不需要在 channels 列表中
+        // 直接保持选择，ProjectChatRoom 会处理显示
+        console.log(
+          `✅ Project channel "${currentChannel}" - keeping selection (independent of channel list)`
+        );
+        // 不需要做任何操作，保持当前选择
+      } else if (channels.length > 0) {
         console.log(`🔍 Channel selection logic:`, {
           currentChannel,
           currentDirectMessage,
@@ -241,7 +256,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
         let selectionReason = "";
 
         if (currentChannel) {
-          // 检查当前选择的频道是否仍然存在
+          // 检查当前选择的普通频道是否仍然存在
           const channelExists = channels.some(
             (channel) => channel.name === currentChannel
           );
@@ -253,7 +268,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
             selectedChannel = currentChannel;
             selectionReason = "恢复上次选择";
           } else {
-            selectedChannel = channels[0].name;
+            selectedChannel = channels.length > 0 ? channels[0].name : null;
             selectionReason = "上次频道不存在，回退到首个频道";
             console.warn(
               `⚠️ Previously selected channel "${currentChannel}" no longer exists, falling back to first channel`
@@ -336,6 +351,35 @@ const ThreadMessagingViewEventBased: React.FC = () => {
     }
   }, [isConnected, loadAgents]);
 
+  // Listen for project completion notifications
+  useEffect(() => {
+    if (!isConnected || !connector) return;
+
+    const handleProjectCompletion = (event: any) => {
+      // Listen for project.notification.completed event
+      if (event.event_name === "project.notification.completed") {
+        const projectData = event.payload || {};
+        const projectId = projectData.project_id;
+        const summary = projectData.summary || "项目已完成";
+
+        if (projectId) {
+          console.log(`🎉 Project ${projectId} completed: ${summary}`);
+          toast.success(`项目已完成`, {
+            description: summary,
+            duration: 10000,
+          });
+        }
+      }
+    };
+
+    // Register event listener
+    connector.on("rawEvent", handleProjectCompletion);
+
+    return () => {
+      connector.off("rawEvent", handleProjectCompletion);
+    };
+  }, [isConnected, connector]);
+
   // 当 chatStore 选择状态变化后，加载对应的消息
   useEffect(() => {
     if (isConnected && channels.length > 0) {
@@ -371,18 +415,67 @@ const ThreadMessagingViewEventBased: React.FC = () => {
     ) => {
       if (!content.trim() || sendingMessage) return;
 
+      // 在项目频道中，不允许回复和引用
+      if (isProjectChannelActive && (replyToId || _quotedMessageId)) {
+        toast.error("项目频道中不允许回复或引用消息");
+        return;
+      }
+
       console.log("📤 Sending message:", {
         content,
         replyToId,
         currentChannel,
         currentDirectMessage,
+        isProjectChannel: isProjectChannelActive,
       });
       setSendingMessage(true);
 
       try {
         let success = false;
         if (currentChannel) {
-          success = await sendChannelMessage(currentChannel, content, replyToId);
+          // Check if this is a project channel
+          const projectId = extractProjectIdFromChannel(currentChannel);
+          
+          if (isProjectChannelActive && projectId && connector) {
+            // Use project.message.send for project channels
+            try {
+              const agentId = connectionStatus.agentId || connector.getAgentId();
+              const channelMessagesList = channelMessages.get(currentChannel) || [];
+              const isFirstMessage = channelMessagesList.length === 0;
+
+              // If this is the first message, the goal will be set from the message content
+              // The backend should handle updating the project goal from the first message
+
+              // Send message using project.message.send
+              const messageResponse = await connector.sendEvent({
+                event_name: "project.message.send",
+                source_id: agentId,
+                destination_id: "mod:openagents.mods.workspace.project",
+                payload: {
+                  project_id: projectId,
+                  content: {
+                    type: "text",
+                    message: content.trim(),
+                  },
+                  reply_to_id: replyToId,
+                },
+              });
+
+              if (messageResponse.success) {
+                success = true;
+                console.log("✅ Project message sent", { projectId, messageId: messageResponse.data?.message_id });
+              } else {
+                throw new Error(messageResponse.message || "Failed to send project message");
+              }
+            } catch (error: any) {
+              console.error("Failed to send project message:", error);
+              toast.error(`发送消息失败: ${error.message || "未知错误"}`);
+              success = false;
+            }
+          } else {
+            // Use regular channel message for non-project channels
+            success = await sendChannelMessage(currentChannel, content, replyToId);
+          }
         } else if (currentDirectMessage) {
           success = await sendDirectMessage(currentDirectMessage, content);
         } else {
@@ -408,24 +501,38 @@ const ThreadMessagingViewEventBased: React.FC = () => {
       sendingMessage,
       sendChannelMessage,
       sendDirectMessage,
+      isProjectChannelActive,
+      channelMessages,
+      connector,
+      connectionStatus.agentId,
     ]
   );
 
   // Handle reply and quote actions
   const startReply = useCallback(
     (messageId: string, text: string, author: string) => {
+      // 在项目频道中禁用回复功能
+      if (isProjectChannelActive) {
+        toast.error("项目频道中不允许回复消息");
+        return;
+      }
       setReplyingTo({ messageId, text, author });
       setQuotingMessage(null); // Clear quote if replying
     },
-    []
+    [isProjectChannelActive]
   );
 
   const startQuote = useCallback(
     (messageId: string, text: string, author: string) => {
+      // 在项目频道中禁用引用功能
+      if (isProjectChannelActive) {
+        toast.error("项目频道中不允许引用消息");
+        return;
+      }
       setQuotingMessage({ messageId, text, author });
       setReplyingTo(null); // Clear reply if quoting
     },
-    []
+    [isProjectChannelActive]
   );
 
   const cancelReply = useCallback(() => {
@@ -443,6 +550,12 @@ const ThreadMessagingViewEventBased: React.FC = () => {
       reactionType: string,
       action: "add" | "remove" = "add"
     ) => {
+      // 在项目频道中禁用反应功能
+      if (isProjectChannelActive) {
+        toast.error("项目频道中不允许添加或移除反应");
+        return;
+      }
+
       try {
         const success = action === "add"
           ? await addReaction(messageId, reactionType, currentChannel || undefined)
@@ -464,7 +577,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
         toast.error(`Network error while ${action}ing reaction "${reactionType}". Please check your connection and try again.`);
       }
     },
-    [addReaction, removeReaction, currentChannel]
+    [addReaction, removeReaction, currentChannel, isProjectChannelActive]
   );
 
   // Methods are managed through chatStore state, no ref needed
@@ -498,6 +611,24 @@ const ThreadMessagingViewEventBased: React.FC = () => {
     if (currentDirectMessage) return `@${currentDirectMessage}`;
     return "Select a channel";
   }, [currentChannel, currentDirectMessage]);
+
+  // 检查是否是项目频道，如果是则使用 ProjectChatRoom 组件
+  const projectId = useMemo(() => {
+    if (currentChannel && isProjectChannelActive) {
+      return extractProjectIdFromChannel(currentChannel);
+    }
+    return null;
+  }, [currentChannel, isProjectChannelActive]);
+
+  // 如果是项目频道，渲染 ProjectChatRoom 组件
+  if (projectId && currentChannel) {
+    return (
+      <ProjectChatRoom
+        channelName={currentChannel}
+        projectId={projectId}
+      />
+    );
+  }
 
   return (
     <div className="thread-messaging-view h-full flex flex-col bg-white dark:bg-gray-900">
@@ -688,6 +819,8 @@ const ThreadMessagingViewEventBased: React.FC = () => {
                   onReply={startReply}
                   onQuote={startQuote}
                   isDMChat={!!currentDirectMessage}
+                  disableReactions={isProjectChannelActive}
+                  disableQuotes={isProjectChannelActive}
                 />
               );
             })()}

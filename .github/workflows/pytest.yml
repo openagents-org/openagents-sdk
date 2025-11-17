@@ -39,15 +39,13 @@ jobs:
     - name: Test with pytest (unit tests)
       env:
         SOME_ENV_VAR: "value"
+        # Enforce sequential execution and stability
+        PYTHONHASHSEED: "0"
+        GRPC_ENABLE_FORK_SUPPORT: "1"
+        GRPC_POLL_STRATEGY: "poll"
       run: |
-        pytest --asyncio-mode=auto --tb=short --maxfail=5 -v tests/ -m "not integration"
-        
-    - name: Test integration tests (slower)
-      env:
-        SOME_ENV_VAR: "value"
-      run: |
-        pytest --asyncio-mode=auto --tb=short -v tests/ -m "integration" || echo "Integration tests failed but continuing..."
-      continue-on-error: true  # Don't fail the entire job if these tests fail
+        # Run tests sequentially (no -n flag to ensure no parallelism)
+        pytest --tb=short --maxfail=5 -v tests
         
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3

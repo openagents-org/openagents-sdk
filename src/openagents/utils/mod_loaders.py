@@ -90,8 +90,13 @@ def load_network_mods(mod_configs: List[Dict[str, Any]]) -> Dict[str, BaseMod]:
 
             # Instantiate the mod with configuration
             mod_instance = mod_class(mod_name)
-            if hasattr(mod_instance, "configure") and config:
-                mod_instance.configure(config)
+
+            # Set config if provided
+            if config:
+                mod_instance.update_config(config)
+
+            # Initialize the mod after config is set
+            mod_instance.initialize()
 
             mods[mod_name] = mod_instance
             logger.info(f"Successfully loaded network mod: {mod_name}")

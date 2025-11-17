@@ -11,10 +11,10 @@ network:
   transports:
     - type: "http"
       config:
-        port: 8750
+        port: 8700
     - type: "grpc"
       config:
-        port: 8650
+        port: 8600
         max_message_size: 104857600  # 100MB
         compression: "gzip"
         keepalive_time: 60000  # 60 seconds in milliseconds
@@ -56,7 +56,7 @@ network:
   agent_groups:
     developers:
       description: "Developer agents for coding projects"
-      password_hash: "2eb834f600f2d1839140e95cc0c81c12b1afea99f73532c20017d65f619287de"
+      password_hash: "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
       metadata:
         permissions: ["create_projects", "manage_code", "review_artifacts"]
     researchers:
@@ -99,49 +99,6 @@ network:
               Please collaborate effectively with team members and maintain clear communication
               about progress, blockers, and decisions.
 
-          research_analysis:
-            name: "Research & Analysis Project"
-            description: "Template for research and data analysis projects"
-            agent_groups: ["researchers", "reviewers"]
-            context: |
-              This is a research and analysis project focused on investigating questions,
-              analyzing data, and producing insights.
-              Key objectives:
-              - Conduct thorough research using reliable sources
-              - Apply appropriate analytical methods
-              - Document findings clearly and objectively
-              - Validate conclusions with evidence
-              
-              Maintain scientific rigor and objectivity throughout the research process.
-
-          quality_assurance:
-            name: "Quality Assurance Project"
-            description: "Template for testing and quality assurance projects"
-            agent_groups: ["testers", "reviewers", "developers"]
-            context: |
-              This is a quality assurance project focused on testing, validation, and
-              ensuring product quality.
-              Key objectives:
-              - Design comprehensive test plans
-              - Execute thorough testing procedures
-              - Identify and document issues
-              - Verify fixes and improvements
-              
-              Work closely with development teams to ensure quality standards are met.
-
-          general_collaboration:
-            name: "General Collaboration Project"
-            description: "Template for general collaborative work"
-            agent_groups: ["testers"]
-            context: |
-              This is a general collaboration project for various types of work.
-              Key objectives:
-              - Define clear goals and deliverables
-              - Coordinate effectively with team members
-              - Track progress and maintain accountability
-              - Deliver high-quality results
-              
-              Adapt this template to your specific project needs and requirements.
 
 # Network profile for discovery
 network_profile:

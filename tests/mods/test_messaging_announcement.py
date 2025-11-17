@@ -88,7 +88,8 @@ async def admin_client(announcement_test_network):
         admin_password_hash = config.network.agent_groups["admin"].password_hash
 
     client = AgentClient(agent_id="admin_user")
-    await client.connect("localhost", http_port, password_hash=admin_password_hash)
+    # Enforce HTTP transport to avoid gRPC connection issues in CI
+    await client.connect("localhost", http_port, password_hash=admin_password_hash, enforce_transport_type="http")
 
     # Give client time to connect and register
     await asyncio.sleep(1.0)
@@ -108,7 +109,8 @@ async def regular_client(announcement_test_network):
     network, config, grpc_port, http_port = announcement_test_network
 
     client = AgentClient(agent_id="regular_user")
-    await client.connect("localhost", http_port)
+    # Enforce HTTP transport to avoid gRPC connection issues in CI
+    await client.connect("localhost", http_port, enforce_transport_type="http")
 
     # Give client time to connect and register
     await asyncio.sleep(1.0)

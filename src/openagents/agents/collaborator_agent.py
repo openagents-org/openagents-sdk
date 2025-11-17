@@ -31,7 +31,7 @@ class CollaboratorAgent(AgentRunner):
             )
             await self.run_agent(context=context, user_instruction=trigger.instruction)
         else:
-            if self.agent_config.react_to_all_messages:
+            if self.agent_config is not None and self.agent_config.react_to_all_messages:
                 logger.debug(
                     f"No trigger found for event: {context.incoming_event.event_name} but react_to_all_messages is True, responding with default instruction"
                 )
