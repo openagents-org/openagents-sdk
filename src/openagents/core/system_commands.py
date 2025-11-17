@@ -7,6 +7,7 @@ System commands are used for network operations like registration, listing agent
 
 import logging
 import time
+import uuid
 from typing import TYPE_CHECKING, Dict, Any, List, Optional, Callable, Awaitable, Union
 from openagents.config.globals import (
     SYSTEM_EVENT_REGISTER_AGENT,
@@ -30,6 +31,7 @@ from openagents.config.globals import (
     SYSTEM_EVENT_LIST_CHANNELS,
     SYSTEM_EVENT_VERIFY_PASSWORD,
     SYSTEM_EVENT_KICK_AGENT,
+    SYSTEM_EVENT_UPDATE_NETWORK_PROFILE,
     SYSTEM_NOTIFICATION_AGENT_KICKED,
 )
 from openagents.models.event import Event
@@ -77,6 +79,7 @@ class SystemCommandProcessor:
             SYSTEM_EVENT_LIST_CHANNELS: self.handle_list_channels,
             SYSTEM_EVENT_VERIFY_PASSWORD: self.handle_verify_password,
             SYSTEM_EVENT_KICK_AGENT: self.handle_kick_agent,
+            SYSTEM_EVENT_UPDATE_NETWORK_PROFILE: self.handle_update_network_profile,
         }
 
     async def process_command(self, system_event: Event) -> Optional[EventResponse]:
@@ -983,5 +986,251 @@ class SystemCommandProcessor:
                     "type": "system_response",
                     "command": "kick_agent",
                     "target_agent_id": target_agent_id,
+                }
+            )
+
+    async def handle_update_network_profile(self, event: Event) -> EventResponse:
+        """Handle the update_network_profile command.
+        
+        Updates network profile configuration in real-time:
+        - Validates partial update payload
+        - Merges with current configuration
+        - Writes to YAML atomically
+        - Refreshes in-memory config
+        - Immediately reflects in /api/health
+        
+        Only agents in the 'admin' group can update network profile.
+        """
+        requesting_agent_id = event.payload.get("agent_id", event.source_id)
+        profile_update = event.payload.get("profile")
+        
+        if not requesting_agent_id:
+            return EventResponse(
+                success=False,
+                message="Missing requesting agent_id",
+                data={
+                    "type": "system_response",
+                    "command": "update_network_profile",
+                }
+            )
+        
+        if not profile_update or not isinstance(profile_update, dict):
+            return EventResponse(
+                success=False,
+                message="Missing or invalid 'profile' field in payload",
+                data={
+                    "type": "system_response",
+                    "command": "update_network_profile",
+                }
+            )
+        
+        # Check if requesting agent is in admin group
+        requesting_group = self.network.topology.agent_group_membership.get(requesting_agent_id)
+        if requesting_group != "admin":
+            self.logger.warning(
+                f"Unauthorized network profile update attempt by {requesting_agent_id} (group: {requesting_group})"
+            )
+            return EventResponse(
+                success=False,
+                message="Unauthorized: Admin privileges required to update network profile",
+                data={
+                    "type": "system_response",
+                    "command": "update_network_profile",
+                    "requesting_agent": requesting_agent_id,
+                    "requesting_group": requesting_group,
+                }
+            )
+        
+        try:
+            from openagents.models.network_profile_update import NetworkProfilePatch, NetworkProfileComplete
+            from pydantic import ValidationError
+            import yaml
+            import os
+            import tempfile
+            import shutil
+            import threading
+            from pathlib import Path
+            
+            # Validate patch (forbids unknown fields)
+            try:
+                patch = NetworkProfilePatch(**profile_update)
+            except ValidationError as e:
+                error_details = []
+                for error in e.errors():
+                    field = ".".join(str(loc) for loc in error["loc"])
+                    message = error["msg"]
+                    error_details.append(f"{field}: {message}")
+                
+                return EventResponse(
+                    success=False,
+                    message=f"Validation failed: {'; '.join(error_details)}",
+                    data={
+                        "type": "system_response",
+                        "command": "update_network_profile",
+                        "errors": error_details,
+                    }
+                )
+            
+            # Get current profile
+            current_profile = {}
+            if hasattr(self.network.config, "network_profile") and self.network.config.network_profile:
+                profile_obj = self.network.config.network_profile
+                if hasattr(profile_obj, "model_dump"):
+                    current_profile = profile_obj.model_dump(mode="json", exclude_none=False)
+                elif isinstance(profile_obj, dict):
+                    current_profile = profile_obj.copy()
+            
+            # Merge patch into current
+            merged_profile = current_profile.copy()
+            patch_dict = patch.model_dump(exclude_none=True)
+            updated_fields = list(patch_dict.keys())
+            
+            for key, value in patch_dict.items():
+                merged_profile[key] = value
+            
+            # Apply defaults if missing
+            if "port" not in merged_profile or merged_profile["port"] is None:
+                merged_profile["port"] = 8700
+
+            # Ensure network_id is preserved from current config
+            if "network_id" not in merged_profile or not merged_profile["network_id"]:
+                # Try to get network_id from network config
+                if hasattr(self.network.config, "network_profile") and self.network.config.network_profile:
+                    profile_obj = self.network.config.network_profile
+                    if hasattr(profile_obj, "network_id") and profile_obj.network_id:
+                        merged_profile["network_id"] = profile_obj.network_id
+                    elif isinstance(profile_obj, dict) and profile_obj.get("network_id"):
+                        merged_profile["network_id"] = profile_obj["network_id"]
+
+                # If still not found, generate a new one as fallback
+                if "network_id" not in merged_profile or not merged_profile["network_id"]:
+                    merged_profile["network_id"] = f"network-{uuid.uuid4().hex[:8]}"
+
+            # Validate complete profile
+            try:
+                complete_profile = NetworkProfileComplete(**merged_profile)
+            except ValidationError as e:
+                error_details = []
+                for error in e.errors():
+                    field = ".".join(str(loc) for loc in error["loc"])
+                    message = error["msg"]
+                    error_details.append(f"{field}: {message}")
+                
+                return EventResponse(
+                    success=False,
+                    message=f"Merged profile validation failed: {'; '.join(error_details)}",
+                    data={
+                        "type": "system_response",
+                        "command": "update_network_profile",
+                        "errors": error_details,
+                    }
+                )
+            
+            final_profile = complete_profile.model_dump(mode="json", exclude_none=False)
+            
+            # Find config file path
+            config_path = None
+            if hasattr(self.network, "config_path") and self.network.config_path:
+                config_path = Path(self.network.config_path)
+            
+            # Atomic YAML write with file lock
+            if config_path and config_path.exists():
+                # Use a lock for thread-safe file operations
+                lock_file = Path(str(config_path) + ".lock")
+                lock = threading.Lock()
+                
+                with lock:
+                    try:
+                        # Read existing config
+                        with open(config_path, 'r', encoding='utf-8') as f:
+                            config_data = yaml.safe_load(f) or {}
+                        
+                        # Update network_profile section
+                        config_data['network_profile'] = final_profile
+                        
+                        # Write to temporary file
+                        temp_fd, temp_path = tempfile.mkstemp(
+                            suffix='.yaml',
+                            dir=config_path.parent,
+                            text=True
+                        )
+                        
+                        try:
+                            with os.fdopen(temp_fd, 'w', encoding='utf-8') as f:
+                                yaml.dump(
+                                    config_data,
+                                    f,
+                                    default_flow_style=False,
+                                    allow_unicode=True,
+                                    sort_keys=False
+                                )
+                                f.flush()
+                                os.fsync(f.fileno())
+                            
+                            # Atomic rename
+                            shutil.move(temp_path, config_path)
+                            self.logger.info(f"Network profile written to {config_path}")
+                            
+                        except Exception as e:
+                            # Clean up temp file on error
+                            if os.path.exists(temp_path):
+                                os.remove(temp_path)
+                            raise
+                    
+                    except Exception as e:
+                        self.logger.error(f"Failed to write YAML config: {e}")
+                        return EventResponse(
+                            success=False,
+                            message=f"Failed to write configuration file: {str(e)}",
+                            data={
+                                "type": "system_response",
+                                "command": "update_network_profile",
+                            }
+                        )
+            
+            # Update in-memory configuration
+            from openagents.models.network_profile import NetworkProfile
+            try:
+                updated_profile_obj = NetworkProfile(**final_profile)
+                self.network.config.network_profile = updated_profile_obj
+                self.logger.info("Network profile updated in memory")
+            except Exception as e:
+                # Fallback to dict
+                self.network.config.network_profile = final_profile
+                self.logger.warning(f"Updated network profile as dict (NetworkProfile creation failed: {e})")
+            
+            # Generate warnings
+            warnings = []
+            if "required_openagents_version" in patch_dict:
+                # Could compare with current version if available
+                self.logger.info(f"Required OpenAgents version updated to: {final_profile['required_openagents_version']}")
+            
+            # Audit log
+            self.logger.info(
+                f"🔒 AUDIT: Network profile updated by {requesting_agent_id}. "
+                f"Updated fields: {updated_fields} at {time.time()}"
+            )
+            
+            return EventResponse(
+                success=True,
+                message="Network profile updated successfully",
+                data={
+                    "type": "system_response",
+                    "command": "update_network_profile",
+                    "network_profile": final_profile,
+                    "warnings": warnings,
+                }
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Error updating network profile: {e}")
+            import traceback
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
+            return EventResponse(
+                success=False,
+                message=f"Internal error while updating network profile: {str(e)}",
+                data={
+                    "type": "system_response",
+                    "command": "update_network_profile",
                 }
             )

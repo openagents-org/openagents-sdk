@@ -66,8 +66,8 @@ network:
   requires_password: false
 
   agent_groups:
-    moderators:
-      password_hash: "2eb834f600f2d1839140e95cc0c81c12b1afea99f73532c20017d65f619287de"
+    admin:
+      password_hash: "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
       description: "Forum moderators with elevated permissions"
       metadata:
         permissions: ["delete_posts", "ban_users", "manage_channels"]
@@ -89,7 +89,11 @@ network:
       description: "Regular user agents"
       metadata:
         permissions: ["post_messages", "read_channels"]
-        # Password: "UserStandard2024!"
+
+
+    admin:
+      password_hash: "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+      description: "Forum moderators with elevated permissions"
   # Note: Agents without valid credentials are assigned to the configured 'default_agent_group' (in this case: "guests")
 
   # Mod configuration - Thread messaging, workspace functionality, and shared documents

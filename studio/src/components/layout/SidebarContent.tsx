@@ -15,7 +15,8 @@ const SidebarContent: React.FC = () => {
 
   // Decide which sidebar content to display based on current route
   const renderContent = () => {
-    const pathname = location.pathname
+
+    const pathname = location.pathname;
 
     if (pathname.startsWith("/messaging")) {
       return <MessagingSidebar />

@@ -66,6 +66,7 @@ class AgentNetwork:
         self.config = config
         self.network_name = config.name
         self.network_id = config.node_id or f"network-{uuid.uuid4().hex[:8]}"
+        self.config_path: Optional[str] = None  # Set by load() if loaded from file
 
         # Workspace manager for persistent storage
         self.workspace_manager = None
@@ -254,13 +255,21 @@ class AgentNetwork:
                         f"Configuration file {config_path} must contain a 'network' section"
                     )
 
-                network_config = NetworkConfig(**config_dict["network"])
+                # Extract network profile from root level if present
+                network_config_dict = config_dict["network"]
+                if "network_profile" in config_dict:
+                    network_config_dict["network_profile"] = config_dict["network_profile"]
+                
+                network_config = NetworkConfig(**network_config_dict)
                 logger.info(f"Loaded network configuration from {config_path}")
 
                 # Create the network instance using create_from_config for consistent mod loading
                 network = AgentNetwork.create_from_config(
                     network_config, port, workspace_path
                 )
+
+                # Store the config file path for later use (e.g., saving updates)
+                network.config_path = str(config_path.resolve())
 
                 # Load metadata if specified in config
                 if "metadata" in config_dict:
@@ -527,7 +536,16 @@ class AgentNetwork:
                 "metadata": {},
             })
 
-        return {
+        # Include network_profile if available
+        network_profile_data = None
+        if hasattr(self.config, "network_profile") and self.config.network_profile:
+            profile = self.config.network_profile
+            if hasattr(profile, "model_dump"):
+                network_profile_data = profile.model_dump(mode="json", exclude_none=False)
+            elif isinstance(profile, dict):
+                network_profile_data = profile
+        
+        stats = {
             "network_id": self.network_id,
             "network_name": self.network_name,
             "is_running": self.is_running,
@@ -560,6 +578,11 @@ class AgentNetwork:
             "recommended_transport": self.config.recommended_transport,
             "max_connections": self.config.max_connections,
         }
+        
+        if network_profile_data:
+            stats["network_profile"] = network_profile_data
+        
+        return stats
 
     async def process_external_event(self, event: Event) -> EventResponse:
         """Handle incoming transport messages.

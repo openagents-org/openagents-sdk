@@ -23,7 +23,7 @@ const ProfileSidebar: React.FC = () => {
   const navItems = [
     {
       id: "profile",
-      label: "Profile",
+      label: "Network Status",
       path: "/profile",
       icon: (
         <svg
@@ -48,6 +48,26 @@ const ProfileSidebar: React.FC = () => {
       id: "agent-management",
       label: "Agent Management",
       path: "/profile/agent-management",
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: "network-profile",
+      label: "Network Profile",
+      path: "/profile/network-profile",
       icon: (
         <svg
           className="w-5 h-5"
@@ -113,7 +133,7 @@ const ProfileSidebar: React.FC = () => {
       )}
 
       {/* Network Management Section - Only visible for admin */}
-      {!isLoading && isAdmin && (
+      {(!isLoading && isAdmin)  && (
         <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
           {/* Section Header */}
           <div className="flex items-center px-2 mb-2">
