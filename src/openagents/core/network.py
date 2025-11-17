@@ -254,7 +254,12 @@ class AgentNetwork:
                         f"Configuration file {config_path} must contain a 'network' section"
                     )
 
-                network_config = NetworkConfig(**config_dict["network"])
+                # Extract network profile from root level if present
+                network_config_dict = config_dict["network"]
+                if "network_profile" in config_dict:
+                    network_config_dict["network_profile"] = config_dict["network_profile"]
+                
+                network_config = NetworkConfig(**network_config_dict)
                 logger.info(f"Loaded network configuration from {config_path}")
 
                 # Create the network instance using create_from_config for consistent mod loading
