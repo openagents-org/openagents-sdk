@@ -839,6 +839,8 @@ class DefaultProjectNetworkMod(BaseMod):
 
     async def _send_project_started_notifications(self, project: Project) -> None:
         """Send project started notifications to all authorized agents."""
+        if not hasattr(self, 'network') or not self.network:
+            return
         authorized_agents = self._resolve_authorized_agents_for_project(project)
         for agent_id in authorized_agents:
             notification = Event(
@@ -858,6 +860,8 @@ class DefaultProjectNetworkMod(BaseMod):
 
     async def _send_project_stopped_notifications(self, project: Project, stopped_by: str, reason: Optional[str]) -> None:
         """Send project stopped notifications."""
+        if not hasattr(self, 'network') or not self.network:
+            return
         authorized_agents = self._resolve_authorized_agents_for_project(project)
         for agent_id in authorized_agents:
             notification = Event(
@@ -875,6 +879,8 @@ class DefaultProjectNetworkMod(BaseMod):
 
     async def _send_project_completed_notifications(self, project: Project, completed_by: str, summary: str) -> None:
         """Send project completed notifications."""
+        if not hasattr(self, 'network') or not self.network:
+            return
         authorized_agents = self._resolve_authorized_agents_for_project(project)
         for agent_id in authorized_agents:
             notification = Event(
@@ -892,6 +898,8 @@ class DefaultProjectNetworkMod(BaseMod):
 
     async def _send_message_received_notifications(self, project: Project, sender_id: str, message_id: str, content: Dict[str, Any], reply_to_id: Optional[str], timestamp: int) -> None:
         """Send message received notifications."""
+        if not hasattr(self, 'network') or not self.network:
+            return
         authorized_agents = self._resolve_authorized_agents_for_project(project)
         for agent_id in authorized_agents:
             if agent_id != sender_id:  # Don't notify sender
@@ -912,6 +920,8 @@ class DefaultProjectNetworkMod(BaseMod):
 
     async def _send_artifact_updated_notifications(self, project: Project, updated_by: str, key: str, action: str) -> None:
         """Send artifact updated notifications."""
+        if not hasattr(self, 'network') or not self.network:
+            return
         authorized_agents = self._resolve_authorized_agents_for_project(project)
         for agent_id in authorized_agents:
             if agent_id != updated_by:  # Don't notify updater
