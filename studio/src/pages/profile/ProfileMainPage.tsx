@@ -23,7 +23,7 @@ const ProfileMainPage: React.FC = () => {
       {/* 默认个人资料视图 */}
       <Route index element={<ProfileDashboard />} />
 
-      {/* 个人信息编辑子页面 */}
+      {/* Profile edit subpage */}
       <Route
         path="edit"
         element={
@@ -38,7 +38,7 @@ const ProfileMainPage: React.FC = () => {
         }
       />
 
-      {/* 安全设置子页面 */}
+      {/* Security settings subpage */}
       <Route
         path="security"
         element={
@@ -53,14 +53,14 @@ const ProfileMainPage: React.FC = () => {
         }
       />
 
-      {/* Agent Management 子页面 - Admin only */}
+      {/* Agent Management subpage - Admin only */}
       <Route path="agent-management" element={<AgentManagement />} />
       <Route path="network-profile" element={<NetworkProfile />} />
       
-      {/* Event Logs 子页面 */}
+      {/* Event Logs subpage */}
       <Route path="event-logs" element={<EventLogs />} />
       
-      {/* Event Debugger 子页面 */}
+      {/* Event Debugger subpage */}
       <Route path="event-debugger" element={<EventDebugger />} />
       
     </Routes>
