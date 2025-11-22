@@ -171,11 +171,31 @@ def _create_agent_config_from_yaml(
             config_data = config_data.copy()
             config_data["mcps"] = mcp_configs
 
+        # Process tools configurations if provided
+        tools_data = config_data.get("tools", [])
+        if tools_data:
+            from openagents.models.tool_config import AgentToolConfig
+            tool_configs = []
+            for tool_data in tools_data:
+                try:
+                    tool_config = AgentToolConfig(**tool_data)
+                    tool_configs.append(tool_config)
+                    logger.debug(f"Added tool config: {tool_config.name}")
+                except Exception as e:
+                    logger.error(f"Invalid tool config: {e}")
+                    raise ValueError(f"Invalid tool configuration: {e}")
+            
+            # Add tool configs to the config data
+            config_data = config_data.copy()
+            config_data["tools"] = tool_configs
+
         # Create AgentConfig using the constructor with validation
         agent_config = AgentConfig(**config_data)
         logger.debug(f"Created AgentConfig with model: {agent_config.model_name}")
         if agent_config.mcps:
             logger.info(f"AgentConfig includes {len(agent_config.mcps)} MCP servers")
+        if agent_config.tools:
+            logger.info(f"AgentConfig includes {len(agent_config.tools)} custom tools")
         return agent_config
     except Exception as e:
         raise ValueError(f"Invalid AgentConfig data: {e}")

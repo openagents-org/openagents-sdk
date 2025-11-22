@@ -60,6 +60,7 @@ class AgentRunner(ABC):
         self._tools = []
         self._mcp_tools = []
         self._mod_tools = []
+        self._custom_tools = []
         self._supported_mods = None
         self._running = False
         self._processed_message_ids = set()
@@ -94,8 +95,8 @@ class AgentRunner(ABC):
             else:
                 self._network_client = AgentClient(agent_id=self._agent_id)
 
-        # Update tools if we have mod information
-        if self._supported_mods is not None:
+        # Update tools if we have mod information or custom tools
+        if self._supported_mods is not None or (self._agent_config and self._agent_config.tools):
             self.update_tools()
 
     @property
@@ -112,13 +113,58 @@ class AgentRunner(ABC):
         self._mod_tools = self.client.get_tools()
         # Add MCP tools if available
         self._mcp_tools = self._mcp_connector.get_mcp_tools()
+        # Add custom tools from agent configuration
+        self._custom_tools = self._load_custom_tools()
 
-        all_tools = self._mod_tools + self._mcp_tools
+        all_tools = self._mod_tools + self._mcp_tools + self._custom_tools
         
         # Log info about all available tools
         tool_names = [tool.name for tool in all_tools]
         logger.info(f"Updated available tools for agent {self._agent_id}: {tool_names}")
         self._tools = all_tools
+
+    def _load_custom_tools(self) -> List[AgentTool]:
+        """Load custom tools from agent configuration.
+        
+        Returns:
+            List of AgentTool instances from the agent configuration
+        """
+        custom_tools = []
+        
+        if self._agent_config and self._agent_config.tools:
+            from openagents.models.tool_config import create_tools_from_configs
+            import sys
+            import os
+            
+            # Save original sys.path to restore later
+            original_path = sys.path.copy()
+            
+            try:
+                # Try to add common tool paths to sys.path
+                current_dir = os.getcwd()
+                possible_tool_paths = [
+                    current_dir,
+                    os.path.join(current_dir, "private_networks", "yaml_coordinator_test_network"),
+                    os.path.join(current_dir, "tools"),
+                ]
+                
+                for path in possible_tool_paths:
+                    if os.path.exists(path) and path not in sys.path:
+                        sys.path.insert(0, path)
+                
+                custom_tools = create_tools_from_configs(self._agent_config.tools)
+                logger.info(f"Loaded {len(custom_tools)} custom tools from agent config")
+                for tool in custom_tools:
+                    logger.debug(f"Loaded custom tool: {tool.name}")
+            except Exception as e:
+                logger.error(f"Failed to load custom tools from agent config: {e}")
+                # Don't fail the entire agent initialization for tool loading errors
+                custom_tools = []
+            finally:
+                # Restore original sys.path
+                sys.path = original_path
+        
+        return custom_tools
 
     @staticmethod
     def from_yaml(
@@ -218,12 +264,14 @@ class AgentRunner(ABC):
             disable_mcp: Whether to disable MCP tools
             disable_mods: Whether to disable network interaction with mods
         """
-        # Get tools from MCP and mods
+        # Get tools from MCP, mods, and custom tools
         tools = []
         if not disable_mcp:
             tools.extend(self._mcp_tools)
         if not disable_mods:
             tools.extend(self._mod_tools)
+        # Always include custom tools from agent configuration
+        tools.extend(self._custom_tools)
         
         return await orchestrate_agent(
             context=context,
