@@ -194,13 +194,15 @@ def _process_mods_config(
     Returns:
         List of enabled mod names
     """
-    # Check if this is a WorkerAgent (avoid direct import to prevent circular dependency)
+    # Check if this is a WorkerAgent or CollaboratorAgent (avoid direct import to prevent circular dependency)
     is_worker_agent = "WorkerAgent" in str(agent_class)
+    is_collaborator_agent = "CollaboratorAgent" in str(agent_class)
+    needs_messaging = is_worker_agent or is_collaborator_agent
 
     if not mods_data:
-        # Auto-include workspace messaging for WorkerAgent if no mods specified
-        if is_worker_agent:
-            logger.debug("Auto-adding workspace messaging for WorkerAgent")
+        # Auto-include workspace messaging for agents that need messaging capabilities
+        if needs_messaging:
+            logger.debug(f"Auto-adding workspace messaging for {agent_class.__name__}")
             return ["openagents.mods.workspace.messaging"]
         else:
             # Return empty list for other agent types
@@ -226,13 +228,13 @@ def _process_mods_config(
         else:
             logger.debug(f"Skipped disabled mod: {mod_name}")
 
-    # Auto-include workspace messaging for WorkerAgent if not already present
-    if is_worker_agent:
+    # Auto-include workspace messaging for agents that need messaging if not already present
+    if needs_messaging:
         workspace_messaging = "openagents.mods.workspace.messaging"
         if workspace_messaging not in mod_names:
             mod_names.append(workspace_messaging)
             logger.debug(
-                f"Auto-added required mod for WorkerAgent: {workspace_messaging}"
+                f"Auto-added required mod for {agent_class.__name__}: {workspace_messaging}"
             )
 
     logger.info(f"Processed {len(mod_names)} enabled mods: {mod_names}")

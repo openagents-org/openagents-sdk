@@ -467,15 +467,35 @@ class AgentClient:
                     )
                     return None
 
-                print(f"🚀 Sending event via connector...")
-                print(f"   Final processed event name: {processed_event.event_name}")
-                print(
-                    f"   Final processed event target: {processed_event.destination_id}"
-                )
+                # Get outgoing event content preview for better logging
+                out_content_preview = "No content"
+                if processed_event.payload and "content" in processed_event.payload:
+                    content = processed_event.payload["content"]
+                    if isinstance(content, dict) and "text" in content:
+                        text = content["text"]
+                        out_content_preview = f'"{text[:50]}{"..." if len(text) > 50 else ""}"'
+                    elif isinstance(content, str):
+                        out_content_preview = f'"{content[:50]}{"..." if len(content) > 50 else ""}"'
+                
+                print(f"📤 SENDING EVENT: {processed_event.event_name}")
+                print(f"   From: {self.agent_id}")
+                print(f"   To: {processed_event.destination_id}")
+                print(f"   Content: {out_content_preview}")
+                
                 verbose_print(f"🚀 Sending event via connector...")
                 result = await self.connector.send_event(processed_event)
                 self._event_id_map[processed_event.event_id] = processed_event
-                print(f"✅ Event sent via connector - result: {result}")
+                
+                # Enhanced result logging
+                success = getattr(result, 'success', 'Unknown') if result else False
+                message = getattr(result, 'message', 'No message') if result else 'No result'
+                
+                print(f"✅ EVENT SENT: {processed_event.event_name}")
+                print(f"   Success: {success}")
+                print(f"   Message: {message}")
+                if hasattr(result, 'data') and result.data:
+                    print(f"   Response data keys: {list(result.data.keys()) if isinstance(result.data, dict) else 'Not a dict'}")
+                
                 verbose_print(f"✅ Event sent via connector successfully")
                 return result
             else:
@@ -628,23 +648,24 @@ class AgentClient:
         Args:
             event: The event to handle
         """
-        print(
-            f"🔧 CLIENT: Handling Event from {event.source_id}, event={event.event_name}"
-        )
-        print(
-            f"🔧 CLIENT: Event payload keys: {list(event.payload.keys()) if event.payload else 'None'}"
-        )
-        print(
-            f"🔧 CLIENT: Agent ID: {self.agent_id}, Event target: {event.destination_id}"
-        )
+        # Get event content preview for better logging
+        content_preview = "No content"
+        if event.payload and "content" in event.payload:
+            content = event.payload["content"]
+            if isinstance(content, dict) and "text" in content:
+                text = content["text"]
+                content_preview = f'"{text[:50]}{"..." if len(text) > 50 else ""}"'
+            elif isinstance(content, str):
+                content_preview = f'"{content[:50]}{"..." if len(content) > 50 else ""}"'
+        
+        print(f"📥 RECEIVED EVENT: {event.event_name}")
+        print(f"   From: {event.source_id}")
+        print(f"   To: {event.destination_id}")
+        print(f"   Content: {content_preview}")
+        print(f"   Payload keys: {list(event.payload.keys()) if event.payload else 'None'}")
+        
         logger.info(
-            f"🔧 CLIENT: Handling Event from {event.source_id}, event={event.event_name}"
-        )
-        logger.info(
-            f"🔧 CLIENT: Event payload keys: {list(event.payload.keys()) if event.payload else 'None'}"
-        )
-        logger.info(
-            f"🔧 CLIENT: Agent ID: {self.agent_id}, Event target: {event.destination_id}"
+            f"📥 RECEIVED EVENT: {event.event_name} from {event.source_id} - Content: {content_preview}"
         )
 
         # Notify any waiting functions

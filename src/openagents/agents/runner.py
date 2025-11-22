@@ -343,14 +343,11 @@ class AgentRunner(ABC):
                 unprocessed_count = 0
 
                 for thread_id, thread in event_threads.items():
-                    print(f"   Thread {thread_id}: {len(thread.events)} messages")
+                    # Only log thread summary once when messages change, not on every poll
                     for message in thread.events:
                         total_messages += 1
                         # Check if message hasn't been processed (regardless of requires_response)
                         message_id = str(message.message_id)
-                        print(
-                            f"     Message {message_id[:8]}... from {message.source_id}, processed={message_id in self._processed_message_ids}"
-                        )
                         if message_id not in self._processed_message_ids:
                             unprocessed_count += 1
                             # Find the earliest unprocessed message by timestamp
@@ -363,12 +360,16 @@ class AgentRunner(ABC):
 
                 # If we found an unprocessed message, process it
                 if unprocessed_message and unprocessed_thread_id:
-                    print(
-                        f"🔧 AGENT_RUNNER: Found unprocessed message {unprocessed_message.message_id[:8]}... from {unprocessed_message.source_id}"
-                    )
-                    print(
-                        f"🎯 Processing message {unprocessed_message.message_id[:8]}... from {unprocessed_message.source_id}"
-                    )
+                    # Get message content for better logging
+                    msg_content_preview = "No content"
+                    if hasattr(unprocessed_message, 'text') and unprocessed_message.text:
+                        msg_content_preview = f'"{unprocessed_message.text[:50]}{"..." if len(unprocessed_message.text) > 50 else ""}"'
+                    
+                    print(f"🔧 AGENT_RUNNER: Found unprocessed message {unprocessed_message.message_id[:8]}... from {unprocessed_message.source_id}")
+                    print(f"🎯 PROCESSING MESSAGE: {unprocessed_message.message_id[:8]}...")
+                    print(f"   From: {unprocessed_message.source_id}")
+                    print(f"   Content: {msg_content_preview}")
+                    print(f"   Timestamp: {unprocessed_message.timestamp}")
                     # logger.info(f"🔧 AGENT_RUNNER: Found unprocessed message {unprocessed_message.message_id[:8]}... from {unprocessed_message.source_id}")
                     # print(f"🎯 Processing message {unprocessed_message.message_id[:8]}... from {unprocessed_message.source_id}")
                     # Mark the message as processed to avoid processing it again
@@ -399,13 +400,18 @@ class AgentRunner(ABC):
                         event_threads=filtered_threads,
                         incoming_thread_id=unprocessed_thread_id,
                     )
-                    print(
-                        f"🔧 AGENT_RUNNER: Calling react method for message {unprocessed_message.message_id[:8]}..."
-                    )
+                    print(f"🔧 AGENT_RUNNER: Calling react method for message {unprocessed_message.message_id[:8]}...")
+                    
+                    import time
+                    start_time = time.time()
                     await self.react(context)
-                    print(
-                        f"🔧 AGENT_RUNNER: react method completed for message {unprocessed_message.message_id[:8]}"
-                    )
+                    elapsed = time.time() - start_time
+                    
+                    print(f"✅ AGENT RESPONSE COMPLETED: {unprocessed_message.message_id[:8]}")
+                    print(f"   Processing time: {elapsed:.2f}s")
+                    if elapsed > 1.0:
+                        print(f"   🤖 LLM API call detected (response time > 1s)")
+                    print(f"   Message marked as processed")
                 else:
                     await asyncio.sleep(self._interval or 1)
                     # print("😴 No unprocessed messages found, sleeping...")
@@ -733,4 +739,5 @@ class AgentRunner(ABC):
 
     def send_human_message(self, message: str):
         # TODO: Implement this
+        _ = message  # Silence unused variable warning
         pass
