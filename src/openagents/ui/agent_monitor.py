@@ -167,7 +167,7 @@ class AgentMonitorApp(App):
                 # Overview tab
                 with TabPane("📊 Overview", id="overview"):
                     self.overview_table = DataTable(id="overview_table")
-                    self.overview_table.add_columns("Agent ID", "Status", "Type", "Uptime", "Config")
+                    self.overview_table.add_columns("Agent ID", "Status", "File", "Type", "PID", "Uptime", "Config")
                     yield self.overview_table
                 
                 # Individual agent tabs
@@ -252,11 +252,22 @@ class AgentMonitorApp(App):
             else:
                 status_display = f"[dim]●[/dim] {status_text}"
             
+            # File type with icon
+            file_type = status.get('file_type', 'yaml')
+            file_icon = "🐍" if file_type == "python" else "📄"
+            file_display = f"{file_icon} {file_type}"
+            
+            # PID display
+            pid = status.get('pid')
+            pid_display = str(pid) if pid else "—"
+            
             # Add row
             self.overview_table.add_row(
                 agent_id,
                 status_display,
+                file_display,
                 status.get('agent_type', 'unknown'),
+                pid_display,
                 uptime_str,
                 status.get('config_path', '').split('/')[-1]  # Just filename
             )

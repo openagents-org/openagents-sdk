@@ -12,6 +12,8 @@ import yaml
 import signal
 import sys
 import os
+import ast
+import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass
@@ -31,6 +33,7 @@ class AgentInfo:
     agent_id: str
     agent_type: str
     connection_settings: Dict
+    file_type: str = "yaml"  # "yaml" or "python"
     is_valid: bool = True
     error_message: Optional[str] = None
 
@@ -40,10 +43,12 @@ class AgentInstance:
     """A running agent instance."""
     info: AgentInfo
     runner: Optional[AgentRunner] = None
+    process: Optional[subprocess.Popen] = None
     status: str = "stopped"  # stopped, starting, running, error, stopping
     error_message: Optional[str] = None
     start_time: Optional[float] = None
     log_buffer: List[str] = None
+    pid: Optional[int] = None
     
     def __post_init__(self):
         if self.log_buffer is None:
@@ -117,18 +122,28 @@ class BulkAgentManager:
         """Discover and validate agent configurations in a directory.
         
         Args:
-            directory: Directory to scan for YAML files
+            directory: Directory to scan for YAML and Python files
             
         Returns:
             List of AgentInfo objects for valid agent configurations
         """
         agent_configs = []
+        
+        # Find YAML files
         yaml_files = list(directory.glob("*.yaml")) + list(directory.glob("*.yml"))
         
-        if not yaml_files:
-            logger.warning(f"No YAML files found in {directory}")
+        # Find Python files
+        python_files = list(directory.glob("*.py"))
+        
+        all_files = yaml_files + python_files
+        
+        if not all_files:
+            logger.warning(f"No YAML or Python agent files found in {directory}")
             return []
         
+        logger.info(f"Found {len(yaml_files)} YAML files and {len(python_files)} Python files")
+        
+        # Process YAML files
         for yaml_file in yaml_files:
             try:
                 agent_info = self._parse_agent_config(yaml_file)
@@ -142,6 +157,26 @@ class BulkAgentManager:
                     agent_id=yaml_file.stem,
                     agent_type="unknown",
                     connection_settings={},
+                    file_type="yaml",
+                    is_valid=False,
+                    error_message=str(e)
+                ))
+        
+        # Process Python files
+        for python_file in python_files:
+            try:
+                agent_info = self._parse_python_agent(python_file)
+                if agent_info:
+                    agent_configs.append(agent_info)
+            except Exception as e:
+                logger.error(f"Error parsing {python_file}: {e}")
+                # Still add invalid configs for user feedback
+                agent_configs.append(AgentInfo(
+                    config_path=python_file,
+                    agent_id=python_file.stem,
+                    agent_type="python_agent",
+                    connection_settings={},
+                    file_type="python",
                     is_valid=False,
                     error_message=str(e)
                 ))
@@ -181,12 +216,115 @@ class BulkAgentManager:
                 agent_id=agent_id,
                 agent_type=agent_type,
                 connection_settings=connection_settings,
+                file_type="yaml",
                 is_valid=True
             )
             
         except Exception as e:
             logger.error(f"Error parsing config {config_path}: {e}")
             raise
+    
+    def _parse_python_agent(self, python_path: Path) -> Optional[AgentInfo]:
+        """Parse a single Python agent file.
+        
+        Args:
+            python_path: Path to the Python agent file
+            
+        Returns:
+            AgentInfo if valid Python agent, None if not an agent file
+        """
+        try:
+            with open(python_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Parse the Python file using AST
+            tree = ast.parse(content, filename=str(python_path))
+            
+            agent_class = None
+            agent_id = None
+            default_network_host = "localhost"
+            default_network_port = 8700
+            
+            # Look for agent class definitions and metadata
+            for node in ast.walk(tree):
+                # Find classes that inherit from agent base classes
+                if isinstance(node, ast.ClassDef):
+                    # Check if it inherits from known agent classes
+                    for base in node.bases:
+                        base_name = self._get_ast_name(base)
+                        if base_name in ['WorkerAgent', 'SimpleAgent', 'CollaboratorAgent', 'AgentRunner']:
+                            agent_class = node.name
+                            break
+                
+                # Look for default_agent_id attribute
+                if isinstance(node, ast.Assign):
+                    for target in node.targets:
+                        if isinstance(target, ast.Name) and target.id == 'default_agent_id':
+                            if isinstance(node.value, ast.Constant):
+                                agent_id = node.value.value
+                
+                # Look for network connection calls in main() or start()
+                if isinstance(node, ast.Call):
+                    func_name = self._get_ast_name(node.func)
+                    if func_name in ['start', 'async_start']:
+                        # Extract network_host and network_port from arguments
+                        for keyword in node.keywords:
+                            if keyword.arg == 'network_host':
+                                if isinstance(keyword.value, ast.Constant):
+                                    default_network_host = keyword.value.value
+                            elif keyword.arg == 'network_port':
+                                if isinstance(keyword.value, ast.Constant):
+                                    default_network_port = keyword.value.value
+            
+            # Check if this looks like an agent file
+            if not agent_class:
+                logger.debug(f"Skipping {python_path}: no agent class found")
+                return None
+            
+            # Check for if __name__ == "__main__" block
+            has_main_block = any(
+                isinstance(node, ast.If) and 
+                isinstance(node.test, ast.Compare) and
+                isinstance(node.test.left, ast.Name) and
+                node.test.left.id == '__name__' and
+                any(isinstance(comp, ast.Constant) and comp.value == '__main__' 
+                    for comp in node.test.comparators)
+                for node in tree.body
+            )
+            
+            if not has_main_block:
+                logger.debug(f"Skipping {python_path}: no __main__ block found")
+                return None
+            
+            # Use filename as agent_id if not found in code
+            if not agent_id:
+                agent_id = python_path.stem
+            
+            return AgentInfo(
+                config_path=python_path,
+                agent_id=agent_id,
+                agent_type=agent_class,
+                connection_settings={
+                    "host": default_network_host,
+                    "port": default_network_port
+                },
+                file_type="python",
+                is_valid=True
+            )
+            
+        except Exception as e:
+            logger.error(f"Error parsing Python file {python_path}: {e}")
+            raise
+    
+    def _get_ast_name(self, node: ast.AST) -> str:
+        """Extract name from an AST node (handles Name, Attribute, etc.)."""
+        if isinstance(node, ast.Name):
+            return node.id
+        elif isinstance(node, ast.Attribute):
+            return node.attr
+        elif isinstance(node, ast.Call):
+            return self._get_ast_name(node.func)
+        return ""
     
     def add_agents(self, agent_infos: List[AgentInfo]) -> None:
         """Add agent configurations to the manager.
@@ -202,7 +340,7 @@ class BulkAgentManager:
             self.agents[info.agent_id] = AgentInstance(info=info)
     
     async def start_agent(self, agent_id: str, connection_override: Optional[Dict] = None) -> bool:
-        """Start a single agent.
+        """Start a single agent using subprocess.
         
         Args:
             agent_id: ID of the agent to start
@@ -232,88 +370,102 @@ class BulkAgentManager:
             agent_instance.start_time = time.time()
             agent_instance.error_message = None
             
-            # Load agent using AgentRunner.from_yaml
-            runner = AgentRunner.from_yaml(
-                str(agent_instance.info.config_path),
-                connection_override=connection_override
+            # Prepare connection settings
+            connection_settings = agent_instance.info.connection_settings.copy()
+            if connection_override:
+                connection_settings.update(connection_override)
+            
+            # Build command based on file type
+            if agent_instance.info.file_type == "yaml":
+                # YAML agent: use openagents CLI
+                cmd = [
+                    sys.executable, "-m", "openagents.cli", "agent", "start",
+                    str(agent_instance.info.config_path)
+                ]
+                
+                # Add connection overrides as CLI arguments
+                if connection_settings.get("host"):
+                    cmd.extend(["--network-host", connection_settings["host"]])
+                if connection_settings.get("port"):
+                    cmd.extend(["--network-port", str(connection_settings["port"])])
+                if connection_settings.get("network_id"):
+                    cmd.extend(["--network-id", connection_settings["network_id"]])
+            
+            elif agent_instance.info.file_type == "python":
+                # Python agent: direct execution
+                cmd = [sys.executable, str(agent_instance.info.config_path)]
+            
+            else:
+                raise ValueError(f"Unsupported file type: {agent_instance.info.file_type}")
+            
+            # Set environment variables for Python agents
+            env = os.environ.copy()
+            if agent_instance.info.file_type == "python":
+                env["OPENAGENTS_NETWORK_HOST"] = connection_settings.get("host", "localhost")
+                env["OPENAGENTS_NETWORK_PORT"] = str(connection_settings.get("port", 8700))
+                if connection_settings.get("network_id"):
+                    env["OPENAGENTS_NETWORK_ID"] = connection_settings["network_id"]
+            
+            # Set working directory to the agent file's directory
+            cwd = agent_instance.info.config_path.parent
+            
+            # Start subprocess
+            logger.info(f"Starting {agent_instance.info.file_type} agent '{agent_id}' with command: {' '.join(cmd)}")
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+                cwd=cwd,
+                env=env
             )
-            agent_instance.runner = runner
             
-            # Start the agent in background thread with gRPC error handling
-            def start_agent_sync():
-                try:
-                    # Prepare connection settings
-                    connection_settings = agent_instance.info.connection_settings.copy()
-                    if connection_override:
-                        connection_settings.update(connection_override)
-                    
-                    # Add retry logic for gRPC connection issues
-                    max_retries = 3
-                    retry_delay = 1.0
-                    
-                    for attempt in range(max_retries):
-                        try:
-                            # Start the agent
-                            runner.start(
-                                network_host=connection_settings.get("host"),
-                                network_port=connection_settings.get("port"),
-                                network_id=connection_settings.get("network_id"),
-                                metadata={
-                                    "agent_type": agent_instance.info.agent_type,
-                                    "config_file": str(agent_instance.info.config_path)
-                                }
-                            )
-                            
-                            agent_instance.status = "running"
-                            logger.info(f"Agent '{agent_id}' started successfully")
-                            break
-                            
-                        except (OSError, ConnectionError, Exception) as e:
-                            error_msg = str(e)
-                            if "BlockingIOError" in error_msg or "Resource temporarily unavailable" in error_msg:
-                                if attempt < max_retries - 1:
-                                    logger.warning(f"Agent '{agent_id}' gRPC connection failed (attempt {attempt + 1}), retrying in {retry_delay}s...")
-                                    time.sleep(retry_delay)
-                                    retry_delay *= 1.5  # Exponential backoff
-                                    continue
-                                else:
-                                    logger.error(f"Agent '{agent_id}' failed after {max_retries} attempts due to gRPC resource issues")
-                                    agent_instance.status = "error"
-                                    agent_instance.error_message = "Failed to start agent: gRPC resource temporarily unavailable"
-                                    return
-                            else:
-                                # Non-gRPC error, don't retry
-                                raise e
-                    
-                    if agent_instance.status == "running":
-                        # Keep agent running until shutdown
-                        runner.wait_for_stop()
-                    
-                except Exception as e:
-                    agent_instance.status = "error"
-                    agent_instance.error_message = str(e)
-                    logger.error(f"Error starting agent '{agent_id}': {e}")
-                finally:
-                    if agent_instance.status == "running":
-                        agent_instance.status = "stopped"
+            agent_instance.process = process
+            agent_instance.pid = process.pid
+            agent_instance.status = "running"
             
-            # Submit to thread pool
-            future = self._executor.submit(start_agent_sync)
+            logger.info(f"Agent '{agent_id}' started successfully with PID {process.pid}")
             
-            # Wait a moment for startup to complete
-            await asyncio.sleep(0.5)
+            # Start log monitoring in background
+            asyncio.create_task(self._monitor_process_logs(agent_instance))
             
-            if agent_instance.status == "starting":
-                # Give it a bit more time
-                await asyncio.sleep(1.0)
-            
-            return agent_instance.status in ["running", "starting"]
+            return True
             
         except Exception as e:
             agent_instance.status = "error" 
             agent_instance.error_message = str(e)
             logger.error(f"Failed to start agent '{agent_id}': {e}")
             return False
+    
+    async def _monitor_process_logs(self, agent_instance: AgentInstance) -> None:
+        """Monitor subprocess logs and update log buffer."""
+        if not agent_instance.process:
+            return
+        
+        try:
+            # Simple process monitoring - just check if process is still alive
+            # Don't try to read logs in real-time as it can cause blocking issues
+            while agent_instance.process and agent_instance.process.poll() is None:
+                # Check if process is still running
+                await asyncio.sleep(2.0)  # Check every 2 seconds
+            
+            # Process has ended, check exit code
+            if agent_instance.process:
+                exit_code = agent_instance.process.returncode
+                if exit_code != 0:
+                    agent_instance.status = "error"
+                    agent_instance.error_message = f"Process exited with code {exit_code}"
+                    logger.error(f"Agent '{agent_instance.info.agent_id}' process exited with code {exit_code}")
+                else:
+                    agent_instance.status = "stopped"
+                    logger.info(f"Agent '{agent_instance.info.agent_id}' process ended normally")
+        
+        except Exception as e:
+            logger.error(f"Error monitoring process for agent '{agent_instance.info.agent_id}': {e}")
+            agent_instance.status = "error"
+            agent_instance.error_message = f"Process monitoring error: {e}"
     
     async def start_all_agents(
         self,
@@ -372,7 +524,7 @@ class BulkAgentManager:
         return success_map
     
     def stop_agent(self, agent_id: str) -> bool:
-        """Stop a single agent.
+        """Stop a single agent subprocess.
         
         Args:
             agent_id: ID of the agent to stop
@@ -386,15 +538,36 @@ class BulkAgentManager:
         
         agent_instance = self.agents[agent_id]
         
-        if agent_instance.status != "running":
-            logger.warning(f"Agent '{agent_id}' is not running")
+        if agent_instance.status not in ["running", "starting"]:
+            logger.warning(f"Agent '{agent_id}' is not running (status: {agent_instance.status})")
             return True
         
         try:
             agent_instance.status = "stopping"
             
+            if agent_instance.process:
+                logger.info(f"Terminating agent '{agent_id}' with PID {agent_instance.process.pid}")
+                
+                # Try graceful termination first
+                agent_instance.process.terminate()
+                
+                # Wait for graceful termination
+                try:
+                    agent_instance.process.wait(timeout=5)
+                    logger.info(f"Agent '{agent_id}' terminated gracefully")
+                except subprocess.TimeoutExpired:
+                    # Force kill if graceful termination fails
+                    logger.warning(f"Agent '{agent_id}' didn't terminate gracefully, force killing")
+                    agent_instance.process.kill()
+                    agent_instance.process.wait()
+                
+                agent_instance.process = None
+                agent_instance.pid = None
+            
+            # Also stop runner if it exists (backward compatibility)
             if agent_instance.runner:
                 agent_instance.runner.stop()
+                agent_instance.runner = None
             
             agent_instance.status = "stopped"
             logger.info(f"Agent '{agent_id}' stopped successfully")
@@ -439,11 +612,13 @@ class BulkAgentManager:
             "agent_id": agent_id,
             "config_path": str(agent_instance.info.config_path),
             "agent_type": agent_instance.info.agent_type,
+            "file_type": agent_instance.info.file_type,
             "status": agent_instance.status,
             "is_valid": agent_instance.info.is_valid,
             "error_message": agent_instance.error_message,
             "start_time": agent_instance.start_time,
-            "uptime": time.time() - agent_instance.start_time if agent_instance.start_time else None
+            "uptime": time.time() - agent_instance.start_time if agent_instance.start_time else None,
+            "pid": agent_instance.pid
         }
         
         return status
