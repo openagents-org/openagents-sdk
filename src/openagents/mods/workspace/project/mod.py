@@ -42,6 +42,10 @@ class DefaultProjectNetworkMod(BaseMod):
 
         logger.info(f"Initializing Project network mod")
 
+    async def process_event(self, event: Event) -> Optional[EventResponse]:
+        """Override base class to route to our process_system_message method."""
+        return await self.process_system_message(event)
+
     def initialize(self) -> bool:
         """Initialize the mod with configuration."""
         config = self.config or {}
@@ -86,13 +90,14 @@ class DefaultProjectNetworkMod(BaseMod):
         logger.info("Project mod shutdown completed")
         return True
 
-    def handle_register_agent(self, agent_id: str, metadata: Dict[str, Any]) -> None:
+    async def handle_register_agent(self, agent_id: str, metadata: Dict[str, Any]) -> Optional[EventResponse]:
         """Register an agent with the project mod."""
         if agent_id not in self.agent_projects:
             self.agent_projects[agent_id] = set()
         logger.info(f"Registered agent {agent_id} with Project mod")
+        return None
 
-    def handle_unregister_agent(self, agent_id: str) -> None:
+    async def handle_unregister_agent(self, agent_id: str) -> Optional[EventResponse]:
         """Unregister an agent from the project mod."""
         if agent_id in self.agent_projects:
             # Remove agent from all their projects
@@ -107,6 +112,7 @@ class DefaultProjectNetworkMod(BaseMod):
 
             del self.agent_projects[agent_id]
         logger.info(f"Unregistered agent {agent_id} from Project mod")
+        return None
 
     async def process_system_message(self, message: Event) -> Optional[EventResponse]:
         """Process a project mod message with granular event routing."""
@@ -153,6 +159,7 @@ class DefaultProjectNetworkMod(BaseMod):
                 return await self._handle_artifact_list(message)
             elif event_name == "project.artifact.delete":
                 return await self._handle_artifact_delete(message)
+            
             else:
                 logger.warning(f"Unknown project event: {event_name}")
                 return EventResponse(
