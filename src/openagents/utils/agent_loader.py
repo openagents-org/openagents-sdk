@@ -229,6 +229,7 @@ def _process_mods_config(
             return []
 
     mod_names = []
+    explicitly_disabled_mods = set()
 
     for mod_config in mods_data:
         if not isinstance(mod_config, dict):
@@ -246,12 +247,13 @@ def _process_mods_config(
             mod_names.append(mod_name)
             logger.debug(f"Added enabled mod: {mod_name}")
         else:
+            explicitly_disabled_mods.add(mod_name)
             logger.debug(f"Skipped disabled mod: {mod_name}")
 
-    # Auto-include workspace messaging for agents that need messaging if not already present
+    # Auto-include workspace messaging for agents that need messaging if not already present and not explicitly disabled
     if needs_messaging:
         workspace_messaging = "openagents.mods.workspace.messaging"
-        if workspace_messaging not in mod_names:
+        if workspace_messaging not in mod_names and workspace_messaging not in explicitly_disabled_mods:
             mod_names.append(workspace_messaging)
             logger.debug(
                 f"Auto-added required mod for {agent_class.__name__}: {workspace_messaging}"
