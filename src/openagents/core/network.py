@@ -31,6 +31,7 @@ from openagents.config.globals import (
     WORKSPACE_DEFAULT_MOD_NAME,
 )
 from openagents.core.base_mod import BaseMod
+from openagents.core.mod_registry import ModRegistry
 from openagents.models.event_response import EventResponse
 
 if TYPE_CHECKING:
@@ -99,6 +100,9 @@ class AgentNetwork:
         # Agent and mod tracking (for compatibility with system commands)
         self.mods: OrderedDict[str, BaseMod] = OrderedDict()
         self.mod_manifests: Dict[str, Any] = {}
+
+        # Dynamic mod registry
+        self.mod_registry = ModRegistry()
 
         # Agent identity management
         self.identity_manager = AgentIdentityManager()
@@ -296,6 +300,10 @@ class AgentNetwork:
         """Register internal message handlers."""
         assert self.topology is not None
         self.topology.register_event_handler(self.process_external_event)
+        
+        # Register system event handlers for dynamic mod loading
+        self.event_gateway.system_command_processor.command_handlers["system.mod.load"] = self._handle_system_mod_load
+        self.event_gateway.system_command_processor.command_handlers["system.mod.unload"] = self._handle_system_mod_unload
 
     async def _log_event(self, event: Event):
         """Global event handler for logging and routing."""
@@ -545,6 +553,9 @@ class AgentNetwork:
             elif isinstance(profile, dict):
                 network_profile_data = profile
         
+        # Get dynamically loaded mods info
+        loaded_mods_info = self.get_loaded_mods()
+        
         stats = {
             "network_id": self.network_id,
             "network_name": self.network_name,
@@ -566,6 +577,11 @@ class AgentNetwork:
             "default_agent_group": self.config.default_agent_group,
             "requires_password": self.config.requires_password,
             "mods": [mod.model_dump() for mod in self.config.mods],
+            "dynamic_mods": {
+                "loaded": list(loaded_mods_info.keys()),
+                "count": len(loaded_mods_info),
+                "details": loaded_mods_info
+            },
             "topology_mode": (
                 self.config.mode
                 if isinstance(self.config.mode, str)
@@ -705,6 +721,193 @@ class AgentNetwork:
 
         logger.info(f"Created workspace with client ID: {client_id}")
         return workspace
+
+    async def load_mod(self, mod_path: str, config: dict = None) -> EventResponse:
+        """Dynamically load a mod at runtime.
+
+        Args:
+            mod_path: Module path to the mod (e.g., "openagents.mods.workspace.shared_artifact")
+            config: Optional configuration dictionary for the mod
+
+        Returns:
+            EventResponse: Response indicating success or failure
+        """
+        try:
+            # Extract mod_id from mod_path (last segment)
+            mod_id = mod_path.split(".")[-1]
+            
+            # Check if already loaded
+            if mod_id in self.mod_registry:
+                return EventResponse(
+                    success=False,
+                    message=f"Mod '{mod_id}' is already loaded"
+                )
+            
+            # Dynamic import
+            import importlib
+            module = importlib.import_module(f"{mod_path}.mod")
+            
+            # Derive class name from mod_id (snake_case → PascalCase + "Mod")
+            class_name = "".join(word.capitalize() for word in mod_id.split("_")) + "Mod"
+            
+            # Try to get the class
+            if not hasattr(module, class_name):
+                # Fallback: search for any BaseMod subclass
+                for attr_name in dir(module):
+                    attr = getattr(module, attr_name)
+                    if (
+                        isinstance(attr, type)
+                        and issubclass(attr, BaseMod)
+                        and attr != BaseMod
+                    ):
+                        class_name = attr_name
+                        break
+                else:
+                    return EventResponse(
+                        success=False,
+                        message=f"Could not find mod class in module {mod_path}"
+                    )
+            
+            mod_class = getattr(module, class_name)
+            
+            # Instantiate the mod
+            mod_instance = mod_class(mod_path)
+            
+            # Set config if provided
+            if config:
+                mod_instance.update_config(config)
+            
+            # Bind network
+            mod_instance.bind_network(self)
+            
+            # Initialize the mod
+            mod_instance.initialize()
+            
+            # Set loaded_at timestamp
+            mod_instance.loaded_at = time.time()
+            
+            # Register in registry
+            self.mod_registry.register(mod_id, mod_instance)
+            
+            # Add to network.mods so ModEventProcessor can process events through this mod
+            self.mods[mod_path] = mod_instance
+            
+            logger.info(f"✅ Successfully loaded mod: {mod_id} from {mod_path}")
+            
+            return EventResponse(
+                success=True,
+                message=f"Successfully loaded mod: {mod_id}",
+                data={"mod_id": mod_id, "mod_path": mod_path}
+            )
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to load mod from {mod_path}: {e}")
+            return EventResponse(
+                success=False,
+                message=f"Failed to load mod: {str(e)}"
+            )
+
+    async def unload_mod(self, mod_path: str) -> EventResponse:
+        """Dynamically unload a mod at runtime.
+
+        Args:
+            mod_path: Module path or mod_id to unload
+
+        Returns:
+            EventResponse: Response indicating success or failure
+        """
+        try:
+            # Extract mod_id from mod_path
+            mod_id = mod_path.split(".")[-1]
+            
+            # Get mod from registry
+            mod_instance = self.mod_registry.get(mod_id)
+            if not mod_instance:
+                return EventResponse(
+                    success=False,
+                    message=f"Mod '{mod_id}' is not loaded"
+                )
+            
+            # Shutdown the mod
+            mod_instance.shutdown()
+            
+            # Remove from network.mods
+            if mod_path in self.mods:
+                del self.mods[mod_path]
+            
+            # Unregister from registry
+            self.mod_registry.unregister(mod_id)
+            
+            logger.info(f"✅ Successfully unloaded mod: {mod_id}")
+            
+            return EventResponse(
+                success=True,
+                message=f"Successfully unloaded mod: {mod_id}",
+                data={"mod_id": mod_id}
+            )
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to unload mod {mod_path}: {e}")
+            return EventResponse(
+                success=False,
+                message=f"Failed to unload mod: {str(e)}"
+            )
+
+    def get_loaded_mods(self) -> Dict[str, Dict[str, Any]]:
+        """Get information about all dynamically loaded mods.
+
+        Returns:
+            Dictionary mapping mod_id to mod information
+        """
+        result = {}
+        for mod_id in self.mod_registry.list_loaded():
+            mod_instance = self.mod_registry.get(mod_id)
+            if mod_instance:
+                result[mod_id] = {
+                    "mod_id": mod_id,
+                    "mod_path": mod_instance._mod_name,
+                    "loaded_at": getattr(mod_instance, "loaded_at", None)
+                }
+        return result
+
+    async def _handle_system_mod_load(self, event: Event) -> EventResponse:
+        """Handle system.mod.load event.
+
+        Args:
+            event: Event with payload containing 'mod_path' and optional 'config'
+
+        Returns:
+            EventResponse: Response from load_mod
+        """
+        mod_path = event.payload.get("mod_path")
+        config = event.payload.get("config")
+        
+        if not mod_path:
+            return EventResponse(
+                success=False,
+                message="mod_path is required in payload"
+            )
+        
+        return await self.load_mod(mod_path, config)
+
+    async def _handle_system_mod_unload(self, event: Event) -> EventResponse:
+        """Handle system.mod.unload event.
+
+        Args:
+            event: Event with payload containing 'mod_path'
+
+        Returns:
+            EventResponse: Response from unload_mod
+        """
+        mod_path = event.payload.get("mod_path")
+        
+        if not mod_path:
+            return EventResponse(
+                success=False,
+                message="mod_path is required in payload"
+            )
+        
+        return await self.unload_mod(mod_path)
 
 
 def create_network(config: Union[NetworkConfig, str, Path]) -> AgentNetwork:
