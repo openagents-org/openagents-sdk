@@ -161,14 +161,21 @@ class DefaultProjectNetworkMod(BaseMod):
                 return await self._handle_artifact_list(message)
             elif event_name == "project.artifact.delete":
                 return await self._handle_artifact_delete(message)
-            
+
             else:
-                logger.warning(f"Unknown project event: {event_name}")
-                return EventResponse(
-                    success=False,
-                    message=f"Unknown event: {event_name}",
-                    data={"error": "Unknown event type"}
-                )
+                # Only handle events that start with "project."
+                # Return None for other events to let them pass through to other mods/agents
+                if event_name.startswith("project."):
+                    logger.warning(f"Unknown project event: {event_name}")
+                    return EventResponse(
+                        success=False,
+                        message=f"Unknown event: {event_name}",
+                        data={"error": "Unknown event type"}
+                    )
+                else:
+                    # Not a project event - let it pass through
+                    logger.debug(f"Non-project event {event_name}, passing through")
+                    return None
 
         except Exception as e:
             logger.error(f"Error processing project mod message: {e}")

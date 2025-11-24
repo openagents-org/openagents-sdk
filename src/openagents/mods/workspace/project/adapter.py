@@ -635,7 +635,7 @@ class DefaultProjectAgentAdapter(BaseModAdapter):
 
         try:
             response = await self._connector.send_event(event)
-            
+
             # Convert EventResponse to dict format
             return {
                 "success": response.success,

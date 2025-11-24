@@ -408,18 +408,39 @@ class AgentRunner(ABC):
 
                 # If we found an unprocessed message, process it
                 if unprocessed_message and unprocessed_thread_id:
-                    # Get message content for better logging
-                    msg_content_preview = "No content"
-                    if hasattr(unprocessed_message, 'text') and unprocessed_message.text:
-                        msg_content_preview = f'"{unprocessed_message.text[:50]}{"..." if len(unprocessed_message.text) > 50 else ""}"'
-                    
-                    print(f"🔧 AGENT_RUNNER: Found unprocessed message {unprocessed_message.message_id[:8]}... from {unprocessed_message.source_id}")
-                    print(f"🎯 PROCESSING MESSAGE: {unprocessed_message.message_id[:8]}...")
-                    print(f"   From: {unprocessed_message.source_id}")
-                    print(f"   Content: {msg_content_preview}")
-                    print(f"   Timestamp: {unprocessed_message.timestamp}")
-                    # logger.info(f"🔧 AGENT_RUNNER: Found unprocessed message {unprocessed_message.message_id[:8]}... from {unprocessed_message.source_id}")
-                    # print(f"🎯 Processing message {unprocessed_message.message_id[:8]}... from {unprocessed_message.source_id}")
+                    # Get message payload for better logging
+                    import json
+                    msg_payload_preview = "None"
+                    if hasattr(unprocessed_message, 'payload') and unprocessed_message.payload:
+                        try:
+                            payload_str = json.dumps(unprocessed_message.payload, indent=2, default=str)
+                            if len(payload_str) > 300:
+                                msg_payload_preview = payload_str[:300] + "..."
+                            else:
+                                msg_payload_preview = payload_str
+                        except:
+                            msg_payload_preview = str(unprocessed_message.payload)[:300]
+
+                    event_name = getattr(unprocessed_message, 'event_name', 'unknown')
+                    destination_id = getattr(unprocessed_message, 'destination_id', None)
+
+                    # Commented out - too verbose for normal operation
+                    # # Print colored box for event processing
+                    # from openagents.utils.cli_display import print_box
+                    #
+                    # lines = [
+                    #     f"Event:  {event_name}",
+                    #     f"Source: {unprocessed_message.source_id}",
+                    #     f"Target: {destination_id or 'None'}",
+                    #     "─" * 66,  # Separator
+                    # ]
+                    #
+                    # # Add payload lines
+                    # for line in msg_payload_preview.split('\n'):
+                    #     lines.append(line)
+                    #
+                    # print_box("🎯 AGENT PROCESSING EVENT", lines, color_code="\033[94m")
+
                     # Mark the message as processed to avoid processing it again
                     self._processed_message_ids.add(str(unprocessed_message.message_id))
 
@@ -448,7 +469,7 @@ class AgentRunner(ABC):
                         event_threads=filtered_threads,
                         incoming_thread_id=unprocessed_thread_id,
                     )
-                    print(f"🔧 AGENT_RUNNER: Calling react method for message {unprocessed_message.message_id[:8]}...")
+                    print(f"🔧 AGENT_RUNNER: Calling react method for event {event_name}")
                     
                     import time
                     start_time = time.time()
@@ -666,6 +687,7 @@ class AgentRunner(ABC):
         network_port: Optional[int] = None,
         network_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        password_hash: Optional[str] = None,
     ):
         """Public async method for starting the agent runner.
 
@@ -680,7 +702,7 @@ class AgentRunner(ABC):
         Raises:
             Exception: If the agent fails to start or connect
         """
-        await self._async_start(network_host, network_port, network_id, metadata)
+        await self._async_start(network_host, network_port, network_id, metadata, password_hash)
 
     async def _async_stop(self):
         """Async implementation of stopping the agent runner.
