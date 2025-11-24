@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/static/css/main.3bec3d4f.css",
+    "main.js": "/static/js/main.010a1014.js",
+    "static/media/open-agents-logo.png": "/static/media/open-agents-logo.4da489289b77ef395eeb.png",
+    "static/media/openagents-logo-trans-white.png": "/static/media/openagents-logo-trans-white.a6c057257062292b9333.png",
+    "index.html": "/index.html",
+    "main.3bec3d4f.css.map": "/static/css/main.3bec3d4f.css.map",
+    "main.010a1014.js.map": "/static/js/main.010a1014.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.3bec3d4f.css",
+    "static/js/main.010a1014.js"
+  ]
+}
