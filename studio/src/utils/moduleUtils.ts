@@ -58,24 +58,24 @@ export const getEnabledModules = (healthResponse: HealthResponse): string[] => {
 export const updateRouteVisibilityFromModules = (
   enabledModules: string[]
 ): void => {
-  // 首先隐藏所有主要路由（保留 Settings, Profile 和 Project 始终可见）
+  // 首先隐藏所有主要路由（只保留 Profile 始终可见，它不是一个 mod）
+  // Settings 如果作为 mod 存在，也应该由网络返回来控制
   Object.values(PLUGIN_NAME_ENUM).forEach((plugin) => {
-    if (
-      plugin !== PLUGIN_NAME_ENUM.SETTINGS &&
-      plugin !== PLUGIN_NAME_ENUM.PROFILE &&
-      plugin !== PLUGIN_NAME_ENUM.PROJECT
-    ) {
+    if (plugin !== PLUGIN_NAME_ENUM.PROFILE) {
       updateRouteVisibility(plugin, false)
     }
   })
 
-  // 然后启用可用的模块
+  // 然后根据网络返回的 mods 启用对应的路由
   enabledModules.forEach((moduleName) => {
     const plugin = MODULE_PLUGIN_MAP[moduleName]
     if (plugin) {
+      console.log(`✅ 启用模块路由: ${moduleName} -> ${plugin}`)
       updateRouteVisibility(plugin, true)
     }
   })
+  
+  console.log(`📊 更新后的可见模块: ${enabledModules.join(', ')}`)
 }
 
 /**

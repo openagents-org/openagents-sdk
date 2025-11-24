@@ -1172,33 +1172,43 @@ def studio_command(args) -> None:
         startup_task = progress.add_task("🚀 Starting OpenAgents Studio...", total=None)
 
         try:
-            # Check Node.js/npm availability first
-            progress.update(startup_task, description="🔍 Checking Node.js/npm availability...")
-            is_available, error_msg = check_nodejs_availability()
-            if not is_available:
-                console.print(Panel(
-                    error_msg,
-                    title="[red]❌ Node.js Requirements[/red]",
-                    border_style="red"
-                ))
-                raise typer.Exit(1)
-
-            # Check and install openagents-studio package if needed
-            progress.update(startup_task, description="📦 Checking openagents-studio package...")
-            is_installed, is_latest, installed_version = check_openagents_studio_package()
-
-            if not is_installed:
-                # Create a separate task for installation with progress bar
-                install_task = progress.add_task("📦 Installing openagents-studio package...", total=100)
-                install_openagents_studio_package(progress, install_task)
-                progress.remove_task(install_task)
-            elif not is_latest:
-                # Create a separate task for update with progress bar
-                install_task = progress.add_task(f"📦 Updating openagents-studio from {installed_version}...", total=100)
-                install_openagents_studio_package(progress, install_task)
-                progress.remove_task(install_task)
+            # Check if we have a pre-built studio (no Node.js required)
+            progress.update(startup_task, description="🔍 Checking for pre-built frontend...")
+            build_dir = _find_studio_build_dir()
+            use_static_server = build_dir is not None
+            
+            if use_static_server:
+                console.print(f"[green]✅ Found pre-built frontend at: {build_dir}[/green]")
+                console.print("[blue]ℹ️  Running in static mode (Node.js not required)[/blue]")
             else:
-                console.print(f"[green]✅ openagents-studio package up-to-date ({installed_version})[/green]")
+                # No pre-built frontend, need Node.js
+                console.print("[yellow]⚠️  Pre-built frontend not found, checking Node.js...[/yellow]")
+                progress.update(startup_task, description="🔍 Checking Node.js/npm availability...")
+                is_available, error_msg = check_nodejs_availability()
+                if not is_available:
+                    console.print(Panel(
+                        error_msg,
+                        title="[red]❌ Node.js Requirements[/red]",
+                        border_style="red"
+                    ))
+                    raise typer.Exit(1)
+
+                # Check and install openagents-studio package if needed
+                progress.update(startup_task, description="📦 Checking openagents-studio package...")
+                is_installed, is_latest, installed_version = check_openagents_studio_package()
+
+                if not is_installed:
+                    # Create a separate task for installation with progress bar
+                    install_task = progress.add_task("📦 Installing openagents-studio package...", total=100)
+                    install_openagents_studio_package(progress, install_task)
+                    progress.remove_task(install_task)
+                elif not is_latest:
+                    # Create a separate task for update with progress bar
+                    install_task = progress.add_task(f"📦 Updating openagents-studio from {installed_version}...", total=100)
+                    install_openagents_studio_package(progress, install_task)
+                    progress.remove_task(install_task)
+                else:
+                    console.print(f"[green]✅ openagents-studio package up-to-date ({installed_version})[/green]")
 
             # Extract arguments
             network_host = args.host
@@ -1324,9 +1334,14 @@ def studio_command(args) -> None:
         frontend_process = None
 
         try:
-            # Start frontend using the installed package
+            # Start frontend - use static server if build exists, otherwise use npm
             console.print(f"[blue]🎨 Launching studio frontend on port {studio_port}...[/blue]")
-            frontend_process = launch_studio_with_package(studio_port)
+            if use_static_server:
+                # Use static file server (no Node.js required)
+                frontend_process = launch_studio_static(studio_port)
+            else:
+                # Use npm package (requires Node.js)
+                frontend_process = launch_studio_with_package(studio_port)
 
             # Check if this is a static file server (no Node.js required)
             is_static_server = hasattr(frontend_process, 'httpd') or (
