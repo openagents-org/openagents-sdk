@@ -180,26 +180,32 @@ class HttpTransport(Transport):
         description_escaped = html.escape(description)
         
         # Get additional network profile information safely
-        try:
-            network_profile = network_stats.get("network_profile", {})
-        except (NameError, AttributeError):
-            network_profile = {}
+        network_profile = {}
+        if 'network_stats' in locals() and network_stats is not None:
+            try:
+                network_profile = network_stats.get("network_profile", {})
+            except (AttributeError, TypeError):
+                network_profile = {}
         
         icon = network_profile.get("icon", "🤖")
         website = network_profile.get("website", "https://openagents.org")
         tags = network_profile.get("tags", [])
         
         # Validate and escape additional fields for security
-        # Only allow emoji icons or safe URLs, escape everything else
+        # For icons: URLs are replaced with default emoji for simplicity (icons typically use emoji)
+        # Text icons are escaped to prevent XSS
         if icon.startswith(('http://', 'https://')):
-            icon = "🤖"  # Use default emoji for URL icons to avoid XSS
+            icon = "🤖"  # Default to emoji for URL-based icons
         else:
             icon = html.escape(icon)
         
-        # Validate website URL - only allow http/https schemes
+        # Validate website URL - only allow http/https schemes to prevent javascript: or data: injection
         if not website.startswith(('http://', 'https://')):
             website = "https://openagents.org"
         website_escaped = html.escape(website)
+        
+        # Limit displayed tags to avoid cluttering the UI
+        MAX_DISPLAYED_TAGS = 8
 
         # Build HTML welcome page - focused on network identity and profile
         html_content = f"""<!DOCTYPE html>
@@ -382,7 +388,7 @@ class HttpTransport(Transport):
         </div>
         
         {f'''<div class="tags">
-            {''.join([f'<span class="tag">{html.escape(tag)}</span>' for tag in tags[:8]])}
+            {''.join([f'<span class="tag">{html.escape(tag)}</span>' for tag in tags[:MAX_DISPLAYED_TAGS]])}
         </div>''' if tags else ''}
         
         <div class="footer">
