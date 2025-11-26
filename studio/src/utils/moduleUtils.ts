@@ -70,12 +70,12 @@ export const updateRouteVisibilityFromModules = (
   enabledModules.forEach((moduleName) => {
     const plugin = MODULE_PLUGIN_MAP[moduleName]
     if (plugin) {
-      console.log(`✅ 启用模块路由: ${moduleName} -> ${plugin}`)
+      console.log(`✅ updateRouteVisibility: ${moduleName} -> ${plugin}`)
       updateRouteVisibility(plugin, true)
     }
   })
   
-  console.log(`📊 更新后的可见模块: ${enabledModules.join(', ')}`)
+  console.log(`📊 updateRouteVisibilityFromModules: ${enabledModules.join(', ')}`)
 }
 
 /**
