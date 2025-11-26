@@ -7,6 +7,7 @@ This module provides the HTTP transport implementation for agent communication.
 import json
 import logging
 import time
+import html
 from typing import Dict, Any, Optional
 
 from openagents.config.globals import (
@@ -174,13 +175,17 @@ class HttpTransport(Transport):
             uptime = 0
             description = ""
 
+        # Escape HTML to prevent XSS attacks
+        network_name_escaped = html.escape(network_name)
+        description_escaped = html.escape(description)
+
         # Build HTML welcome page
         html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{network_name} - OpenAgents</title>
+    <title>{network_name_escaped} - OpenAgents</title>
     <style>
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -278,14 +283,14 @@ class HttpTransport(Transport):
 </head>
 <body>
     <div class="container">
-        <h1>🤖 {network_name}</h1>
+        <h1>🤖 {network_name_escaped}</h1>
         <div class="subtitle">OpenAgents Network</div>
         
         <div class="status {'online' if is_running else 'offline'}">
             {'🟢 Online' if is_running else '🔴 Offline'}
         </div>
         
-        {f'<p>{description}</p>' if description else ''}
+        {f'<p>{description_escaped}</p>' if description_escaped else ''}
         
         <div class="stats">
             <div class="stat-item">
