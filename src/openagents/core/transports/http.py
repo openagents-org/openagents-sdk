@@ -187,18 +187,10 @@ class HttpTransport(Transport):
             except (AttributeError, TypeError):
                 network_profile = {}
         
-        icon = network_profile.get("icon", "🤖")
         website = network_profile.get("website", "https://openagents.org")
         tags = network_profile.get("tags", [])
         
         # Validate and escape additional fields for security
-        # For icons: URLs are replaced with default emoji for simplicity (icons typically use emoji)
-        # Text icons are escaped to prevent XSS
-        if icon.startswith(('http://', 'https://')):
-            icon = "🤖"  # Default to emoji for URL-based icons
-        else:
-            icon = html.escape(icon)
-        
         # Validate website URL - only allow http/https schemes to prevent javascript: or data: injection
         if not website.startswith(('http://', 'https://')):
             website = "https://openagents.org"
@@ -237,15 +229,6 @@ class HttpTransport(Transport):
             width: 100%;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             text-align: center;
-        }}
-        .icon {{
-            font-size: 80px;
-            margin-bottom: 20px;
-            animation: float 3s ease-in-out infinite;
-        }}
-        @keyframes float {{
-            0%, 100% {{ transform: translateY(0px); }}
-            50% {{ transform: translateY(-10px); }}
         }}
         h1 {{
             font-size: 2.5em;
@@ -365,7 +348,6 @@ class HttpTransport(Transport):
 </head>
 <body>
     <div class="card">
-        <div class="icon">{icon}</div>
         <h1>{network_name_escaped}</h1>
         <div class="subtitle">OpenAgents Agent Network</div>
         
