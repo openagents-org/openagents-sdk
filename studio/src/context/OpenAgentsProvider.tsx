@@ -259,7 +259,7 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
       // Initialize event router with this connector
       eventRouter.initialize(connector);
     },
-    [setConnection, setupEventListeners, navigate]
+    [setConnection, setupEventListeners, navigate, setAgentGroup]
   );
 
   // Set up global notification listener (only active on non-messaging pages)
