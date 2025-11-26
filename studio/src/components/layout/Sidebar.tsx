@@ -83,7 +83,7 @@ const SidebarFooter: React.FC<{
   theme: string;
 }> = React.memo(({ toggleTheme, theme }) => {
   const navigate = useNavigate();
-  const { agentName, agentGroup, selectedNetwork, clearNetwork, clearAgentName, clearPasswordHash } =
+  const { agentName, agentGroup, selectedNetwork, clearNetwork, clearAgentName, clearAgentGroup, clearPasswordHash } =
     useAuthStore();
   const { clearAllChatData } = useChatStore();
   const { confirm } = useConfirm();
@@ -114,6 +114,7 @@ const SidebarFooter: React.FC<{
       // Clear network state
       clearNetwork();
       clearAgentName();
+      clearAgentGroup(); // Explicitly clear agent group
       clearPasswordHash(); // Explicitly clear password hash
       console.log("🧹 Network state and password hash cleared");
 
