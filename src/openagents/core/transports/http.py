@@ -179,12 +179,27 @@ class HttpTransport(Transport):
         network_name_escaped = html.escape(network_name)
         description_escaped = html.escape(description)
         
-        # Get additional network profile information
-        network_profile = network_stats.get("network_profile", {}) if 'network_stats' in locals() else {}
+        # Get additional network profile information safely
+        try:
+            network_profile = network_stats.get("network_profile", {})
+        except (NameError, AttributeError):
+            network_profile = {}
+        
         icon = network_profile.get("icon", "🤖")
         website = network_profile.get("website", "https://openagents.org")
         tags = network_profile.get("tags", [])
-        categories = network_profile.get("categories", [])
+        
+        # Validate and escape additional fields for security
+        # Only allow emoji icons or safe URLs, escape everything else
+        if icon.startswith(('http://', 'https://')):
+            icon = "🤖"  # Use default emoji for URL icons to avoid XSS
+        else:
+            icon = html.escape(icon)
+        
+        # Validate website URL - only allow http/https schemes
+        if not website.startswith(('http://', 'https://')):
+            website = "https://openagents.org"
+        website_escaped = html.escape(website)
 
         # Build HTML welcome page - focused on network identity and profile
         html_content = f"""<!DOCTYPE html>
@@ -344,7 +359,7 @@ class HttpTransport(Transport):
 </head>
 <body>
     <div class="card">
-        <div class="icon">{icon if not icon.startswith('http') else '🤖'}</div>
+        <div class="icon">{icon}</div>
         <h1>{network_name_escaped}</h1>
         <div class="subtitle">OpenAgents Agent Network</div>
         
@@ -373,7 +388,7 @@ class HttpTransport(Transport):
         <div class="footer">
             <div class="footer-text">Powered by OpenAgents</div>
             <div class="links">
-                <a href="{html.escape(website)}" target="_blank" class="link">🌐 Network Website</a>
+                <a href="{website_escaped}" target="_blank" class="link">🌐 Network Website</a>
                 <a href="https://openagents.org" target="_blank" class="link">📚 Documentation</a>
                 <a href="https://github.com/openagents-org/openagents" target="_blank" class="link">💻 GitHub</a>
             </div>
