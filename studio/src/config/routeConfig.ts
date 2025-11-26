@@ -9,7 +9,7 @@ import ProjectMainPage from "@/pages/project/ProjectMainPage"
 import ForumMainPage from "@/pages/forum/ForumMainPage"
 import WikiMainPage from "@/pages/wiki/WikiMainPage"
 import DocumentsMainPage from "@/pages/documents/DocumentsMainPage"
-import ProjectChatRoom from "@/pages/messaging/components/ProjectChatRoom"
+// import ProjectChatRoom from "@/pages/messaging/components/ProjectChatRoom"
 // import SettingsMainPage from "@/pages/settings/SettingsMainPage";
 import ProfileMainPage from "@/pages/profile/ProfileMainPage"
 // import McpMainPage from "@/pages/mcp/McpMainPage";
