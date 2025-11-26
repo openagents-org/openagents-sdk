@@ -83,7 +83,7 @@ const SidebarFooter: React.FC<{
   theme: string;
 }> = React.memo(({ toggleTheme, theme }) => {
   const navigate = useNavigate();
-  const { agentName, selectedNetwork, clearNetwork, clearAgentName, clearPasswordHash } =
+  const { agentName, agentGroup, selectedNetwork, clearNetwork, clearAgentName, clearPasswordHash } =
     useAuthStore();
   const { clearAllChatData } = useChatStore();
   const { confirm } = useConfirm();
@@ -145,6 +145,11 @@ const SidebarFooter: React.FC<{
             <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
               {selectedNetwork ? agentName || "Connected" : "Disconnected"}
             </span>
+            {selectedNetwork && agentGroup && (
+              <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+                {agentGroup}
+              </span>
+            )}
             {selectedNetwork && (
               <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
                 {selectedNetwork.host}:{selectedNetwork.port}
