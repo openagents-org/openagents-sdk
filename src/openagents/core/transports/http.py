@@ -43,6 +43,8 @@ class HttpTransport(Transport):
 
     def setup_routes(self):
         """Setup HTTP routes."""
+        # Root path handler
+        self.app.router.add_get("/", self.root_handler)
         # Add both /health and /api/health for compatibility
         self.app.router.add_get("/api/health", self.health_check)
         self.app.router.add_post("/api/register", self.register_agent)
@@ -135,6 +137,205 @@ class HttpTransport(Transport):
         return web.json_response(
             {"success": True, "status": "healthy", "data": network_stats}
         )
+
+    async def root_handler(self, request):
+        """Handle requests to root path with a welcome page."""
+        logger.debug("HTTP root path requested")
+
+        # Try to get network stats for the welcome page
+        try:
+            health_check_event = Event(
+                event_name=SYSTEM_EVENT_HEALTH_CHECK,
+                source_id="http_transport",
+                destination_id="system:system",
+                payload={},
+            )
+            event_response = await self.call_event_handler(health_check_event)
+            
+            if event_response and event_response.success and event_response.data:
+                network_stats = event_response.data
+                network_name = network_stats.get("network_name", "OpenAgents Network")
+                agent_count = network_stats.get("agent_count", 0)
+                is_running = network_stats.get("is_running", False)
+                uptime = network_stats.get("uptime_seconds", 0)
+                network_profile = network_stats.get("network_profile", {})
+                description = network_profile.get("description", "")
+            else:
+                network_name = "OpenAgents Network"
+                agent_count = 0
+                is_running = False
+                uptime = 0
+                description = ""
+        except Exception as e:
+            logger.warning(f"Failed to get network stats for root handler: {e}")
+            network_name = "OpenAgents Network"
+            agent_count = 0
+            is_running = False
+            uptime = 0
+            description = ""
+
+        # Build HTML welcome page
+        html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{network_name} - OpenAgents</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }}
+        .container {{
+            background: white;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }}
+        h1 {{
+            color: #667eea;
+            margin-bottom: 10px;
+        }}
+        .subtitle {{
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 30px;
+        }}
+        .status {{
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+        }}
+        .status.online {{
+            background-color: #d4edda;
+            color: #155724;
+        }}
+        .status.offline {{
+            background-color: #f8d7da;
+            color: #721c24;
+        }}
+        .stats {{
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }}
+        .stat-item {{
+            margin: 10px 0;
+            font-size: 1.1em;
+        }}
+        .stat-label {{
+            font-weight: bold;
+            color: #667eea;
+        }}
+        .endpoints {{
+            margin-top: 30px;
+        }}
+        .endpoint {{
+            background: #e7f3ff;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }}
+        .endpoint-method {{
+            display: inline-block;
+            padding: 3px 8px;
+            background: #667eea;
+            color: white;
+            border-radius: 3px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-right: 10px;
+        }}
+        .endpoint-path {{
+            font-family: 'Courier New', monospace;
+            color: #333;
+        }}
+        .footer {{
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #666;
+        }}
+        a {{
+            color: #667eea;
+            text-decoration: none;
+        }}
+        a:hover {{
+            text-decoration: underline;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 {network_name}</h1>
+        <div class="subtitle">OpenAgents Network</div>
+        
+        <div class="status {'online' if is_running else 'offline'}">
+            {'🟢 Online' if is_running else '🔴 Offline'}
+        </div>
+        
+        {f'<p>{description}</p>' if description else ''}
+        
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-label">Connected Agents:</span> {agent_count}
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Uptime:</span> {int(uptime)} seconds
+            </div>
+        </div>
+        
+        <div class="endpoints">
+            <h2>API Endpoints</h2>
+            
+            <div class="endpoint">
+                <span class="endpoint-method">GET</span>
+                <span class="endpoint-path">/api/health</span>
+                <p>Check network health and get statistics</p>
+            </div>
+            
+            <div class="endpoint">
+                <span class="endpoint-method">POST</span>
+                <span class="endpoint-path">/api/register</span>
+                <p>Register an agent with the network</p>
+            </div>
+            
+            <div class="endpoint">
+                <span class="endpoint-method">GET</span>
+                <span class="endpoint-path">/api/poll</span>
+                <p>Poll messages for an agent</p>
+            </div>
+            
+            <div class="endpoint">
+                <span class="endpoint-method">POST</span>
+                <span class="endpoint-path">/api/send_event</span>
+                <p>Send an event to the network</p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>
+                Powered by <a href="https://openagents.org" target="_blank">OpenAgents</a><br>
+                <a href="https://github.com/openagents-org/openagents" target="_blank">GitHub</a> | 
+                <a href="https://openagents.org" target="_blank">Documentation</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>"""
+
+        return web.Response(text=html_content, content_type='text/html')
 
     async def register_agent(self, request):
         """Handle agent registration via HTTP."""
