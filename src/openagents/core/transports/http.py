@@ -178,163 +178,205 @@ class HttpTransport(Transport):
         # Escape HTML to prevent XSS attacks
         network_name_escaped = html.escape(network_name)
         description_escaped = html.escape(description)
+        
+        # Get additional network profile information
+        network_profile = network_stats.get("network_profile", {}) if 'network_stats' in locals() else {}
+        icon = network_profile.get("icon", "🤖")
+        website = network_profile.get("website", "https://openagents.org")
+        tags = network_profile.get("tags", [])
+        categories = network_profile.get("categories", [])
 
-        # Build HTML welcome page
+        # Build HTML welcome page - focused on network identity and profile
         html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{network_name_escaped} - OpenAgents</title>
+    <title>{network_name_escaped} - OpenAgents Agent Network</title>
     <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }}
-        .container {{
+        .card {{
             background: white;
-            border-radius: 10px;
-            padding: 40px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-radius: 20px;
+            padding: 60px 50px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }}
+        .icon {{
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+        }}
+        @keyframes float {{
+            0%, 100% {{ transform: translateY(0px); }}
+            50% {{ transform: translateY(-10px); }}
         }}
         h1 {{
-            color: #667eea;
+            font-size: 2.5em;
+            color: #2d3748;
             margin-bottom: 10px;
+            font-weight: 700;
         }}
         .subtitle {{
-            color: #666;
-            font-size: 1.1em;
+            font-size: 1.3em;
+            color: #667eea;
             margin-bottom: 30px;
+            font-weight: 600;
         }}
-        .status {{
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-weight: bold;
-            margin: 10px 0;
-        }}
-        .status.online {{
-            background-color: #d4edda;
-            color: #155724;
-        }}
-        .status.offline {{
-            background-color: #f8d7da;
-            color: #721c24;
-        }}
-        .stats {{
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 20px;
+        .status-badge {{
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 24px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1em;
             margin: 20px 0;
         }}
-        .stat-item {{
-            margin: 10px 0;
+        .status-badge.online {{
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+        }}
+        .status-badge.offline {{
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+        }}
+        .description {{
             font-size: 1.1em;
+            color: #4a5568;
+            line-height: 1.8;
+            margin: 30px 0;
+            padding: 0 20px;
+        }}
+        .stats-grid {{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 40px 0;
+        }}
+        .stat-card {{
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid #e2e8f0;
+        }}
+        .stat-value {{
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
         }}
         .stat-label {{
-            font-weight: bold;
-            color: #667eea;
+            font-size: 0.95em;
+            color: #718096;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }}
-        .endpoints {{
-            margin-top: 30px;
+        .tags {{
+            margin: 30px 0;
         }}
-        .endpoint {{
-            background: #e7f3ff;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 5px;
-            border-left: 4px solid #667eea;
-        }}
-        .endpoint-method {{
+        .tag {{
             display: inline-block;
-            padding: 3px 8px;
-            background: #667eea;
-            color: white;
-            border-radius: 3px;
+            background: #e7f3ff;
+            color: #667eea;
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin: 5px;
             font-size: 0.9em;
-            font-weight: bold;
-            margin-right: 10px;
-        }}
-        .endpoint-path {{
-            font-family: 'Courier New', monospace;
-            color: #333;
+            font-weight: 500;
         }}
         .footer {{
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #ddd;
-            text-align: center;
-            color: #666;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #e2e8f0;
         }}
-        a {{
+        .footer-text {{
+            color: #718096;
+            font-size: 0.95em;
+            margin-bottom: 15px;
+        }}
+        .links {{
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }}
+        .link {{
             color: #667eea;
             text-decoration: none;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
         }}
-        a:hover {{
-            text-decoration: underline;
+        .link:hover {{
+            background: #f7fafc;
+            transform: translateY(-2px);
+        }}
+        @media (max-width: 600px) {{
+            .card {{
+                padding: 40px 30px;
+            }}
+            h1 {{
+                font-size: 2em;
+            }}
+            .stats-grid {{
+                grid-template-columns: 1fr;
+            }}
         }}
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🤖 {network_name_escaped}</h1>
-        <div class="subtitle">OpenAgents Network</div>
+    <div class="card">
+        <div class="icon">{icon if not icon.startswith('http') else '🤖'}</div>
+        <h1>{network_name_escaped}</h1>
+        <div class="subtitle">OpenAgents Agent Network</div>
         
-        <div class="status {'online' if is_running else 'offline'}">
-            {'🟢 Online' if is_running else '🔴 Offline'}
+        <div class="status-badge {'online' if is_running else 'offline'}">
+            <span>{'🟢' if is_running else '🔴'}</span>
+            <span>{'Online' if is_running else 'Offline'}</span>
         </div>
         
-        {f'<p>{description_escaped}</p>' if description_escaped else ''}
+        {f'<div class="description">{description_escaped}</div>' if description_escaped else ''}
         
-        <div class="stats">
-            <div class="stat-item">
-                <span class="stat-label">Connected Agents:</span> {agent_count}
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{agent_count}</div>
+                <div class="stat-label">Connected Agents</div>
             </div>
-            <div class="stat-item">
-                <span class="stat-label">Uptime:</span> {int(uptime)} seconds
+            <div class="stat-card">
+                <div class="stat-value">{int(uptime)}</div>
+                <div class="stat-label">Uptime (seconds)</div>
             </div>
         </div>
         
-        <div class="endpoints">
-            <h2>API Endpoints</h2>
-            
-            <div class="endpoint">
-                <span class="endpoint-method">GET</span>
-                <span class="endpoint-path">/api/health</span>
-                <p>Check network health and get statistics</p>
-            </div>
-            
-            <div class="endpoint">
-                <span class="endpoint-method">POST</span>
-                <span class="endpoint-path">/api/register</span>
-                <p>Register an agent with the network</p>
-            </div>
-            
-            <div class="endpoint">
-                <span class="endpoint-method">GET</span>
-                <span class="endpoint-path">/api/poll</span>
-                <p>Poll messages for an agent</p>
-            </div>
-            
-            <div class="endpoint">
-                <span class="endpoint-method">POST</span>
-                <span class="endpoint-path">/api/send_event</span>
-                <p>Send an event to the network</p>
-            </div>
-        </div>
+        {f'''<div class="tags">
+            {''.join([f'<span class="tag">{html.escape(tag)}</span>' for tag in tags[:8]])}
+        </div>''' if tags else ''}
         
         <div class="footer">
-            <p>
-                Powered by <a href="https://openagents.org" target="_blank">OpenAgents</a><br>
-                <a href="https://github.com/openagents-org/openagents" target="_blank">GitHub</a> | 
-                <a href="https://openagents.org" target="_blank">Documentation</a>
-            </p>
+            <div class="footer-text">Powered by OpenAgents</div>
+            <div class="links">
+                <a href="{html.escape(website)}" target="_blank" class="link">🌐 Network Website</a>
+                <a href="https://openagents.org" target="_blank" class="link">📚 Documentation</a>
+                <a href="https://github.com/openagents-org/openagents" target="_blank" class="link">💻 GitHub</a>
+            </div>
         </div>
     </div>
 </body>
