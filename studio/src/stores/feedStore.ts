@@ -143,19 +143,6 @@ const buildFilterPayload = (filters: FeedFilters) => {
   return payload;
 };
 
-const sortToPayload = (sortBy: FeedSortField, direction: "asc" | "desc") => {
-  switch (sortBy) {
-    case "oldest":
-      return { field: "created_at", direction: "asc" };
-    case "title":
-      return { field: "title", direction };
-    case "category":
-      return { field: "category", direction };
-    case "recent":
-    default:
-      return { field: "created_at", direction: "desc" };
-  }
-};
 
 export const useFeedStore = create<FeedState>((set, get) => ({
   connection: null,
@@ -203,26 +190,121 @@ export const useFeedStore = create<FeedState>((set, get) => ({
     }
     set({ postsLoading: true, postsError: null });
     try {
+      // For title and category sorting, we need to get all matching posts and sort on client side
+      // For recent and oldest, we can use backend sorting
+      const needsClientSort = filters.sortBy === "title" || filters.sortBy === "category";
+      
+      // Convert page to offset: offset = (page - 1) * pageSize
+      // If client sort is needed, get all matching posts first (use a large limit)
+      // Note: For very large datasets (>5000 posts), client-side sorting may be incomplete
+      const offset = needsClientSort ? 0 : (page - 1) * pageSize;
+      const limit = needsClientSort ? 5000 : pageSize; // Get more posts for client-side sorting
+      
+      // Convert sort to sort_by string expected by backend
+      // Backend only supports "recent" and "oldest", so use "recent" as default for client-side sorting
+      let sort_by = "recent";
+      if (filters.sortBy === "oldest") {
+        // For oldest, check sortDirection: if desc, use recent instead
+        sort_by = filters.sortDirection === "desc" ? "recent" : "oldest";
+      } else if (filters.sortBy === "recent") {
+        // For recent, check sortDirection: if asc, use oldest instead
+        sort_by = filters.sortDirection === "asc" ? "oldest" : "recent";
+      }
+      // For title and category, backend doesn't support, so we'll sort on client side
+      // Use "recent" as default backend sort, then override on client
+      
+      // Build filter payload and merge into main payload
+      const filterPayload = buildFilterPayload(filters);
+      
+      // Build the payload in the format expected by backend
+      const payload: Record<string, any> = {
+        limit: limit,
+        offset: offset,
+        sort_by: sort_by,
+      };
+      
+      // Merge filter fields into payload
+      if (filterPayload.category) {
+        payload.category = filterPayload.category;
+      }
+      if (filterPayload.author) {
+        payload.author_id = filterPayload.author;
+      }
+      if (filterPayload.tags && filterPayload.tags.length > 0) {
+        payload.tags = filterPayload.tags;
+      }
+      if (filterPayload.start_date) {
+        // Convert start_date (YYYY-MM-DD) to since_date (Unix timestamp in seconds)
+        // Set to start of day (00:00:00) in local timezone
+        const date = new Date(filterPayload.start_date);
+        // Ensure we get the start of the day
+        date.setHours(0, 0, 0, 0);
+        const sinceDate = Math.floor(date.getTime() / 1000);
+        payload.since_date = sinceDate;
+      }
+      
       const response = await connection.sendEvent({
         event_name: "feed.posts.list",
         destination_id: FEED_DESTINATION_ID,
-        payload: {
-          pagination: {
-            page,
-            limit: pageSize,
-          },
-          filters: buildFilterPayload(filters),
-          sort: sortToPayload(filters.sortBy, filters.sortDirection),
-        },
+        payload,
       });
       if (response.success) {
-        const posts = (response.data?.posts || []).map(normalizePost);
-        set({
-          posts,
-          totalPosts: response.data?.total || response.data?.total_posts || posts.length,
-          postsLoading: false,
-          postsError: null,
-        });
+        let posts = (response.data?.posts || []).map(normalizePost);
+        
+        // Filter by endDate on client side (backend doesn't support until_date)
+        if (filterPayload.end_date) {
+          // Convert end_date (YYYY-MM-DD) to end of day timestamp
+          const endDate = new Date(filterPayload.end_date);
+          endDate.setHours(23, 59, 59, 999);
+          const endTimestamp = endDate.getTime() / 1000; // Convert to seconds
+          
+          // Filter posts created before or at end date
+          posts = posts.filter((post) => post.created_at <= endTimestamp);
+        }
+        
+        // Apply client-side sorting for title and category
+        if (needsClientSort) {
+          const sortField = filters.sortBy;
+          const sortDir = filters.sortDirection === "asc" ? 1 : -1;
+          
+          posts.sort((a, b) => {
+            let aVal: any;
+            let bVal: any;
+            
+            if (sortField === "title") {
+              aVal = (a.title || "").toLowerCase();
+              bVal = (b.title || "").toLowerCase();
+            } else if (sortField === "category") {
+              aVal = (a.category || "").toLowerCase();
+              bVal = (b.category || "").toLowerCase();
+            } else {
+              return 0;
+            }
+            
+            if (aVal < bVal) return -1 * sortDir;
+            if (aVal > bVal) return 1 * sortDir;
+            return 0;
+          });
+          
+          // Apply pagination after client-side sorting
+          const totalCount = posts.length;
+          const paginatedPosts = posts.slice((page - 1) * pageSize, page * pageSize);
+          
+          set({
+            posts: paginatedPosts,
+            totalPosts: totalCount,
+            postsLoading: false,
+            postsError: null,
+          });
+        } else {
+          // Use backend sorting and pagination
+          set({
+            posts,
+            totalPosts: response.data?.total_count || response.data?.total || response.data?.total_posts || posts.length,
+            postsLoading: false,
+            postsError: null,
+          });
+        }
       } else {
         set({
           posts: [],
@@ -473,6 +555,8 @@ export const useFeedStore = create<FeedState>((set, get) => ({
           createStatus: "success",
           createError: null,
         });
+        // Refresh the posts list after successful creation
+        await get().loadPosts();
         return true;
       }
       set({

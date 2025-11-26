@@ -39,7 +39,7 @@ const FeedPostDetail: React.FC = () => {
     : "";
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto">
+    <div className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-gray-950">
       <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
         <div className="flex items-center justify-between">
           <button
@@ -61,26 +61,30 @@ const FeedPostDetail: React.FC = () => {
             </svg>
             Back to feed
           </button>
-          <div className="text-xs uppercase tracking-wide text-gray-500">
+          <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
             Immutable announcement
           </div>
         </div>
 
         {selectedPostLoading && (
-          <div className="mt-6 text-gray-500 text-sm">Loading post...</div>
+          <div className="mt-6 text-gray-500 dark:text-gray-400 text-sm">
+            Loading post...
+          </div>
         )}
         {selectedPostError && (
-          <div className="mt-6 text-red-600 text-sm">{selectedPostError}</div>
+          <div className="mt-6 text-red-600 dark:text-red-400 text-sm">
+            {selectedPostError}
+          </div>
         )}
         {post && (
           <div className="mt-6 space-y-2">
             <div className="flex items-center gap-3">
               {post.category && (
-                <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1">
+                <span className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 text-xs font-semibold px-3 py-1">
                   {post.category}
                 </span>
               )}
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
                 {createdAt} • by {post.author_id}
               </span>
             </div>
@@ -100,7 +104,7 @@ const FeedPostDetail: React.FC = () => {
               </div>
             )}
             {post.allowed_groups && post.allowed_groups.length > 0 && (
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-500 dark:text-gray-400">
                 Restricted to: {post.allowed_groups.join(", ")}
               </div>
             )}
@@ -108,7 +112,7 @@ const FeedPostDetail: React.FC = () => {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
+      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 bg-white dark:bg-gray-950">
         {post ? (
           <>
             <div className="prose prose-slate max-w-none dark:prose-invert">
@@ -125,7 +129,9 @@ const FeedPostDetail: React.FC = () => {
           </>
         ) : (
           !selectedPostLoading && (
-            <div className="text-center text-gray-500">Post not found.</div>
+            <div className="text-center text-gray-500 dark:text-gray-400">
+              Post not found.
+            </div>
           )
         )}
       </div>

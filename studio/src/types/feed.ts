@@ -1,8 +1,8 @@
 export const FEED_CATEGORY_OPTIONS = [
-  { value: "announcement", label: "Announcement" },
-  { value: "update", label: "Update" },
-  { value: "information", label: "Information" },
-  { value: "alert", label: "Alert" },
+  { value: "announcements", label: "Announcement" },
+  { value: "updates", label: "Update" },
+  { value: "info", label: "Information" },
+  { value: "alerts", label: "Alert" },
 ] as const;
 
 export type FeedCategory =

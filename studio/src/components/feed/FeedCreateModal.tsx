@@ -198,7 +198,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
               className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
               placeholder="Concise summary (max 200 characters)"
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               {title.length}/200 characters
             </p>
           </div>
@@ -259,7 +259,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
                 {content.trim() ? (
                   <MarkdownRenderer content={content} />
                 ) : (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     Start typing to see the preview.
                   </p>
                 )}
@@ -314,9 +314,11 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
               Allowed agent groups (optional)
             </label>
             {groupsLoading ? (
-              <p className="text-sm text-gray-500">Loading groups...</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Loading groups...
+              </p>
             ) : groups.length === 0 ? (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 No groups available from network health.
               </p>
             ) : (
@@ -339,7 +341,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
                 ))}
               </select>
             )}
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Leave empty to make the post visible to everyone on this network.
             </p>
           </div>
@@ -353,7 +355,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Upload files or images
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   Attach supporting materials (max 1 file per upload)
                 </p>
               </div>
@@ -391,7 +393,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
                       <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
                         {attachment.filename}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {(attachment.size / 1024).toFixed(1)} KB
                       </p>
                     </div>
@@ -409,14 +411,14 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
           </div>
 
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+            <div className="rounded-lg border border-red-200 dark:border-red-500/60 bg-red-50 dark:bg-red-950/40 px-4 py-2 text-sm text-red-700 dark:text-red-200">
               {error}
             </div>
           )}
         </form>
 
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-gray-500 dark:text-gray-400">
             Posts cannot be edited or deleted once published.
           </div>
           <div className="flex items-center space-x-3">

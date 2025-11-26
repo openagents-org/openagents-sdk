@@ -168,7 +168,7 @@ const FeedView: React.FC = () => {
   }, [filters]);
 
   return (
-    <div className="flex-1 flex flex-col h-full">
+    <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-950">
       <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -186,7 +186,7 @@ const FeedView: React.FC = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => refreshPosts()}
-              className="inline-flex items-center px-3 py-2 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
+              className="inline-flex items-center px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
               disabled={postsLoading}
             >
               <svg
@@ -226,7 +226,7 @@ const FeedView: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
+      <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
           <span>{totalPosts} posts</span>
           <span>•</span>
           <span>
@@ -277,12 +277,12 @@ const FeedView: React.FC = () => {
                     {searchTags.map((tag) => (
                       <span
                         key={tag}
-                        className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 px-3 py-1 text-xs font-medium"
+                        className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-200 px-3 py-1 text-xs font-medium"
                       >
                         #{tag}
                         <button
                           type="button"
-                          className="ml-2 hover:text-indigo-900"
+                          className="ml-2 hover:text-indigo-900 dark:hover:text-indigo-100"
                           onClick={() => handleRemoveSearchTag(tag)}
                         >
                           ×
@@ -308,7 +308,7 @@ const FeedView: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleAddSearchTag}
-                    className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
+                    className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
                   >
                     Add
                   </button>
@@ -446,7 +446,7 @@ const FeedView: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleAddFilterTag}
-                      className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
+                      className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
                     >
                       Add
                     </button>
@@ -456,12 +456,12 @@ const FeedView: React.FC = () => {
                       {filters.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium"
+                          className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-200"
                         >
                           #{tag}
                           <button
                             type="button"
-                            className="ml-2 text-gray-500 hover:text-gray-700"
+                            className="ml-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                             onClick={() => handleRemoveFilterTag(tag)}
                           >
                             ×
@@ -506,14 +506,14 @@ const FeedView: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-between">
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-500 dark:text-gray-400">
                   {filtersActive ? "Filters applied" : "No filters applied"}
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => fetchRecentPosts()}
-                    className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
+                    className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
                     disabled={recentLoading}
                   >
                     {recentLoading ? "Checking..." : "Check new posts"}
@@ -521,7 +521,7 @@ const FeedView: React.FC = () => {
                   <button
                     type="button"
                     onClick={resetFilters}
-                    className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
+                    className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
                   >
                     Reset filters
                   </button>
@@ -533,18 +533,18 @@ const FeedView: React.FC = () => {
       </div>
 
       {newPostCount > 0 && (
-        <div className="mx-8 mt-6 rounded-2xl border border-amber-300 bg-amber-50 px-6 py-4 flex items-center justify-between">
+        <div className="mx-8 mt-6 rounded-2xl border border-amber-300 dark:border-amber-500/60 bg-amber-50 dark:bg-amber-900/20 px-6 py-4 flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-amber-800">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-100">
               {newPostCount} new post{newPostCount > 1 ? "s" : ""} arrived
             </p>
-            <p className="text-xs text-amber-700">
+            <p className="text-xs text-amber-700 dark:text-amber-200">
               Insert them into the feed to keep your list fresh.
             </p>
           </div>
           <button
             onClick={consumeIncomingPosts}
-            className="px-4 py-2 text-sm font-medium rounded-lg bg-amber-500 text-white hover:bg-amber-400"
+            className="px-4 py-2 text-sm font-medium rounded-lg bg-amber-500 text-white hover:bg-amber-400 dark:hover:bg-amber-400/90"
           >
             Show latest posts
           </button>
@@ -552,20 +552,20 @@ const FeedView: React.FC = () => {
       )}
 
       {recentPosts.length > 0 && (
-        <div className="mx-8 mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-6 py-4 space-y-3">
+        <div className="mx-8 mt-6 rounded-2xl border border-emerald-200 dark:border-emerald-500/50 bg-emerald-50 dark:bg-emerald-900/20 px-6 py-4 space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-emerald-800">
+              <h3 className="text-sm font-semibold text-emerald-800 dark:text-emerald-100">
                 Recent posts since your last check
               </h3>
-              <p className="text-xs text-emerald-700">
+              <p className="text-xs text-emerald-700 dark:text-emerald-200">
                 {recentPosts.length} items ready for review
               </p>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={markPostsChecked}
-                className="px-3 py-1.5 text-xs rounded-lg border border-emerald-300 text-emerald-800"
+                className="px-3 py-1.5 text-xs rounded-lg border border-emerald-300 dark:border-emerald-500/60 text-emerald-800 dark:text-emerald-100"
               >
                 Mark as reviewed
               </button>
@@ -584,30 +584,34 @@ const FeedView: React.FC = () => {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4">
+      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4 bg-white dark:bg-gray-950">
         {searchResults && (
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-gray-300">
             Showing {searchResults.length} search result
             {searchResults.length !== 1 ? "s" : ""}.
             {searchError && (
-              <span className="text-red-600 ml-2">{searchError}</span>
+              <span className="text-red-600 dark:text-red-300 ml-2">
+                {searchError}
+              </span>
             )}
           </div>
         )}
         {postsError && !searchResults && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+          <div className="rounded-lg border border-red-200 dark:border-red-500/60 bg-red-50 dark:bg-red-950/40 px-4 py-2 text-sm text-red-700 dark:text-red-200">
             {postsError}
           </div>
         )}
 
         {listLoading ? (
-          <div className="text-center text-gray-500 py-12">Loading feed...</div>
+          <div className="text-center text-gray-500 dark:text-gray-400 py-12">
+            Loading feed...
+          </div>
         ) : visiblePosts.length === 0 ? (
-          <div className="text-center py-16 border border-dashed border-gray-300 rounded-2xl">
-            <h3 className="text-lg font-semibold text-gray-700">
+          <div className="text-center py-16 border border-dashed border-gray-300 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-gray-900/50">
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-100">
               No posts match your filters
             </h3>
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
               Try adjusting filters or run a different search query.
             </p>
           </div>
@@ -628,20 +632,20 @@ const FeedView: React.FC = () => {
 
       {!searchResults && visiblePosts.length > 0 && (
         <div className="px-8 pb-8">
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-gray-200 bg-white px-5 py-4">
-            <div className="text-sm text-gray-600">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-5 py-4">
+            <div className="text-sm text-gray-600 dark:text-gray-300">
               Page {page} / {totalPages}
             </div>
             <div className="flex items-center gap-3">
               <button
-                className="px-3 py-2 rounded-lg border border-gray-300 text-sm disabled:opacity-50"
+                className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-200 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800"
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
               >
                 Previous
               </button>
               <button
-                className="px-3 py-2 rounded-lg border border-gray-300 text-sm disabled:opacity-50"
+                className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-200 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800"
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
               >
@@ -650,7 +654,7 @@ const FeedView: React.FC = () => {
               <select
                 value={pageSize}
                 onChange={(e) => setPageSize(Number(e.target.value))}
-                className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-800 dark:text-gray-100 px-2 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
               >
                 {[10, 20, 30, 50].map((size) => (
                   <option key={size} value={size}>
