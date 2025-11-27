@@ -35,6 +35,6 @@ mods:
 
 connection:
   host: "localhost"
-  port: 8702
+  port: 8700
   transport: "grpc"
   agent_group: "researchers"

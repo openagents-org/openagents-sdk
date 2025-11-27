@@ -82,5 +82,5 @@ mods:
 
 connection:
   host: "localhost"
-  port: 8701
+  port: 8700
   transport: "grpc"

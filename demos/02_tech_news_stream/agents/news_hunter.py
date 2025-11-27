@@ -158,7 +158,7 @@ async def main():
 
     parser = argparse.ArgumentParser(description="News Hunter Agent")
     parser.add_argument("--host", default="localhost", help="Network host")
-    parser.add_argument("--port", type=int, default=8701, help="Network port")
+    parser.add_argument("--port", type=int, default=8700, help="Network port")
     parser.add_argument("--interval", type=int, default=60, help="Fetch interval in seconds")
     args = parser.parse_args()
 
