@@ -4,6 +4,7 @@ import { updateRouteVisibility } from "@/config/routeConfig"
 // 模块名到插件枚举的映射
 const MODULE_PLUGIN_MAP: Record<string, PLUGIN_NAME_ENUM> = {
   messaging: PLUGIN_NAME_ENUM.MESSAGING,
+  feed: PLUGIN_NAME_ENUM.FEED,
   project: PLUGIN_NAME_ENUM.PROJECT,
   "openagents.mods.workspace.project": PLUGIN_NAME_ENUM.PROJECT,
   documents: PLUGIN_NAME_ENUM.DOCUMENTS,
@@ -90,7 +91,7 @@ export const getDefaultRoute = (enabledModules: string[]): string => {
   }
 
   // 按优先级排序模块
-  const priorityOrder = ["messaging", "documents", "forum", "wiki"]
+  const priorityOrder = ["messaging", "feed", "documents", "forum", "wiki"]
 
   for (const priority of priorityOrder) {
     if (enabledModules.includes(priority)) {

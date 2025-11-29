@@ -7,6 +7,7 @@ import ForumSidebar from "@/pages/forum/ForumSidebar"
 import WikiSidebar from "@/pages/wiki/WikiSidebar"
 import ProfileSidebar from "@/pages/profile/ProfileSidebar"
 import ProjectSidebar from "@/pages/project/ProjectSidebar"
+import FeedSidebar from "@/pages/feed/FeedSidebar"
 
 // SidebarContent component - dynamically displays different sidebar content based on route
 // Each specific sidebar component manages its own data, no need to pass from outside
@@ -30,6 +31,10 @@ const SidebarContent: React.FC = () => {
     if (pathname.startsWith("/project")) {
       // ProjectSidebar gets needed data through hooks itself
       return <ProjectSidebar />
+    }
+
+    if (pathname.startsWith("/feed")) {
+      return <FeedSidebar />
     }
 
     if (pathname.startsWith("/forum")) {
