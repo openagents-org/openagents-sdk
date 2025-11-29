@@ -9,6 +9,8 @@ const MODULE_PLUGIN_MAP: Record<string, PLUGIN_NAME_ENUM> = {
   documents: PLUGIN_NAME_ENUM.DOCUMENTS,
   forum: PLUGIN_NAME_ENUM.FORUM,
   wiki: PLUGIN_NAME_ENUM.WIKI,
+  agentworld: PLUGIN_NAME_ENUM.AGENTWORLD,
+  "openagents.mods.games.agentworld": PLUGIN_NAME_ENUM.AGENTWORLD,
 }
 
 // 从 API 健康检查响应中提取启用的模块
@@ -126,6 +128,7 @@ export const isRouteAvailable = (
     "settings",
     "network-selection",
     "agent-setup",
+    "agentworld",
   ]
   if (alwaysAvailableRoutes.includes(routeName)) {
     return true
