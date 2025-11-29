@@ -31,7 +31,6 @@ from openagents.config.globals import (
     WORKSPACE_DEFAULT_MOD_NAME,
 )
 from openagents.core.base_mod import BaseMod
-from openagents.core.mod_registry import ModRegistry
 from openagents.models.event_response import EventResponse
 
 if TYPE_CHECKING:
@@ -101,8 +100,8 @@ class AgentNetwork:
         self.mods: OrderedDict[str, BaseMod] = OrderedDict()
         self.mod_manifests: Dict[str, Any] = {}
 
-        # Dynamic mod registry
-        self.mod_registry = ModRegistry()
+        # Track dynamically loaded mod IDs (vs statically configured)
+        self._dynamic_mod_ids: Set[str] = set()
 
         # Agent identity management
         self.identity_manager = AgentIdentityManager()
@@ -735,9 +734,9 @@ class AgentNetwork:
         try:
             # Extract mod_id from mod_path (last segment)
             mod_id = mod_path.split(".")[-1]
-            
-            # Check if already loaded
-            if mod_id in self.mod_registry:
+
+            # Check if already loaded (in self.mods by path)
+            if mod_path in self.mods:
                 return EventResponse(
                     success=False,
                     message=f"Mod '{mod_id}' is already loaded"
@@ -785,12 +784,12 @@ class AgentNetwork:
             
             # Set loaded_at timestamp
             mod_instance.loaded_at = time.time()
-            
-            # Register in registry
-            self.mod_registry.register(mod_id, mod_instance)
-            
+
             # Add to network.mods so ModEventProcessor can process events through this mod
             self.mods[mod_path] = mod_instance
+
+            # Track as dynamically loaded
+            self._dynamic_mod_ids.add(mod_id)
             
             logger.info(f"✅ Successfully loaded mod: {mod_id} from {mod_path}")
             
@@ -819,24 +818,24 @@ class AgentNetwork:
         try:
             # Extract mod_id from mod_path
             mod_id = mod_path.split(".")[-1]
-            
-            # Get mod from registry
-            mod_instance = self.mod_registry.get(mod_id)
-            if not mod_instance:
+
+            # Check if mod is dynamically loaded
+            if mod_id not in self._dynamic_mod_ids:
                 return EventResponse(
                     success=False,
                     message=f"Mod '{mod_id}' is not loaded"
                 )
-            
-            # Shutdown the mod
-            mod_instance.shutdown()
-            
-            # Remove from network.mods
-            if mod_path in self.mods:
+
+            # Get mod instance from self.mods
+            mod_instance = self.mods.get(mod_path)
+            if mod_instance:
+                # Shutdown the mod
+                mod_instance.shutdown()
+                # Remove from network.mods
                 del self.mods[mod_path]
-            
-            # Unregister from registry
-            self.mod_registry.unregister(mod_id)
+
+            # Remove from dynamic tracking
+            self._dynamic_mod_ids.discard(mod_id)
             
             logger.info(f"✅ Successfully unloaded mod: {mod_id}")
             
@@ -860,14 +859,16 @@ class AgentNetwork:
             Dictionary mapping mod_id to mod information
         """
         result = {}
-        for mod_id in self.mod_registry.list_loaded():
-            mod_instance = self.mod_registry.get(mod_id)
-            if mod_instance:
-                result[mod_id] = {
-                    "mod_id": mod_id,
-                    "mod_path": mod_instance._mod_name,
-                    "loaded_at": getattr(mod_instance, "loaded_at", None)
-                }
+        for mod_id in self._dynamic_mod_ids:
+            # Find mod instance in self.mods by matching mod_id
+            for mod_path, mod_instance in self.mods.items():
+                if mod_path.split(".")[-1] == mod_id:
+                    result[mod_id] = {
+                        "mod_id": mod_id,
+                        "mod_path": mod_instance._mod_name,
+                        "loaded_at": getattr(mod_instance, "loaded_at", None)
+                    }
+                    break
         return result
 
     async def _handle_system_mod_load(self, event: Event) -> EventResponse:

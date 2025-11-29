@@ -32,8 +32,8 @@ async def test_load_mod_success(test_network):
     response = await test_network.load_mod(mod_path)
     
     assert response.success is True
-    assert "project" in test_network.mod_registry
-    assert "project" in test_network.mod_registry.list_loaded()
+    assert "project" in test_network._dynamic_mod_ids
+    assert "openagents.mods.workspace.project" in test_network.mods
 
 
 @pytest.mark.asyncio
@@ -63,7 +63,7 @@ async def test_unload_mod_success(test_network):
     # Unload the mod
     unload_response = await test_network.unload_mod(mod_path)
     assert unload_response.success is True
-    assert "project" not in test_network.mod_registry
+    assert "project" not in test_network._dynamic_mod_ids
 
 
 @pytest.mark.asyncio
@@ -85,12 +85,12 @@ async def test_load_unload_cycle(test_network):
         # Load
         load_response = await test_network.load_mod(mod_path)
         assert load_response.success is True, f"Load failed on iteration {i}"
-        assert "project" in test_network.mod_registry
-        
+        assert "project" in test_network._dynamic_mod_ids
+
         # Unload
         unload_response = await test_network.unload_mod(mod_path)
         assert unload_response.success is True, f"Unload failed on iteration {i}"
-        assert "project" not in test_network.mod_registry
+        assert "project" not in test_network._dynamic_mod_ids
 
 
 @pytest.mark.asyncio
@@ -105,9 +105,9 @@ async def test_system_mod_load_event(test_network):
     )
     
     response = await test_network._handle_system_mod_load(event)
-    
+
     assert response.success is True
-    assert "project" in test_network.mod_registry
+    assert "project" in test_network._dynamic_mod_ids
 
 
 @pytest.mark.asyncio
@@ -125,9 +125,9 @@ async def test_system_mod_unload_event(test_network):
     )
     
     response = await test_network._handle_system_mod_unload(event)
-    
+
     assert response.success is True
-    assert "project" not in test_network.mod_registry
+    assert "project" not in test_network._dynamic_mod_ids
 
 
 @pytest.mark.asyncio
@@ -175,8 +175,9 @@ async def test_mod_with_config(test_network):
     config = {"test_key": "test_value"}
     
     response = await test_network.load_mod(mod_path, config=config)
-    
+
     assert response.success is True
-    mod_instance = test_network.mod_registry.get("project")
+    assert "project" in test_network._dynamic_mod_ids
+    mod_instance = test_network.mods.get(mod_path)
     assert mod_instance is not None
 
