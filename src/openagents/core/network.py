@@ -48,6 +48,7 @@ from openagents.core.agent_identity import AgentIdentityManager
 from openagents.models.event import Event, EventNames, EventVisibility
 from openagents.core.event_gateway import EventGateway
 from openagents.core.secret_manager import SecretManager
+from openagents.models.network_context import NetworkContext
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +110,9 @@ class AgentNetwork:
         # Event gateway
         self.event_gateway = EventGateway(self)
 
+        # Set network context for MCP transport (must be after mods and event_gateway are initialized)
+        self.topology.network_context = self._create_network_context()
+
     @property
     def events(self) -> EventGateway:
         """Get the events interface for this network.
@@ -121,6 +125,43 @@ class AgentNetwork:
             subscription = network.events.subscribe("agent1", ["project.*", "channel.message.*"])
         """
         return self.event_gateway
+
+    def _create_network_context(self) -> NetworkContext:
+        """Create a NetworkContext with shared data for components.
+
+        Returns:
+            NetworkContext: Context object with network data and callbacks
+        """
+        # Compute workspace path
+        workspace_path = self._compute_workspace_path()
+
+        # Create emit_event callback
+        async def emit_event(event: Event, enable_delivery: bool = True):
+            return await self.event_gateway.process_event(event, enable_delivery=enable_delivery)
+
+        return NetworkContext(
+            network_name=self.network_name,
+            workspace_path=workspace_path,
+            config=self.config,
+            mods=self.mods,
+            emit_event=emit_event,
+        )
+
+    def _compute_workspace_path(self) -> Optional[str]:
+        """Compute the workspace path based on config_path or workspace_manager."""
+        if self.config_path:
+            return str(Path(self.config_path).parent)
+        elif self.workspace_manager:
+            return str(self.workspace_manager.workspace_path)
+        return None
+
+    def _update_network_context(self) -> None:
+        """Update the network context after config_path is set.
+
+        This is called after load() sets config_path to ensure workspace_path is correct.
+        """
+        if self.topology.network_context:
+            self.topology.network_context.workspace_path = self._compute_workspace_path()
 
     @staticmethod
     def create_from_config(
@@ -255,11 +296,13 @@ class AgentNetwork:
                         f"Configuration file {config_path} must contain a 'network' section"
                     )
 
-                # Extract network profile from root level if present
+                # Extract network profile and external_access from root level if present
                 network_config_dict = config_dict["network"]
                 if "network_profile" in config_dict:
                     network_config_dict["network_profile"] = config_dict["network_profile"]
-                
+                if "external_access" in config_dict:
+                    network_config_dict["external_access"] = config_dict["external_access"]
+
                 network_config = NetworkConfig(**network_config_dict)
                 logger.info(f"Loaded network configuration from {config_path}")
 
@@ -270,6 +313,8 @@ class AgentNetwork:
 
                 # Store the config file path for later use (e.g., saving updates)
                 network.config_path = str(config_path.resolve())
+                # Update network context now that config_path is set
+                network._update_network_context()
 
                 # Load metadata if specified in config
                 if "metadata" in config_dict:
