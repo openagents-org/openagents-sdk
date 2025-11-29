@@ -270,11 +270,10 @@ const AgentNamePicker: React.FC = () => {
                 setPassword(e.target.value);
                 setPasswordError(""); // Clear error when user types
               }}
-              className={`w-full px-4 py-3 border-2 rounded-lg text-base transition-all duration-150 focus:outline-none focus:ring-3 bg-white text-gray-800 focus:border-blue-500 focus:ring-blue-500/10 dark:bg-gray-600 dark:text-gray-50 dark:focus:border-blue-400 dark:focus:ring-blue-400/10 ${
-                passwordError
-                  ? "border-red-500 dark:border-red-400"
-                  : "border-gray-300 dark:border-gray-500"
-              }`}
+              className={`w-full px-4 py-3 border-2 rounded-lg text-base transition-all duration-150 focus:outline-none focus:ring-3 bg-white text-gray-800 focus:border-blue-500 focus:ring-blue-500/10 dark:bg-gray-600 dark:text-gray-50 dark:focus:border-blue-400 dark:focus:ring-blue-400/10 ${passwordError
+                ? "border-red-500 dark:border-red-400"
+                : "border-gray-300 dark:border-gray-500"
+                }`}
               placeholder="Enter password to join a group..."
               autoComplete="off"
             />
@@ -318,11 +317,10 @@ const AgentNamePicker: React.FC = () => {
             <button
               type="submit"
               disabled={!isValidName(pageAgentName) || isVerifying}
-              className={`flex-[2] px-6 py-3 border-none rounded-lg text-base font-semibold cursor-pointer transition-all duration-150 text-white ${
-                !isValidName(pageAgentName) || isVerifying
-                  ? "bg-gray-300 dark:bg-gray-500 cursor-not-allowed"
-                  : "bg-blue-500 hover:bg-blue-600 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/30"
-              }`}
+              className={`flex-[2] px-6 py-3 border-none rounded-lg text-base font-semibold cursor-pointer transition-all duration-150 text-white ${!isValidName(pageAgentName) || isVerifying
+                ? "bg-gray-300 dark:bg-gray-500 cursor-not-allowed"
+                : "bg-blue-500 hover:bg-blue-600 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/30"
+                }`}
             >
               <div className="flex flex-wrap justify-center items-center gap-2">
                 {isVerifying ? (
