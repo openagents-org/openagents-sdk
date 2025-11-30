@@ -13,6 +13,7 @@ import DocumentsMainPage from "@/pages/documents/DocumentsMainPage"
 // import SettingsMainPage from "@/pages/settings/SettingsMainPage";
 import ProfileMainPage from "@/pages/profile/ProfileMainPage"
 import AgentWorldMainPage from "@/pages/agentworld/AgentWorldMainPage"
+import ReadmeMainPage from "@/pages/readme/ReadmeMainPage"
 // import McpMainPage from "@/pages/mcp/McpMainPage";
 import FeedMainPage from "@/pages/feed/FeedMainPage"
 
@@ -196,6 +197,23 @@ export const NavigationIcons = {
         strokeLinejoin: "round",
         strokeWidth: 2,
         d: "M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z",
+      })
+    )
+  ),
+  Readme: React.memo(() =>
+    React.createElement(
+      "svg",
+      {
+        className: "w-6 h-6",
+        fill: "none",
+        stroke: "currentColor",
+        viewBox: "0 0 24 24",
+      },
+      React.createElement("path", {
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        strokeWidth: 2,
+        d: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
       })
     )
   ),
@@ -402,6 +420,21 @@ export const dynamicRouteConfig: RouteConfig[] = [
       visible: true,
       order: 5,
       group: "secondary",
+    },
+  },
+  {
+    path: "/readme/*",
+    element: ReadmeMainPage,
+    title: "README",
+    requiresAuth: true,
+    requiresLayout: true,
+    navigationConfig: {
+      key: PLUGIN_NAME_ENUM.README,
+      label: "README",
+      icon: "Readme",
+      visible: true,
+      order: 3.5,
+      group: "primary",
     },
   },
   // {

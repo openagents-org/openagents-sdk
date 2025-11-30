@@ -588,6 +588,9 @@ class AgentNetwork:
                 "metadata": {},
             })
 
+        # Get README content (resolved from config or file)
+        readme_content = self.topology.network_context.get_readme() if self.topology.network_context else None
+
         # Include network_profile if available
         network_profile_data = None
         if hasattr(self.config, "network_profile") and self.config.network_profile:
@@ -637,11 +640,12 @@ class AgentNetwork:
             "manifest_transport": self.config.manifest_transport,
             "recommended_transport": self.config.recommended_transport,
             "max_connections": self.config.max_connections,
+            "readme": readme_content,
         }
-        
+
         if network_profile_data:
             stats["network_profile"] = network_profile_data
-        
+
         return stats
 
     async def process_external_event(self, event: Event) -> EventResponse:

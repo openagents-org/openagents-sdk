@@ -6,7 +6,9 @@ information needed by various components (transports, tool collectors, etc.)
 without requiring direct access to the AgentNetwork instance.
 """
 
+import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, Optional, OrderedDict, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -14,6 +16,8 @@ if TYPE_CHECKING:
     from openagents.models.network_config import NetworkConfig, NetworkProfile
     from openagents.models.external_access import ExternalAccessConfig
     from openagents.models.event import Event
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -50,4 +54,38 @@ class NetworkContext:
         """Get the network_profile from network config."""
         if self.config:
             return getattr(self.config, "network_profile", None)
+        return None
+
+    def get_readme(self) -> Optional[str]:
+        """Get network README content.
+
+        Resolution priority:
+        1. network_profile.readme (from network profile configuration)
+        2. README.md file in workspace directory
+
+        Returns:
+            Optional[str]: README content in Markdown format, or None if not available
+        """
+        # Priority 1: network_profile.readme
+        network_profile = self.network_profile
+        if network_profile:
+            # Handle both dict (from YAML) and NetworkProfile model
+            if isinstance(network_profile, dict):
+                readme = network_profile.get("readme")
+            else:
+                readme = getattr(network_profile, "readme", None)
+            if readme:
+                return readme
+
+        # Priority 2: README.md file in workspace
+        if self.workspace_path:
+            readme_file = Path(self.workspace_path) / "README.md"
+            if readme_file.exists():
+                try:
+                    return readme_file.read_text(encoding="utf-8")
+                except Exception as e:
+                    logger.warning(f"Failed to read README.md file: {e}")
+                    return None
+
+        # No README available
         return None

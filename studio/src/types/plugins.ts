@@ -10,4 +10,5 @@ export enum PLUGIN_NAME_ENUM {
   PROFILE = "profile",
   MCP = "mcp",
   AGENTWORLD = "agentworld",
+  README = "readme",
 }
