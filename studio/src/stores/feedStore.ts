@@ -6,7 +6,6 @@ import {
   FeedCreatePayload,
   FeedFilters,
   FeedPost,
-  FeedSortField,
 } from "@/types/feed";
 
 const FEED_DESTINATION_ID = "mod:openagents.mods.workspace.feed";
