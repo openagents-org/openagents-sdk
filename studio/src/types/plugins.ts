@@ -3,6 +3,7 @@ export enum PLUGIN_NAME_ENUM {
   FEED = "feed",
   PROJECT = "project",
   FORUM = "forum",
+  ARTIFACT = "artifact",
   WIKI = "wiki",
   DOCUMENTS = "documents",
   SETTINGS = "settings",

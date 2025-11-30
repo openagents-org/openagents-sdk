@@ -12,6 +12,7 @@ const MODULE_PLUGIN_MAP: Record<string, PLUGIN_NAME_ENUM> = {
   wiki: PLUGIN_NAME_ENUM.WIKI,
   agentworld: PLUGIN_NAME_ENUM.AGENTWORLD,
   "openagents.mods.games.agentworld": PLUGIN_NAME_ENUM.AGENTWORLD,
+  artifact: PLUGIN_NAME_ENUM.ARTIFACT,
 }
 
 // 从 API 健康检查响应中提取启用的模块
@@ -91,7 +92,7 @@ export const getDefaultRoute = (enabledModules: string[]): string => {
   }
 
   // 按优先级排序模块
-  const priorityOrder = ["messaging", "feed", "documents", "forum", "wiki"]
+  const priorityOrder = ["messaging", "documents", "forum", "artifact", "wiki", "feed"]
 
   for (const priority of priorityOrder) {
     if (enabledModules.includes(priority)) {
@@ -130,6 +131,7 @@ export const isRouteAvailable = (
     "network-selection",
     "agent-setup",
     "agentworld",
+    "artifact", // Artifact 始终可用，类似 Project
   ]
   if (alwaysAvailableRoutes.includes(routeName)) {
     return true
