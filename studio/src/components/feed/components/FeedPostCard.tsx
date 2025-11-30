@@ -24,7 +24,7 @@ const FeedPostCard: React.FC<FeedPostCardProps> = ({
 
   const snippet = useMemo(() => {
     if (post.summary) return post.summary;
-    const text = post.content.replace(/[#*_`>\-\[\]()*~]/g, "");
+    const text = post.content.replace(/[#*_`>\-[\]()*~]/g, "");
     if (text.length <= 200) return text;
     return `${text.slice(0, 200)}...`;
   }, [post.summary, post.content]);
