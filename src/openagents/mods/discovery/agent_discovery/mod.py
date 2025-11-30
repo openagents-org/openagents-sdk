@@ -92,6 +92,19 @@ class AgentDiscoveryMod(BaseMod):
             }
         }
 
+    def _get_agent_group(self, agent_id: str) -> Optional[str]:
+        """Get agent group from network topology.
+
+        Args:
+            agent_id: The agent ID to get group for
+
+        Returns:
+            Optional[str]: The agent's group or None
+        """
+        if self.network and hasattr(self.network, 'topology'):
+            return self.network.topology.agent_group_membership.get(agent_id)
+        return None
+
     async def handle_register_agent(
         self, agent_id: str, metadata: Dict[str, Any]
     ) -> Optional[EventResponse]:
@@ -105,9 +118,7 @@ class AgentDiscoveryMod(BaseMod):
             Optional[EventResponse]: Response to the event
         """
         # Get agent group from network topology if available
-        agent_group = None
-        if self.network and hasattr(self.network, 'topology'):
-            agent_group = self.network.topology.agent_group_membership.get(agent_id)
+        agent_group = self._get_agent_group(agent_id)
 
         # Extract capabilities from metadata
         capabilities = metadata.get("capabilities", {})
@@ -171,9 +182,7 @@ class AgentDiscoveryMod(BaseMod):
 
         # Get or create agent info
         if source_id not in self._agent_registry:
-            agent_group = None
-            if self.network and hasattr(self.network, 'topology'):
-                agent_group = self.network.topology.agent_group_membership.get(source_id)
+            agent_group = self._get_agent_group(source_id)
             
             self._agent_registry[source_id] = AgentInfo(
                 agent_id=source_id,

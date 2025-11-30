@@ -134,12 +134,12 @@ class AgentDiscoveryAdapter(BaseModAdapter):
         return None
 
     async def search_agents(
-        self, filter_query: Dict[str, Any]
+        self, filter: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
         """Search for agents with specific capabilities.
 
         Args:
-            filter_query: Capability filter for searching agents
+            filter: Capability filter for searching agents
 
         Returns:
             List of matching agents with their capabilities
@@ -153,7 +153,7 @@ class AgentDiscoveryAdapter(BaseModAdapter):
         event = Event(
             event_name="discovery.agents.search",
             source_id=self.agent_id,
-            payload={"filter": filter_query}
+            payload={"filter": filter}
         )
 
         response = await self.connector.send_event(event)
@@ -164,12 +164,12 @@ class AgentDiscoveryAdapter(BaseModAdapter):
         return []
 
     async def list_agents(
-        self, filter_query: Optional[Dict[str, Any]] = None
+        self, filter: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
         """List all connected agents.
 
         Args:
-            filter_query: Optional capability filter
+            filter: Optional capability filter
 
         Returns:
             List of all agents with their capabilities
@@ -181,8 +181,8 @@ class AgentDiscoveryAdapter(BaseModAdapter):
             return []
 
         payload = {}
-        if filter_query:
-            payload["filter"] = filter_query
+        if filter:
+            payload["filter"] = filter
 
         event = Event(
             event_name="discovery.agents.list",
@@ -271,7 +271,7 @@ class AgentDiscoveryAdapter(BaseModAdapter):
                 },
                 "required": ["filter"]
             },
-            func=lambda filter: self.search_agents(filter)
+            func=self.search_agents
         )
         tools.append(search_agents_tool)
 
@@ -289,7 +289,7 @@ class AgentDiscoveryAdapter(BaseModAdapter):
                 },
                 "required": []
             },
-            func=lambda filter=None: self.list_agents(filter)
+            func=self.list_agents
         )
         tools.append(list_agents_tool)
 
