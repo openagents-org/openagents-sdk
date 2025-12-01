@@ -42,7 +42,7 @@ const AgentNamePicker: React.FC = () => {
   // Group selection state
   const [availableGroups, setAvailableGroups] = useState<GroupConfig[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-  const [defaultGroup, setDefaultGroup] = useState<string>("guests");
+  const [defaultGroup, setDefaultGroup] = useState<string>("guest");
   const [isLoadingGroups, setIsLoadingGroups] = useState<boolean>(true);
 
   const handleRandomize = useCallback(() => {
@@ -89,7 +89,7 @@ const AgentNamePicker: React.FC = () => {
 
           // Extract group configuration
           const groupConfig: GroupConfig[] = healthData.data?.group_config || [];
-          const defaultGroupName = healthData.data?.default_agent_group || "guests";
+          const defaultGroupName = healthData.data?.default_agent_group || "guest";
 
           setAvailableGroups(groupConfig);
           setDefaultGroup(defaultGroupName);
@@ -148,10 +148,72 @@ const AgentNamePicker: React.FC = () => {
         console.log(`Connecting to group '${selectedGroup}' (no password required)`);
       }
 
+      // Verify credentials by attempting registration
+      const verifyResponse = await networkFetch(
+        selectedNetwork.host,
+        selectedNetwork.port,
+        "/api/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            agent_id: agentNameTrimmed,
+            metadata: {
+              display_name: agentNameTrimmed,
+              platform: "web",
+              verification_only: true,
+            },
+            password_hash: passwordHash || undefined,
+            agent_group: selectedGroup || undefined,
+          }),
+        }
+      );
+
+      const verifyData = await verifyResponse.json();
+
+      if (!verifyData.success) {
+        // Registration failed - likely invalid password
+        const errorMessage = verifyData.error_message || "Failed to connect to network";
+
+        // Check if error is related to invalid credentials
+        if (errorMessage.toLowerCase().includes("invalid credentials") ||
+            errorMessage.toLowerCase().includes("password")) {
+          setPasswordError(`Invalid password for the '${selectedGroup}' group`);
+        } else {
+          setPasswordError(errorMessage);
+        }
+        setIsVerifying(false);
+        return;
+      }
+
+      // Registration succeeded - unregister to let the main app re-register
+      try {
+        await networkFetch(
+          selectedNetwork.host,
+          selectedNetwork.port,
+          "/api/unregister",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              agent_id: agentNameTrimmed,
+              secret: verifyData.secret,
+            }),
+          }
+        );
+      } catch (unregError) {
+        // Ignore unregister errors - not critical
+        console.warn("Failed to unregister after verification:", unregError);
+      }
+
       // Proceed with connection
       proceedWithConnection(passwordHash);
     } catch (error) {
-      console.error("Failed to process password:", error);
+      console.error("Failed to verify credentials:", error);
       setPasswordError("Failed to connect to network. Please try again.");
       setIsVerifying(false);
     }
