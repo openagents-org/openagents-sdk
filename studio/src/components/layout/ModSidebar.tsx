@@ -5,6 +5,7 @@ import {
   getNavigationRoutesByGroup,
 } from "@/config/routeConfig";
 import { useAuthStore } from "@/stores/authStore";
+import { PLUGIN_NAME_ENUM } from "@/types/plugins";
 import ModIcon from "./ModIcon";
 import logo from "@/assets/images/open-agents-logo.png";
 
@@ -24,9 +25,29 @@ const ModSidebar: React.FC = () => {
   const primaryRoutes = getNavigationRoutesByGroup("primary");
   const secondaryRoutes = getNavigationRoutesByGroup("secondary");
 
+  // Extract README route to pin it at the top
+  const readmeRoute = primaryRoutes.find(
+    (route) => route.navigationConfig?.key === PLUGIN_NAME_ENUM.README
+  );
+  const otherPrimaryRoutes = primaryRoutes.filter(
+    (route) => route.navigationConfig?.key !== PLUGIN_NAME_ENUM.README
+  );
+
+  // Create pinned README icon config
+  const pinnedReadmeIcon = readmeRoute
+    ? {
+        key: readmeRoute.navigationConfig!.key,
+        label: readmeRoute.navigationConfig!.label,
+        icon: React.createElement(
+          NavigationIcons[readmeRoute.navigationConfig!.icon]
+        ),
+        route: readmeRoute.path.replace("/*", ""),
+      }
+    : null;
+
   const iconGroups = [
-    // Primary group (main features)
-    primaryRoutes.map((route) => ({
+    // Primary group (main features) - excluding README which is pinned
+    otherPrimaryRoutes.map((route) => ({
       key: route.navigationConfig!.key,
       label: route.navigationConfig!.label,
       icon: React.createElement(
@@ -65,7 +86,7 @@ const ModSidebar: React.FC = () => {
     "
     >
       {/* Logo/Brand Icon */}
-      <div className="mb-6">
+      <div className="mb-4">
         {/* <div
           className="
           w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg
@@ -83,6 +104,19 @@ const ModSidebar: React.FC = () => {
           <img src={logo} alt="OA" className="w-10 h-10" />
         </div>
       </div>
+
+      {/* Pinned README Icon - always at the top */}
+      {pinnedReadmeIcon && (
+        <div className="mb-4">
+          <ModIcon
+            key={pinnedReadmeIcon.key}
+            isActive={isRouteActive(pinnedReadmeIcon.route)}
+            onClick={() => handleNavigation(pinnedReadmeIcon.route)}
+            label={pinnedReadmeIcon.label}
+            icon={pinnedReadmeIcon.icon}
+          />
+        </div>
+      )}
 
       {/* Top Icons - main features */}
       <div className="flex flex-col space-y-3 flex-1">

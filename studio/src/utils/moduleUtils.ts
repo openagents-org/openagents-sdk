@@ -30,6 +30,11 @@ export interface HealthResponse {
     network_name: string
     is_running: boolean
     mods: ModuleInfo[]
+    readme?: string
+    network_profile?: {
+      readme?: string
+      [key: string]: any
+    }
     [key: string]: any
   }
 }
@@ -87,8 +92,15 @@ export const updateRouteVisibilityFromModules = (
 
 /**
  * 获取默认路由（第一个启用的模块）
+ * @param enabledModules - 启用的模块列表
+ * @param hasReadme - 是否有 README 内容可用
  */
-export const getDefaultRoute = (enabledModules: string[]): string => {
+export const getDefaultRoute = (enabledModules: string[], hasReadme: boolean = false): string => {
+  // If README content is available, prioritize the readme page
+  if (hasReadme) {
+    return "/readme"
+  }
+
   if (enabledModules.length === 0) {
     // 如果没有启用的模块，回退到 profile
     return "/profile"
@@ -151,7 +163,12 @@ export const generateRouteConfigFromHealth = (
   healthResponse: HealthResponse
 ) => {
   const enabledModules = getEnabledModules(healthResponse)
-  const defaultRoute = getDefaultRoute(enabledModules)
+
+  // Check if README content is available
+  const readmeContent = healthResponse.data?.network_profile?.readme || healthResponse.data?.readme || ""
+  const hasReadme = readmeContent.trim().length > 0
+
+  const defaultRoute = getDefaultRoute(enabledModules, hasReadme)
 
   return {
     enabledModules,

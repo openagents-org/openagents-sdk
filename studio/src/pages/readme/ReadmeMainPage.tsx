@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
+import { useReadmeStore } from "@/stores/readmeStore";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 
 /**
@@ -10,6 +11,7 @@ const ReadmeMainPage: React.FC = () => {
   const [readmeContent, setReadmeContent] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const setStoreContent = useReadmeStore((state) => state.setContent);
 
   useEffect(() => {
     const fetchReadme = async () => {
@@ -32,20 +34,23 @@ const ReadmeMainPage: React.FC = () => {
 
         if (readme) {
           setReadmeContent(readme);
+          setStoreContent(readme);
         } else {
           setReadmeContent("");
+          setStoreContent("");
         }
       } catch (err) {
         console.error("Failed to fetch README:", err);
         setError(err instanceof Error ? err.message : "Failed to fetch README");
         setReadmeContent("");
+        setStoreContent("");
       } finally {
         setLoading(false);
       }
     };
 
     fetchReadme();
-  }, [connector]);
+  }, [connector, setStoreContent]);
 
   // Loading state
   if (loading) {
@@ -131,6 +136,7 @@ const ReadmeMainPage: React.FC = () => {
         <MarkdownRenderer
           content={readmeContent}
           className="prose prose-gray dark:prose-invert max-w-none"
+          addHeadingIds={true}
         />
       </div>
     </div>

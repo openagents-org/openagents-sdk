@@ -152,8 +152,9 @@ const AgentNamePicker: React.FC = () => {
     setPasswordHash(hash);
     setAgentName(agentNameTrimmed);
 
-    // Navigate to messaging
-    navigate("/messaging");
+    // Navigate to root - RouteGuard will redirect to the appropriate default route
+    // after modules are loaded (which determines if README or messaging is the default)
+    navigate("/");
   };
 
   return (
