@@ -6,12 +6,7 @@ used by the `openagents network list --status` command.
 """
 
 import pytest
-import asyncio
-import os
-import random
-from pathlib import Path
 from unittest.mock import patch, MagicMock
-import json
 
 from openagents.cli import discover_running_networks
 
@@ -180,7 +175,9 @@ class TestDiscoverRunningNetworks:
 
     def test_discover_with_default_ports(self):
         """Test discovery uses reasonable default ports."""
-        with patch('requests.get', side_effect=Exception("No network")):
+        import requests
+        
+        with patch('requests.get', side_effect=requests.exceptions.ConnectionError("No network")):
             # Just verify it runs without error using defaults
             networks = discover_running_networks(timeout=0.1)
         

@@ -1818,6 +1818,7 @@ def discover_running_networks(
         List of dictionaries containing network information for each discovered network.
     """
     import requests
+    import re
     
     if ports is None:
         # Common OpenAgents network ports
@@ -1853,19 +1854,22 @@ def discover_running_networks(
                         pid = None
                         try:
                             if sys.platform.startswith("linux"):
+                                # Use ss without filter and search for the port in output
                                 result = subprocess.run(
-                                    ["ss", "-tlpn", f"sport = :{port}"],
+                                    ["ss", "-tlpn"],
                                     capture_output=True,
                                     text=True,
                                     timeout=2,
                                 )
                                 if result.returncode == 0 and result.stdout:
-                                    lines = result.stdout.strip().split("\n")
-                                    for line in lines[1:]:
-                                        if f":{port}" in line and "pid=" in line:
-                                            users_part = line.split("users:")[1] if "users:" in line else ""
-                                            if "pid=" in users_part:
-                                                pid = users_part.split("pid=")[1].split(",")[0].split(")")[0]
+                                    # Find lines containing the port and extract PID
+                                    for line in result.stdout.split("\n"):
+                                        if f":{port}" in line:
+                                            # Use regex for more robust PID extraction
+                                            # Match patterns like "pid=12345," or "pid=12345)"
+                                            pid_match = re.search(r'pid=(\d+)', line)
+                                            if pid_match:
+                                                pid = pid_match.group(1)
                                                 break
                             elif sys.platform == "darwin":
                                 result = subprocess.run(
@@ -1876,7 +1880,8 @@ def discover_running_networks(
                                 )
                                 if result.returncode == 0 and result.stdout:
                                     pid = result.stdout.strip().split("\n")[0]
-                        except Exception:
+                        except (subprocess.TimeoutExpired, subprocess.SubprocessError, OSError):
+                            # PID detection is optional, continue without it
                             pass
                         
                         network_info = {
@@ -1892,7 +1897,7 @@ def discover_running_networks(
                         }
                         discovered_networks.append(network_info)
                         
-            except Exception:
+            except (requests.RequestException, requests.exceptions.JSONDecodeError, ValueError):
                 # Port is not reachable or not an OpenAgents network
                 continue
     
