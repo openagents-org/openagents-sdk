@@ -414,6 +414,7 @@ class AgentNetwork:
         certificate: str,
         force_reconnect: bool = False,
         password_hash: Optional[str] = None,
+        requested_group: Optional[str] = None,
     ) -> EventResponse:
         """Register an agent with the network.
 
@@ -424,6 +425,7 @@ class AgentNetwork:
             certificate: Agent certificate
             force_reconnect: Whether to force reconnect
             password_hash: Password hash for group authentication (direct parameter, not in metadata)
+            requested_group: Explicitly requested agent group (optional)
 
         Returns:
             bool: True if registration successful
@@ -456,7 +458,11 @@ class AgentNetwork:
                     message=f"Agent {agent_id} already registered with network",
                 )
 
-        success = await self.topology.register_agent(agent_info, password_hash=password_hash)
+        success = await self.topology.register_agent(
+            agent_info,
+            password_hash=password_hash,
+            requested_group=requested_group
+        )
 
         if success:
             # Generate and store authentication secret
@@ -482,12 +488,14 @@ class AgentNetwork:
             return EventResponse(
                 success=True,
                 message=f"Registered agent {agent_id} with network",
-                data={"secret": secret},
+                data={"secret": secret, "assigned_group": assigned_group},
             )
         else:
-            # Check if rejection was due to password requirement
+            # Build specific error message based on the situation
             error_message = f"Failed to register agent {agent_id} with network"
-            if self.config.requires_password:
+            if requested_group:
+                error_message = f"Invalid credentials for group '{requested_group}'"
+            elif self.config.requires_password:
                 error_message = "Password authentication required for network registration"
 
             logger.error(f"Failed to register agent {agent_id} with network")
@@ -565,7 +573,7 @@ class AgentNetwork:
                 groups[group_name] = []
             groups[group_name].append(agent_id)
 
-        # Build group config info
+        # Build group config info (including has_password flag for UI)
         group_config = []
         added_group_names = set()
         for group_name, group_cfg in self.config.agent_groups.items():
@@ -575,17 +583,19 @@ class AgentNetwork:
                 "description": group_cfg.description,
                 "agent_count": len(groups.get(group_name, [])),
                 "metadata": group_cfg.metadata,
+                "has_password": bool(group_cfg.password_hash),
             })
 
-        # Add default group info if it has agents
+        # Add default group info if it has agents or always include it for UI
         default_group_name = self.config.default_agent_group
         if default_group_name not in added_group_names:
             added_group_names.add(default_group_name)
             group_config.append({
                 "name": default_group_name,
-                "description": "Agents without valid credentials",
+                "description": "Default group for agents without specific credentials",
                 "agent_count": len(groups.get(default_group_name, [])),
                 "metadata": {},
+                "has_password": False,
             })
 
         # Get README content (resolved from config or file)
