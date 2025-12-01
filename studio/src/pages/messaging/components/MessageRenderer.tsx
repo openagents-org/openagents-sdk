@@ -1,12 +1,12 @@
 /**
- * 统一的消息渲染器 - 合并了MessageDisplay和UnifiedMessageRenderer的功能
+ * Unified message renderer - combines features of MessageDisplay and UnifiedMessageRenderer
  *
- * 功能：
- * 1. 支持多种消息类型（UnifiedMessage 和 ThreadMessage）
- * 2. 支持反应、回复、引用操作
- * 3. 支持附件显示
- * 4. 支持线程结构显示
- * 5. 支持多种渲染模式
+ * Features：
+ * 1. Support multiple message types (UnifiedMessage and ThreadMessage)
+ * 2. Support reactions, replies, quote operations
+ * 3. Support attachment display
+ * 4. Support thread structure display
+ * 5. Support multiple rendering modes
  */
 
 import React, { useState, useRef } from "react";
@@ -30,25 +30,25 @@ import {
 import MarkdownContent from "./MarkdownContent";
 import AttachmentDisplay from "./AttachmentDisplay";
 
-// 支持的消息类型
+// Supported message types
 type SupportedMessage = UnifiedMessage | ThreadMessage;
 
 interface MessageRendererProps {
   messages: SupportedMessage[];
   currentUserId: string;
-  // 回复回调（可选）- 若未提供，则不显示回复按钮
+  // Reply callback (optional) - if not provided, reply button is not shown
   onReply?: (messageId: string, text: string, author: string) => void;
   onQuote: (messageId: string, text: string, author: string) => void;
   onReaction: (messageId: string, reactionType: string, action?: "add" | "remove") => void;
-  // 渲染模式：flat（平铺）或 threaded（线程）
+  // Render mode: flat or threaded
   renderMode?: 'flat' | 'threaded';
-  // 最大线程深度
+  // Maximum thread depth
   maxThreadDepth?: number;
-  // 是否为直接消息聊天（DM）
+  // Whether it's a direct message chat (DM)
   isDMChat?: boolean;
-  // 是否禁用反应功能（用于项目频道）
+  // Whether to disable reaction features (for project channel)
   disableReactions?: boolean;
-  // 是否禁用引用功能（用于项目频道）
+  // Whether to disable quote features (for project channel)
   disableQuotes?: boolean;
 }
 
@@ -74,9 +74,9 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
   // This prevents duplicate scroll effects that conflict with each other
 
 
-  // 消息类型检测和属性获取
+  // Message type detection and property extraction
   const getMessageProps = (message: SupportedMessage) => {
-    // 检测是否为 ThreadMessage 类型
+    // Detect if it's ThreadMessage type
     if ('message_id' in message) {
       const threadMsg = message as ThreadMessage;
       return {
@@ -92,7 +92,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
           size: att.size,
           fileType: att.file_type,
         })) : undefined,
-        // 处理旧格式的单个附件
+        // Handle old format single attachment
         legacyAttachment: threadMsg.attachment_file_id ? {
           fileId: threadMsg.attachment_file_id,
           filename: threadMsg.attachment_filename || '',
@@ -102,7 +102,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
         } : undefined,
       };
     } else {
-      // UnifiedMessage 类型
+      // UnifiedMessage type
       const unifiedMsg = message as UnifiedMessage;
       return {
         id: unifiedMsg.id,
@@ -117,13 +117,13 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
     }
   };
 
-  // 格式化用户名
+  // Format username
   const formatUsername = (senderId: string): string => {
     if (!senderId || typeof senderId !== 'string') {
       return 'Unknown';
     }
 
-    // 如果包含@，取@之前的部分
+    // If contains @, take part before @
     if (senderId.includes("@")) {
       const namePart = senderId.split("@")[0];
       if (namePart.includes("_")) {
@@ -135,7 +135,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
       return namePart;
     }
 
-    // 如果包含下划线，格式化显示
+    // If contains underscore, format for display
     if (senderId.includes("_")) {
       return senderId
         .split("_")
@@ -143,7 +143,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
         .join(" ");
     }
 
-    // 否则只是首字母大写
+    // Otherwise just capitalize first letter
     return senderId.charAt(0).toUpperCase() + senderId.slice(1);
   };
 
@@ -159,11 +159,11 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
       event.stopPropagation();
     }
 
-    // 检查用户是否已经添加过该reaction，如果是则直接返回
+    // Check if user has already added this reaction, if so return directly
     // if (checkIfUserReacted(messageReactions, reactionType, currentUserId)) {
     //   console.log(`🚫 User ${currentUserId} already reacted with ${reactionType} to message ${messageId}`);
     //   setShowReactionPicker(null);
-    //   return; // 防止重复添加
+    //   return; // Prevent duplicate addition
     // }
 
     console.log(`✅ Adding reaction ${reactionType} for user ${currentUserId} to message ${messageId}`);
@@ -171,7 +171,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
     setShowReactionPicker(null);
   };
 
-  // 简单的表情选择器切换
+  // Simple emoji picker toggle
   const handleReactionPickerToggle = (
     messageId: string,
     event?: React.MouseEvent
@@ -193,12 +193,12 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
     setCollapsedThreads(newCollapsed);
   };
 
-  // 为了兼容旧的 ThreadMessage 格式，需要构建线程结构
+  // For compatibility with old ThreadMessage format, need to build thread structure
   const buildThreadStructureForThreadMessages = (threadMessages: ThreadMessage[]) => {
     const structure: { [messageId: string]: { message: ThreadMessage; children: string[]; level: number } } = {};
     const rootMessages: string[] = [];
 
-    // 第一遍：组织消息并识别根消息
+    // First pass: organize messages and identify root messages
     threadMessages.forEach((message) => {
       structure[message.message_id] = {
         message,
@@ -211,10 +211,10 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
       }
     });
 
-    // 跟踪孤立的回复
+    // Track orphaned replies
     const orphanedReplies: string[] = [];
 
-    // 第二遍：建立父子关系
+    // Second pass: establish parent-child relationships
     threadMessages.forEach((message) => {
       if (message.reply_to_id) {
         if (structure[message.reply_to_id]) {
@@ -225,13 +225,13 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
       }
     });
 
-    // 将孤立回复作为根消息显示
+    // Display orphaned replies as root messages
     rootMessages.push(...orphanedReplies);
 
     return { structure, rootMessageIds: rootMessages };
   };
 
-  // 渲染单个消息（ThreadMessage格式）
+  // Render single message (ThreadMessage format)
   const renderThreadMessage = (
     messageId: string,
     structure: { [messageId: string]: { message: ThreadMessage; children: string[]; level: number } },
@@ -254,7 +254,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
           onMouseEnter={() => setHoveredMessage(messageId)}
           onMouseLeave={() => setHoveredMessage(null)}
         >
-          {/* 消息头部 */}
+          {/* Message header */}
           <div className="flex items-center gap-2 mb-2 text-sm">
             <span className="font-semibold text-slate-800 dark:text-slate-100">
               {isOwnMessage ? "You" : formatUsername(messageProps.senderId)}
@@ -267,7 +267,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             )}
           </div>
 
-          {/* 消息内容 */}
+          {/* Message content */}
           <div className="message-content leading-6 break-words">
             {messageProps.content ? (
               <MarkdownContent content={messageProps.content} />
@@ -275,7 +275,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
               <div className="text-gray-500 italic">Empty message</div>
             )}
 
-            {/* 附件显示 */}
+            {/* Attachment display */}
             {messageProps.attachments && messageProps.attachments.length > 0 ? (
               <AttachmentDisplay attachments={messageProps.attachments} />
             ) : messageProps.legacyAttachment ? (
@@ -287,7 +287,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             ) : null}
           </div>
 
-          {/* 反应显示 */}
+          {/* Reaction display */}
           {messageProps.reactions && Object.keys(getValidReactions(messageProps.reactions)).length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {Object.entries(getValidReactions(messageProps.reactions)).map(([type, count]) => (
@@ -303,13 +303,13 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             </div>
           )}
 
-          {/* 悬浮操作按钮 */}
+          {/* Floating action buttons */}
           <div
             className={`absolute -top-2 right-4 flex gap-1 px-1 py-1 rounded-lg border z-10 transition-all duration-200 bg-white border-slate-200 shadow-lg shadow-black/10 dark:bg-slate-700 dark:border-slate-600 dark:shadow-black/30 ${
               hoveredMessage === messageId ? "opacity-100 visible" : "opacity-0 invisible"
             }`}
           >
-            {/* 回复按钮 - 在 DM 聊天中不显示 */}
+            {/* Reply button - not shown in DM chat */}
             {!isDMChat && onReply && (
               <button
                 className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
@@ -335,7 +335,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             </button>
           </div>
 
-          {/* 反应选择器 */}
+          {/* Reaction picker */}
           {showReactionPicker === messageId && (
             <div
               className="absolute bottom-full left-0 flex gap-1 p-2 rounded-lg border z-10 shadow-lg bg-white border-slate-200 shadow-black/10 dark:bg-gray-800 dark:border-gray-700 dark:shadow-black/30"
@@ -355,7 +355,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             </div>
           )}
 
-          {/* 线程控制按钮 */}
+          {/* Thread control button */}
           {hasChildren && (
             <button
               className="bg-transparent border-none cursor-pointer text-xs px-1 py-0.5 rounded mt-1 transition-colors text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-600"
@@ -372,7 +372,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
           )}
         </div>
 
-        {/* 渲染子消息 */}
+        {/* Render child messages */}
         {hasChildren && !isCollapsed && level < maxThreadDepth && (
           <div className={`border-l-2 mt-2 pl-4 border-slate-200 dark:border-slate-600 ${getThreadStyleClass(level)}`}>
             {item.children.map((childId) => renderThreadMessage(childId, structure, level + 1, undefined))}
@@ -382,7 +382,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
     );
   };
 
-  // 渲染单个消息（UnifiedMessage格式）
+  // Render single message (UnifiedMessage format)
   const renderUnifiedMessage = (
     message: UnifiedMessage,
     level = 0,
@@ -400,7 +400,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
           onMouseEnter={() => setHoveredMessage(message.id)}
           onMouseLeave={() => setHoveredMessage(null)}
         >
-          {/* 消息头部 */}
+          {/* Message header */}
           <div className="flex items-center gap-2 mb-2 text-sm">
             <span className="font-semibold text-slate-800 dark:text-slate-100">
               {isOwnMessage ? "You" : formatUsername(message.senderId)}
@@ -413,7 +413,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             )}
           </div>
 
-          {/* 消息内容 */}
+          {/* Message content */}
           <div className="message-content leading-6 break-words">
             {message.content ? (
               <MarkdownContent content={message.content} />
@@ -421,13 +421,13 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
               <div className="text-gray-500 italic">Empty message</div>
             )}
 
-            {/* 附件显示 */}
+            {/* Attachment display */}
             {message.attachments && message.attachments.length > 0 && (
               <AttachmentDisplay attachments={message.attachments} />
             )}
           </div>
 
-          {/* 反应显示 */}
+          {/* Reaction display */}
           {message.reactions && Object.keys(getValidReactions(message.reactions)).length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {Object.entries(getValidReactions(message.reactions)).map(([type, count]) => (
@@ -443,13 +443,13 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             </div>
           )}
 
-          {/* 悬浮操作按钮 */}
+          {/* Floating action buttons */}
           <div
             className={`absolute -top-2 right-4 flex gap-1 px-1 py-1 rounded-lg border z-10 transition-all duration-200 bg-white border-slate-200 shadow-lg shadow-black/10 dark:bg-slate-700 dark:border-slate-600 dark:shadow-black/30 ${
               hoveredMessage === message.id ? "opacity-100 visible" : "opacity-0 invisible"
             }`}
           >
-            {/* 回复按钮 - 在 DM 聊天中不显示 */}
+            {/* Reply button - not shown in DM chat */}
             {!isDMChat && onReply && (
               <button
                 className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
@@ -459,7 +459,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
                 ↩️
               </button>
             )}
-            {/* 反应按钮 - 在项目频道中禁用 */}
+            {/* Reaction button - disabled in project channel */}
             {!disableReactions && (
               <button
                 className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
@@ -469,7 +469,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
                 😊
               </button>
             )}
-            {/* 引用按钮 - 在项目频道中禁用 */}
+            {/* Quote button - disabled in project channel */}
             {!disableQuotes && (
               <button
                 className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
@@ -481,7 +481,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             )}
           </div>
 
-          {/* 反应选择器 */}
+          {/* Reaction picker */}
           {showReactionPicker === message.id && (
             <div
               className="absolute bottom-full left-0 flex gap-1 p-2 rounded-lg border z-10 shadow-lg bg-white border-slate-200 shadow-black/10 dark:bg-gray-800 dark:border-gray-700 dark:shadow-black/30"
@@ -501,7 +501,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             </div>
           )}
 
-          {/* 线程控制按钮 */}
+          {/* Thread control button */}
           {hasChildren && shouldShowThreadCollapseButton({ message, children: children || [], level }) && (
             <button
               className="bg-transparent border-none cursor-pointer text-xs px-1 py-0.5 rounded mt-1 transition-colors text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-600"
@@ -518,7 +518,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
           )}
         </div>
 
-        {/* 渲染子消息 */}
+        {/* Render child messages */}
         {hasChildren && !isCollapsed && level < maxThreadDepth && (
           <div className={`border-l-2 mt-2 pl-4 border-slate-200 dark:border-slate-600 ${getThreadStyleClass(level)}`}>
             {children?.map((child) => renderUnifiedMessage(child.message, level + 1, child.children, undefined))}
@@ -542,11 +542,11 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
     );
   }
 
-  // 检测消息类型并相应渲染
+  // Detect message type and render accordingly
   const isThreadMessageFormat = messages.length > 0 && 'message_id' in messages[0];
 
   if (isThreadMessageFormat) {
-    // ThreadMessage 格式
+    // ThreadMessage format
     const threadMessages = messages as ThreadMessage[];
     const { structure, rootMessageIds } = buildThreadStructureForThreadMessages(threadMessages);
 
@@ -558,11 +558,11 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
       </div>
     );
   } else {
-    // UnifiedMessage 格式
+    // UnifiedMessage format
     const unifiedMessages = messages as UnifiedMessage[];
 
     if (renderMode === 'flat') {
-      // 平铺模式：简单按时间顺序显示所有消息
+      // Flat mode: simply display all messages in chronological order
       return (
         <div className="flex-1 overflow-y-auto p-4 scroll-smooth bg-white dark:bg-slate-800">
           <style>{MESSAGE_DISPLAY_STYLES}</style>
@@ -571,7 +571,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
         </div>
       );
     } else {
-      // 线程模式：构建线程结构显示
+      // Threaded mode: build and display thread structure
       const messageTree = buildMessageTree(unifiedMessages);
 
       return (

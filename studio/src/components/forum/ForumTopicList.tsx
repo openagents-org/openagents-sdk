@@ -22,27 +22,27 @@ const ForumTopicList: React.FC = () => {
     cleanupEventListeners,
   } = useForumStore();
 
-  // 设置连接
+  // Set connection
   useEffect(() => {
     if (openAgentsService) {
       setConnection(openAgentsService);
     }
   }, [openAgentsService, setConnection]);
 
-  // 初始化权限数据
+  // Initialize permission data
   useEffect(() => {
     const initializePermissions = async () => {
       if (!openAgentsService) return;
 
       try {
-        // 获取当前agent ID
+        // Get current agent ID
         const agentId = openAgentsService.getAgentId();
         if (agentId) {
           console.log("ForumTopicList: Setting agentId:", agentId);
           setAgentId(agentId);
         }
 
-        // 获取groups数据
+        // Get groups data
         const healthData = await openAgentsService.getNetworkHealth();
         if (healthData && healthData.groups) {
           console.log("ForumTopicList: Setting groupsData:", healthData.groups);
@@ -56,7 +56,7 @@ const ForumTopicList: React.FC = () => {
     initializePermissions();
   }, [openAgentsService, setGroupsData, setAgentId]);
 
-  // 加载话题（等待连接建立）
+  // Load topics (wait for connection to be established)
   useEffect(() => {
     if (openAgentsService && isConnected) {
       console.log("ForumTopicList: Connection ready, loading topics");
@@ -64,7 +64,7 @@ const ForumTopicList: React.FC = () => {
     }
   }, [openAgentsService, isConnected, loadTopics]);
 
-  // 设置forum事件监听器
+  // Set up forum event listeners
   useEffect(() => {
     if (openAgentsService) {
       console.log("ForumTopicList: Setting up forum event listeners");
@@ -121,7 +121,7 @@ const ForumTopicList: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full ">
-      {/* 头部 */}
+      {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between   bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -133,7 +133,7 @@ const ForumTopicList: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-3">
-          {/* 创建话题按钮 */}
+          {/* Create topic button */}
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
@@ -156,7 +156,7 @@ const ForumTopicList: React.FC = () => {
         </div>
       </div>
 
-      {/* 话题列表 */}
+      {/* Topic list */}
       <div className="flex-1 overflow-y-hidden py-6 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
         {topics.length === 0 ? (
           <div className="text-center py-12 h-full flex flex-col items-center justify-center">
@@ -197,7 +197,7 @@ const ForumTopicList: React.FC = () => {
         )}
       </div>
 
-      {/* 创建话题模态框 */}
+      {/* Create topic modal */}
       <ForumCreateModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}

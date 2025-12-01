@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { notificationService } from "@/services/notificationService";
 
 interface NotificationPermissionOverlayProps {
-  // 可选的外部控制props
+  // Optional external control props
   className?: string;
 }
 
@@ -16,12 +16,12 @@ const NotificationPermissionOverlay: React.FC<
   const [permissionStatus, setPermissionStatus] =
     useState<NotificationPermission>("default");
 
-  // 检查是否在 /messaging 路径下
+  // Check if on /messaging path
   const isMessagingPage =
     location.pathname === "/messaging" ||
     location.pathname.startsWith("/messaging/");
 
-  // 检查用户是否选择了"不再提示"
+  // Check if user chose "Don't show again"
   const checkNeverShowAgain = () => {
     try {
       const stored = localStorage.getItem("notification-permission-never-show");
@@ -31,7 +31,7 @@ const NotificationPermissionOverlay: React.FC<
     }
   };
 
-  // 保存"不再提示"设置
+  // Save "Do not show again" setting
   const saveNeverShowAgain = () => {
     try {
       localStorage.setItem("notification-permission-never-show", "true");
@@ -40,7 +40,7 @@ const NotificationPermissionOverlay: React.FC<
     }
   };
 
-  // 检查通知权限状态
+  // Check notification permission status
   const checkPermissionStatus = () => {
     if ("Notification" in window) {
       setPermissionStatus(Notification.permission);
@@ -50,7 +50,7 @@ const NotificationPermissionOverlay: React.FC<
     return "default";
   };
 
-  // 检查显示条件
+  // Check display conditions
   useEffect(() => {
     const shouldShowOverlay = () => {
       const never = checkNeverShowAgain();
@@ -68,7 +68,7 @@ const NotificationPermissionOverlay: React.FC<
     setIsVisible(show);
   }, [isMessagingPage]);
 
-  // 监听权限状态变化
+  // Listen for permission status changes
   useEffect(() => {
     const interval = setInterval(() => {
       const newStatus = checkPermissionStatus();
@@ -83,7 +83,7 @@ const NotificationPermissionOverlay: React.FC<
     return () => clearInterval(interval);
   }, [permissionStatus]);
 
-  // 请求通知权限
+  // Request notification permission
   const requestPermission = async () => {
     try {
       const permission =
@@ -100,7 +100,7 @@ const NotificationPermissionOverlay: React.FC<
     }
   };
 
-  // 关闭浮层
+  // Close overlay
   const handleClose = () => {
     setIsClosing(true);
     setTimeout(() => {
@@ -109,12 +109,12 @@ const NotificationPermissionOverlay: React.FC<
     }, 300);
   };
 
-  // 暂不允许
+  // Not allow for now
   const handleNotNow = () => {
     handleClose();
   };
 
-  // 不再提示
+  // Do not show again
   const handleNeverShowAgain = () => {
     saveNeverShowAgain();
     handleClose();
@@ -133,7 +133,7 @@ const NotificationPermissionOverlay: React.FC<
       } ${className}`}
     >
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-6 relative">
-        {/* 关闭按钮 */}
+        {/* Close button */}
         <button
           onClick={handleClose}
           className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
@@ -154,7 +154,7 @@ const NotificationPermissionOverlay: React.FC<
           </svg>
         </button>
 
-        {/* 标题 */}
+        {/* Title */}
         <div className="flex items-center mb-4 pr-6">
           <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mr-3">
             <svg
@@ -176,7 +176,7 @@ const NotificationPermissionOverlay: React.FC<
           </h3>
         </div>
 
-        {/* 说明文字 */}
+        {/* Description text */}
         <div className="mb-4 space-y-3">
           <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
             Enable notifications to receive timely alerts for:
@@ -197,7 +197,7 @@ const NotificationPermissionOverlay: React.FC<
           </ul>
         </div>
 
-        {/* 详细设置指引 */}
+        {/* Detailed settings guide */}
         <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md border border-yellow-200 dark:border-yellow-800/30">
           <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-2">
             💡 Two steps to enable notifications:
@@ -220,7 +220,7 @@ const NotificationPermissionOverlay: React.FC<
           </div>
         </div>
 
-        {/* 权限状态提示 */}
+        {/* Permission status hint */}
         {permissionStatus === "denied" && (
           <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-200 dark:border-red-800/30">
             <p className="text-xs text-red-700 dark:text-red-400">
@@ -230,7 +230,7 @@ const NotificationPermissionOverlay: React.FC<
           </div>
         )}
 
-        {/* 操作按钮 */}
+        {/* Action buttons */}
         <div className="flex flex-col space-y-2">
           <button
             onClick={requestPermission}
