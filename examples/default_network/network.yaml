@@ -49,7 +49,7 @@ network:
   message_routing_enabled: true
 
   # Agent groups for research workflow (Demo 03)
-  default_agent_group: "researchers"
+  default_agent_group: "guest"
   requires_password: false
 
   agent_groups:

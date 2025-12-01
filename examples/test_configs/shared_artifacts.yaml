@@ -28,7 +28,7 @@ network:
   disable_agent_secret_verification: true  # Disabled for testing
 
   # Agent groups configuration for access control testing
-  default_agent_group: "users"
+  default_agent_group: "guest"
   requires_password: false
 
   agent_groups:
@@ -42,11 +42,6 @@ network:
       description: "Analyst group with artifact access"
       metadata:
         permissions: ["artifact_access"]
-    users:
-      password_hash: "e5a978ae4d92fe4786d6ecdb811e0723c5f585d782fbd9439be6510f06adca0e"
-      description: "Regular user group"
-      metadata:
-        permissions: ["basic"]
 
   # Discovery configuration
   discovery_interval: 10
