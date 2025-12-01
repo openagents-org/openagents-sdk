@@ -1802,6 +1802,103 @@ def network_init(
         raise typer.Exit(1)
 
 
+def discover_running_networks(
+    ports: Optional[List[int]] = None,
+    hosts: Optional[List[str]] = None,
+    timeout: float = 1.0
+) -> List[Dict[str, Any]]:
+    """Discover running OpenAgents networks by scanning known ports.
+    
+    Args:
+        ports: List of ports to scan. Defaults to common OpenAgents ports.
+        hosts: List of hosts to scan. Defaults to localhost.
+        timeout: Connection timeout in seconds.
+        
+    Returns:
+        List of dictionaries containing network information for each discovered network.
+    """
+    import requests
+    
+    if ports is None:
+        # Common OpenAgents network ports
+        ports = [8700, 8570, 8050, 8600, 8701, 8702, 8703]
+    
+    if hosts is None:
+        hosts = ["localhost", "127.0.0.1"]
+    
+    discovered_networks = []
+    seen_networks = set()  # Track network_id to avoid duplicates
+    
+    for host in hosts:
+        for port in ports:
+            try:
+                # Try to reach the health endpoint
+                url = f"http://{host}:{port}/api/health"
+                response = requests.get(url, timeout=timeout)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    # Check if this is a valid OpenAgents network response
+                    if data.get("success") and "data" in data:
+                        network_data = data["data"]
+                        network_id = network_data.get("network_id", "unknown")
+                        
+                        # Skip if we've already found this network
+                        if network_id in seen_networks:
+                            continue
+                        seen_networks.add(network_id)
+                        
+                        # Get process info for PID
+                        pid = None
+                        try:
+                            if sys.platform.startswith("linux"):
+                                result = subprocess.run(
+                                    ["ss", "-tlpn", f"sport = :{port}"],
+                                    capture_output=True,
+                                    text=True,
+                                    timeout=2,
+                                )
+                                if result.returncode == 0 and result.stdout:
+                                    lines = result.stdout.strip().split("\n")
+                                    for line in lines[1:]:
+                                        if f":{port}" in line and "pid=" in line:
+                                            users_part = line.split("users:")[1] if "users:" in line else ""
+                                            if "pid=" in users_part:
+                                                pid = users_part.split("pid=")[1].split(",")[0].split(")")[0]
+                                                break
+                            elif sys.platform == "darwin":
+                                result = subprocess.run(
+                                    ["lsof", "-i", f":{port}", "-t"],
+                                    capture_output=True,
+                                    text=True,
+                                    timeout=2,
+                                )
+                                if result.returncode == 0 and result.stdout:
+                                    pid = result.stdout.strip().split("\n")[0]
+                        except Exception:
+                            pass
+                        
+                        network_info = {
+                            "network_id": network_id,
+                            "network_name": network_data.get("network_name", "Unknown"),
+                            "host": host,
+                            "port": port,
+                            "is_running": network_data.get("is_running", False),
+                            "uptime_seconds": network_data.get("uptime_seconds", 0),
+                            "agent_count": network_data.get("agent_count", 0),
+                            "pid": pid,
+                            "network_profile": network_data.get("network_profile", {}),
+                        }
+                        discovered_networks.append(network_info)
+                        
+            except Exception:
+                # Port is not reachable or not an OpenAgents network
+                continue
+    
+    return discovered_networks
+
+
 @network_app.command("list")
 def network_list(
     status: bool = typer.Option(False, "--status", "-s", help="Show status information")
@@ -1814,7 +1911,29 @@ def network_list(
         table.add_column("Status", style="green")
         table.add_column("Port", style="yellow") 
         table.add_column("PID", style="magenta")
-        table.add_row("No networks found", "—", "—", "—")
+        
+        # Discover running networks
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+            transient=True,
+        ) as progress:
+            progress.add_task("🔍 Scanning for running networks...", total=None)
+            networks = discover_running_networks()
+        
+        if networks:
+            for network in networks:
+                status_text = "[green]Running[/green]" if network.get("is_running") else "[red]Stopped[/red]"
+                pid_text = str(network.get("pid")) if network.get("pid") else "—"
+                table.add_row(
+                    network.get("network_name", "Unknown"),
+                    status_text,
+                    str(network.get("port", "—")),
+                    pid_text
+                )
+        else:
+            table.add_row("No networks found", "—", "—", "—")
     else:
         table.add_column("Name", style="cyan")
         table.add_column("Description", style="green")
