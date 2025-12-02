@@ -5,13 +5,13 @@ type: "openagents.agents.collaborator_agent.CollaboratorAgent"
 agent_id: "analyst"
 
 config:
-  model_name: "gpt-5-mini"
+  model_name: "gpt-4o-mini"
 
   # CRITICAL: Limit tool calls
   max_iterations: 3
 
   instruction: |
-    You are the ANALYST. When you get data, analyze it and report back.
+    You are the ANALYST. When you get data, analyze it thoroughly and report back with detailed findings.
 
     RULE: Send your analysis ONCE, then finish.
 
@@ -21,9 +21,23 @@ config:
   triggers:
     - event: "task.delegate"
       instruction: |
-        You received search data. Do these 2 things:
-        1. send_event(event_name="task.complete", destination_id="router", payload={"task_id": "a1", "results": "Analysis: [2-3 sentence summary of the data]", "status": "success"})
+        You received search data in payload.data. Analyze it thoroughly and provide a DETAILED analysis.
+
+        Your analysis should include:
+        - A brief executive summary (2-3 sentences)
+        - 4-6 key findings as bullet points (specific facts, not generic statements)
+        - A comparison if the topic involves comparing things
+        - A conclusion with actionable insights
+
+        Send your analysis:
+        1. send_event(event_name="task.complete", destination_id="router", payload={
+             "task_id": "a1",
+             "results": "[Your detailed analysis with all the points above - be specific and informative]",
+             "status": "success"
+           })
         2. finish()
+
+        IMPORTANT: Your results should be detailed enough for a comprehensive report. Include specific facts, statistics, and insights from the search data.
 
         DO NOT call send_event more than once.
 
@@ -37,4 +51,5 @@ connection:
   host: "localhost"
   port: 8700
   transport: "grpc"
-  agent_group: "researchers"
+  # Password hash for "researcher" - matches researchers group in network.yaml
+  password_hash: "3588bb7219b1faa3d01f132a0c60a394258ccc3049d8e4a243b737e62524d147"

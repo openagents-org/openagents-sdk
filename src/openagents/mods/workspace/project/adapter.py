@@ -619,13 +619,18 @@ class DefaultProjectAgentAdapter(BaseModAdapter):
         # Send message via event system
         # Get all message fields using model_dump()
         message_data = message.model_dump()
-        
+
         # Remove fields that shouldn't be in the payload
         payload = {
             key: value for key, value in message_data.items()
             if key not in ['event_name', 'source_id', 'event_id', 'timestamp', 'payload', 'metadata']
         }
-        
+
+        # Rename message_content to content for backward compatibility with mod handlers
+        # The field is named message_content in the model to avoid shadowing Event.content property
+        if 'message_content' in payload:
+            payload['content'] = payload.pop('message_content')
+
         event = Event(
             event_name=message.event_name,
             source_id=self._agent_id,

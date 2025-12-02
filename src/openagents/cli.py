@@ -2156,6 +2156,9 @@ def agent_start(
                 final_host = connection_settings.get("host", "localhost")
                 final_port = connection_settings.get("port", 8570)
 
+            # Get password_hash for group authentication
+            final_password_hash = connection_settings.get("password_hash")
+
             # Update progress message appropriately
             if final_network_id:
                 progress.update(task, description=f"[blue]🔗 Connecting to network '{final_network_id}'")
@@ -2168,6 +2171,7 @@ def agent_start(
                 network_port=final_port,
                 network_id=final_network_id,
                 metadata={"agent_type": type(agent).__name__, "config_file": config},
+                password_hash=final_password_hash,
             )
 
             progress.update(task, description="[green]✅ Agent started successfully!")

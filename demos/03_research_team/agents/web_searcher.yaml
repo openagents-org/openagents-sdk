@@ -5,7 +5,7 @@ type: "openagents.agents.collaborator_agent.CollaboratorAgent"
 agent_id: "web-searcher"
 
 config:
-  model_name: "gpt-5-mini"
+  model_name: "gpt-4o-mini"
 
   # CRITICAL: Limit tool calls to prevent duplicates
   max_iterations: 5
@@ -86,4 +86,5 @@ connection:
   host: "localhost"
   port: 8700
   transport: "grpc"
-  agent_group: "researchers"
+  # Password hash for "researcher" - matches researchers group in network.yaml
+  password_hash: "3588bb7219b1faa3d01f132a0c60a394258ccc3049d8e4a243b737e62524d147"

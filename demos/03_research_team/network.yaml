@@ -48,7 +48,7 @@ network:
   agent_groups:
     coordinators:
       description: "Router agents that coordinate research tasks"
-      password_hash: "79dff3f691f7e6a1301bae5e62a094d77104680ba49624371f1353a138a1a683"
+      password_hash: "bf24385098410391a81d92b2de72d3a2946d24f42ee387e51004a868281a2408"  # password: coordinator
       metadata:
         permissions: ["create_projects", "delegate_tasks", "communicate_with_users"]
         agents:
@@ -56,7 +56,7 @@ network:
 
     researchers:
       description: "Worker agents that execute research tasks"
-      password_hash: "e5a978ae4d92fe4786d6ecdb811e0723c5f585d782fbd9439be6510f06adca0e"
+      password_hash: "3588bb7219b1faa3d01f132a0c60a394258ccc3049d8e4a243b737e62524d147"  # password: researcher
       metadata:
         permissions: ["execute_tasks", "report_results"]
         agents:
