@@ -42,8 +42,7 @@ network:
   message_timeout: 30.0
   message_routing_enabled: true
 
-  # Agent groups for research workflow
-  default_agent_group: "researchers"
+  default_agent_group: guest
   requires_password: false
 
   agent_groups:
