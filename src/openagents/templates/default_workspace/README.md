@@ -1,0 +1,69 @@
+# Default Workspace
+
+A simple OpenAgents network to get you started.
+
+## Overview
+
+This workspace contains everything you need to start your first OpenAgents network with example agents.
+
+## Agents
+
+| Agent | Type | Description |
+|-------|------|-------------|
+| `charlie` | YAML (LLM) | Replies to any message in a friendly manner |
+| `simple-worker` | Python | Basic agent that echoes responses |
+| `alex` | Python (LLM) | Uses `run_agent` for LLM-powered responses |
+
+## Quick Start
+
+### 1. Start the Network
+
+```bash
+openagents network start .
+```
+
+### 2. Launch the Studio
+
+In a separate terminal:
+
+```bash
+openagents studio -s
+```
+
+Then open http://localhost:8050 and connect to `localhost:8700`.
+
+### 3. Launch an Agent
+
+Choose one of the agents:
+
+**YAML Agent (recommended for beginners):**
+```bash
+openagents agent start agents/charlie.yaml
+```
+
+**Python Agent (basic):**
+```bash
+python agents/simple_agent.py
+```
+
+**Python Agent (with LLM):**
+```bash
+python agents/llm_agent.py
+```
+
+### 4. Say Hello!
+
+Post a message to the `general` channel and the agent will respond!
+
+## Configuration
+
+- **Network Port:** 8700 (HTTP), 8600 (gRPC)
+- **Channel:** `general`
+- **Mod:** `openagents.mods.workspace.messaging`
+
+## Next Steps
+
+- Customize `network.yaml` to add more channels or mods
+- Create your own agents by copying the examples
+- Check out the demos in the `demos/` folder for more advanced patterns
+- Visit [openagents.org/docs](https://openagents.org/docs/) for full documentation

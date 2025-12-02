@@ -124,22 +124,97 @@ def initialize_workspace(workspace_path: Path) -> Path:
     try:
         # First, try to get the network.yaml template from package resources
         template_files = files("openagents.templates.default_workspace")
-        
+
         # Copy the main network.yaml template
         network_yaml_content = (template_files / "network.yaml").read_text()
         with open(config_path, 'w') as f:
             f.write(network_yaml_content)
         logging.info(f"Created network.yaml in workspace")
-        
+
+        # Copy README.md if it exists
+        try:
+            readme_content = (template_files / "README.md").read_text()
+            with open(workspace_path / "README.md", 'w') as f:
+                f.write(readme_content)
+            logging.info(f"Created README.md in workspace")
+        except (FileNotFoundError, TypeError):
+            logging.debug("No README.md template found, skipping")
+
+        # Copy the agents directory if it exists
+        try:
+            agents_template = files("openagents.templates.default_workspace.agents")
+            agents_dir = workspace_path / "agents"
+            agents_dir.mkdir(parents=True, exist_ok=True)
+
+            # Copy agent YAML and Python files
+            for item in agents_template.iterdir():
+                if item.name.endswith('.yaml') or item.name.endswith('.py'):
+                    if item.name == '__init__.py':
+                        continue
+                    agent_content = item.read_text()
+                    with open(agents_dir / item.name, 'w') as f:
+                        f.write(agent_content)
+                    logging.info(f"Created agents/{item.name} in workspace")
+        except (FileNotFoundError, ModuleNotFoundError):
+            logging.debug("No agents template found, skipping")
+
+        # Create events, tools, mods directories with .keep files
+        for folder_name, description in [
+            ("events", "Place AsyncAPI event definition files here"),
+            ("tools", "Place custom tool Python files here"),
+            ("mods", "Place custom mod files here"),
+        ]:
+            folder_path = workspace_path / folder_name
+            folder_path.mkdir(parents=True, exist_ok=True)
+            keep_file = folder_path / ".keep"
+            if not keep_file.exists():
+                with open(keep_file, 'w') as f:
+                    f.write(f"# {description}\n")
+            logging.info(f"Created {folder_name}/ directory in workspace")
+
     except (FileNotFoundError, ModuleNotFoundError):
         # Fallback to development mode path resolution
         script_dir = Path(__file__).parent
-        
+
         # Try templates directory first (package mode)
         template_path = script_dir / "templates" / "default_workspace" / "network.yaml"
         if template_path.exists():
             shutil.copy2(template_path, config_path)
             logging.info(f"Copied network.yaml from templates to workspace")
+
+            # Copy README.md if it exists
+            readme_path = script_dir / "templates" / "default_workspace" / "README.md"
+            if readme_path.exists():
+                shutil.copy2(readme_path, workspace_path / "README.md")
+                logging.info(f"Copied README.md to workspace")
+
+            # Also copy agents directory if it exists
+            agents_template_path = script_dir / "templates" / "default_workspace" / "agents"
+            if agents_template_path.exists():
+                agents_dir = workspace_path / "agents"
+                shutil.copytree(agents_template_path, agents_dir, dirs_exist_ok=True)
+                # Remove __init__.py and __pycache__ from copied agents
+                init_file = agents_dir / "__init__.py"
+                if init_file.exists():
+                    init_file.unlink()
+                pycache_dir = agents_dir / "__pycache__"
+                if pycache_dir.exists():
+                    shutil.rmtree(pycache_dir)
+                logging.info(f"Copied agents directory to workspace")
+
+            # Create events, tools, mods directories with .keep files
+            for folder_name, description in [
+                ("events", "Place AsyncAPI event definition files here"),
+                ("tools", "Place custom tool Python files here"),
+                ("mods", "Place custom mod files here"),
+            ]:
+                folder_path = workspace_path / folder_name
+                folder_path.mkdir(parents=True, exist_ok=True)
+                keep_file = folder_path / ".keep"
+                if not keep_file.exists():
+                    with open(keep_file, 'w') as f:
+                        f.write(f"# {description}\n")
+                logging.info(f"Created {folder_name}/ directory in workspace")
         else:
             # Fallback to examples directory (development mode)
             project_root = script_dir.parent.parent
