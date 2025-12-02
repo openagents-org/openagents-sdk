@@ -1,7 +1,7 @@
 """Configuration models for OpenAgents."""
 
 from typing import Dict, List, Optional, Any, Union
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from enum import Enum
 from openagents.config.globals import DEFAULT_AGENT_GROUP
 from openagents.models.network_profile import NetworkProfile
@@ -184,6 +184,24 @@ class NetworkConfig(BaseModel):
                 )
 
         return v
+
+    @model_validator(mode='after')
+    def validate_default_group_password_requirement(self):
+        """Validate that default_agent_group doesn't require password when requires_password is False."""
+        # If requires_password is False, agents without passwords should be able to join
+        # So the default_agent_group must not require a password
+        if not self.requires_password and self.agent_groups:
+            default_group = self.default_agent_group
+            if default_group in self.agent_groups:
+                group_config = self.agent_groups[default_group]
+                if group_config.password_hash:
+                    raise ValueError(
+                        f"Invalid configuration: 'requires_password' is False but "
+                        f"default_agent_group '{default_group}' requires a password. "
+                        f"Either set 'requires_password: true' or choose a default group "
+                        f"that doesn't require a password."
+                    )
+        return self
 
     def model_post_init(self, __context):
         """Handle legacy transport fields and set defaults after model initialization."""

@@ -50,7 +50,7 @@ network:
   message_routing_enabled: true
 
   # Agent groups configuration for project testing
-  default_agent_group: "testers"
+  default_agent_group: "guest"
   requires_password: false
 
   agent_groups:

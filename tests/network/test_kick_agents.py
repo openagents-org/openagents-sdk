@@ -30,6 +30,7 @@ async def network_with_admin_groups():
         name="TestKickNetwork",
         mode=NetworkMode.CENTRALIZED,
         default_agent_group="guests",
+        requires_password=True,
         transports=[
             TransportConfigItem(
                 type=TransportType.GRPC,
@@ -199,10 +200,11 @@ async def test_guest_cannot_kick_agent(network_with_admin_groups):
     user_client = AgentClient(agent_id="user-1")
 
     try:
-        # Connect guest without password (goes to default group)
+        # Connect guest with guest credentials (goes to default group)
         guest_connected = await guest_client.connect(
             network_host="localhost",
             network_port=8574,
+            password_hash=GUEST_HASH,
         )
         user_connected = await user_client.connect(
             network_host="localhost",

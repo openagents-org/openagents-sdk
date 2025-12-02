@@ -44,7 +44,7 @@ network:
   message_routing_enabled: true
 
   # Agent groups configuration for access control testing
-  default_agent_group: "users"
+  default_agent_group: "guest"
   requires_password: false
 
   agent_groups:
@@ -58,11 +58,6 @@ network:
       description: "Developer group with cache access"
       metadata:
         permissions: ["cache_access"]
-    users:
-      password_hash: "e5a978ae4d92fe4786d6ecdb811e0723c5f585d782fbd9439be6510f06adca0e"
-      description: "Regular user group"
-      metadata:
-        permissions: ["basic"]
 
   # Mod configuration - only shared cache mod
   mods:

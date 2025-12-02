@@ -44,11 +44,6 @@ network:
   requires_password: false
 
   agent_groups:
-    guest:
-      description: "Guest agents with limited access"
-      password_hash: "guest_hash_test_456"
-      metadata:
-        permissions: ["view"]
     workers:
       description: "Worker agents with task execution permissions"
       password_hash: "worker_hash_test_123"
@@ -65,7 +60,7 @@ network:
           test_project:
             name: "Test Project Template"
             description: "A simple test project template"
-            agent_groups: ["guest", "workers"]
+            agent_groups: ["workers"]
             context: |
               This is a test project for verifying MCP tool discovery.
 
