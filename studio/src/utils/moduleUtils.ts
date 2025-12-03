@@ -141,6 +141,7 @@ export const isRouteAvailable = (
   const alwaysAvailableRoutes = [
     "profile",
     "settings",
+    "mod-management",
     "network-selection",
     "agent-setup",
     "agentworld",

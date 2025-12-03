@@ -264,10 +264,13 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     // Special case: project routes (/project and /project/:projectId) are always available
     // as they provide project management and private chat room functionality
     const isProjectRoute = currentPath.startsWith("/project")
+    // Special case: mod-management is always available as a management page
+    const isModManagementRoute = currentPath.startsWith("/mod-management")
 
     if (
       isModulesLoaded &&
       !isProjectRoute &&
+      !isModManagementRoute &&
       !isRouteAvailable(currentPath, enabledModules)
     ) {
       console.log(
