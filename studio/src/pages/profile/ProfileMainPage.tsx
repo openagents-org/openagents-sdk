@@ -11,6 +11,7 @@ import AgentManagement from "./AgentManagement";
 import NetworkProfile from "./NetworkProfile";
 import EventLogs from "./EventLogs";
 import EventDebugger from "./EventDebugger";
+import ModManagementPage from "../mod-management/ModManagementPage";
 
 /**
  * Profile main page - handles all profile-related features
@@ -56,6 +57,7 @@ const ProfileMainPage: React.FC = () => {
       {/* Agent Management subpage - Admin only */}
       <Route path="agent-management" element={<AgentManagement />} />
       <Route path="network-profile" element={<NetworkProfile />} />
+      <Route path="mod-management" element={<ModManagementPage />} />
       
       {/* Event Logs subpage */}
       <Route path="event-logs" element={<EventLogs />} />
