@@ -57,10 +57,18 @@ class HttpTransport(Transport):
         self.app.router.add_post("/api/unregister", self.unregister_agent)
         self.app.router.add_get("/api/poll", self.poll_messages)
         self.app.router.add_post("/api/send_event", self.send_message)
+
         # Cache file upload/download endpoints
         self.app.router.add_post("/api/cache/upload", self.cache_upload)
         self.app.router.add_get("/api/cache/download/{cache_id}", self.cache_download)
         self.app.router.add_get("/api/cache/info/{cache_id}", self.cache_info)
+        
+        # Event Explorer API endpoints
+        self.app.router.add_get("/api/events/sync", self.sync_events)
+        self.app.router.add_get("/api/events", self.list_events)
+        self.app.router.add_get("/api/events/mods", self.list_mods)
+        self.app.router.add_get("/api/events/search", self.search_events)
+        self.app.router.add_get("/api/events/{event_name}", self.get_event_detail)
 
     @web.middleware
     async def cors_middleware(self, request, handler):
@@ -1020,6 +1028,221 @@ class HttpTransport(Transport):
                 {"success": False, "error": str(e)},
                 status=500,
             )
+
+    async def sync_events(self, request):
+        """Handle event index sync from GitHub."""
+        try:
+            from openagents.utils.event_indexer import get_event_indexer
+            
+            indexer = get_event_indexer()
+            result = indexer.sync_from_github()
+            
+            return web.json_response({
+                "success": True,
+                "data": result
+            })
+        except Exception as e:
+            logger.error(f"Error syncing events: {e}")
+            return web.json_response(
+                {"success": False, "error_message": str(e)},
+                status=500
+            )
+
+    async def list_events(self, request):
+        """List all indexed events with optional filters."""
+        try:
+            from openagents.utils.event_indexer import get_event_indexer
+            
+            indexer = get_event_indexer()
+            
+            # Get query parameters
+            mod_filter = request.query.get("mod")
+            type_filter = request.query.get("type")
+            
+            events = indexer.get_all_events(
+                mod_filter=mod_filter if mod_filter else None,
+                type_filter=type_filter if type_filter else None
+            )
+            
+            return web.json_response({
+                "success": True,
+                "data": {
+                    "events": events,
+                    "total": len(events)
+                }
+            })
+        except Exception as e:
+            logger.error(f"Error listing events: {e}")
+            return web.json_response(
+                {"success": False, "error_message": str(e)},
+                status=500
+            )
+
+    async def list_mods(self, request):
+        """List all indexed mods."""
+        try:
+            from openagents.utils.event_indexer import get_event_indexer
+            
+            indexer = get_event_indexer()
+            mods = indexer.get_mods()
+            
+            return web.json_response({
+                "success": True,
+                "data": {
+                    "mods": mods,
+                    "total": len(mods)
+                }
+            })
+        except Exception as e:
+            logger.error(f"Error listing mods: {e}")
+            return web.json_response(
+                {"success": False, "error_message": str(e)},
+                status=500
+            )
+
+    async def search_events(self, request):
+        """Search events by query string."""
+        try:
+            from openagents.utils.event_indexer import get_event_indexer
+            
+            indexer = get_event_indexer()
+            
+            query = request.query.get("q", "")
+            if not query:
+                return web.json_response(
+                    {"success": False, "error_message": "Query parameter 'q' is required"},
+                    status=400
+                )
+            
+            results = indexer.search_events(query)
+            
+            return web.json_response({
+                "success": True,
+                "data": {
+                    "events": results,
+                    "total": len(results),
+                    "query": query
+                }
+            })
+        except Exception as e:
+            logger.error(f"Error searching events: {e}")
+            return web.json_response(
+                {"success": False, "error_message": str(e)},
+                status=500
+            )
+
+    async def get_event_detail(self, request):
+        """Get detailed information about a specific event."""
+        try:
+            from openagents.utils.event_indexer import get_event_indexer
+            import urllib.parse
+            
+            indexer = get_event_indexer()
+            
+            event_name = request.match_info.get("event_name")
+            if not event_name:
+                return web.json_response(
+                    {"success": False, "error_message": "Event name is required"},
+                    status=400
+                )
+            
+            # Decode URL-encoded event name
+            event_name = urllib.parse.unquote(event_name)
+            
+            event = indexer.get_event(event_name)
+            
+            if not event:
+                return web.json_response(
+                    {"success": False, "error_message": f"Event '{event_name}' not found"},
+                    status=404
+                )
+            
+            # Generate example code
+            examples = _generate_event_examples(event)
+            event_with_examples = {**event, "examples": examples}
+            
+            return web.json_response({
+                "success": True,
+                "data": event_with_examples
+            })
+        except Exception as e:
+            logger.error(f"Error getting event detail: {e}")
+            return web.json_response(
+                {"success": False, "error_message": str(e)},
+                status=500
+            )
+
+
+def _generate_event_examples(event: Dict[str, Any]) -> Dict[str, str]:
+    """Generate code examples for an event."""
+    event_name = event.get('event_name', '')
+    event_type = event.get('event_type', 'operation')
+    request_schema = event.get('request_schema', {})
+    
+    # Python example
+    python_example = f"""# Python example
+from openagents import Agent
+
+agent = Agent(agent_id="my_agent")
+response = await agent.send_event(
+    event_name="{event_name}",
+    destination_id="mod:openagents.mods.{event.get('mod_id', 'unknown')}",
+    payload={{
+        # Add your payload here based on the schema
+"""
+    
+    # Add payload fields from schema
+    if request_schema and 'properties' in request_schema:
+        for prop_name, prop_info in request_schema['properties'].items():
+            if isinstance(prop_info, dict):
+                prop_type = prop_info.get('type', 'string')
+                is_required = prop_info.get('required', False)
+                default = prop_info.get('default')
+                
+                if default is not None:
+                    python_example += f'        "{prop_name}": {repr(default)},  # {prop_type}\n'
+                elif is_required:
+                    python_example += f'        "{prop_name}": "value",  # {prop_type} (required)\n'
+                else:
+                    python_example += f'        # "{prop_name}": "value",  # {prop_type} (optional)\n'
+    
+    python_example += """    }
+)
+print(response)
+"""
+    
+    # JavaScript example
+    js_example = f"""// JavaScript example
+const response = await connector.sendEvent({{
+    event_name: "{event_name}",
+    destination_id: "mod:openagents.mods.{event.get('mod_id', 'unknown')}",
+    payload: {{
+        // Add your payload here based on the schema
+"""
+    
+    if request_schema and 'properties' in request_schema:
+        for prop_name, prop_info in request_schema['properties'].items():
+            if isinstance(prop_info, dict):
+                prop_type = prop_info.get('type', 'string')
+                is_required = prop_info.get('required', False)
+                default = prop_info.get('default')
+                
+                if default is not None:
+                    js_example += f'        {prop_name}: {repr(default)},  // {prop_type}\n'
+                elif is_required:
+                    js_example += f'        {prop_name}: "value",  // {prop_type} (required)\n'
+                else:
+                    js_example += f'        // {prop_name}: "value",  // {prop_type} (optional)\n'
+    
+    js_example += """    }
+});
+console.log(response);
+"""
+    
+    return {
+        "python": python_example,
+        "javascript": js_example,
+    }
 
 
 # Convenience function for creating HTTP transport

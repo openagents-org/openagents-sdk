@@ -12,6 +12,7 @@ import NetworkProfile from "./NetworkProfile";
 import EventLogs from "./EventLogs";
 import EventDebugger from "./EventDebugger";
 import ModManagementPage from "../mod-management/ModManagementPage";
+import EventsMainPage from "../events/EventsMainPage";
 
 /**
  * Profile main page - handles all profile-related features
@@ -64,6 +65,9 @@ const ProfileMainPage: React.FC = () => {
       
       {/* Event Debugger subpage */}
       <Route path="event-debugger" element={<EventDebugger />} />
+      
+      {/* Event Explorer subpage */}
+      <Route path="events/*" element={<EventsMainPage />} />
       
     </Routes>
   );

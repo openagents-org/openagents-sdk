@@ -147,6 +147,7 @@ export const isRouteAvailable = (
     "agentworld",
     "artifact", // Artifact 始终可用，类似 Project
     "readme", // README 始终可用，显示网络文档
+    "events", // Event Explorer 始终可用，用于浏览事件定义
   ]
   if (alwaysAvailableRoutes.includes(routeName)) {
     return true
