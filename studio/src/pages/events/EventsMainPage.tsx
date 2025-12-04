@@ -17,7 +17,6 @@ import EventDetailPage from "./EventDetailPage";
  */
 const EventsMainPage: React.FC = () => {
   const navigate = useNavigate();
-  
   const context = useContext(OpenAgentsContext);
   const openAgentsService = context?.connector;
   
