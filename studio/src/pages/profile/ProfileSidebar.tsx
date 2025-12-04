@@ -102,6 +102,26 @@ const ProfileSidebar: React.FC = () => {
         </svg>
       ),
     },
+    {
+      id: "event_explorer",
+      label: "Event Explorer",
+      path: "/profile/events",
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+          />
+        </svg>
+      ),
+    },
   ];
 
   const adminNavItems = [
@@ -192,7 +212,13 @@ const ProfileSidebar: React.FC = () => {
         {navItems.map((item) => (
           <button
             key={item.id}
-            onClick={() => navigate(item.path)}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Navigating to:', item.path);
+              navigate(item.path, { replace: false });
+            }}
             className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all ${
               isActive(item.path)
                 ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
