@@ -50,6 +50,9 @@ network:
           - name: "general"
             description: "General chat channel"
         max_thread_depth: 5
+    - name: "openagents.mods.core.shared_cache"
+      enabled: true
+      config: {}
 
 # Network profile for discovery
 network_profile:

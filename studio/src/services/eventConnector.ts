@@ -185,6 +185,34 @@ export class HttpEventConnector {
   }
 
   /**
+   * Get the authentication secret for this connection
+   */
+  getSecret(): string | null {
+    return this.secret;
+  }
+
+  /**
+   * Get the network host
+   */
+  getHost(): string {
+    return this.host;
+  }
+
+  /**
+   * Get the network port
+   */
+  getPort(): number {
+    return this.port;
+  }
+
+  /**
+   * Get the base URL for API requests
+   */
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
+  /**
    * Send an event to the network and get immediate EventResponse
    */
   async sendEvent(event: Event): Promise<EventResponse> {

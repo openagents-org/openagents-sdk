@@ -67,6 +67,13 @@ export interface ThreadMessage {
   timestamp: string;
   content: {
     text: string;
+    files?: Array<{
+      file_id: string;
+      filename: string;
+      size: number;
+      file_type?: string;
+      storage_type?: 'cache';
+    }>;
   };
   message_type: 'direct_message' | 'channel_message' | 'reply_message';
   channel?: string;
@@ -83,15 +90,6 @@ export interface ThreadMessage {
   reactions?: {
     [reaction_type: string]: number;
   };
-  attachment_file_id?: string;
-  attachment_filename?: string;
-  attachment_size?: number | string;
-  attachments?: Array<{
-    file_id: string;
-    filename: string;
-    size: number;
-    file_type?: string;
-  }>;
 }
 
 // Re-export RawThreadMessage as the primary type
