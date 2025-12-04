@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useContext } from "react";
-import { Routes, Route, useNavigate, useSearchParams } from "react-router-dom";
+import React, { useState, useEffect, useMemo, useContext, useCallback } from "react";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import { 
   getEvents, 
   getMods, 
@@ -17,7 +17,6 @@ import EventDetailPage from "./EventDetailPage";
  */
 const EventsMainPage: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   
   const context = useContext(OpenAgentsContext);
   const openAgentsService = context?.connector;
@@ -55,17 +54,7 @@ const EventsMainPage: React.FC = () => {
     }
   }, [openAgentsService]);
   
-  // Load mods on mount
-  useEffect(() => {
-    loadMods();
-  }, []);
-  
-  // Load events when filters change
-  useEffect(() => {
-    loadEvents();
-  }, [selectedMod, selectedType, searchQuery]);
-  
-  const loadMods = async () => {
+  const loadMods = useCallback(async () => {
     try {
       const result = await getMods();
       if (result.success && result.data) {
@@ -76,9 +65,9 @@ const EventsMainPage: React.FC = () => {
     } catch (err: any) {
       setError(err.message || "Failed to load mods");
     }
-  };
+  }, []);
   
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -104,7 +93,17 @@ const EventsMainPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, selectedMod, selectedType]);
+  
+  // Load mods on mount
+  useEffect(() => {
+    loadMods();
+  }, [loadMods]);
+  
+  // Load events when filters change
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
   
   const handleSync = async () => {
     setSyncing(true);

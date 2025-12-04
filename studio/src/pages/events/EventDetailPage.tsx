@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getEventDetail, EventDefinition } from "@/services/eventExplorerService";
 
@@ -14,13 +14,7 @@ const EventDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'python' | 'javascript'>('python');
   
-  useEffect(() => {
-    if (eventName) {
-      loadEventDetail(decodeURIComponent(eventName));
-    }
-  }, [eventName]);
-  
-  const loadEventDetail = async (name: string) => {
+  const loadEventDetail = useCallback(async (name: string) => {
     setLoading(true);
     setError(null);
     
@@ -36,7 +30,13 @@ const EventDetailPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+  
+  useEffect(() => {
+    if (eventName) {
+      loadEventDetail(decodeURIComponent(eventName));
+    }
+  }, [eventName, loadEventDetail]);
   
   if (loading) {
     return (
