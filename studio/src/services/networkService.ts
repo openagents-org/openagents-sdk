@@ -29,11 +29,52 @@ export interface NetworkListResponse {
   items: Network[];
 }
 
-// Check if a local OpenAgents network is running on localhost:8700 (HTTP port)
+// Check if a local OpenAgents network is running
+// First checks the current origin, then falls back to localhost ports
 export const detectLocalNetwork =
   async (): Promise<NetworkConnection | null> => {
-    // Try common HTTP ports for OpenAgents networks
-    const commonPorts = [8700, 8571, 8570]; // Try default HTTP port first
+    // First, try the current origin (same host/port as the app is served from)
+    if (typeof window !== "undefined") {
+      try {
+        const currentUrl = new URL(window.location.href);
+        const currentHost = currentUrl.hostname;
+        const currentPort = parseInt(currentUrl.port, 10) || (currentUrl.protocol === "https:" ? 443 : 80);
+        const useHttps = currentUrl.protocol === "https:";
+
+        console.log(
+          `Checking current origin: ${currentUrl.protocol}//${currentHost}:${currentPort}`
+        );
+
+        const response = await networkFetch(
+          currentHost,
+          currentPort,
+          "/api/health",
+          {
+            method: "GET",
+            timeout: 3000,
+            useHttps,
+          }
+        );
+
+        if (response.ok) {
+          console.log(
+            `OpenAgents network detected at current origin: ${currentUrl.protocol}//${currentHost}:${currentPort}`
+          );
+          return {
+            host: currentHost,
+            port: currentPort,
+            status: ConnectionStatusEnum.CONNECTED,
+            latency: 0,
+            useHttps,
+          };
+        }
+      } catch (error) {
+        console.log("No OpenAgents network at current origin, trying localhost ports...");
+      }
+    }
+
+    // Fall back to localhost default HTTP port
+    const commonPorts = [8700];
 
     for (const httpPort of commonPorts) {
       try {
@@ -43,7 +84,7 @@ export const detectLocalNetwork =
           "/api/health",
           {
             method: "GET",
-            timeout: 3000, // 3 second timeout
+            timeout: 3000,
           }
         );
 
@@ -56,6 +97,7 @@ export const detectLocalNetwork =
             port: httpPort,
             status: ConnectionStatusEnum.CONNECTED,
             latency: 0,
+            useHttps: false,
           };
         }
       } catch (error) {
