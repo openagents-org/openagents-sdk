@@ -38,54 +38,6 @@ const EventDetailPage: React.FC = () => {
     }
   };
   
-  const renderSchema = (schema: any, title: string) => {
-    if (!schema || !schema.properties) {
-      return null;
-    }
-    
-    return (
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-          {title}
-        </h3>
-        <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-          <pre className="text-sm text-gray-800 dark:text-gray-200 overflow-x-auto">
-            <code>{JSON.stringify(schema, null, 2)}</code>
-          </pre>
-        </div>
-      </div>
-    );
-  };
-  
-  const renderSchemaFormatted = (schema: any) => {
-    if (!schema || !schema.properties) {
-      return <span className="text-gray-500 dark:text-gray-400">No schema defined</span>;
-    }
-    
-    return (
-      <div className="space-y-2">
-        {Object.entries(schema.properties).map(([propName, propInfo]: [string, any]) => (
-          <div key={propName} className="flex items-start gap-2">
-            <span className="font-mono text-sm text-blue-600 dark:text-blue-400">
-              {propName}
-            </span>
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              : {propInfo.type || 'unknown'}
-              {propInfo.required !== false && (
-                <span className="text-red-600 dark:text-red-400 ml-1">(required)</span>
-              )}
-              {propInfo.default !== undefined && (
-                <span className="text-gray-500 dark:text-gray-400 ml-1">
-                  (default: {JSON.stringify(propInfo.default)})
-                </span>
-              )}
-            </span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-  
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
