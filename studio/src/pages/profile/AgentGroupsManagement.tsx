@@ -297,24 +297,6 @@ const AgentGroupsManagement: React.FC = () => {
     }
   };
 
-  // Handle set default group
-  const handleSetDefaultGroup = async (groupName: string) => {
-    setError(null);
-    setSuccess(null);
-
-    const result = await updateAgentGroups('set_default', {
-      action: 'set_default',
-      group_name: groupName,
-    });
-
-    if (result.success) {
-      setSuccess(`Default group set to "${groupName}"`);
-      setDefaultGroup(groupName);
-    } else {
-      setError(result.message || 'Failed to set default group');
-    }
-  };
-
   // Handle save network settings
   const handleSaveNetworkSettings = async () => {
     setSavingSettings(true);
