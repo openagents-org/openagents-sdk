@@ -9,6 +9,7 @@ import AgentInfoCard from "./components/AgentInfoCard";
 import SystemInfoCard from "./components/SystemInfoCard";
 import AgentManagement from "./AgentManagement";
 import NetworkProfile from "./NetworkProfile";
+import AgentGroupsManagement from "./AgentGroupsManagement";
 import EventLogs from "./EventLogs";
 import EventDebugger from "./EventDebugger";
 import ModManagementPage from "../mod-management/ModManagementPage";
@@ -58,6 +59,7 @@ const ProfileMainPage: React.FC = () => {
       {/* Agent Management subpage - Admin only */}
       <Route path="agent-management" element={<AgentManagement />} />
       <Route path="network-profile" element={<NetworkProfile />} />
+      <Route path="agent-groups" element={<AgentGroupsManagement />} />
       <Route path="mod-management" element={<ModManagementPage />} />
       
       {/* Event Logs subpage */}
