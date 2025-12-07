@@ -460,6 +460,23 @@ class HttpTransport(Transport):
             background: #f7fafc;
             transform: translateY(-2px);
         }}
+        .studio-button {{
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 40px;
+            border-radius: 12px;
+            font-size: 1.2em;
+            font-weight: 600;
+            text-decoration: none;
+            margin: 30px 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }}
+        .studio-button:hover {{
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }}
         @media (max-width: 600px) {{
             .card {{
                 padding: 40px 30px;
@@ -495,7 +512,9 @@ class HttpTransport(Transport):
                 <div class="stat-label">Uptime (seconds)</div>
             </div>
         </div>
-        
+
+        {f'<a href="/studio/" class="studio-button">🎨 Open Studio</a>' if self._serve_studio else ''}
+
         {f'''<div class="tags">
             {''.join([f'<span class="tag">{html.escape(tag)}</span>' for tag in tags[:MAX_DISPLAYED_TAGS]])}
         </div>''' if tags else ''}
@@ -503,8 +522,8 @@ class HttpTransport(Transport):
         <div class="footer">
             <div class="footer-text">Powered by OpenAgents</div>
             <div class="links">
-                <a href="{website_escaped}" target="_blank" class="link">🌐 Network Website</a>
-                <a href="https://openagents.org" target="_blank" class="link">📚 Documentation</a>
+                <a href="{website_escaped}" target="_blank" class="link">🌐 Website</a>
+                <a href="https://openagents.org/docs/" target="_blank" class="link">📚 Documentation</a>
                 <a href="https://github.com/openagents-org/openagents" target="_blank" class="link">💻 GitHub</a>
             </div>
         </div>
