@@ -6,9 +6,13 @@
  */
 
 import { networkFetch } from './httpClient';
+import CryptoJS from 'crypto-js';
 
 /**
  * Hash a password using SHA-256 (matching backend implementation)
+ *
+ * Uses crypto.subtle when available (secure contexts: HTTPS or localhost),
+ * falls back to crypto-js for non-secure HTTP contexts.
  *
  * @param password - Plain text password to hash
  * @returns Promise that resolves to the SHA-256 hex hash string
@@ -22,18 +26,21 @@ export async function hashPassword(password: string): Promise<string> {
     throw new Error('Password cannot be empty');
   }
 
-  // Convert password string to bytes
-  const encoder = new TextEncoder();
-  const passwordBytes = encoder.encode(password);
-
-  // Hash using SHA-256
-  const hashBuffer = await crypto.subtle.digest('SHA-256', passwordBytes);
-
-  // Convert buffer to hex string
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-  return hashHex;
+  // Check if crypto.subtle is available (requires secure context: HTTPS or localhost)
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    // Use native crypto.subtle for secure contexts
+    const encoder = new TextEncoder();
+    const passwordBytes = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', passwordBytes);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+  } else {
+    // Fallback to crypto-js for non-secure HTTP contexts
+    console.warn('crypto.subtle not available (requires HTTPS or localhost), using crypto-js fallback');
+    const hash = CryptoJS.SHA256(password);
+    return hash.toString(CryptoJS.enc.Hex);
+  }
 }
 
 /**

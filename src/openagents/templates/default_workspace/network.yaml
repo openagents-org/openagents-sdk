@@ -100,7 +100,7 @@ network:
         search_results_limit: 50
         search_content_preview_length: 200
       
-     - name: "openagents.mods.games.agentworld"
+    - name: "openagents.mods.games.agentworld"
       enabled: true
       config:
       # AgentWorld game server address
@@ -125,6 +125,15 @@ network:
     # Workspace functionality for collaboration
     - name: "openagents.mods.workspace.default"
       enabled: true
+
+  # Agent groups configuration
+  default_agent_group: guest
+  agent_groups:
+    admin:
+      description: "Administrator agents with full permissions"
+      password_hash: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"  # password: admin
+      metadata:
+        permissions: ["all"]
 
 # Network profile for discovery
 network_profile:
