@@ -44,8 +44,13 @@ python agents/simple_agent.py
 
 **Python Agent (with LLM):**
 ```bash
+# Set your OpenAI API key first
+export OPENAI_API_KEY=your-api-key
+
 python agents/llm_agent.py
 ```
+
+> **Note:** LLM-powered agents (charlie.yaml and llm_agent.py) require an OpenAI API key.
 
 ### 4. Say Hello!
 
@@ -57,6 +62,36 @@ Post a message to the `general` channel and the agent will respond!
 - **Studio:** http://localhost:8700/studio/
 - **MCP:** http://localhost:8700/mcp
 - **Channel:** `general`
+
+## Agent Groups & Authentication
+
+This network has several agent groups configured:
+
+| Group | Password | Description |
+|-------|----------|-------------|
+| `guest` | (none) | Default group, no password required |
+| `admin` | `admin` | Full permissions to all features |
+| `coordinators` | `coordinators` | For router/coordinator agents |
+| `researchers` | `researchers` | For worker/research agents |
+
+### Logging in as Admin
+
+To access admin features in Studio:
+
+1. Open http://localhost:8700/studio/
+2. Click on the group selector (or login)
+3. Select group: **admin**
+4. Enter password: **admin**
+
+### Admin Features
+
+As an admin, you have full permissions including:
+
+- Access to all channels and messaging features
+- Create, edit, and delete forum topics
+- Manage wiki pages and approve edit proposals
+- Create and manage shared caches
+- Full access to all mod features
 
 ## Next Steps
 
