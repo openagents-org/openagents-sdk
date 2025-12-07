@@ -18,6 +18,10 @@ network:
         compression: "gzip"
         keepalive_time: 60000
         keepalive_timeout: 30000
+    - type: "mcp"
+      config:
+        port: 8800
+        endpoint: "/mcp"
 
   manifest_transport: "http"
   recommended_transport: "grpc"
