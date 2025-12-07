@@ -11,6 +11,10 @@ network:
     - type: "http"
       config:
         port: 8700
+        # Serve MCP protocol at /mcp endpoint (same port as HTTP)
+        serve_mcp: true
+        # Serve Studio frontend at /studio endpoint (same port as HTTP)
+        serve_studio: true
     - type: "grpc"
       config:
         port: 8600
@@ -20,7 +24,9 @@ network:
         keepalive_timeout: 30000
     - type: "mcp"
       config:
-        port: 8800
+        # Set to null to disable standalone MCP port (MCP served via HTTP /mcp)
+        # Set to 8800 to also serve MCP on a dedicated port
+        port: null
         endpoint: "/mcp"
 
   manifest_transport: "http"

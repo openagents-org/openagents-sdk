@@ -2,15 +2,21 @@
 HTTP Transport Implementation for OpenAgents.
 
 This module provides the HTTP transport implementation for agent communication.
+Optionally serves MCP protocol at /mcp and Studio frontend at /studio.
 """
 
+import asyncio
 import json
 import logging
+import mimetypes
 import time
 import html
 import base64
 import os
-from typing import Dict, Any, Optional
+import uuid
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Dict, Any, Optional, List, TYPE_CHECKING
 
 from openagents.config.globals import (
     SYSTEM_EVENT_REGISTER_AGENT,
@@ -26,7 +32,24 @@ from .base import Transport
 from openagents.models.transport import TransportType, ConnectionState, ConnectionInfo
 from openagents.models.event import Event, EventVisibility
 
+if TYPE_CHECKING:
+    from openagents.core.network import AgentNetwork
+
 logger = logging.getLogger(__name__)
+
+# MCP Protocol version (when serve_mcp is enabled)
+MCP_PROTOCOL_VERSION = "2025-03-26"
+
+
+@dataclass
+class MCPSession:
+    """Represents an MCP client session (used when serve_mcp is enabled)."""
+
+    session_id: str
+    is_active: bool = True
+    initialized: bool = False
+    sse_response: Optional[web.StreamResponse] = None
+    pending_notifications: List[Dict[str, Any]] = field(default_factory=list)
 
 # Maximum file size for uploads (50 MB)
 MAX_FILE_SIZE = 50 * 1024 * 1024
@@ -38,13 +61,28 @@ class HttpTransport(Transport):
 
     This transport implementation uses HTTP to communicate with the network.
     It is used to communicate with the network from the browser and easily obtain claim information.
+
+    Optional features (configured via transport config):
+    - serve_mcp: true - Serve MCP protocol at /mcp endpoint
+    - serve_studio: true - Serve Studio frontend at /studio endpoint
     """
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         super().__init__(TransportType.HTTP, config, is_notifiable=False)
         self.app = web.Application(middlewares=[self.cors_middleware])
         self.site = None
-        self.network_instance = None  # Reference to network instance
+        self.network_instance: Optional["AgentNetwork"] = None  # Reference to network instance
+
+        # MCP serving configuration (enabled via serve_mcp: true)
+        self._serve_mcp = self.config.get("serve_mcp", False)
+        self._mcp_sessions: Dict[str, MCPSession] = {}
+        self._mcp_tool_collector = None  # Initialized when network context is available
+        self.network_context = None  # Set by topology when serve_mcp is enabled
+
+        # Studio serving configuration (enabled via serve_studio: true)
+        self._serve_studio = self.config.get("serve_studio", False)
+        self._studio_build_dir: Optional[str] = None
+
         self.setup_routes()
 
     def setup_routes(self):
@@ -62,13 +100,36 @@ class HttpTransport(Transport):
         self.app.router.add_post("/api/cache/upload", self.cache_upload)
         self.app.router.add_get("/api/cache/download/{cache_id}", self.cache_download)
         self.app.router.add_get("/api/cache/info/{cache_id}", self.cache_info)
-        
+
         # Event Explorer API endpoints
         self.app.router.add_get("/api/events/sync", self.sync_events)
         self.app.router.add_get("/api/events", self.list_events)
         self.app.router.add_get("/api/events/mods", self.list_mods)
         self.app.router.add_get("/api/events/search", self.search_events)
         self.app.router.add_get("/api/events/{event_name}", self.get_event_detail)
+
+        # MCP routes (if serve_mcp: true)
+        if self._serve_mcp:
+            self.app.router.add_post("/mcp", self._handle_mcp_post)
+            self.app.router.add_get("/mcp", self._handle_mcp_get)
+            self.app.router.add_delete("/mcp", self._handle_mcp_delete)
+            self.app.router.add_get("/mcp/tools", self._handle_mcp_tools_list)
+            logger.info("HTTP transport: MCP protocol enabled at /mcp")
+
+        # Studio routes (if serve_studio: true)
+        if self._serve_studio:
+            # Studio static files - catch-all for /studio paths
+            self.app.router.add_get("/studio", self._handle_studio_redirect)
+            self.app.router.add_get("/studio/{path:.*}", self._handle_studio_static)
+            # Also serve /static/* and root-level assets for React app compatibility
+            # (React builds reference /static/js/... not /studio/static/js/...)
+            self.app.router.add_get("/static/{path:.*}", self._handle_studio_root_static)
+            self.app.router.add_get("/favicon.ico", self._handle_studio_root_asset)
+            self.app.router.add_get("/manifest.json", self._handle_studio_root_asset)
+            self.app.router.add_get("/logo192.png", self._handle_studio_root_asset)
+            self.app.router.add_get("/logo512.png", self._handle_studio_root_asset)
+            self.app.router.add_get("/robots.txt", self._handle_studio_root_asset)
+            logger.info("HTTP transport: Studio frontend enabled at /studio")
 
     @web.middleware
     async def cors_middleware(self, request, handler):
@@ -79,11 +140,15 @@ class HttpTransport(Transport):
         else:
             response = await handler(request)
 
+        # Add MCP-specific headers if serve_mcp is enabled
+        if self._serve_mcp:
+            response.headers["Access-Control-Expose-Headers"] = "Mcp-Session-Id"
+
         # Add CORS headers
         response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS"
         response.headers["Access-Control-Allow-Headers"] = (
-            "Content-Type, Authorization, Accept"
+            "Content-Type, Authorization, Accept, Mcp-Session-Id"
         )
         response.headers["Access-Control-Max-Age"] = "86400"  # 24 hours
 
@@ -91,13 +156,58 @@ class HttpTransport(Transport):
 
     async def initialize(self) -> bool:
         """Initialize HTTP transport."""
+        # Initialize Studio build directory if serve_studio is enabled
+        if self._serve_studio:
+            self._studio_build_dir = self._find_studio_build_dir()
+            if self._studio_build_dir:
+                logger.info(f"HTTP transport: Studio build directory found at {self._studio_build_dir}")
+            else:
+                logger.warning("HTTP transport: Studio build directory not found, /studio will return 404")
+
         self.is_initialized = True
         return True
+
+    def initialize_mcp(self) -> bool:
+        """Initialize MCP tool collector. Called after network_context is set."""
+        if not self._serve_mcp:
+            return True
+
+        if not self.network_context:
+            logger.warning("HTTP transport: Cannot initialize MCP without network context")
+            return False
+
+        try:
+            from openagents.utils.network_tool_collector import NetworkToolCollector
+
+            # Get workspace path from network context
+            workspace_path = self.network_context.workspace_path
+
+            self._mcp_tool_collector = NetworkToolCollector(
+                network=None,  # Not needed when context is provided
+                workspace_path=workspace_path,
+                context=self.network_context,
+            )
+            self._mcp_tool_collector.collect_all_tools()
+            logger.info(
+                f"HTTP transport MCP: Collected {self._mcp_tool_collector.tool_count} tools: "
+                f"{self._mcp_tool_collector.tool_names}"
+            )
+            return True
+        except Exception as e:
+            logger.error(f"HTTP transport: Failed to initialize MCP tool collector: {e}")
+            return False
 
     async def shutdown(self) -> bool:
         """Shutdown HTTP transport."""
         self.is_initialized = False
         self.is_listening = False
+
+        # Clean up MCP sessions if serve_mcp is enabled
+        if self._serve_mcp:
+            for session_id, session in list(self._mcp_sessions.items()):
+                session.is_active = False
+            self._mcp_sessions.clear()
+
         if self.site:
             await self.site.stop()
             self.site = None
@@ -1171,6 +1281,406 @@ class HttpTransport(Transport):
                 {"success": False, "error_message": str(e)},
                 status=500
             )
+
+    # ========================================================================
+    # MCP Protocol Handlers (enabled via serve_mcp: true)
+    # ========================================================================
+
+    async def _handle_mcp_post(self, request: web.Request) -> web.Response:
+        """Handle POST requests (JSON-RPC messages) for MCP Streamable HTTP."""
+        # Check Accept header
+        accept = request.headers.get("Accept", "")
+        if "application/json" not in accept and "text/event-stream" not in accept and "*/*" not in accept:
+            return web.Response(
+                status=406,
+                text="Must accept application/json or text/event-stream",
+            )
+
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return web.json_response(
+                self._mcp_jsonrpc_error(None, -32700, "Parse error"),
+                status=400,
+            )
+
+        # Get or validate session
+        session_id = request.headers.get("Mcp-Session-Id")
+        method = body.get("method", "")
+
+        # Initialize request creates new session
+        if method == "initialize":
+            session_id = str(uuid.uuid4())
+            self._mcp_sessions[session_id] = MCPSession(session_id=session_id)
+            logger.info(f"HTTP MCP: Created new session: {session_id}")
+        elif session_id and session_id not in self._mcp_sessions:
+            # Invalid session ID for non-initialize request
+            return web.Response(status=404, text="Invalid session ID")
+
+        # Process JSON-RPC request
+        response_data = await self._mcp_process_jsonrpc(body, session_id)
+
+        # Build response headers
+        headers = {}
+        if method == "initialize" and session_id:
+            headers["Mcp-Session-Id"] = session_id
+
+        return web.json_response(response_data, headers=headers)
+
+    async def _handle_mcp_get(self, request: web.Request) -> web.Response:
+        """Handle GET requests (SSE stream for server notifications)."""
+        session_id = request.headers.get("Mcp-Session-Id")
+        if not session_id or session_id not in self._mcp_sessions:
+            return web.Response(status=404, text="Invalid or missing session")
+
+        session = self._mcp_sessions[session_id]
+
+        # Create SSE response
+        response = web.StreamResponse(
+            status=200,
+            headers={
+                "Content-Type": "text/event-stream",
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+            },
+        )
+        await response.prepare(request)
+
+        # Store SSE response for sending notifications
+        session.sse_response = response
+
+        try:
+            # Keep connection open for notifications
+            while session.is_active:
+                # Send any pending notifications
+                while session.pending_notifications:
+                    notification = session.pending_notifications.pop(0)
+                    await self._mcp_send_sse_event(response, notification)
+
+                # Wait a bit before checking again
+                await asyncio.sleep(0.1)
+
+                # Check if client disconnected
+                if response.task and response.task.done():
+                    break
+
+        except (ConnectionResetError, asyncio.CancelledError):
+            logger.debug(f"HTTP MCP: SSE connection closed for session {session_id}")
+        finally:
+            session.sse_response = None
+
+        return response
+
+    async def _handle_mcp_delete(self, request: web.Request) -> web.Response:
+        """Handle DELETE requests (session termination)."""
+        session_id = request.headers.get("Mcp-Session-Id")
+        if session_id and session_id in self._mcp_sessions:
+            session = self._mcp_sessions[session_id]
+            session.is_active = False
+            del self._mcp_sessions[session_id]
+            logger.info(f"HTTP MCP: Terminated session: {session_id}")
+            return web.Response(status=200, text="Session terminated")
+        return web.Response(status=404, text="Session not found")
+
+    async def _handle_mcp_tools_list(self, request: web.Request) -> web.Response:
+        """Handle tools list request (debugging endpoint)."""
+        if not self._mcp_tool_collector:
+            return web.json_response({"tools": [], "error": "Tool collector not initialized"})
+
+        tools = self._mcp_tool_collector.to_mcp_tools_filtered(None, None)
+        return web.json_response({"tools": tools})
+
+    async def _mcp_send_sse_event(self, response: web.StreamResponse, data: Dict[str, Any]):
+        """Send an SSE event to the client."""
+        event_data = f"data: {json.dumps(data)}\n\n"
+        await response.write(event_data.encode("utf-8"))
+
+    def _mcp_jsonrpc_error(
+        self, id: Optional[Any], code: int, message: str, data: Any = None
+    ) -> Dict[str, Any]:
+        """Create a JSON-RPC error response."""
+        error = {"code": code, "message": message}
+        if data is not None:
+            error["data"] = data
+        return {"jsonrpc": "2.0", "id": id, "error": error}
+
+    def _mcp_jsonrpc_result(self, id: Any, result: Any) -> Dict[str, Any]:
+        """Create a JSON-RPC result response."""
+        return {"jsonrpc": "2.0", "id": id, "result": result}
+
+    async def _mcp_process_jsonrpc(
+        self, body: Dict[str, Any], session_id: Optional[str]
+    ) -> Dict[str, Any]:
+        """Process a JSON-RPC request and return the response."""
+        request_id = body.get("id")
+        method = body.get("method", "")
+        params = body.get("params", {})
+
+        try:
+            if method == "initialize":
+                return await self._mcp_handle_initialize(request_id, params)
+            elif method == "initialized":
+                # Client notification that initialization is complete
+                if session_id and session_id in self._mcp_sessions:
+                    self._mcp_sessions[session_id].initialized = True
+                return self._mcp_jsonrpc_result(request_id, {})
+            elif method == "tools/list":
+                return await self._mcp_handle_tools_list_rpc(request_id)
+            elif method == "tools/call":
+                return await self._mcp_handle_tools_call(request_id, params)
+            elif method == "ping":
+                return self._mcp_jsonrpc_result(request_id, {})
+            else:
+                return self._mcp_jsonrpc_error(
+                    request_id, -32601, f"Method not found: {method}"
+                )
+        except Exception as e:
+            logger.error(f"HTTP MCP: Error processing JSON-RPC request: {e}")
+            return self._mcp_jsonrpc_error(request_id, -32603, f"Internal error: {str(e)}")
+
+    async def _mcp_handle_initialize(
+        self, request_id: Any, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle MCP initialize request."""
+        network_name = "OpenAgents"
+        if self.network_context and self.network_context.network_name:
+            network_name = self.network_context.network_name
+
+        result = {
+            "protocolVersion": MCP_PROTOCOL_VERSION,
+            "capabilities": {
+                "tools": {"listChanged": False},
+            },
+            "serverInfo": {
+                "name": network_name,
+                "version": "1.0.0",
+            },
+        }
+        return self._mcp_jsonrpc_result(request_id, result)
+
+    async def _mcp_handle_tools_list_rpc(self, request_id: Any) -> Dict[str, Any]:
+        """Handle tools/list JSON-RPC request."""
+        if not self._mcp_tool_collector:
+            return self._mcp_jsonrpc_result(request_id, {"tools": []})
+
+        tools = []
+        for tool_dict in self._mcp_tool_collector.to_mcp_tools_filtered(None, None):
+            tools.append({
+                "name": tool_dict["name"],
+                "description": tool_dict["description"],
+                "inputSchema": tool_dict["inputSchema"],
+            })
+
+        return self._mcp_jsonrpc_result(request_id, {"tools": tools})
+
+    async def _mcp_handle_tools_call(
+        self, request_id: Any, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle tools/call JSON-RPC request."""
+        tool_name = params.get("name")
+        arguments = params.get("arguments", {})
+
+        if not tool_name:
+            return self._mcp_jsonrpc_error(request_id, -32602, "Missing tool name")
+
+        if not self._mcp_tool_collector:
+            return self._mcp_jsonrpc_error(
+                request_id, -32603, "Tool collector not initialized"
+            )
+
+        tool = self._mcp_tool_collector.get_tool_by_name(tool_name)
+        if not tool:
+            return self._mcp_jsonrpc_error(
+                request_id, -32602, f"Tool not found: {tool_name}"
+            )
+
+        try:
+            result = await tool.execute(**arguments)
+            return self._mcp_jsonrpc_result(
+                request_id,
+                {
+                    "content": [{"type": "text", "text": str(result)}],
+                    "isError": False,
+                },
+            )
+        except Exception as e:
+            logger.error(f"HTTP MCP: Error executing tool '{tool_name}': {e}")
+            return self._mcp_jsonrpc_result(
+                request_id,
+                {
+                    "content": [{"type": "text", "text": f"Error: {str(e)}"}],
+                    "isError": True,
+                },
+            )
+
+    # ========================================================================
+    # Studio Static File Handlers (enabled via serve_studio: true)
+    # ========================================================================
+
+    def _find_studio_build_dir(self) -> Optional[str]:
+        """Find the studio build directory from the installed package."""
+        try:
+            from importlib.resources import files
+            studio_resources = files("openagents").joinpath("studio", "build")
+            if studio_resources.is_dir():
+                try:
+                    index_file = studio_resources.joinpath("index.html")
+                    if index_file.is_file():
+                        return str(studio_resources)
+                except (AttributeError, TypeError):
+                    pass
+        except (ModuleNotFoundError, AttributeError, TypeError):
+            pass
+
+        # Try to find build directory in multiple locations
+        script_dir = os.path.dirname(os.path.abspath(__file__))  # core/transports
+        core_dir = os.path.dirname(script_dir)  # core
+        package_dir = os.path.dirname(core_dir)  # src/openagents
+        src_dir = os.path.dirname(package_dir)  # src
+        project_root = os.path.dirname(src_dir)  # actual project root
+
+        possible_paths = [
+            # In development: project_root/studio/build
+            os.path.join(project_root, "studio", "build"),
+            # In installed package (src/openagents/studio/build)
+            os.path.join(package_dir, "studio", "build"),
+            # Alternative: relative to src
+            os.path.join(src_dir, "studio", "build"),
+        ]
+
+        for path in possible_paths:
+            if path and os.path.exists(path) and os.path.isdir(path):
+                index_html = os.path.join(path, "index.html")
+                if os.path.exists(index_html):
+                    return path
+
+        return None
+
+    async def _handle_studio_redirect(self, request: web.Request) -> web.Response:
+        """Redirect /studio to /studio/ for proper relative path handling."""
+        return web.HTTPFound("/studio/")
+
+    async def _handle_studio_static(self, request: web.Request) -> web.Response:
+        """Handle Studio static file requests with SPA routing support."""
+        if not self._studio_build_dir:
+            return web.Response(
+                status=404,
+                text="Studio build directory not found. Run 'npm run build' in the studio directory.",
+            )
+
+        # Get the requested path
+        path = request.match_info.get("path", "")
+
+        # Handle empty path or just "/" - serve index.html
+        if not path or path == "/":
+            file_path = os.path.join(self._studio_build_dir, "index.html")
+        else:
+            # Remove leading slash and construct full path
+            path = path.lstrip("/")
+            file_path = os.path.join(self._studio_build_dir, path)
+
+        # Security check: ensure the resolved path is within the build directory
+        real_build_dir = os.path.realpath(self._studio_build_dir)
+        real_file_path = os.path.realpath(file_path)
+        if not real_file_path.startswith(real_build_dir):
+            return web.Response(status=403, text="Forbidden")
+
+        # Check if file exists
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            # Serve the actual file
+            content_type, _ = mimetypes.guess_type(file_path)
+            if content_type is None:
+                content_type = "application/octet-stream"
+
+            try:
+                with open(file_path, "rb") as f:
+                    content = f.read()
+
+                response = web.Response(body=content, content_type=content_type)
+                # Add cache headers for static assets
+                if any(path.startswith(prefix) for prefix in ["static/", "assets/"]):
+                    response.headers["Cache-Control"] = "public, max-age=31536000"
+                else:
+                    response.headers["Cache-Control"] = "no-cache"
+                return response
+            except IOError as e:
+                logger.error(f"HTTP Studio: Error reading file {file_path}: {e}")
+                return web.Response(status=500, text="Internal server error")
+        else:
+            # For SPA routing: serve index.html for non-existent paths
+            # This allows React Router to handle client-side routing
+            index_path = os.path.join(self._studio_build_dir, "index.html")
+            if os.path.exists(index_path):
+                try:
+                    with open(index_path, "rb") as f:
+                        content = f.read()
+                    return web.Response(
+                        body=content,
+                        content_type="text/html",
+                        headers={"Cache-Control": "no-cache"},
+                    )
+                except IOError as e:
+                    logger.error(f"HTTP Studio: Error reading index.html: {e}")
+                    return web.Response(status=500, text="Internal server error")
+            else:
+                return web.Response(status=404, text="Not found")
+
+    async def _handle_studio_root_static(self, request: web.Request) -> web.Response:
+        """Handle /static/* requests for React app assets."""
+        if not self._studio_build_dir:
+            return web.Response(status=404, text="Studio build not found")
+
+        path = request.match_info.get("path", "")
+        file_path = os.path.join(self._studio_build_dir, "static", path.lstrip("/"))
+
+        # Security check
+        real_build_dir = os.path.realpath(self._studio_build_dir)
+        real_file_path = os.path.realpath(file_path)
+        if not real_file_path.startswith(real_build_dir):
+            return web.Response(status=403, text="Forbidden")
+
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            content_type, _ = mimetypes.guess_type(file_path)
+            if content_type is None:
+                content_type = "application/octet-stream"
+            try:
+                with open(file_path, "rb") as f:
+                    content = f.read()
+                response = web.Response(body=content, content_type=content_type)
+                response.headers["Cache-Control"] = "public, max-age=31536000"
+                return response
+            except IOError as e:
+                logger.error(f"HTTP Studio: Error reading static file {file_path}: {e}")
+                return web.Response(status=500, text="Internal server error")
+        return web.Response(status=404, text="Not found")
+
+    async def _handle_studio_root_asset(self, request: web.Request) -> web.Response:
+        """Handle root-level asset requests (favicon.ico, manifest.json, etc.)."""
+        if not self._studio_build_dir:
+            return web.Response(status=404, text="Studio build not found")
+
+        # Get filename from request path
+        filename = request.path.lstrip("/")
+        file_path = os.path.join(self._studio_build_dir, filename)
+
+        # Security check
+        real_build_dir = os.path.realpath(self._studio_build_dir)
+        real_file_path = os.path.realpath(file_path)
+        if not real_file_path.startswith(real_build_dir):
+            return web.Response(status=403, text="Forbidden")
+
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            content_type, _ = mimetypes.guess_type(file_path)
+            if content_type is None:
+                content_type = "application/octet-stream"
+            try:
+                with open(file_path, "rb") as f:
+                    content = f.read()
+                return web.Response(body=content, content_type=content_type)
+            except IOError as e:
+                logger.error(f"HTTP Studio: Error reading asset {file_path}: {e}")
+                return web.Response(status=500, text="Internal server error")
+        return web.Response(status=404, text="Not found")
 
 
 def _generate_event_examples(event: Dict[str, Any]) -> Dict[str, str]:
