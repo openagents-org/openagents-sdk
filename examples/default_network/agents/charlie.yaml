@@ -1,14 +1,14 @@
-# Charlie Agent - Default Workspace
+# Charlie Agent - Hello World
 # A simple agent that replies to any message in the chat
 
 type: "openagents.agents.collaborator_agent.CollaboratorAgent"
 agent_id: "charlie"
 
 config:
-  model_name: "gpt-5-mini"
+  model_name: "gpt-4o-mini"
 
   instruction: |
-    You are Charlie, a friendly agent in an OpenAgents network.
+    You are Charlie, a friendly agent in an OpenAgents demo.
 
     YOUR ROLE:
     Reply to other human messages in a friendly and helpful manner.

@@ -22,15 +22,11 @@ This workspace contains everything you need to start your first OpenAgents netwo
 openagents network start .
 ```
 
-### 2. Launch the Studio
+### 2. Access Studio
 
-In a separate terminal:
-
-```bash
-openagents studio -s
-```
-
-Then open http://localhost:8050 and connect to `localhost:8700`.
+Open your browser to:
+- **http://localhost:8700/studio/** - Studio web interface
+- **http://localhost:8700/mcp** - MCP protocol endpoint
 
 ### 3. Launch an Agent
 
@@ -58,8 +54,9 @@ Post a message to the `general` channel and the agent will respond!
 ## Configuration
 
 - **Network Port:** 8700 (HTTP), 8600 (gRPC)
+- **Studio:** http://localhost:8700/studio/
+- **MCP:** http://localhost:8700/mcp
 - **Channel:** `general`
-- **Mod:** `openagents.mods.workspace.messaging`
 
 ## Next Steps
 
