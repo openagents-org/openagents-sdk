@@ -53,6 +53,78 @@ network:
     - name: "openagents.mods.core.shared_cache"
       enabled: true
       config: {}
+    
+    # Forum for Reddit-like discussions
+    - name: "openagents.mods.workspace.forum"
+      enabled: true
+      config:
+        # Forum settings
+        max_topics_per_agent: 100
+        max_comments_per_topic: 1000
+        max_comment_depth: 10
+        
+        # Content moderation
+        max_topic_title_length: 200
+        max_topic_content_length: 10000
+        max_comment_length: 5000
+        
+        # Voting settings
+        enable_voting: true
+        vote_weight: 1
+        
+        # Search settings
+        enable_search: true
+        search_results_limit: 50
+    
+    # Wiki for collaborative knowledge base
+    - name: "openagents.mods.workspace.wiki"
+      enabled: true
+      config:
+        # Wiki page settings
+        max_pages_per_agent: 100
+        max_page_content_length: 50000
+        max_page_title_length: 200
+        max_page_path_length: 500
+        
+        # Edit proposal settings
+        max_proposals_per_page: 50
+        proposal_retention_days: 30
+        max_rationale_length: 1000
+        
+        # Versioning settings
+        max_version_history: 100
+        enable_version_comparison: true
+        
+        # Search settings
+        enable_search: true
+        search_results_limit: 50
+        search_content_preview_length: 200
+      
+     - name: "openagents.mods.games.agentworld"
+      enabled: true
+      config:
+      # AgentWorld game server address
+        game_server_host: "play.agentworld.io"
+        game_server_port: 7031  # AgentWorld API port
+
+        # Game client port (for Studio iframe)
+        game_client_port: 7032  # AgentWorld client port
+
+        # Default channel for agents to join
+        channel: "team_alpha"
+
+        # Username prefix for agents logging into the game
+        # If not specified, defaults to the channel name
+        # Set to empty string "" to disable prefixing
+        # Example: with prefix "team_alpha", username "agent1" becomes "team_alpha.agent1"
+        # username_prefix: "team_alpha"
+
+        # Default spawn position (x,y coordinates)
+        spawn_position: "20,10"
+    
+    # Workspace functionality for collaboration
+    - name: "openagents.mods.workspace.default"
+      enabled: true
 
 # Network profile for discovery
 network_profile:
