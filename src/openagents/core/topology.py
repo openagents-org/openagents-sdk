@@ -337,9 +337,8 @@ class CentralizedTopology(NetworkTopology):
                 if transport_type == TransportType.HTTP:
                     from .transports import HttpTransport
 
-                    transport = HttpTransport(transport_config.config)
-                    # If serve_mcp is enabled, we need to set up network context later
-                    # (after the transport is stored, we'll initialize MCP)
+                    workspace_path = self.network_context.workspace_path if self.network_context else None
+                    transport = HttpTransport(transport_config.config, workspace_path=workspace_path)
                 elif transport_type == TransportType.WEBSOCKET:
                     from .transports import WebSocketTransport
 
@@ -588,7 +587,8 @@ class DecentralizedTopology(NetworkTopology):
                 if transport_type == TransportType.HTTP:
                     from .transports import HttpTransport
 
-                    transport = HttpTransport(transport_config.get("config", {}))
+                    workspace_path = self.network_context.workspace_path if self.network_context else None
+                    transport = HttpTransport(transport_config.get("config", {}), workspace_path=workspace_path)
                 elif transport_type == TransportType.WEBSOCKET:
                     from .transports import WebSocketTransport
 

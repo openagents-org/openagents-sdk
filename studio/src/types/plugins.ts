@@ -13,4 +13,5 @@ export enum PLUGIN_NAME_ENUM {
   README = "readme",
   MOD_MANAGEMENT = "mod_management",
   EVENTS = "events",
+  LLM_LOGS = "llm_logs",
 }

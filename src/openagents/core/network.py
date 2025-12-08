@@ -145,6 +145,7 @@ class AgentNetwork:
         return NetworkContext(
             network_name=self.network_name,
             workspace_path=workspace_path,
+            workspace_manager=self.workspace_manager,
             config=self.config,
             mods=self.mods,
             emit_event=emit_event,

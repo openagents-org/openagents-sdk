@@ -763,4 +763,12 @@ export class HttpEventConnector {
   isUsingModifiedId(): boolean {
     return this.agentId !== this.originalAgentId;
   }
+
+  getHost(): string {
+    return this.host;
+  }
+
+  getPort(): number {
+    return this.port;
+  }
 }
