@@ -24,7 +24,7 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) => {
     };
   }, [isOpen]);
 
-  // 完全隐藏：只在打开时渲染
+  // Completely hide: only render when open
   if (!isOpen) {
     return null;
   }
