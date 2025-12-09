@@ -117,6 +117,8 @@ class HttpTransport(Transport):
         self.app.router.add_get("/api/agents/service/{agent_id}/logs/screen", self.get_service_agent_logs)
         self.app.router.add_get("/api/agents/service/{agent_id}/source", self.get_service_agent_source)
         self.app.router.add_put("/api/agents/service/{agent_id}/source", self.save_service_agent_source)
+        self.app.router.add_get("/api/agents/service/{agent_id}/env", self.get_service_agent_env)
+        self.app.router.add_put("/api/agents/service/{agent_id}/env", self.save_service_agent_env)
 
         # Event Explorer API endpoints
         self.app.router.add_get("/api/events/sync", self.sync_events)
@@ -1581,6 +1583,96 @@ class HttpTransport(Transport):
 
         except Exception as e:
             logger.error(f"Error saving service agent source: {e}")
+            return web.json_response(
+                {"success": False, "error": str(e)},
+                status=500,
+            )
+
+    async def get_service_agent_env(self, request):
+        """Get environment variables for a service agent."""
+        try:
+            agent_id = request.match_info.get("agent_id")
+            if not agent_id:
+                return web.json_response(
+                    {"success": False, "error": "Agent ID required"},
+                    status=400,
+                )
+
+            if not self.network_instance or not hasattr(self.network_instance, "agent_manager"):
+                return web.json_response(
+                    {"success": False, "error": "Agent manager not available"},
+                    status=503,
+                )
+
+            agent_manager = self.network_instance.agent_manager
+            env_vars = agent_manager.get_agent_env_vars(agent_id)
+
+            if env_vars is None:
+                return web.json_response(
+                    {"success": False, "error": f"Agent '{agent_id}' not found"},
+                    status=404,
+                )
+
+            return web.json_response({
+                "success": True,
+                "env_vars": env_vars
+            })
+
+        except Exception as e:
+            logger.error(f"Error getting service agent env vars: {e}")
+            return web.json_response(
+                {"success": False, "error": str(e)},
+                status=500,
+            )
+
+    async def save_service_agent_env(self, request):
+        """Save environment variables for a service agent."""
+        try:
+            agent_id = request.match_info.get("agent_id")
+            if not agent_id:
+                return web.json_response(
+                    {"success": False, "error": "Agent ID required"},
+                    status=400,
+                )
+
+            if not self.network_instance or not hasattr(self.network_instance, "agent_manager"):
+                return web.json_response(
+                    {"success": False, "error": "Agent manager not available"},
+                    status=503,
+                )
+
+            # Parse request body
+            try:
+                data = await request.json()
+            except Exception:
+                return web.json_response(
+                    {"success": False, "error": "Invalid JSON body"},
+                    status=400,
+                )
+
+            env_vars = data.get("env_vars")
+            if env_vars is None:
+                return web.json_response(
+                    {"success": False, "error": "env_vars field required"},
+                    status=400,
+                )
+
+            if not isinstance(env_vars, dict):
+                return web.json_response(
+                    {"success": False, "error": "env_vars must be an object"},
+                    status=400,
+                )
+
+            agent_manager = self.network_instance.agent_manager
+            result = agent_manager.set_agent_env_vars(agent_id, env_vars)
+
+            if result["success"]:
+                return web.json_response(result)
+            else:
+                return web.json_response(result, status=400)
+
+        except Exception as e:
+            logger.error(f"Error saving service agent env vars: {e}")
             return web.json_response(
                 {"success": False, "error": str(e)},
                 status=500,

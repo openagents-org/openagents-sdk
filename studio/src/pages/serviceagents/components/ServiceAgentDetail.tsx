@@ -7,15 +7,18 @@ import {
   getAgentLogs,
   getAgentSource,
   saveAgentSource,
+  getAgentEnvVars,
+  saveAgentEnvVars,
   restartServiceAgent,
   startServiceAgent,
   stopServiceAgent,
   type AgentStatus,
   type LogEntry,
   type AgentSource,
+  type AgentEnvVars,
 } from "@/services/serviceAgentsApi";
 
-type TabType = "status" | "logs" | "editor";
+type TabType = "status" | "logs" | "editor" | "env";
 
 /**
  * Service Agent Detail Component
@@ -48,6 +51,15 @@ const ServiceAgentDetail: React.FC = () => {
   // Action loading states
   const [startingAgent, setStartingAgent] = useState(false);
   const [stoppingAgent, setStoppingAgent] = useState(false);
+
+  // Environment variables state
+  const [envVars, setEnvVars] = useState<AgentEnvVars>({});
+  const [originalEnvVars, setOriginalEnvVars] = useState<AgentEnvVars>({});
+  const [loadingEnvVars, setLoadingEnvVars] = useState(false);
+  const [savingEnvVars, setSavingEnvVars] = useState(false);
+  const [hasUnsavedEnvChanges, setHasUnsavedEnvChanges] = useState(false);
+  const [newEnvKey, setNewEnvKey] = useState("");
+  const [newEnvValue, setNewEnvValue] = useState("");
 
   // Scroll to bottom when new logs arrive
   useEffect(() => {
@@ -120,6 +132,105 @@ const ServiceAgentDetail: React.FC = () => {
   useEffect(() => {
     setHasUnsavedChanges(sourceCode !== originalSourceCode);
   }, [sourceCode, originalSourceCode]);
+
+  // Fetch environment variables
+  const fetchEnvVars = useCallback(async () => {
+    if (!agentId) return;
+
+    try {
+      setLoadingEnvVars(true);
+      const vars = await getAgentEnvVars(agentId);
+      setEnvVars(vars);
+      setOriginalEnvVars(vars);
+      setHasUnsavedEnvChanges(false);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to fetch environment variables";
+      toast.error(errorMessage);
+    } finally {
+      setLoadingEnvVars(false);
+    }
+  }, [agentId]);
+
+  // Load env vars when switching to env tab
+  useEffect(() => {
+    if (activeTab === "env" && Object.keys(originalEnvVars).length === 0 && !loadingEnvVars) {
+      fetchEnvVars();
+    }
+  }, [activeTab, originalEnvVars, loadingEnvVars, fetchEnvVars]);
+
+  // Track unsaved env changes
+  useEffect(() => {
+    setHasUnsavedEnvChanges(JSON.stringify(envVars) !== JSON.stringify(originalEnvVars));
+  }, [envVars, originalEnvVars]);
+
+  // Handle save env vars
+  const handleSaveEnvVars = async () => {
+    if (!agentId || !hasUnsavedEnvChanges) return;
+
+    try {
+      setSavingEnvVars(true);
+      const result = await saveAgentEnvVars(agentId, envVars);
+      setOriginalEnvVars({ ...envVars });
+      setHasUnsavedEnvChanges(false);
+      toast.success(result.message);
+
+      if (result.needs_restart) {
+        toast.info("Agent is running. Restart required for changes to take effect.", {
+          action: {
+            label: "Restart Now",
+            onClick: async () => {
+              try {
+                await restartServiceAgent(agentId);
+                toast.success("Agent restarted successfully");
+              } catch (err) {
+                toast.error("Failed to restart agent");
+              }
+            },
+          },
+        });
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to save environment variables";
+      toast.error(errorMessage);
+    } finally {
+      setSavingEnvVars(false);
+    }
+  };
+
+  // Handle discard env changes
+  const handleDiscardEnvChanges = () => {
+    setEnvVars({ ...originalEnvVars });
+    setHasUnsavedEnvChanges(false);
+  };
+
+  // Handle add new env var
+  const handleAddEnvVar = () => {
+    if (!newEnvKey.trim()) {
+      toast.error("Variable name is required");
+      return;
+    }
+    if (envVars[newEnvKey]) {
+      toast.error("Variable already exists");
+      return;
+    }
+    setEnvVars({ ...envVars, [newEnvKey]: newEnvValue });
+    setNewEnvKey("");
+    setNewEnvValue("");
+  };
+
+  // Handle update env var
+  const handleUpdateEnvVar = (key: string, value: string) => {
+    setEnvVars({ ...envVars, [key]: value });
+  };
+
+  // Handle delete env var
+  const handleDeleteEnvVar = (key: string) => {
+    const newVars = { ...envVars };
+    delete newVars[key];
+    setEnvVars(newVars);
+  };
 
   // Handle save source
   const handleSaveSource = async () => {
@@ -480,6 +591,27 @@ const ServiceAgentDetail: React.FC = () => {
                 )}
               </div>
             </button>
+            <button
+              onClick={() => setActiveTab("env")}
+              className={`
+                px-4 py-3 text-sm font-medium border-b-2 transition-colors
+                ${
+                  activeTab === "env"
+                    ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                }
+              `}
+            >
+              <div className="flex items-center space-x-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                <span>Environment</span>
+                {hasUnsavedEnvChanges && (
+                  <span className="w-2 h-2 rounded-full bg-orange-500" title="Unsaved changes" />
+                )}
+              </div>
+            </button>
           </div>
         </div>
 
@@ -820,6 +952,195 @@ const ServiceAgentDetail: React.FC = () => {
                       bracketPairColorization: { enabled: true },
                     }}
                   />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Environment Tab Content */}
+          {activeTab === "env" && (
+            <div className="flex-1 flex flex-col min-h-0">
+              {/* Environment Header */}
+              <div className="flex-shrink-0 p-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {Object.keys(envVars).length} variable{Object.keys(envVars).length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    {hasUnsavedEnvChanges && (
+                      <span className="text-sm text-orange-600 dark:text-orange-400 flex items-center space-x-1">
+                        <span className="w-2 h-2 rounded-full bg-orange-500" />
+                        <span>Unsaved</span>
+                      </span>
+                    )}
+                    <button
+                      onClick={fetchEnvVars}
+                      disabled={loadingEnvVars}
+                      className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                    >
+                      Reload
+                    </button>
+                    <button
+                      onClick={handleDiscardEnvChanges}
+                      disabled={!hasUnsavedEnvChanges}
+                      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors
+                        ${hasUnsavedEnvChanges
+                          ? "text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+                          : "text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
+                        }
+                      `}
+                    >
+                      Discard
+                    </button>
+                    <button
+                      onClick={handleSaveEnvVars}
+                      disabled={!hasUnsavedEnvChanges || savingEnvVars}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center space-x-2
+                        ${hasUnsavedEnvChanges && !savingEnvVars
+                          ? "text-white bg-blue-600 hover:bg-blue-700"
+                          : "text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 cursor-not-allowed"
+                        }
+                      `}
+                    >
+                      {savingEnvVars ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        <span>Save</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Environment Variables List */}
+              <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900">
+                {loadingEnvVars ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
+                      <p className="text-gray-500 dark:text-gray-400 mt-3">
+                        Loading environment variables...
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="max-w-4xl space-y-4">
+                    {/* Add New Variable Form */}
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                      <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+                        Add New Variable
+                      </h3>
+                      <div className="flex items-end space-x-3">
+                        <div className="flex-1">
+                          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            Name
+                          </label>
+                          <input
+                            type="text"
+                            value={newEnvKey}
+                            onChange={(e) => setNewEnvKey(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, "_"))}
+                            placeholder="OPENAI_API_KEY"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm font-mono focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            Value
+                          </label>
+                          <input
+                            type="password"
+                            value={newEnvValue}
+                            onChange={(e) => setNewEnvValue(e.target.value)}
+                            placeholder="sk-..."
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm font-mono focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <button
+                          onClick={handleAddEnvVar}
+                          disabled={!newEnvKey.trim()}
+                          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Add
+                        </button>
+                      </div>
+                      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        Common variables: OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY
+                      </p>
+                    </div>
+
+                    {/* Existing Variables */}
+                    {Object.keys(envVars).length > 0 ? (
+                      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            Environment Variables
+                          </h3>
+                        </div>
+                        <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                          {Object.entries(envVars).map(([key, value]) => (
+                            <div key={key} className="p-4 flex items-center space-x-4">
+                              <div className="flex-shrink-0 w-48">
+                                <span className="font-mono text-sm text-gray-900 dark:text-gray-100">
+                                  {key}
+                                </span>
+                              </div>
+                              <div className="flex-1">
+                                <input
+                                  type="password"
+                                  value={value}
+                                  onChange={(e) => handleUpdateEnvVar(key, e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm font-mono focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </div>
+                              <button
+                                onClick={() => handleDeleteEnvVar(key)}
+                                className="flex-shrink-0 p-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                                title="Delete variable"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
+                        <svg className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                        </svg>
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                          No Environment Variables
+                        </h3>
+                        <p className="text-gray-500 dark:text-gray-400">
+                          Add environment variables to configure API keys and other settings for this agent.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Security Notice */}
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
+                      <div className="flex items-start space-x-3">
+                        <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <div>
+                          <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                            Security Notice
+                          </h4>
+                          <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                            Environment variables are stored in the workspace configuration. Keep your API keys secure and avoid sharing your workspace config files.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

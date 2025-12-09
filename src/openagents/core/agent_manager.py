@@ -6,7 +6,9 @@ directory, including discovery, lifecycle management, and log collection.
 """
 
 import asyncio
+import json
 import logging
+import os
 import shutil
 import sys
 import time
@@ -47,24 +49,26 @@ class AgentManager:
     
     def __init__(self, workspace_path: Path):
         """Initialize agent manager.
-        
+
         Args:
             workspace_path: Path to workspace directory
         """
         self.workspace_path = Path(workspace_path)
         self.agents_dir = self.workspace_path / "agents"
         self.logs_dir = self.workspace_path / "logs" / "agents"
-        
+        self.env_vars_dir = self.workspace_path / "config" / "agent_env"
+
         # Ensure directories exist
         self.logs_dir.mkdir(parents=True, exist_ok=True)
-        
+        self.env_vars_dir.mkdir(parents=True, exist_ok=True)
+
         # Agent registry: agent_id -> AgentProcessInfo
         self.agents: Dict[str, AgentProcessInfo] = {}
-        
+
         # Manager state
         self.is_running = False
         self._monitor_task: Optional[asyncio.Task] = None
-        
+
         logger.info(f"AgentManager initialized for workspace: {self.workspace_path}")
     
     async def start(self) -> bool:
@@ -256,14 +260,25 @@ class AgentManager:
             else:  # python
                 # Direct Python execution
                 cmd = [sys.executable, str(abs_file_path)]
-            
-            # Start process without cwd to avoid path duplication
+
+            # Build environment with agent-specific variables
+            process_env = self._build_agent_env(agent_id)
+
+            # Log env vars being used (without values for security)
+            agent_env_vars = self.get_agent_env_vars(agent_id)
+            if agent_env_vars:
+                env_var_names = list(agent_env_vars.keys())
+                agent_info.log_file_handle.write(f"Environment variables: {', '.join(env_var_names)}\n\n")
+                agent_info.log_file_handle.flush()
+
+            # Start process with environment variables
             # The agent's working directory will be its parent directory
             agent_info.process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                cwd=str(abs_file_path.parent)
+                cwd=str(abs_file_path.parent),
+                env=process_env
             )
             
             agent_info.pid = agent_info.process.pid
@@ -544,7 +559,127 @@ class AgentManager:
         except Exception as e:
             logger.error(f"Error saving source file for agent '{agent_id}': {e}")
             return {"success": False, "message": f"Failed to save: {e}"}
-    
+
+    def _get_env_vars_file(self, agent_id: str) -> Path:
+        """Get the path to the environment variables file for an agent."""
+        return self.env_vars_dir / f"{agent_id}.json"
+
+    def get_agent_env_vars(self, agent_id: str) -> Optional[Dict[str, str]]:
+        """Get environment variables for an agent.
+
+        Args:
+            agent_id: ID of the agent
+
+        Returns:
+            dict: Environment variables, or None if agent not found
+        """
+        if agent_id not in self.agents:
+            return None
+
+        env_file = self._get_env_vars_file(agent_id)
+
+        if not env_file.exists():
+            return {}
+
+        try:
+            with open(env_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data.get("env_vars", {})
+
+        except Exception as e:
+            logger.error(f"Error reading env vars for agent '{agent_id}': {e}")
+            return {}
+
+    def set_agent_env_vars(self, agent_id: str, env_vars: Dict[str, str]) -> Dict[str, Any]:
+        """Set environment variables for an agent.
+
+        Args:
+            agent_id: ID of the agent
+            env_vars: Dictionary of environment variable name -> value
+
+        Returns:
+            dict: Result with 'success' and 'message'
+        """
+        if agent_id not in self.agents:
+            return {"success": False, "message": f"Agent '{agent_id}' not found"}
+
+        agent_info = self.agents[agent_id]
+        env_file = self._get_env_vars_file(agent_id)
+
+        try:
+            # Load existing data or create new
+            data = {}
+            if env_file.exists():
+                try:
+                    with open(env_file, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                except:
+                    pass
+
+            # Update env vars
+            data["env_vars"] = env_vars
+            data["updated_at"] = datetime.now().isoformat()
+
+            # Write to file
+            with open(env_file, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+
+            logger.info(f"Saved {len(env_vars)} environment variables for agent '{agent_id}'")
+
+            return {
+                "success": True,
+                "message": "Environment variables saved successfully",
+                "needs_restart": agent_info.status == "running"
+            }
+
+        except Exception as e:
+            logger.error(f"Error saving env vars for agent '{agent_id}': {e}")
+            return {"success": False, "message": f"Failed to save: {e}"}
+
+    def delete_agent_env_var(self, agent_id: str, var_name: str) -> Dict[str, Any]:
+        """Delete a specific environment variable for an agent.
+
+        Args:
+            agent_id: ID of the agent
+            var_name: Name of the environment variable to delete
+
+        Returns:
+            dict: Result with 'success' and 'message'
+        """
+        if agent_id not in self.agents:
+            return {"success": False, "message": f"Agent '{agent_id}' not found"}
+
+        env_vars = self.get_agent_env_vars(agent_id)
+        if env_vars is None:
+            return {"success": False, "message": f"Agent '{agent_id}' not found"}
+
+        if var_name not in env_vars:
+            return {"success": False, "message": f"Variable '{var_name}' not found"}
+
+        del env_vars[var_name]
+        return self.set_agent_env_vars(agent_id, env_vars)
+
+    def _build_agent_env(self, agent_id: str) -> Dict[str, str]:
+        """Build the environment dictionary for starting an agent process.
+
+        Combines system environment with agent-specific variables.
+
+        Args:
+            agent_id: ID of the agent
+
+        Returns:
+            dict: Environment variables for the process
+        """
+        # Start with current environment
+        env = os.environ.copy()
+
+        # Add agent-specific variables
+        agent_env = self.get_agent_env_vars(agent_id)
+        if agent_env:
+            env.update(agent_env)
+
+        return env
+
     async def _capture_stream(
         self,
         agent_info: AgentProcessInfo,
