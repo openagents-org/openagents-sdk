@@ -1525,10 +1525,18 @@ agents_app = typer.Typer(
     rich_markup_mode="rich"
 )
 
+# Certs command group for SSL/TLS certificate management
+certs_app = typer.Typer(
+    name="certs",
+    help="🔐 Certificate management commands",
+    rich_markup_mode="rich"
+)
+
 # Add subcommands to main app
 app.add_typer(network_app, name="network")
 app.add_typer(agent_app, name="agent")
 app.add_typer(agents_app, name="agents")
+app.add_typer(certs_app, name="certs")
 
 
 @network_app.command("start")
@@ -1540,7 +1548,23 @@ def network_start(
     runtime: Optional[int] = typer.Option(None, "--runtime", "-t", help="Runtime in seconds"),
 ):
     """🚀 Start a network"""
-    
+
+    # Check if workspace path is provided
+    if not path and not workspace:
+        console.print(Panel(
+            "[yellow]📁 Workspace path required[/yellow]\n\n"
+            "To start a network, you need to specify a workspace directory.\n\n"
+            "[bold cyan]💡 Usage:[/bold cyan]\n"
+            "  [code]openagents network start /path/to/workspace[/code]\n\n"
+            "[bold cyan]📦 To create a new workspace:[/bold cyan]\n"
+            "  [code]openagents init /path/to/new-workspace[/code]\n\n"
+            "[dim]A workspace contains your network configuration (network.yaml),\n"
+            "agent definitions, and other resources for your agent network.[/dim]",
+            title="[yellow]ℹ️  Getting Started[/yellow]",
+            border_style="yellow"
+        ))
+        raise typer.Exit(0)
+
     # Show a simple startup message
     console.print(f"[blue]🚀 Starting OpenAgents network...[/blue]")
     if path:
@@ -1562,6 +1586,8 @@ def network_start(
             self.network_ports = []
             self.status_displayed = False
             self.console = console
+            self.studio_enabled = False
+            self.http_port = None
             
         def emit(self, record):
             message = record.getMessage()
@@ -1590,17 +1616,43 @@ def network_start(
                 self.error_messages.append(message)
             elif "started successfully" in message:
                 self.network_started = True
-                # Show status immediately when network starts successfully
+            elif "Studio frontend enabled" in message:
+                self.studio_enabled = True
+            elif "HTTP transport listening on" in message:
+                # Extract HTTP port from message like "HTTP transport listening on 0.0.0.0:8700"
+                import re
+                match = re.search(r':(\d+)', message)
+                if match:
+                    self.http_port = match.group(1)
+            elif "Starting heartbeat monitor" in message:
+                # Show banner and status after network is fully started
                 if not self.status_displayed and not self.has_error:
                     self.status_displayed = True
-                    self.console.print()  # Add blank line  
+                    self.console.print()  # Add blank line
+                    # Show banner
+                    show_banner()
+                    self.console.print()  # Add blank line
+
+                    # Build status message
+                    status_lines = [
+                        "[bold green]✅ OpenAgents network is online[/bold green]"
+                    ]
+                    if self.studio_enabled and self.http_port:
+                        studio_url = f"http://localhost:{self.http_port}/studio/"
+                        status_lines.append(f"🎨 Studio: [link={studio_url}]{studio_url}[/link]")
+                    status_lines.append("🔌 Check the logs above for host and port details")
+
                     self.console.print(Panel.fit(
-                        f"[bold green]✅ OpenAgents network is online[/bold green]\n"
-                        f"🌐 Network: [code]WorkspaceTestNetwork[/code]\n"
-                        f"🔌 Check the logs above for host and port details",
+                        "\n".join(status_lines),
                         border_style="green"
                     ))
                     self.console.print("[dim]Network is running... Press Ctrl+C to stop[/dim]")
+
+                    # Open browser if Studio is enabled
+                    if self.studio_enabled and self.http_port:
+                        studio_url = f"http://localhost:{self.http_port}/studio/"
+                        self.console.print(f"\n[cyan]🌐 Opening Studio in browser...[/cyan]")
+                        webbrowser.open(studio_url)
             elif "Transport" in record.getMessage() and ":" in record.getMessage():
                 # Extract host:port from transport messages like "Transport TransportType.HTTP: 0.0.0.0:8702"
                 message = record.getMessage()
@@ -1616,23 +1668,8 @@ def network_start(
                         self._check_and_display_status()
                             
         def _check_and_display_status(self):
-            # Display status line once we have all the information and network is started
-            if (not self.status_displayed and 
-                self.network_started and 
-                self.network_host and 
-                self.network_ports and 
-                not self.has_error):
-                
-                self.status_displayed = True
-                ports_str = ", ".join(self.network_ports)
-                self.console.print()  # Add blank line
-                self.console.print(Panel.fit(
-                    f"[bold green]✅ OpenAgents network is online[/bold green]\n"
-                    f"🌐 Host: [code]{self.network_host}[/code]\n"
-                    f"🔌 Ports: [code]{ports_str}[/code]",
-                    border_style="green"
-                ))
-                self.console.print("[dim]Network is running... Press Ctrl+C to stop[/dim]")
+            # No longer used - status is displayed after heartbeat monitor starts
+            pass
                 
     # Create a filter to suppress noisy poll messages
     class PollMessageFilter(logging.Filter):
@@ -2630,6 +2667,119 @@ def init_workspace(
             raise typer.Exit(1)
 
 
+# ============================================================================
+# Certificate Management Commands
+# ============================================================================
+
+@certs_app.command("generate")
+def certs_generate(
+    output: str = typer.Option("./certs", "--output", "-o", help="Output directory for certificates"),
+    common_name: str = typer.Option("localhost", "--common-name", "-cn", help="Common name for the certificate"),
+    days: int = typer.Option(365, "--days", "-d", help="Number of days the certificate is valid"),
+    san: Optional[List[str]] = typer.Option(None, "--san", help="Subject Alternative Names (can be used multiple times)"),
+):
+    """
+    Generate self-signed certificates for development.
+    
+    Creates a CA certificate and server certificate for local development and testing.
+    """
+    from openagents.utils.cert_generator import CertificateGenerator
+    
+    try:
+        console.print(f"[blue]🔐 Generating certificates in {output}...[/blue]")
+        
+        paths = CertificateGenerator.generate_self_signed(
+            output_dir=output,
+            common_name=common_name,
+            days_valid=days,
+            san_names=list(san) if san else None
+        )
+        
+        console.print()
+        console.print("[green]✅ Certificate generation successful![/green]")
+        console.print()
+        console.print(f"[cyan]📄 CA Certificate:[/cyan] {paths['ca_cert']}")
+        console.print(f"[cyan]📄 Server Certificate:[/cyan] {paths['server_cert']}")
+        console.print(f"[cyan]🔑 Server Key:[/cyan] {paths['server_key']}")
+        console.print()
+        
+        # Show example configuration
+        console.print("[yellow]📋 Example network.yaml configuration:[/yellow]")
+        console.print()
+        example_config = f"""[dim]transports:
+  - type: grpc
+    config:
+      port: 8600
+      tls:
+        enabled: true
+        cert_file: "{paths['server_cert']}"
+        key_file: "{paths['server_key']}"
+        ca_file: "{paths['ca_cert']}"[/dim]"""
+        console.print(example_config)
+        console.print()
+        
+        console.print("[green]💡 Tip:[/green] Use [cyan]openagents certs verify[/cyan] to check certificate details")
+        
+    except Exception as e:
+        console.print(f"[red]❌ Failed to generate certificates: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@certs_app.command("verify")
+def certs_verify(
+    cert_file: str = typer.Argument(..., help="Path to certificate file to verify"),
+):
+    """
+    Verify and display information about a certificate file.
+    
+    Shows certificate details including subject, issuer, validity period, and SAN.
+    """
+    from openagents.utils.cert_generator import CertificateGenerator
+    from datetime import datetime
+    
+    try:
+        cert_path = Path(cert_file)
+        if not cert_path.exists():
+            console.print(f"[red]❌ Certificate file not found: {cert_file}[/red]")
+            raise typer.Exit(1)
+        
+        console.print(f"[blue]🔍 Verifying certificate: {cert_file}[/blue]")
+        console.print()
+        
+        info = CertificateGenerator.verify_certificate(cert_file)
+        
+        # Create a rich table for certificate info
+        table = Table(title="Certificate Information", show_header=False, box=box.ROUNDED)
+        table.add_column("Field", style="cyan", no_wrap=True)
+        table.add_column("Value", style="white")
+        
+        table.add_row("Subject", info["subject"])
+        table.add_row("Issuer", info["issuer"])
+        table.add_row("Valid From", info["valid_from"])
+        table.add_row("Valid Until", info["valid_until"])
+        table.add_row("Serial Number", info["serial"])
+        if info.get("san"):
+            table.add_row("Subject Alt Names", info["san"])
+        
+        console.print(table)
+        console.print()
+        
+        # Check if certificate is expired
+        valid_until = datetime.fromisoformat(info["valid_until"])
+        if valid_until < datetime.now():
+            console.print("[red]⚠️  Certificate has expired![/red]")
+        else:
+            days_left = (valid_until - datetime.now()).days
+            if days_left < 30:
+                console.print(f"[yellow]⚠️  Certificate expires in {days_left} days[/yellow]")
+            else:
+                console.print(f"[green]✅ Certificate is valid (expires in {days_left} days)[/green]")
+        
+    except Exception as e:
+        console.print(f"[red]❌ Failed to verify certificate: {e}[/red]")
+        raise typer.Exit(1)
+
+
 # Global options callback
 def version_callback(value: bool):
     if value:
@@ -2649,7 +2799,7 @@ def show_banner():
 [bold blue]   ___                              ___                          _       [/bold blue]
 [bold blue]  / _ \\ _ __    ___  _ __           /   \\  __ _   ___  _ __   | |_  ___ [/bold blue]
 [bold blue] | | | | '_ \\  / _ \\| '_ \\         / /\\ / / _` | / _ \\| '_ \\  | __|/ __[/bold blue]
-[bold blue] | |_| | |_) ||  __/| | | |       / /_// | (_| ||  __/| | | | | |_\\__ \\[/bold blue]
+[bold blue] | |_| | |_) ||  __/| | | |       / /_// | (_| ||  __/| | | | | |_\\__ \\ [/bold blue]
 [bold blue]  \\___/| .__/  \\___||_| |_|      /___,'   \\__, | \\___||_| |_|  \\__|___/[/bold blue]
 [bold blue]       |_|                              |___/                        [/bold blue]
                                                                       
@@ -2689,7 +2839,7 @@ def main(
     """
     setup_logging(log_level, verbose)
     
-    # Show banner for the studio command (most common entry point)
+    # Show banner for studio command (network start shows banner after startup completes)
     if not no_banner and len(sys.argv) > 1 and sys.argv[1] == 'studio':
         show_banner()
 
