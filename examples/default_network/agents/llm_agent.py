@@ -105,15 +105,20 @@ async def main():
     parser = argparse.ArgumentParser(description="LLM Agent")
     parser.add_argument("--host", default="localhost", help="Network host")
     parser.add_argument("--port", type=int, default=8700, help="Network port")
+    parser.add_argument("--url", default=None, help="Connection URL (e.g., grpc://localhost:8600 for direct gRPC)")
     args = parser.parse_args()
 
     agent = LLMAgent()
 
     try:
-        await agent.async_start(
-            network_host=args.host,
-            network_port=args.port,
-        )
+        if args.url:
+            # Use URL for direct connection (useful for Docker port mapping)
+            await agent.async_start(url=args.url)
+        else:
+            await agent.async_start(
+                network_host=args.host,
+                network_port=args.port,
+            )
 
         # Keep running until interrupted
         while True:

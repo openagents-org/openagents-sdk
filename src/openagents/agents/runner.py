@@ -542,19 +542,28 @@ class AgentRunner(ABC):
         """
         # Parse URL if provided
         use_tls = False
+        skip_detection = False
+        enforce_transport_type = None
         if url:
             from urllib.parse import urlparse
             parsed = urlparse(url)
-            
+
             # Extract scheme to determine if TLS should be used
+            # grpc:// and grpcs:// schemes enable direct connection (skip detection)
+            # This is useful for Docker port mapping scenarios where the health check
+            # port (HTTP) differs from the gRPC port
             if parsed.scheme == "grpcs":
                 use_tls = True
                 host = parsed.hostname or host
                 port = parsed.port or port or 8600
+                skip_detection = True
+                enforce_transport_type = "grpc"
             elif parsed.scheme == "grpc":
                 use_tls = False
                 host = parsed.hostname or host
                 port = parsed.port or port or 8600
+                skip_detection = True
+                enforce_transport_type = "grpc"
             elif parsed.scheme == "https":
                 use_tls = True
                 host = parsed.hostname or host
@@ -568,13 +577,14 @@ class AgentRunner(ABC):
                 network_id = parsed.path.lstrip('/') or parsed.hostname
             else:
                 raise ValueError(f"Unsupported URL scheme: {parsed.scheme}")
-                
+
         # verbose_print(f"🚀 Agent {self._agent_id} starting...")
         try:
             connected = await self.client.connect(
                 network_host=host,
                 network_port=port,
                 network_id=network_id,
+                enforce_transport_type=enforce_transport_type,
                 metadata=metadata,
                 password_hash=password_hash,
                 use_tls=use_tls,
@@ -582,6 +592,7 @@ class AgentRunner(ABC):
                 ssl_client_cert=ssl_client_cert,
                 ssl_client_key=ssl_client_key,
                 ssl_verify=ssl_verify,
+                skip_detection=skip_detection,
             )
             if not connected:
                 raise Exception("Failed to connect to server")

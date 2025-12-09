@@ -158,6 +158,7 @@ class AgentClient:
         ssl_client_cert: Optional[str] = None,
         ssl_client_key: Optional[str] = None,
         ssl_verify: bool = True,
+        skip_detection: bool = False,
     ) -> bool:
         """Connect to a network server.
 
@@ -174,6 +175,8 @@ class AgentClient:
             ssl_client_cert: Path to client certificate for mTLS
             ssl_client_key: Path to client private key for mTLS
             ssl_verify: Whether to verify server certificate (default: True)
+            skip_detection: Skip health check detection and connect directly using
+                enforce_transport_type. Useful for Docker port mapping scenarios.
 
         Returns:
             bool: True if connection successful
@@ -214,52 +217,65 @@ class AgentClient:
             await self.disconnect()
             self.connector = None
 
-        # Detect transport type and create appropriate connector
-        detected_profile = await self._detect_network_profile(network_host, network_port)
-
-        if detected_profile is None:
-            logger.error(f"Failed to detect network at {network_host}:{network_port}")
-            return False
-
-        assert isinstance(detected_profile, DetectedNetworkProfile)
-        transport_type = None
-        optimal_transport = None
-
-        if enforce_transport_type:
-            for transport in detected_profile.transports:
-                if transport.type.value == enforce_transport_type:
-                    transport_type = enforce_transport_type
-                    break
-            if transport_type is None:
+        # Handle direct connection (skip detection) for Docker port mapping scenarios
+        if skip_detection:
+            if not enforce_transport_type:
                 raise ValueError(
-                    f"The network does not support enforced transport type: {enforce_transport_type}"
+                    "enforce_transport_type must be specified when skip_detection=True"
                 )
+            transport_type = enforce_transport_type
+            optimal_transport_host = network_host
+            optimal_transport_port = network_port
+            logger.info(
+                f"Skipping detection, connecting directly via {transport_type} to {network_host}:{network_port}"
+            )
         else:
-            transport_type = detected_profile.recommended_transport
-            if transport_type is None and len(detected_profile.transports) > 0:
-                # Use the first transport type that is supported
-                transport_type = detected_profile.transports[0].type.value
-            if transport_type is None:
-                raise ValueError("No supported transport types found in the network")
+            # Detect transport type and create appropriate connector
+            detected_profile = await self._detect_network_profile(network_host, network_port)
 
-        for transport in detected_profile.transports:
-            if transport.type.value == transport_type:
-                optimal_transport = transport
-                break
-        if optimal_transport is None:
-            logger.error(f"Failed to find optimal transport for {transport_type}")
-            return False
+            if detected_profile is None:
+                logger.error(f"Failed to detect network at {network_host}:{network_port}")
+                return False
 
-        # Extract host and port from transport config
-        optimal_transport_host = optimal_transport.config.get("host", network_host)
-        optimal_transport_port = optimal_transport.config.get("port", network_port)
+            assert isinstance(detected_profile, DetectedNetworkProfile)
+            transport_type = None
+            optimal_transport = None
 
-        logger.info(
-            f"Detected network: {detected_profile.network_name} ({detected_profile.network_id})"
-        )
-        logger.info(
-            f"Transport: {transport_type}, Host: {optimal_transport_host}, Port: {optimal_transport_port}"
-        )
+            if enforce_transport_type:
+                for transport in detected_profile.transports:
+                    if transport.type.value == enforce_transport_type:
+                        transport_type = enforce_transport_type
+                        break
+                if transport_type is None:
+                    raise ValueError(
+                        f"The network does not support enforced transport type: {enforce_transport_type}"
+                    )
+            else:
+                transport_type = detected_profile.recommended_transport
+                if transport_type is None and len(detected_profile.transports) > 0:
+                    # Use the first transport type that is supported
+                    transport_type = detected_profile.transports[0].type.value
+                if transport_type is None:
+                    raise ValueError("No supported transport types found in the network")
+
+            for transport in detected_profile.transports:
+                if transport.type.value == transport_type:
+                    optimal_transport = transport
+                    break
+            if optimal_transport is None:
+                logger.error(f"Failed to find optimal transport for {transport_type}")
+                return False
+
+            # Extract host and port from transport config
+            optimal_transport_host = optimal_transport.config.get("host", network_host)
+            optimal_transport_port = optimal_transport.config.get("port", network_port)
+
+            logger.info(
+                f"Detected network: {detected_profile.network_name} ({detected_profile.network_id})"
+            )
+            logger.info(
+                f"Transport: {transport_type}, Host: {optimal_transport_host}, Port: {optimal_transport_port}"
+            )
 
         if transport_type == "grpc":
             logger.info(f"Creating gRPC connector for agent {self.agent_id}")
@@ -338,6 +354,7 @@ class AgentClient:
         ssl_client_cert: Optional[str] = None,
         ssl_client_key: Optional[str] = None,
         ssl_verify: bool = True,
+        skip_detection: bool = False,
     ) -> bool:
         """Connect to a network server (alias for connect_to_server).
 
@@ -356,14 +373,17 @@ class AgentClient:
             ssl_client_cert: Path to client certificate for mTLS
             ssl_client_key: Path to client private key for mTLS
             ssl_verify: Whether to verify server certificate (default: True)
+            skip_detection: Skip health check detection and connect directly using
+                enforce_transport_type. Useful for Docker port mapping scenarios.
 
         Returns:
             bool: True if connection successful
         """
         return await self.connect_to_server(
-            network_host, network_port, network_id, enforce_transport_type, 
+            network_host, network_port, network_id, enforce_transport_type,
             metadata, max_message_size, password_hash,
-            use_tls, ssl_ca_cert, ssl_client_cert, ssl_client_key, ssl_verify
+            use_tls, ssl_ca_cert, ssl_client_cert, ssl_client_key, ssl_verify,
+            skip_detection
         )
 
     async def disconnect(self) -> bool:
