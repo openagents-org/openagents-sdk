@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   saveManualConnection,
   getSavedManualConnection,
@@ -24,6 +25,7 @@ const QUICK_CONNECT_TAB = "quick-connect";
 type ConnectionTab = typeof HOST_PORT_TAB | typeof NETWORK_ID_TAB | typeof QUICK_CONNECT_TAB;
 
 export default function ManualNetwork() {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -83,12 +85,12 @@ export default function ManualNetwork() {
     if (saved) {
       tabList.push({
         key: QUICK_CONNECT_TAB,
-        label: "Quick Connect Host + Port"
+        label: t('manualNetwork.tabs.quickConnect')
       });
     }
     const NetworkIdTab = {
       key: NETWORK_ID_TAB,
-      label: "Network ID"
+      label: t('manualNetwork.tabs.networkId')
     };
     if (urlNetworkId) {
       tabList.unshift(NetworkIdTab);
@@ -97,7 +99,7 @@ export default function ManualNetwork() {
     }
     tabList.push({
       key: HOST_PORT_TAB,
-      label: "Host + Port"
+      label: t('manualNetwork.tabs.hostPort')
     });
     setTabList(tabList as { key: ConnectionTab; label: string }[]);
   }, [searchParams]);
@@ -285,21 +287,20 @@ export default function ManualNetwork() {
   return (
     <div className="mb-8">
       <h2 className="mb-4 text-2xl font-semibold text-gray-800 dark:text-gray-200">
-        Manual Connection
+        {t('manualNetwork.title')}
       </h2>
 
-      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 overflow-visible">
         {/* Tab Toggle button */}
         <div className="flex border-b border-gray-300 dark:border-gray-600 mb-4">
           {tabList.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 font-medium text-base transition-colors ${
-                activeTab === tab.key
-                  ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-              }`}
+              className={`px-4 py-2 font-medium text-base transition-colors ${activeTab === tab.key
+                ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                }`}
             >
               {tab.label}
             </button>
@@ -311,20 +312,18 @@ export default function ManualNetwork() {
           <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-4">
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-400">
-                Last Connected Server
+                {t('manualNetwork.lastConnected')}
               </h3>
               <p className="text-blue-600 dark:text-blue-500">
                 {/* HTTPS Feature: Display connection protocol */}
                 {savedConnection.useHttps ? 'https://' : 'http://'}{savedConnection.host}:{savedConnection.port}
               </p>
               {savedAgentName && (
-                <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
-                  {/* 👤  */}
-                  Last used as: <strong>{savedAgentName}</strong>
+                <p className="text-sm text-blue-700 dark:text-blue-400 mt-1" dangerouslySetInnerHTML={{ __html: t('manualNetwork.lastUsedAs', { name: savedAgentName }) }}>
                 </p>
               )}
               <p className="text-sm text-blue-600 dark:text-blue-500 mt-1">
-                Cached from previous successful connection
+                {t('manualNetwork.cached')}
               </p>
             </div>
             <div className="flex flex-col gap-2">
@@ -333,7 +332,7 @@ export default function ManualNetwork() {
                 className="text-blue-600 hover:text-blue-700 dark:text-blue-400 px-3 py-2 rounded-lg font-medium transition-colors"
                 title="Clear saved connection"
               >
-                Clear Saved
+                {t('manualNetwork.clearSaved')}
               </button>
             </div>
           </div>
@@ -342,19 +341,19 @@ export default function ManualNetwork() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Host
+                  {t('manualNetwork.hostLabel')}
                 </label>
                 <input
                   type="text"
                   value={manualHost}
                   onChange={(e) => setManualHost(e.target.value)}
-                  placeholder="localhost or IP address"
+                  placeholder={t('manualNetwork.hostPlaceholder')}
                   className="w-full px-3 py-2 border border-gray-300 bg-white dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Port
+                  {t('manualNetwork.portLabel')}
                 </label>
                 <input
                   type="number"
@@ -368,7 +367,7 @@ export default function ManualNetwork() {
 
             <div className="mt-2 flex items-center justify-between">
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Enter the host address and port number to connect directly
+                {t('manualNetwork.hostPortHint')}
               </p>
 
               {/* HTTPS Feature: Add HTTPS checkbox */}
@@ -380,7 +379,7 @@ export default function ManualNetwork() {
                   className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
                 />
                 <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Connect over SSL
+                  {t('manualNetwork.useHttps')}
                 </span>
               </label>
             </div>
@@ -389,35 +388,34 @@ export default function ManualNetwork() {
           <div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Network ID
+                {t('manualNetwork.networkIdLabel')}
               </label>
               <input
                 type="text"
                 value={networkId}
                 onChange={(e) => setNetworkId(e.target.value)}
-                placeholder="network-id-123 or openagents://network-id"
+                placeholder={t('manualNetwork.networkIdPlaceholder')}
                 className="w-full px-3 py-2 border border-gray-300 bg-white dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white"
               />
             </div>
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              Enter a network ID to connect via the OpenAgents directory service
+              {t('manualNetwork.networkIdHint')}
             </p>
           </div>
         ) : null}
 
-        <div className="flex gap-3 mt-4">
+        <div className="flex justify-between items-center gap-3 mt-4 relative z-10">
           <button
             onClick={handleManualConnect}
             disabled={manualConnectButtonDisabled}
             className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-medium transition-colors"
           >
-            {isLoadingConnection ? "Connecting..." : "Connect"}
+            {isLoadingConnection ? t('manualNetwork.connecting') : t('manualNetwork.connect')}
           </button>
         </div>
 
         <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-          {/* 💾  */}
-          Successful connections will be automatically saved for quick access
+          {t('manualNetwork.savedHint')}
         </p>
       </div>
     </div>

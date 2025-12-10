@@ -12,6 +12,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useNavigate } from "react-router-dom";
 import { hashPassword } from "@/utils/passwordHash";
 import { networkFetch } from "@/utils/httpClient";
+import LanguageSwitcher from "@/components/common/LanguageSwitcher";
 
 // Interface for group configuration from /api/health
 interface GroupConfig {
@@ -181,7 +182,7 @@ const AgentNamePicker: React.FC = () => {
 
         // Check if error is related to invalid credentials
         if (errorMessage.toLowerCase().includes("invalid credentials") ||
-            errorMessage.toLowerCase().includes("password")) {
+          errorMessage.toLowerCase().includes("password")) {
           setPasswordError(`Invalid password for the '${selectedGroup}' group`);
         } else {
           setPasswordError(errorMessage);
@@ -394,11 +395,10 @@ const AgentNamePicker: React.FC = () => {
                   setPassword(e.target.value);
                   setPasswordError(""); // Clear error when user types
                 }}
-                className={`w-full px-4 py-3 border-2 rounded-lg text-base transition-all duration-150 focus:outline-none focus:ring-3 bg-white text-gray-800 focus:border-blue-500 focus:ring-blue-500/10 dark:bg-gray-600 dark:text-gray-50 dark:focus:border-blue-400 dark:focus:ring-blue-400/10 ${
-                  passwordError
-                    ? "border-red-500 dark:border-red-400"
-                    : "border-gray-300 dark:border-gray-500"
-                }`}
+                className={`w-full px-4 py-3 border-2 rounded-lg text-base transition-all duration-150 focus:outline-none focus:ring-3 bg-white text-gray-800 focus:border-blue-500 focus:ring-blue-500/10 dark:bg-gray-600 dark:text-gray-50 dark:focus:border-blue-400 dark:focus:ring-blue-400/10 ${passwordError
+                  ? "border-red-500 dark:border-red-400"
+                  : "border-gray-300 dark:border-gray-500"
+                  }`}
                 placeholder={`Enter password for '${selectedGroup}' group...`}
                 autoComplete="off"
               />
@@ -431,7 +431,7 @@ const AgentNamePicker: React.FC = () => {
           )}
 
           {/* Submit Buttons */}
-          <div className="flex gap-3 mt-4">
+          <div className="flex gap-3 mt-4 items-center">
             <button
               type="button"
               onClick={onBack}
@@ -443,11 +443,10 @@ const AgentNamePicker: React.FC = () => {
             <button
               type="submit"
               disabled={!isValidName(pageAgentName) || isVerifying || isLoadingGroups}
-              className={`flex-[2] px-6 py-3 border-none rounded-lg text-base font-semibold cursor-pointer transition-all duration-150 text-white ${
-                !isValidName(pageAgentName) || isVerifying || isLoadingGroups
-                  ? "bg-gray-300 dark:bg-gray-500 cursor-not-allowed"
-                  : "bg-blue-500 hover:bg-blue-600 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/30"
-              }`}
+              className={`flex-[2] px-6 py-3 border-none rounded-lg text-base font-semibold cursor-pointer transition-all duration-150 text-white ${!isValidName(pageAgentName) || isVerifying || isLoadingGroups
+                ? "bg-gray-300 dark:bg-gray-500 cursor-not-allowed"
+                : "bg-blue-500 hover:bg-blue-600 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/30"
+                }`}
             >
               <div className="flex flex-wrap justify-center items-center gap-2">
                 {isVerifying ? (
@@ -482,6 +481,11 @@ const AgentNamePicker: React.FC = () => {
                 )}
               </div>
             </button>
+
+            {/* Language Switcher - Next to Connect button */}
+            <div className="flex-shrink-0">
+              <LanguageSwitcher showFlag={true} showFullName={false} />
+            </div>
           </div>
         </form>
       </div>

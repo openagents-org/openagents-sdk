@@ -7,6 +7,9 @@ interface LanguageSwitcherProps {
     className?: string;
     showFlag?: boolean;
     showFullName?: boolean;
+    variant?: 'default' | 'minimal'; // 新增: 样式变体
+    align?: 'left' | 'right'; // 新增: 下拉菜单对齐方式
+    size?: 'sm' | 'md' | 'lg'; // 新增: 尺寸大小
 }
 
 /**
@@ -16,6 +19,9 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
     className = '',
     showFlag = true,
     showFullName = false,
+    variant = 'default',
+    align = 'left',
+    size = 'sm',
 }) => {
     const { currentLanguage, switchLanguage } = useI18n();
     const [isOpen, setIsOpen] = useState(false);
@@ -38,8 +44,8 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
         };
     }, [isOpen]);
 
-    const handleLanguageChange = async (language: SupportedLanguage) => {
-        await switchLanguage(language);
+    const handleLanguageChange = async (lang: SupportedLanguage) => {
+        await switchLanguage(lang);
         setIsOpen(false);
     };
 
@@ -47,21 +53,47 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
         return showFlag ? getLanguageFlag(currentLanguage) + ' ' : '';
     };
 
+    // 根据 size 决定尺寸相关的样式
+    const sizeClasses = {
+        sm: {
+            button: 'px-2 py-1.5 text-xs gap-1.5',
+            flag: 'text-sm',
+        },
+        md: {
+            button: 'px-3 py-2 text-sm gap-2',
+            flag: 'text-base',
+        },
+        lg: {
+            button: 'px-4 py-2.5 text-base gap-2',
+            flag: 'text-lg',
+        },
+    };
+
+    // 根据 variant 决定按钮样式
+    const buttonClassName = variant === 'minimal'
+        ? `flex items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 font-medium text-gray-700 dark:text-gray-300 ${sizeClasses[size].button}`
+        : `flex items-center rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 transition-colors duration-200 font-medium text-gray-700 dark:text-gray-300 ${sizeClasses[size].button}`;
+
+    // 根据 align 决定下拉菜单位置
+    const dropdownClassName = align === 'right'
+        ? "absolute right-0 bottom-full mb-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden"
+        : "absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden";
+
     return (
         <div className={`relative ${className}`} ref={dropdownRef}>
             {/* Language selector button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 transition-colors duration-200 text-xs font-medium text-gray-700 dark:text-gray-300"
+                className={buttonClassName}
                 aria-label="Select language"
                 title="Switch language"
             >
-                <span className="text-sm">{getCurrentLanguageDisplay()}</span>
+                <span className={sizeClasses[size].flag}>{getCurrentLanguageDisplay()}</span>
             </button>
 
             {/* Dropdown menu */}
             {isOpen && (
-                <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden">
+                <div className={dropdownClassName}>
                     {Object.entries(SUPPORTED_LANGUAGES).map(([code, lang]) => {
                         const langCode = code as SupportedLanguage;
                         const isActive = langCode === currentLanguage;

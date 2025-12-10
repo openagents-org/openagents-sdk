@@ -1,9 +1,13 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import OpenAgentsLogo from "@/assets/images/openagents-logo-trans-white.png";
 import LocalNetwork from "@/components/network/LocalNetwork";
 import ManualNetwork from "@/components/network/ManualNetwork";
+import LanguageSwitcher from "@/components/common/LanguageSwitcher";
 
 const NetworkSelectionView: React.FC = () => {
+  const { t } = useTranslation('auth');
+
   const Header = React.memo(() => {
     return (
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-8 text-white">
@@ -13,10 +17,10 @@ const NetworkSelectionView: React.FC = () => {
             alt="OpenAgents Logo"
             className="w-16 h-16 mr-4"
           />
-          <h1 className="text-4xl font-bold">OpenAgents Studio</h1>
+          <h1 className="text-4xl font-bold">{t('networkSelection.title')}</h1>
         </div>
         <p className="text-center text-lg opacity-90">
-          Connect to an OpenAgents network to start collaborating with AI agents
+          {t('networkSelection.subtitle')}
         </p>
       </div>
     );
