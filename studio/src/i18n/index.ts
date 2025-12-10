@@ -14,6 +14,7 @@ import commonEN from './locales/en/common.json';
 import authEN from './locales/en/auth.json';
 import messagingEN from './locales/en/messaging.json';
 import documentsEN from './locales/en/documents.json';
+import wikiEN from './locales/en/wiki.json';
 import networkEN from './locales/en/network.json';
 import layoutEN from './locales/en/layout.json';
 import errorsEN from './locales/en/errors.json';
@@ -23,6 +24,7 @@ import commonZH from './locales/zh-CN/common.json';
 import authZH from './locales/zh-CN/auth.json';
 import messagingZH from './locales/zh-CN/messaging.json';
 import documentsZH from './locales/zh-CN/documents.json';
+import wikiZH from './locales/zh-CN/wiki.json';
 import networkZH from './locales/zh-CN/network.json';
 import layoutZH from './locales/zh-CN/layout.json';
 import errorsZH from './locales/zh-CN/errors.json';
@@ -56,6 +58,7 @@ i18n
                 auth: authEN,
                 messaging: messagingEN,
                 documents: documentsEN,
+                wiki: wikiEN,
                 network: networkEN,
                 layout: layoutEN,
                 errors: errorsEN,
@@ -66,6 +69,7 @@ i18n
                 auth: authZH,
                 messaging: messagingZH,
                 documents: documentsZH,
+                wiki: wikiZH,
                 network: networkZH,
                 layout: layoutZH,
                 errors: errorsZH,
