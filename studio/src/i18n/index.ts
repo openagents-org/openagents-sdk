@@ -13,12 +13,14 @@ import {
 import commonEN from './locales/en/common.json';
 import authEN from './locales/en/auth.json';
 import networkEN from './locales/en/network.json';
+import layoutEN from './locales/en/layout.json';
 import errorsEN from './locales/en/errors.json';
 import validationEN from './locales/en/validation.json';
 
 import commonZH from './locales/zh-CN/common.json';
 import authZH from './locales/zh-CN/auth.json';
 import networkZH from './locales/zh-CN/network.json';
+import layoutZH from './locales/zh-CN/layout.json';
 import errorsZH from './locales/zh-CN/errors.json';
 import validationZH from './locales/zh-CN/validation.json';
 
@@ -49,6 +51,7 @@ i18n
                 common: commonEN,
                 auth: authEN,
                 network: networkEN,
+                layout: layoutEN,
                 errors: errorsEN,
                 validation: validationEN,
             },
@@ -56,6 +59,7 @@ i18n
                 common: commonZH,
                 auth: authZH,
                 network: networkZH,
+                layout: layoutZH,
                 errors: errorsZH,
                 validation: validationZH,
             },

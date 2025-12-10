@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useI18n } from '@/hooks/useI18n';
 import { SUPPORTED_LANGUAGES, SupportedLanguage } from '@/i18n/config';
-import { getLanguageName, getLanguageFlag } from '@/i18n/utils';
+import { getLanguageFlag } from '@/i18n/utils';
 
 interface LanguageSwitcherProps {
     className?: string;

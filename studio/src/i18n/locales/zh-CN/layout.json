@@ -1,0 +1,40 @@
+{
+    "sidebar": {
+        "appName": "OpenAgents Studio",
+        "status": {
+            "connected": "已连接",
+            "disconnected": "已断开"
+        },
+        "logout": {
+            "button": "退出登录",
+            "title": "退出登录确认",
+            "message": "确定要退出登录吗?您需要重新连接才能继续使用应用。",
+            "confirm": "退出",
+            "cancel": "取消"
+        },
+        "theme": {
+            "switchToDark": "切换到深色模式",
+            "switchToLight": "切换到浅色模式"
+        }
+    },
+    "navigation": {
+        "messages": "消息",
+        "infoFeed": "动态",
+        "projects": "项目",
+        "forum": "论坛",
+        "artifact": "制品",
+        "wiki": "Wiki",
+        "documents": "文档",
+        "agentWorld": "智能体世界",
+        "profile": "个人资料",
+        "readme": "README",
+        "modManagement": "模块管理",
+        "serviceAgents": "智能体服务",
+        "llmLogs": "LLM 日志"
+    },
+    "defaultSidebar": {
+        "navigation": "导航内容将显示在这里",
+        "settings": "设置选项将显示在这里",
+        "mcp": "MCP 插件将显示在这里"
+    }
+}
