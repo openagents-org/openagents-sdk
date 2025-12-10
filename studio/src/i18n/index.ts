@@ -12,6 +12,7 @@ import {
 // Import translation files
 import commonEN from './locales/en/common.json';
 import authEN from './locales/en/auth.json';
+import messagingEN from './locales/en/messaging.json';
 import networkEN from './locales/en/network.json';
 import layoutEN from './locales/en/layout.json';
 import errorsEN from './locales/en/errors.json';
@@ -19,6 +20,7 @@ import validationEN from './locales/en/validation.json';
 
 import commonZH from './locales/zh-CN/common.json';
 import authZH from './locales/zh-CN/auth.json';
+import messagingZH from './locales/zh-CN/messaging.json';
 import networkZH from './locales/zh-CN/network.json';
 import layoutZH from './locales/zh-CN/layout.json';
 import errorsZH from './locales/zh-CN/errors.json';
@@ -50,6 +52,7 @@ i18n
             en: {
                 common: commonEN,
                 auth: authEN,
+                messaging: messagingEN,
                 network: networkEN,
                 layout: layoutEN,
                 errors: errorsEN,
@@ -58,6 +61,7 @@ i18n
             'zh-CN': {
                 common: commonZH,
                 auth: authZH,
+                messaging: messagingZH,
                 network: networkZH,
                 layout: layoutZH,
                 errors: errorsZH,

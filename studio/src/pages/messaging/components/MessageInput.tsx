@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 interface AgentInfo {
   agent_id: string;
@@ -551,6 +552,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   disableMentions = false,
   disableFileUpload = false,
 }) => {
+  const { t } = useTranslation('messaging');
   const [message, setMessage] = useState("");
   const [pendingAttachment, setPendingAttachment] = useState<{
     file_id: string;
@@ -898,13 +900,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
         <div className={`reply-preview ${currentTheme}`}>
           <div className="reply-header">
             <div className={`reply-label ${currentTheme}`}>
-              ↪️ Replying to {replyingTo.author}
+              ↪️ {t('input.replyingTo', { user: replyingTo.author })}
             </div>
             {onCancelReply && (
               <button
-                className={`cancel-reply ${currentTheme}`}
+                className={`cancel-reply ${currentTheme === "dark" ? "dark" : ""}`}
                 onClick={onCancelReply}
-                title="Cancel reply"
+                aria-label={t('input.cancel')}
               >
                 ✕
               </button>
@@ -922,13 +924,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
         <div className={`quote-preview ${currentTheme}`}>
           <div className="quote-header">
             <div className={`quote-label ${currentTheme}`}>
-              💬 Quoting {quotingMessage.author}
+              📝 {t('input.quotingFrom', { user: quotingMessage.author })}
             </div>
             {onCancelQuote && (
               <button
-                className={`cancel-quote ${currentTheme}`}
+                className={`cancel-quote ${currentTheme === "dark" ? "dark" : ""}`}
                 onClick={onCancelQuote}
-                title="Cancel quote"
+                aria-label={t('input.cancel')}
               >
                 ✕
               </button>
@@ -974,9 +976,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 return (
                   <div
                     key={agent.agent_id}
-                    className={`mention-item ${currentTheme} ${
-                      isSelected ? "selected" : ""
-                    }`}
+                    className={`mention-item ${currentTheme} ${isSelected ? "selected" : ""
+                      }`}
                     onClick={() => handleMentionClick(agent)}
                   >
                     <div className={`mention-avatar ${currentTheme}`}>

@@ -102,7 +102,7 @@ export default function ManualNetwork() {
       label: t('manualNetwork.tabs.hostPort')
     });
     setTabList(tabList as { key: ConnectionTab; label: string }[]);
-  }, [searchParams]);
+  }, [searchParams, t]);
 
   useEffect(() => {
     // Load saved manual connection and determine initial tab

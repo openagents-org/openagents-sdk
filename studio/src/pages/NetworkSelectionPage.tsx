@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import OpenAgentsLogo from "@/assets/images/openagents-logo-trans-white.png";
 import LocalNetwork from "@/components/network/LocalNetwork";
 import ManualNetwork from "@/components/network/ManualNetwork";
-import LanguageSwitcher from "@/components/common/LanguageSwitcher";
 
 const NetworkSelectionView: React.FC = () => {
   const { t } = useTranslation('auth');

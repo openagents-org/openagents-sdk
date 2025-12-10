@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { notificationService } from "@/services/notificationService";
 
@@ -10,6 +11,7 @@ interface NotificationPermissionOverlayProps {
 const NotificationPermissionOverlay: React.FC<
   NotificationPermissionOverlayProps
 > = ({ className = "" }) => {
+  const { t } = useTranslation('messaging');
   const location = useLocation();
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -126,11 +128,10 @@ const NotificationPermissionOverlay: React.FC<
 
   return (
     <div
-      className={`fixed top-4 right-4 z-50 max-w-sm transition-all duration-300 ease-in-out transform ${
-        isClosing
-          ? "opacity-0 translate-x-full scale-95"
-          : "opacity-100 translate-x-0 scale-100"
-      } ${className}`}
+      className={`fixed top-4 right-4 z-50 max-w-sm transition-all duration-300 ease-in-out transform ${isClosing
+        ? "opacity-0 translate-x-full scale-95"
+        : "opacity-100 translate-x-0 scale-100"
+        } ${className}`}
     >
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-6 relative">
         {/* Close button */}
@@ -172,27 +173,27 @@ const NotificationPermissionOverlay: React.FC<
             </svg>
           </div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Enable Message Notifications
+            {t('notification.title')}
           </h3>
         </div>
 
         {/* Description text */}
         <div className="mb-4 space-y-3">
           <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-            Enable notifications to receive timely alerts for:
+            {t('notification.description')}
           </p>
           <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1 ml-4">
             <li className="flex items-start">
               <span className="text-blue-500 mr-2 mt-0.5">•</span>
-              Direct messages from others
+              {t('notification.features.directMessages')}
             </li>
             <li className="flex items-start">
               <span className="text-blue-500 mr-2 mt-0.5">•</span>
-              Mentions in channels
+              {t('notification.features.mentions')}
             </li>
             <li className="flex items-start">
               <span className="text-blue-500 mr-2 mt-0.5">•</span>
-              Replies to your messages
+              {t('notification.features.replies')}
             </li>
           </ul>
         </div>
@@ -200,21 +201,19 @@ const NotificationPermissionOverlay: React.FC<
         {/* Detailed settings guide */}
         <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md border border-yellow-200 dark:border-yellow-800/30">
           <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-2">
-            💡 Two steps to enable notifications:
+            {t('notification.guide.title')}
           </h4>
           <div className="text-xs text-yellow-700 dark:text-yellow-400 space-y-2">
             <div>
-              <strong>1. Browser settings:</strong>
+              <strong>{t('notification.guide.browserSettings')}</strong>
               <div className="ml-3">
-                Chrome: Settings → Privacy and security → Site Settings → Notifications →
-                Ensure this site is set to "Allow"
+                {t('notification.guide.browserInstructions')}
               </div>
             </div>
             <div>
-              <strong>2. System settings:</strong>
+              <strong>{t('notification.guide.systemSettings')}</strong>
               <div className="ml-3">
-                macOS: System Preferences → Notifications & Focus → Find Chrome →
-                Enable notifications
+                {t('notification.guide.systemInstructions')}
               </div>
             </div>
           </div>
@@ -224,8 +223,8 @@ const NotificationPermissionOverlay: React.FC<
         {permissionStatus === "denied" && (
           <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-200 dark:border-red-800/30">
             <p className="text-xs text-red-700 dark:text-red-400">
-              <strong>Permission denied:</strong>
-              Please click the lock icon in your browser's address bar, set notifications to "Allow", then refresh the page.
+              <strong>{t('notification.permissionDeniedTitle')}</strong>
+              {' '}{t('notification.permissionDeniedHint')}
             </p>
           </div>
         )}
@@ -235,13 +234,12 @@ const NotificationPermissionOverlay: React.FC<
           <button
             onClick={requestPermission}
             disabled={permissionStatus === "denied"}
-            className={`w-full px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              permissionStatus === "denied"
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
-                : "bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
-            }`}
+            className={`w-full px-4 py-2 rounded-md text-sm font-medium transition-colors ${permissionStatus === "denied"
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
+              : "bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
+              }`}
           >
-            {permissionStatus === "denied" ? "Permission Denied" : "Allow Notifications"}
+            {permissionStatus === "denied" ? t('notification.permissionDenied') : t('notification.enable')}
           </button>
 
           <div className="flex space-x-2">
@@ -249,13 +247,13 @@ const NotificationPermissionOverlay: React.FC<
               onClick={handleNotNow}
               className="flex-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
             >
-              Not Now
+              {t('notification.notNow')}
             </button>
             <button
               onClick={handleNeverShowAgain}
               className="flex-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
             >
-              Don't Ask Again
+              {t('notification.dontAskAgain')}
             </button>
           </div>
         </div>
