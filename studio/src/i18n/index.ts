@@ -77,8 +77,8 @@ i18n
             },
         },
 
-        // Language settings
-        lng: DEFAULT_LANGUAGE,
+        // Language settings - DO NOT set lng here, let language detector handle it
+        // lng: DEFAULT_LANGUAGE, // REMOVED: This overrides language detector
         fallbackLng: FALLBACK_LANGUAGE,
 
         // Namespace settings
