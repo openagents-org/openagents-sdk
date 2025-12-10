@@ -44,11 +44,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
     };
 
     const getCurrentLanguageDisplay = () => {
-        const flag = showFlag ? getLanguageFlag(currentLanguage) + ' ' : '';
-        const name = showFullName
-            ? getLanguageName(currentLanguage, true)
-            : currentLanguage.toUpperCase();
-        return flag + name;
+        return showFlag ? getLanguageFlag(currentLanguage) + ' ' : '';
     };
 
     return (
@@ -56,15 +52,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
             {/* Language selector button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="
-          flex items-center gap-1.5 px-2 py-1.5 rounded-lg
-          bg-white dark:bg-gray-800
-          hover:bg-gray-100 dark:hover:bg-gray-700
-          border border-gray-200 dark:border-gray-700
-          transition-colors duration-200
-          text-xs font-medium
-          text-gray-700 dark:text-gray-300
-        "
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 transition-colors duration-200 text-xs font-medium text-gray-700 dark:text-gray-300"
                 aria-label="Select language"
                 title="Switch language"
             >
@@ -73,16 +61,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
 
             {/* Dropdown menu */}
             {isOpen && (
-                <div
-                    className="
-            absolute right-0 bottom-full mb-2 w-48
-            bg-white dark:bg-gray-800
-            border border-gray-200 dark:border-gray-700
-            rounded-lg shadow-lg
-            z-50
-            overflow-hidden
-          "
-                >
+                <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden">
                     {Object.entries(SUPPORTED_LANGUAGES).map(([code, lang]) => {
                         const langCode = code as SupportedLanguage;
                         const isActive = langCode === currentLanguage;
@@ -91,15 +70,9 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
                             <button
                                 key={code}
                                 onClick={() => handleLanguageChange(langCode)}
-                                className={`
-                  w-full flex items-center gap-3 px-4 py-3
-                  text-left text-sm
-                  transition-colors duration-150
-                  ${isActive
-                                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                    }
-                `}
+                                className={`w-full flex items-center gap-3 px-4 py-3 text-left text-sm transition-colors duration-150 
+                                    ${isActive ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' :
+                                        'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                             >
                                 <span className="text-xl">{lang.flag}</span>
                                 <div className="flex-1">
