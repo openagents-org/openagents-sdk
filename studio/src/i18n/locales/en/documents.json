@@ -1,0 +1,54 @@
+{
+    "createModal": {
+        "title": "Create New Document",
+        "documentName": "Document Name",
+        "documentNamePlaceholder": "Enter document name...",
+        "initialContent": "Initial Content",
+        "initialContentPlaceholder": "Enter initial document content... (optional)",
+        "cancel": "Cancel",
+        "create": "Create Document",
+        "creating": "Creating...",
+        "errors": {
+            "nameRequired": "Document name is required",
+            "createFailed": "Failed to create document. Please try again."
+        }
+    },
+    "list": {
+        "noDocuments": "No documents yet",
+        "createFirst": "Create your first document to get started",
+        "loading": "Loading documents...",
+        "searchPlaceholder": "Search documents..."
+    },
+    "editor": {
+        "untitled": "Untitled Document",
+        "save": "Save",
+        "saving": "Saving...",
+        "saved": "Saved",
+        "saveFailed": "Save failed",
+        "lastSaved": "Last saved: {{time}}",
+        "collaborators": "Collaborators",
+        "onlineUsers": "Online Users",
+        "noCollaborators": "No collaborators yet"
+    },
+    "actions": {
+        "new": "New Document",
+        "delete": "Delete",
+        "rename": "Rename",
+        "share": "Share",
+        "export": "Export",
+        "duplicate": "Duplicate"
+    },
+    "status": {
+        "online": "Online",
+        "offline": "Offline",
+        "syncing": "Syncing...",
+        "synced": "Synced"
+    },
+    "messages": {
+        "deleteConfirm": "Are you sure you want to delete this document?",
+        "deleteSuccess": "Document deleted successfully",
+        "deleteFailed": "Failed to delete document",
+        "renameSuccess": "Document renamed successfully",
+        "renameFailed": "Failed to rename document"
+    }
+}
