@@ -1,0 +1,27 @@
+{
+    "selection": {
+        "title": "选择网络",
+        "subtitle": "选择要连接的网络",
+        "publicNetworks": "公共网络",
+        "manualConnection": "手动连接",
+        "searchPlaceholder": "搜索网络..."
+    },
+    "manual": {
+        "title": "手动网络连接",
+        "hostLabel": "主机",
+        "hostPlaceholder": "localhost 或 IP 地址",
+        "portLabel": "端口",
+        "portPlaceholder": "8700",
+        "networkIdLabel": "网络 ID",
+        "networkIdPlaceholder": "network-id-123 或 openagents://network-id",
+        "connectButton": "连接",
+        "cancelButton": "取消"
+    },
+    "status": {
+        "connecting": "正在连接网络...",
+        "connected": "已连接",
+        "disconnected": "已断开",
+        "connectionFailed": "连接失败",
+        "retrying": "重试中..."
+    }
+}

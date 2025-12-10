@@ -1,0 +1,27 @@
+{
+    "selection": {
+        "title": "Select Network",
+        "subtitle": "Choose a network to connect",
+        "publicNetworks": "Public Networks",
+        "manualConnection": "Manual Connection",
+        "searchPlaceholder": "Search networks..."
+    },
+    "manual": {
+        "title": "Manual Network Connection",
+        "hostLabel": "Host",
+        "hostPlaceholder": "localhost or IP address",
+        "portLabel": "Port",
+        "portPlaceholder": "8700",
+        "networkIdLabel": "Network ID",
+        "networkIdPlaceholder": "network-id-123 or openagents://network-id",
+        "connectButton": "Connect",
+        "cancelButton": "Cancel"
+    },
+    "status": {
+        "connecting": "Connecting to network...",
+        "connected": "Connected",
+        "disconnected": "Disconnected",
+        "connectionFailed": "Connection failed",
+        "retrying": "Retrying..."
+    }
+}

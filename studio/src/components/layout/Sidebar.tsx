@@ -8,6 +8,8 @@ import { useConfirm } from "@/context/ConfirmContext";
 import { useThemeStore } from "@/stores/themeStore";
 import SidebarContent from "./SidebarContent";
 import { useAuthStore } from "@/stores/authStore";
+import LanguageSwitcher from "@/components/common/LanguageSwitcher";
+
 
 // Header Component - cached component because content is static
 const SidebarHeader: React.FC = React.memo(() => (
@@ -135,30 +137,32 @@ const SidebarFooter: React.FC<{
 
   return (
     <div className="mt-2 border-t border-gray-200 dark:border-gray-700">
-      <div className="flex items-center justify-between px-4 py-4">
-        <div className="flex items-center">
+      <div className="flex items-center justify-between px-4 py-4 gap-2">
+        <div className="flex items-center flex-1 min-w-0">
           <div
-            className={`w-3 h-3 rounded-full mr-3 shadow-sm ${
-              selectedNetwork ? "bg-green-500 animate-pulse" : "bg-red-500"
-            }`}
+            className={`w-3 h-3 rounded-full mr-3 shadow-sm flex-shrink-0 ${selectedNetwork ? "bg-green-500 animate-pulse" : "bg-red-500"
+              }`}
           />
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
               {selectedNetwork ? agentName || "Connected" : "Disconnected"}
             </span>
             {selectedNetwork && agentGroup && (
-              <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+              <span className="text-xs text-purple-600 dark:text-purple-400 font-medium truncate">
                 {agentGroup}
               </span>
             )}
             {selectedNetwork && (
-              <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate">
                 {selectedNetwork.host}:{selectedNetwork.port}
               </span>
             )}
           </div>
         </div>
-        <div className="flex items-center space-x-1">
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {/* Language switcher */}
+          <LanguageSwitcher showFlag={true} showFullName={false} />
+
           {/* Theme toggle button */}
           <button
             onClick={toggleTheme}
@@ -238,9 +242,8 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
 
   return (
     <div
-      className={`sidebar h-full flex flex-col transition-all duration-200 bg-slate-100 dark:bg-gray-900 ${
-        className || ""
-      } flex flex-col overflow-hidden`}
+      className={`sidebar h-full flex flex-col transition-all duration-200 bg-slate-100 dark:bg-gray-900 ${className || ""
+        } flex flex-col overflow-hidden`}
       style={{ width: "19rem" }}
     >
       {/* Top: Header */}
