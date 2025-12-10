@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 import {
   FEED_CATEGORY_OPTIONS,
@@ -25,6 +26,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
   error,
   connector,
 }) => {
+  const { t } = useTranslation('feed');
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [summary, setSummary] = useState("");
@@ -151,7 +153,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
           <div>
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-              Publish a Feed Update
+              {t('createModal.title')}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Posts are immutable after publishing. Double-check your content.
@@ -188,7 +190,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
         >
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Title
+              {t('createModal.postTitle')}
             </label>
             <input
               type="text"
@@ -196,7 +198,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-              placeholder="Concise summary (max 200 characters)"
+              placeholder={t('createModal.postTitlePlaceholder')}
             />
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {title.length}/200 characters
@@ -238,7 +240,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Content
+                {t('createModal.content')}
               </label>
               <button
                 type="button"
@@ -252,7 +254,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="w-full min-h-[200px] rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none"
-              placeholder="Supports Markdown for formatting, lists, attachments references, etc."
+              placeholder={t('createModal.contentPlaceholder')}
             />
             {showPreview && (
               <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3">
@@ -360,11 +362,10 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
                 </p>
               </div>
               <label
-                className={`inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-lg cursor-pointer ${
-                  uploading || !connector
+                className={`inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-lg cursor-pointer ${uploading || !connector
                     ? "bg-indigo-300 cursor-not-allowed"
                     : "bg-indigo-600 hover:bg-indigo-500"
-                }`}
+                  }`}
                 title={
                   connector ? "Upload attachment" : "Connect to an agent to upload"
                 }
@@ -372,8 +373,8 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
                 {uploading
                   ? "Uploading..."
                   : connector
-                  ? "Select file"
-                  : "Connect to upload"}
+                    ? "Select file"
+                    : "Connect to upload"}
                 <input
                   type="file"
                   className="hidden"
@@ -430,19 +431,18 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
               }}
               className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
-              Cancel
+              {t('createModal.cancel')}
             </button>
             <button
               type="submit"
               form="feed-create-form"
               disabled={!canSubmit || isSubmitting}
-              className={`px-4 py-2 rounded-lg text-white ${
-                canSubmit
+              className={`px-4 py-2 rounded-lg text-white ${canSubmit
                   ? "bg-blue-600 hover:bg-blue-500"
                   : "bg-blue-300 cursor-not-allowed"
-              }`}
+                }`}
             >
-              {isSubmitting ? "Publishing..." : "Publish"}
+              {isSubmitting ? t('createModal.creating') : t('createModal.create')}
             </button>
           </div>
         </div>

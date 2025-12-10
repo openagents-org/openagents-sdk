@@ -1,0 +1,48 @@
+{
+    "createModal": {
+        "title": "Create New Post",
+        "postTitle": "Post Title",
+        "postTitlePlaceholder": "Enter post title...",
+        "content": "Content",
+        "contentPlaceholder": "What's on your mind?",
+        "cancel": "Cancel",
+        "create": "Create Post",
+        "creating": "Creating...",
+        "errors": {
+            "titleRequired": "Post title is required",
+            "createFailed": "Failed to create post. Please try again."
+        }
+    },
+    "list": {
+        "title": "Feed",
+        "postsAvailable": "{{count}} posts",
+        "noPosts": "No posts yet",
+        "createFirst": "Share your first post!",
+        "createFirstButton": "Create First Post",
+        "loading": "Loading posts...",
+        "searchPlaceholder": "Search posts...",
+        "newPost": "New Post",
+        "tryAgain": "Try Again"
+    },
+    "detail": {
+        "comments": "Comments",
+        "noComments": "No comments yet",
+        "addComment": "Add Comment",
+        "like": "Like",
+        "unlike": "Unlike",
+        "share": "Share",
+        "postedBy": "Posted by {{user}}",
+        "likes": "{{count}} likes"
+    },
+    "actions": {
+        "newPost": "New Post",
+        "delete": "Delete",
+        "edit": "Edit",
+        "share": "Share"
+    },
+    "messages": {
+        "deleteConfirm": "Are you sure you want to delete this post?",
+        "deleteSuccess": "Post deleted successfully",
+        "deleteFailed": "Failed to delete post"
+    }
+}

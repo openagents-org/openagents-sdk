@@ -1,0 +1,48 @@
+{
+    "createModal": {
+        "title": "创建新动态",
+        "postTitle": "动态标题",
+        "postTitlePlaceholder": "输入动态标题...",
+        "content": "内容",
+        "contentPlaceholder": "分享您的想法...",
+        "cancel": "取消",
+        "create": "发布动态",
+        "creating": "发布中...",
+        "errors": {
+            "titleRequired": "动态标题不能为空",
+            "createFailed": "发布动态失败。请重试。"
+        }
+    },
+    "list": {
+        "title": "动态",
+        "postsAvailable": "{{count}} 条动态",
+        "noPosts": "还没有动态",
+        "createFirst": "分享您的第一条动态!",
+        "createFirstButton": "创建第一条动态",
+        "loading": "加载动态中...",
+        "searchPlaceholder": "搜索动态...",
+        "newPost": "新建动态",
+        "tryAgain": "重试"
+    },
+    "detail": {
+        "comments": "评论",
+        "noComments": "还没有评论",
+        "addComment": "添加评论",
+        "like": "点赞",
+        "unlike": "取消点赞",
+        "share": "分享",
+        "postedBy": "由 {{user}} 发布",
+        "likes": "{{count}} 个赞"
+    },
+    "actions": {
+        "newPost": "新建动态",
+        "delete": "删除",
+        "edit": "编辑",
+        "share": "分享"
+    },
+    "messages": {
+        "deleteConfirm": "确定要删除此动态吗?",
+        "deleteSuccess": "动态删除成功",
+        "deleteFailed": "删除动态失败"
+    }
+}
