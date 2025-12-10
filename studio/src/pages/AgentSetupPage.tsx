@@ -1,29 +1,29 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react"
 import {
   getSavedAgentNameForNetwork,
   saveAgentNameForNetwork,
-} from "@/utils/cookies";
+} from "@/utils/cookies"
 import {
   generateRandomAgentName,
   isValidName,
   getAvatarInitials,
-} from "@/utils/utils";
-import { useAuthStore } from "@/stores/authStore";
-import { useNavigate } from "react-router-dom";
-import { hashPassword } from "@/utils/passwordHash";
-import { networkFetch } from "@/utils/httpClient";
+} from "@/utils/utils"
+import { useAuthStore } from "@/stores/authStore"
+import { useNavigate } from "react-router-dom"
+import { hashPassword } from "@/utils/passwordHash"
+import { networkFetch } from "@/utils/httpClient"
 
 // Interface for group configuration from /api/health
 interface GroupConfig {
-  name: string;
-  description?: string;
-  has_password: boolean;
-  agent_count?: number;
-  metadata?: Record<string, any>;
+  name: string
+  description?: string
+  has_password: boolean
+  agent_count?: number
+  metadata?: Record<string, any>
 }
 
 const AgentNamePicker: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
   const {
     selectedNetwork,
     setAgentName,
@@ -31,46 +31,46 @@ const AgentNamePicker: React.FC = () => {
     clearNetwork,
     setPasswordHash,
     setAgentGroup,
-  } = useAuthStore();
+  } = useAuthStore()
 
-  const [pageAgentName, setPageAgentName] = useState<string | null>(null);
-  const [savedAgentName, setSavedAgentName] = useState<string | null>(null);
-  const [password, setPassword] = useState<string>("");
-  const [passwordError, setPasswordError] = useState<string>("");
-  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [pageAgentName, setPageAgentName] = useState<string | null>(null)
+  const [savedAgentName, setSavedAgentName] = useState<string | null>(null)
+  const [password, setPassword] = useState<string>("")
+  const [passwordError, setPasswordError] = useState<string>("")
+  const [isVerifying, setIsVerifying] = useState<boolean>(false)
 
   // Group selection state
-  const [availableGroups, setAvailableGroups] = useState<GroupConfig[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-  const [defaultGroup, setDefaultGroup] = useState<string>("guest");
-  const [isLoadingGroups, setIsLoadingGroups] = useState<boolean>(true);
+  const [availableGroups, setAvailableGroups] = useState<GroupConfig[]>([])
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
+  const [defaultGroup, setDefaultGroup] = useState<string>("guest")
+  const [isLoadingGroups, setIsLoadingGroups] = useState<boolean>(true)
 
   const handleRandomize = useCallback(() => {
-    setPageAgentName(generateRandomAgentName());
-  }, [setPageAgentName]);
+    setPageAgentName(generateRandomAgentName())
+  }, [setPageAgentName])
 
   // Load saved agent name
   useEffect(() => {
-    if (!selectedNetwork) return;
+    if (!selectedNetwork) return
     const savedName = getSavedAgentNameForNetwork(
       selectedNetwork.host,
       selectedNetwork.port
-    );
+    )
 
     if (savedName) {
-      setSavedAgentName(savedName);
-      setPageAgentName(savedName);
+      setSavedAgentName(savedName)
+      setPageAgentName(savedName)
     } else {
-      handleRandomize();
+      handleRandomize()
     }
-  }, [selectedNetwork, handleRandomize, setPageAgentName]);
+  }, [selectedNetwork, handleRandomize, setPageAgentName])
 
   // Fetch network configuration and available groups
   useEffect(() => {
     const fetchNetworkConfig = async () => {
-      if (!selectedNetwork) return;
+      if (!selectedNetwork) return
 
-      setIsLoadingGroups(true);
+      setIsLoadingGroups(true)
       try {
         const response = await networkFetch(
           selectedNetwork.host,
@@ -83,14 +83,16 @@ const AgentNamePicker: React.FC = () => {
             },
             useHttps: selectedNetwork.useHttps,
           }
-        );
+        )
 
         if (response.ok) {
-          const healthData = await response.json();
+          const healthData = await response.json()
 
           // Extract group configuration
-          const groupConfig: GroupConfig[] = healthData.data?.group_config || [];
-          const defaultGroupName = healthData.data?.default_agent_group || "guest";
+          const groupConfig: GroupConfig[] =
+            healthData.data?.group_config || []
+          const defaultGroupName =
+            healthData.data?.default_agent_group || "guest"
 
           // If no groups are configured, create a default fallback group
           if (groupConfig.length === 0) {
@@ -98,74 +100,82 @@ const AgentNamePicker: React.FC = () => {
               name: defaultGroupName,
               description: "Default agent group",
               has_password: false,
-            };
-            setAvailableGroups([fallbackGroup]);
+            }
+            setAvailableGroups([fallbackGroup])
           } else {
-            setAvailableGroups(groupConfig);
+            setAvailableGroups(groupConfig)
           }
-          setDefaultGroup(defaultGroupName);
+          setDefaultGroup(defaultGroupName)
 
           // Pre-select the default group
-          setSelectedGroup(defaultGroupName);
+          setSelectedGroup(defaultGroupName)
 
-          console.log("Available groups:", groupConfig);
-          console.log("Default group:", defaultGroupName);
-          console.log("Network requires password:", healthData.data?.requires_password || false);
+          console.log("Available groups:", groupConfig)
+          console.log("Default group:", defaultGroupName)
+          console.log(
+            "Network requires password:",
+            healthData.data?.requires_password || false
+          )
         }
       } catch (error) {
-        console.error("Failed to fetch network config:", error);
+        console.error("Failed to fetch network config:", error)
         // On error, provide a default fallback group so users can still connect
-        const fallbackGroupName = "guest";
+        const fallbackGroupName = "guest"
         const fallbackGroup: GroupConfig = {
           name: fallbackGroupName,
           description: "Default agent group",
           has_password: false,
-        };
-        setAvailableGroups([fallbackGroup]);
-        setSelectedGroup(fallbackGroupName);
+        }
+        setAvailableGroups([fallbackGroup])
+        setSelectedGroup(fallbackGroupName)
       } finally {
-        setIsLoadingGroups(false);
+        setIsLoadingGroups(false)
       }
-    };
+    }
 
-    fetchNetworkConfig();
-  }, [selectedNetwork]);
+    fetchNetworkConfig()
+  }, [selectedNetwork])
 
   // Get the selected group's configuration
-  const selectedGroupConfig = availableGroups.find(g => g.name === selectedGroup);
+  const selectedGroupConfig = availableGroups.find(
+    (g) => g.name === selectedGroup
+  )
 
   // Determine if password is required based on selected group
-  const selectedGroupRequiresPassword = selectedGroupConfig?.has_password ?? false;
+  const selectedGroupRequiresPassword =
+    selectedGroupConfig?.has_password ?? false
 
   const onBack = useCallback(() => {
-    clearAgentName();
-    clearNetwork();
-  }, [clearAgentName, clearNetwork]);
+    clearAgentName()
+    clearNetwork()
+  }, [clearAgentName, clearNetwork])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const agentNameTrimmed = pageAgentName?.trim();
-    if (!agentNameTrimmed || !selectedNetwork) return;
+    e.preventDefault()
+    const agentNameTrimmed = pageAgentName?.trim()
+    if (!agentNameTrimmed || !selectedNetwork) return
 
     // Validate password requirement for selected group
     if (selectedGroupRequiresPassword && !password.trim()) {
-      setPasswordError(`Password is required for the '${selectedGroup}' group`);
-      return;
+      setPasswordError(`Password is required for the '${selectedGroup}' group`)
+      return
     }
 
-    setIsVerifying(true);
-    setPasswordError("");
+    setIsVerifying(true)
+    setPasswordError("")
 
     try {
-      let passwordHash: string | null = null;
+      let passwordHash: string | null = null
 
       // If password is provided, hash it
       if (password.trim()) {
-        passwordHash = await hashPassword(password);
-        console.log(`Password hashed for group: ${selectedGroup}`);
+        passwordHash = await hashPassword(password)
+        console.log(`Password hashed for group: ${selectedGroup}`)
       } else if (!selectedGroupRequiresPassword) {
         // No password needed for this group
-        console.log(`Connecting to group '${selectedGroup}' (no password required)`);
+        console.log(
+          `Connecting to group '${selectedGroup}' (no password required)`
+        )
       }
 
       // Verify credentials by attempting registration
@@ -190,23 +200,26 @@ const AgentNamePicker: React.FC = () => {
           }),
           useHttps: selectedNetwork.useHttps,
         }
-      );
+      )
 
-      const verifyData = await verifyResponse.json();
+      const verifyData = await verifyResponse.json()
 
       if (!verifyData.success) {
         // Registration failed - likely invalid password
-        const errorMessage = verifyData.error_message || "Failed to connect to network";
+        const errorMessage =
+          verifyData.error_message || "Failed to connect to network"
 
         // Check if error is related to invalid credentials
-        if (errorMessage.toLowerCase().includes("invalid credentials") ||
-            errorMessage.toLowerCase().includes("password")) {
-          setPasswordError(`Invalid password for the '${selectedGroup}' group`);
+        if (
+          errorMessage.toLowerCase().includes("invalid credentials") ||
+          errorMessage.toLowerCase().includes("password")
+        ) {
+          setPasswordError(`Invalid password for the '${selectedGroup}' group`)
         } else {
-          setPasswordError(errorMessage);
+          setPasswordError(errorMessage)
         }
-        setIsVerifying(false);
-        return;
+        setIsVerifying(false)
+        return
       }
 
       // Registration succeeded - unregister to let the main app re-register
@@ -226,41 +239,47 @@ const AgentNamePicker: React.FC = () => {
             }),
             useHttps: selectedNetwork.useHttps,
           }
-        );
+        )
       } catch (unregError) {
         // Ignore unregister errors - not critical
-        console.warn("Failed to unregister after verification:", unregError);
+        console.warn("Failed to unregister after verification:", unregError)
       }
 
       // Proceed with connection
-      proceedWithConnection(passwordHash);
+      proceedWithConnection(passwordHash)
     } catch (error) {
-      console.error("Failed to verify credentials:", error);
-      setPasswordError("Failed to connect to network. Please try again.");
-      setIsVerifying(false);
+      console.error("Failed to verify credentials:", error)
+      setPasswordError("Failed to connect to network. Please try again.")
+      setIsVerifying(false)
     }
-  };
+  }
 
   const proceedWithConnection = (hash: string | null) => {
-    const agentNameTrimmed = pageAgentName?.trim();
-    if (!agentNameTrimmed || !selectedNetwork) return;
+    const agentNameTrimmed = pageAgentName?.trim()
+    if (!agentNameTrimmed || !selectedNetwork) return
 
     // Save the agent name for this network
     saveAgentNameForNetwork(
       selectedNetwork.host,
       selectedNetwork.port,
       agentNameTrimmed
-    );
+    )
 
     // Store the password hash and selected group in authStore
-    setPasswordHash(hash);
-    setAgentGroup(selectedGroup);
-    setAgentName(agentNameTrimmed);
+    setPasswordHash(hash)
+    setAgentGroup(selectedGroup)
+    setAgentName(agentNameTrimmed)
 
-    // Navigate to root - RouteGuard will redirect to the appropriate default route
-    // after modules are loaded (which determines if README or messaging is the default)
-    navigate("/");
-  };
+    // Navigate based on user type
+    if (selectedGroup === "admin") {
+      // Admin users go directly to admin dashboard
+      navigate("/admin/dashboard", { replace: true })
+    } else {
+      // Regular users go to root - RouteGuard will redirect to the appropriate default route
+      // after modules are loaded (which determines if README or messaging is the default)
+      navigate("/")
+    }
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-5 bg-gradient-to-br from-indigo-400 to-purple-500 dark:from-blue-800 dark:to-violet-800">
@@ -372,9 +391,9 @@ const AgentNamePicker: React.FC = () => {
                 id="agentGroup"
                 value={selectedGroup || ""}
                 onChange={(e) => {
-                  setSelectedGroup(e.target.value);
-                  setPassword(""); // Clear password when group changes
-                  setPasswordError("");
+                  setSelectedGroup(e.target.value)
+                  setPassword("") // Clear password when group changes
+                  setPasswordError("")
                 }}
                 className="w-full px-4 py-3 border-2 rounded-lg text-base transition-all duration-150 focus:outline-none focus:ring-3 bg-white border-gray-300 text-gray-800 focus:border-blue-500 focus:ring-blue-500/10 dark:bg-gray-600 dark:border-gray-500 dark:text-gray-50 dark:focus:border-blue-400 dark:focus:ring-blue-400/10"
               >
@@ -410,8 +429,8 @@ const AgentNamePicker: React.FC = () => {
                 type="password"
                 value={password}
                 onChange={(e) => {
-                  setPassword(e.target.value);
-                  setPasswordError(""); // Clear error when user types
+                  setPassword(e.target.value)
+                  setPasswordError("") // Clear error when user types
                 }}
                 className={`w-full px-4 py-3 border-2 rounded-lg text-base transition-all duration-150 focus:outline-none focus:ring-3 bg-white text-gray-800 focus:border-blue-500 focus:ring-blue-500/10 dark:bg-gray-600 dark:text-gray-50 dark:focus:border-blue-400 dark:focus:ring-blue-400/10 ${
                   passwordError
@@ -461,7 +480,9 @@ const AgentNamePicker: React.FC = () => {
             </button>
             <button
               type="submit"
-              disabled={!isValidName(pageAgentName) || isVerifying || isLoadingGroups}
+              disabled={
+                !isValidName(pageAgentName) || isVerifying || isLoadingGroups
+              }
               className={`flex-[2] px-6 py-3 border-none rounded-lg text-base font-semibold cursor-pointer transition-all duration-150 text-white ${
                 !isValidName(pageAgentName) || isVerifying || isLoadingGroups
                   ? "bg-gray-300 dark:bg-gray-500 cursor-not-allowed"
@@ -505,7 +526,7 @@ const AgentNamePicker: React.FC = () => {
         </form>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default AgentNamePicker;
+export default AgentNamePicker
