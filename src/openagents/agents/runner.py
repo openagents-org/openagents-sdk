@@ -449,6 +449,16 @@ class AgentRunner(ABC):
                     # Mark the message as processed to avoid processing it again
                     self._processed_message_ids.add(str(unprocessed_message.message_id))
 
+                    # Skip system events (system.*) - these are internal and should not trigger orchestration
+                    if event_name.startswith("system."):
+                        logger.debug(f"⏭️  Skipping system event: {event_name}")
+                        continue
+
+                    # Skip events sent by this agent itself - avoid self-reaction loops
+                    if unprocessed_message.source_id == self.agent_id:
+                        logger.debug(f"⏭️  Skipping self-sent event from {self.agent_id}")
+                        continue
+
                     # If the sender is in the ignored list, skip the message
                     if unprocessed_message.source_id in self._ignored_sender_ids:
                         # print(f"⏭️  Skipping message from ignored sender {unprocessed_message.source_id}")
