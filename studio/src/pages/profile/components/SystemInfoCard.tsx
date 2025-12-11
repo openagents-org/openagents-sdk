@@ -1,8 +1,10 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { useThemeStore } from "@/stores/themeStore";
 import { profileSelectors } from "@/stores/profileStore";
 
 const SystemInfoCard: React.FC = () => {
+  const { t } = useTranslation('profile');
   const { theme, toggleTheme } = useThemeStore();
   const lastUpdated = profileSelectors.useLastUpdated();
   const healthData = profileSelectors.useHealthData();
@@ -11,12 +13,12 @@ const SystemInfoCard: React.FC = () => {
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          System Settings
+          {t('dashboard.system.title')}
         </h3>
         <div className="flex items-center space-x-2">
           <div className="w-3 h-3 bg-blue-500 rounded-full" />
           <span className="text-sm text-gray-600 dark:text-gray-400">
-            System
+            {t('dashboard.system.system')}
           </span>
         </div>
       </div>
@@ -25,7 +27,7 @@ const SystemInfoCard: React.FC = () => {
         {/* Theme Settings */}
         <div>
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Appearance
+            {t('dashboard.system.appearance')}
           </h4>
           <div className="bg-gray-50 dark:bg-gray-700 rounded-md p-3">
             <div className="flex items-center justify-between">
@@ -43,10 +45,10 @@ const SystemInfoCard: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    Theme
+                    {t('dashboard.system.theme')}
                   </div>
                   <div className="text-xs text-gray-600 dark:text-gray-400">
-                    {theme === "dark" ? "Dark Mode" : "Light Mode"}
+                    {theme === "dark" ? t('dashboard.system.darkMode') : t('dashboard.system.lightMode')}
                   </div>
                 </div>
               </div>
@@ -55,9 +57,8 @@ const SystemInfoCard: React.FC = () => {
                 className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 dark:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    theme === "dark" ? "translate-x-6" : "translate-x-1"
-                  }`}
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${theme === "dark" ? "translate-x-6" : "translate-x-1"
+                    }`}
                 />
               </button>
             </div>
@@ -67,25 +68,25 @@ const SystemInfoCard: React.FC = () => {
         {/* System Information */}
         <div>
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            System Information
+            {t('dashboard.system.info')}
           </h4>
           <div className="bg-gray-50 dark:bg-gray-700 rounded-md p-3">
             <div className="grid grid-cols-1 gap-2">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Platform:</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.system.platform')}:</span>
                 <span className="text-sm text-gray-900 dark:text-gray-100">
                   OpenAgents Studio
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Version:</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.system.version')}:</span>
                 <span className="text-sm text-gray-900 dark:text-gray-100">
                   1.0.0
                 </span>
               </div>
               {lastUpdated && (
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Last Sync:</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.system.lastSync')}:</span>
                   <span className="text-sm text-gray-900 dark:text-gray-100">
                     {lastUpdated.toLocaleString()}
                   </span>
@@ -93,7 +94,7 @@ const SystemInfoCard: React.FC = () => {
               )}
               {healthData?.data?.network_id && (
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Network ID:</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.system.networkId')}:</span>
                   <span className="text-sm font-mono text-gray-900 dark:text-gray-100">
                     {healthData.data.network_id.slice(0, 8)}...
                   </span>
@@ -148,7 +149,7 @@ const SystemInfoCard: React.FC = () => {
         {/* Status Indicators */}
         <div>
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            System Status
+            {t('dashboard.system.status')}
           </h4>
           <div className="grid grid-cols-3 gap-2">
             <div className="text-center p-2 bg-gray-50 dark:bg-gray-700 rounded-md">
@@ -158,7 +159,7 @@ const SystemInfoCard: React.FC = () => {
                 </svg>
               </div>
               <div className="text-xs text-gray-600 dark:text-gray-400">
-                Operational
+                {t('dashboard.system.operational')}
               </div>
             </div>
 
@@ -169,7 +170,7 @@ const SystemInfoCard: React.FC = () => {
                 </svg>
               </div>
               <div className="text-xs text-gray-600 dark:text-gray-400">
-                Performance
+                {t('dashboard.system.performance')}
               </div>
             </div>
 
@@ -180,7 +181,7 @@ const SystemInfoCard: React.FC = () => {
                 </svg>
               </div>
               <div className="text-xs text-gray-600 dark:text-gray-400">
-                Secure
+                {t('dashboard.system.secure')}
               </div>
             </div>
           </div>
