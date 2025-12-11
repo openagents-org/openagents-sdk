@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import ServerCard from './ServerCard';
-import { ServerIcon } from './icons';
 import { getAuth } from 'firebase/auth';
 import { toast } from "sonner";
 import { useConfirm } from '../../context/ConfirmContext';

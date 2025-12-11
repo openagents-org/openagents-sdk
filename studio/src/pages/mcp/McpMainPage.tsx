@@ -1,12 +1,12 @@
 import React from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import McpView from "@/components/mcp/McpView";
 
 /**
  * MCP main page - Handle all MCP-related features
  */
 const McpMainPage: React.FC = () => {
-  const navigate = useNavigate();
+
 
   return (
     <Routes>
