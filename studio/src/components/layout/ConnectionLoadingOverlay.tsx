@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useContext } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ConnectionState,
   OpenAgentsContext,
@@ -9,6 +10,7 @@ import { clearAllOpenAgentsDataForLogout } from "@/utils/cookies";
 import { useNavigate } from "react-router-dom";
 
 const ConnectionLoadingOverlay: React.FC = () => {
+  const { t } = useTranslation('layout');
   const context = useContext(OpenAgentsContext);
   const navigate = useNavigate();
   const { agentName, clearNetwork, clearAgentName } =
@@ -29,7 +31,7 @@ const ConnectionLoadingOverlay: React.FC = () => {
     // if (context?.connect) {
     //   await context.connect();
     // } else {
-      window.location.reload();
+    window.location.reload();
     // }
   }, []);
 
@@ -64,29 +66,29 @@ const ConnectionLoadingOverlay: React.FC = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
       <div className="text-center">
         {!isError && <><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-600 dark:text-gray-400">
-          Connecting as {agentName || ""}...
-        </p></>}
+          <p className="text-gray-600 dark:text-gray-400">
+            {t('overlay.connecting', { name: agentName || "" })}
+          </p></>}
         <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-          Status: {currentStatus}
+          {t('overlay.status', { status: currentStatus })}
         </p>
         {isError && (
           <div className="mt-4">
             <p className="text-red-600 dark:text-red-400 text-sm mb-2">
-              Connection failed. Please try again.
+              {t('overlay.failed')}
             </p>
             <div className="flex">
               <button
                 onClick={() => onRetry()}
                 className="mt-2 px-4 py-2 bg-blue-400 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Retry
+                {t('overlay.retry')}
               </button>
               <button
                 onClick={() => handleLogout()}
                 className="ml-6 mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Back To Select Network
+                {t('overlay.backToNetwork')}
               </button>
             </div>
           </div>

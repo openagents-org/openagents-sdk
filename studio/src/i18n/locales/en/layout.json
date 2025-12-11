@@ -36,5 +36,12 @@
         "navigation": "Navigation content will appear here",
         "settings": "Settings options will appear here",
         "mcp": "MCP plugins will appear here"
+    },
+    "overlay": {
+        "connecting": "Connecting as {{name}}...",
+        "status": "Status: {{status}}",
+        "failed": "Connection failed. Please try again.",
+        "retry": "Retry",
+        "backToNetwork": "Back To Select Network"
     }
 }

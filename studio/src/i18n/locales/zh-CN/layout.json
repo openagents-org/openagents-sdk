@@ -36,5 +36,12 @@
         "navigation": "导航内容将显示在这里",
         "settings": "设置选项将显示在这里",
         "mcp": "MCP 插件将显示在这里"
+    },
+    "overlay": {
+        "connecting": "正在以 {{name}} 身份连接...",
+        "status": "状态: {{status}}",
+        "failed": "连接失败，请重试。",
+        "retry": "重试",
+        "backToNetwork": "返回选择网络"
     }
 }
