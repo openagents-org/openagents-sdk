@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo, useContext, useCallback } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
-import { 
-  getEvents, 
-  getMods, 
-  searchEvents, 
+import { useTranslation } from "react-i18next";
+import {
+  getEvents,
+  getMods,
+  searchEvents,
   syncEvents,
   setNetworkConnection,
   EventDefinition,
-  ModInfo 
+  ModInfo
 } from "@/services/eventExplorerService";
 import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
 import EventDetailPage from "./EventDetailPage";
@@ -16,20 +17,21 @@ import EventDetailPage from "./EventDetailPage";
  * Events Main Page - Event Explorer
  */
 const EventsMainPage: React.FC = () => {
+  const { t } = useTranslation('events');
   const navigate = useNavigate();
   const context = useContext(OpenAgentsContext);
   const openAgentsService = context?.connector;
-  
+
   const [events, setEvents] = useState<EventDefinition[]>([]);
   const [mods, setMods] = useState<ModInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMod, setSelectedMod] = useState<string>("");
   const [selectedType, setSelectedType] = useState<string>("");
-  
+
   // Set network connection from context
   useEffect(() => {
     if (openAgentsService && 'host' in openAgentsService && 'port' in openAgentsService) {
@@ -52,27 +54,27 @@ const EventsMainPage: React.FC = () => {
       }
     }
   }, [openAgentsService]);
-  
+
   const loadMods = useCallback(async () => {
     try {
       const result = await getMods();
       if (result.success && result.data) {
         setMods(result.data.mods || []);
       } else {
-        setError(result.error_message || "Failed to load mods");
+        setError(result.error_message || t('messages.loadModsError', "Failed to load mods"));
       }
     } catch (err: any) {
-      setError(err.message || "Failed to load mods");
+      setError(err.message || t('messages.loadModsError', "Failed to load mods"));
     }
-  }, []);
-  
+  }, [t]);
+
   const loadEvents = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       let result;
-      
+
       if (searchQuery.trim()) {
         result = await searchEvents(searchQuery);
       } else {
@@ -81,52 +83,52 @@ const EventsMainPage: React.FC = () => {
           selectedType || undefined
         );
       }
-      
+
       if (result.success && result.data) {
         setEvents(result.data.events || []);
       } else {
-        setError(result.error_message || "Failed to load events");
+        setError(result.error_message || t('messages.loadEventsError', "Failed to load events"));
       }
     } catch (err: any) {
-      setError(err.message || "Failed to load events");
+      setError(err.message || t('messages.loadEventsError', "Failed to load events"));
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedMod, selectedType]);
-  
+  }, [searchQuery, selectedMod, selectedType, t]);
+
   // Load mods on mount
   useEffect(() => {
     loadMods();
   }, [loadMods]);
-  
+
   // Load events when filters change
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
-  
+
   const handleSync = async () => {
     setSyncing(true);
     setError(null);
-    
+
     try {
       const result = await syncEvents();
       if (result.success) {
         // Reload events and mods after sync
         await Promise.all([loadMods(), loadEvents()]);
       } else {
-        setError(result.error_message || "Failed to sync events");
+        setError(result.error_message || t('messages.syncError', "Failed to sync events"));
       }
     } catch (err: any) {
-      setError(err.message || "Failed to sync events");
+      setError(err.message || t('messages.syncError', "Failed to sync events"));
     } finally {
       setSyncing(false);
     }
   };
-  
+
   // Group events by mod
   const eventsByMod = useMemo(() => {
     const grouped: Record<string, EventDefinition[]> = {};
-    
+
     events.forEach(event => {
       const modId = event.mod_id;
       if (!grouped[modId]) {
@@ -134,20 +136,20 @@ const EventsMainPage: React.FC = () => {
       }
       grouped[modId].push(event);
     });
-    
+
     return grouped;
   }, [events]);
-  
+
   // Get mod name for a mod_id
   const getModName = (modId: string) => {
     const mod = mods.find(m => m.mod_id === modId);
     return mod?.mod_name || modId;
   };
-  
+
   const handleEventClick = (eventName: string) => {
     navigate(`/profile/events/${encodeURIComponent(eventName)}`);
   };
-  
+
   return (
     <Routes>
       <Route
@@ -158,23 +160,23 @@ const EventsMainPage: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
               <div className="flex items-center justify-between mb-4">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Event Explorer
+                  {t('title')}
                 </h1>
                 <button
                   onClick={handleSync}
                   disabled={syncing}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {syncing ? "Syncing..." : "Sync from GitHub"}
+                  {syncing ? t('actions.syncing') : t('actions.sync')}
                 </button>
               </div>
-              
+
               {/* Search Bar */}
               <div className="mb-4">
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Search events..."
+                    placeholder={t('actions.search')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -182,7 +184,7 @@ const EventsMainPage: React.FC = () => {
                   <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
                 </div>
               </div>
-              
+
               {/* Filters */}
               <div className="flex gap-4">
                 <select
@@ -190,27 +192,27 @@ const EventsMainPage: React.FC = () => {
                   onChange={(e) => setSelectedMod(e.target.value)}
                   className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">All Mods</option>
+                  <option value="">{t('filters.allMods')}</option>
                   {mods.map(mod => (
                     <option key={mod.mod_id} value={mod.mod_id}>
-                      {mod.mod_name} ({mod.event_count})
+                      {mod.mod_name} {t('list.eventCount', { count: mod.event_count })}
                     </option>
                   ))}
                 </select>
-                
+
                 <select
                   value={selectedType}
                   onChange={(e) => setSelectedType(e.target.value)}
                   className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">All Types</option>
-                  <option value="operation">Operation</option>
-                  <option value="response">Response</option>
-                  <option value="notification">Notification</option>
+                  <option value="">{t('filters.allTypes')}</option>
+                  <option value="operation">{t('filters.operation')}</option>
+                  <option value="response">{t('filters.response')}</option>
+                  <option value="notification">{t('filters.notification')}</option>
                 </select>
               </div>
             </div>
-            
+
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4">
               {error && (
@@ -218,14 +220,14 @@ const EventsMainPage: React.FC = () => {
                   {error}
                 </div>
               )}
-              
+
               {loading ? (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  Loading events...
+                  {t('messages.loadingEvents')}
                 </div>
               ) : Object.keys(eventsByMod).length === 0 ? (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  No events found. Try syncing from GitHub.
+                  {t('messages.noEvents')}
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -235,9 +237,9 @@ const EventsMainPage: React.FC = () => {
                       className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
                     >
                       <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                        {getModName(modId)} ({modEvents.length} events)
+                        {getModName(modId)} {t('list.eventCount', { count: modEvents.length })}
                       </h2>
-                      
+
                       <div className="space-y-3">
                         {modEvents.map((event) => (
                           <div
@@ -252,13 +254,12 @@ const EventsMainPage: React.FC = () => {
                                     {event.event_name}
                                   </span>
                                   <span
-                                    className={`px-2 py-0.5 text-xs rounded ${
-                                      event.event_type === 'operation'
+                                    className={`px-2 py-0.5 text-xs rounded ${event.event_type === 'operation'
                                         ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                                         : event.event_type === 'response'
-                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                        : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-                                    }`}
+                                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                          : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                                      }`}
                                   >
                                     {event.event_type}
                                   </span>
@@ -279,7 +280,7 @@ const EventsMainPage: React.FC = () => {
           </div>
         }
       />
-      
+
       <Route
         path=":eventName"
         element={<EventDetailPage />}
