@@ -56,7 +56,7 @@ const AgentManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [connector]);
+  }, [connector, t]);
 
   useEffect(() => {
     fetchAgents();
@@ -290,8 +290,8 @@ const AgentManagement: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${agent.status === "offline" || agent.isKicked
-                          ? "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400"
-                          : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                        ? "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400"
+                        : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                         }`}
                     >
                       {agent.status === "offline" || agent.isKicked

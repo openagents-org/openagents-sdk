@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { 
-  getAuth, 
+import {
+  getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -10,7 +10,6 @@ import {
   GithubAuthProvider,
   updateProfile,
   User,
-  AuthProvider,
   AuthError
 } from 'firebase/auth';
 
@@ -68,12 +67,12 @@ const useAuth = (): AuthHookResult => {
     setError(null);
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
-      
+
       // Update profile if displayName is provided
       if (displayName && result.user) {
         await updateProfile(result.user, { displayName });
       }
-      
+
       return result.user;
     } catch (error: any) {
       const authError = error as AuthError;
@@ -142,7 +141,7 @@ const useAuth = (): AuthHookResult => {
       setIsLoading(false);
       throw new Error("No user is logged in");
     }
-    
+
     try {
       await updateProfile(user, { displayName, photoURL });
       // Force refresh the user object
@@ -156,16 +155,16 @@ const useAuth = (): AuthHookResult => {
     }
   };
 
-  return { 
-    user, 
-    isLoading, 
-    error, 
-    signIn, 
-    signUp, 
+  return {
+    user,
+    isLoading,
+    error,
+    signIn,
+    signUp,
     signInWithGoogle,
     signInWithGitHub,
-    signOut, 
-    updateUserProfile 
+    signOut,
+    updateUserProfile
   };
 };
 
