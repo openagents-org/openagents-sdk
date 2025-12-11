@@ -73,6 +73,14 @@
         "completed": "Project completed",
         "messageSent": "Project message sent"
     },
+    "sidebar": {
+        "channels": "CHANNELS",
+        "directMessages": "DIRECT MESSAGES",
+        "loadingChannels": "Loading channels...",
+        "noChannels": "No channels available",
+        "loadingAgents": "Loading agents...",
+        "noAgents": "No agents online"
+    },
     "status": {
         "loading": "Loading...",
         "sending": "Sending...",

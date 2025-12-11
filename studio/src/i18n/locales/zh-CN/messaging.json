@@ -73,6 +73,14 @@
         "completed": "项目已完成",
         "messageSent": "项目消息已发送"
     },
+    "sidebar": {
+        "channels": "频道",
+        "directMessages": "私信",
+        "loadingChannels": "正在加载频道...",
+        "noChannels": "暂无可用频道",
+        "loadingAgents": "正在加载成员...",
+        "noAgents": "暂无在线成员"
+    },
     "status": {
         "loading": "加载中...",
         "sending": "发送中...",

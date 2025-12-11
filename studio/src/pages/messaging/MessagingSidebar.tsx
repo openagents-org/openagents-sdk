@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { ThreadChannel, AgentInfo } from "@/types/events";
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
 import { useChatStore, setChatStoreContext } from "@/stores/chatStore";
@@ -28,10 +29,9 @@ const ChannelItem: React.FC<{
     <button
       onClick={onClick}
       className={`w-full text-left text-sm truncate px-2 py-2 font-medium rounded transition-colors
-        ${
-          isActive
-            ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 border-l-2 border-indigo-500 dark:border-indigo-400 pl-2 shadow-sm"
-            : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 pl-2.5"
+        ${isActive
+          ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 border-l-2 border-indigo-500 dark:border-indigo-400 pl-2 shadow-sm"
+          : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 pl-2.5"
         }
       `}
       title={channel.description || channel.name}
@@ -63,10 +63,9 @@ const AgentItem: React.FC<{
     <button
       onClick={onClick}
       className={`w-full text-left text-sm truncate px-2 py-2 font-medium rounded transition-colors
-        ${
-          isActive
-            ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 border-l-2 border-indigo-500 dark:border-indigo-400 pl-2 shadow-sm"
-            : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 pl-2.5"
+        ${isActive
+          ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 border-l-2 border-indigo-500 dark:border-indigo-400 pl-2 shadow-sm"
+          : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 pl-2.5"
         }
       `}
       title={agent.metadata?.display_name || agent.agent_id}
@@ -74,11 +73,10 @@ const AgentItem: React.FC<{
       <div className="flex items-center justify-between">
         <div className="flex items-center min-w-0">
           <div
-            className={`w-2 h-2 rounded-full mr-2 ${
-              agent.metadata?.status === "online"
-                ? "bg-green-500"
-                : "bg-gray-400"
-            }`}
+            className={`w-2 h-2 rounded-full mr-2 ${agent.metadata?.status === "online"
+              ? "bg-green-500"
+              : "bg-gray-400"
+              }`}
           />
           <span className="truncate">
             {agent.metadata?.display_name || agent.agent_id}
@@ -97,6 +95,7 @@ AgentItem.displayName = "AgentItem";
 
 // Chat Sidebar Content Component - Use chatStore to get data
 const MessagingSidebar: React.FC = () => {
+  const { t } = useTranslation('messaging');
   const { connector, connectionStatus, isConnected } = useOpenAgents();
   const { agentName } = useAuthStore();
 
@@ -216,11 +215,11 @@ const MessagingSidebar: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Channels Section */}
-      <SectionHeader title="CHANNELS" />
+      <SectionHeader title={t('sidebar.channels')} />
       <div className="px-3">
         {channelsLoading && channels.length === 0 ? (
           <div className="text-gray-500 text-sm px-2 py-2 text-center">
-            Loading channels...
+            {t('sidebar.loadingChannels')}
           </div>
         ) : (
           <ul className="flex flex-col gap-1">
@@ -235,7 +234,7 @@ const MessagingSidebar: React.FC = () => {
             ))}
             {channels.length === 0 && !channelsLoading && (
               <div className="text-gray-500 text-sm px-2 py-2 text-center">
-                No channels available
+                {t('sidebar.noChannels')}
               </div>
             )}
           </ul>
@@ -243,11 +242,11 @@ const MessagingSidebar: React.FC = () => {
       </div>
 
       {/* Direct Messages Section */}
-      <SectionHeader title="DIRECT MESSAGES" />
+      <SectionHeader title={t('sidebar.directMessages')} />
       <div className="flex-1 overflow-y-auto px-3 custom-scrollbar">
         {agentsLoading && filteredAgents.length === 0 ? (
           <div className="text-gray-500 text-sm px-2 py-2 text-center">
-            Loading agents...
+            {t('sidebar.loadingAgents')}
           </div>
         ) : (
           <ul className="flex flex-col gap-1">
@@ -262,7 +261,7 @@ const MessagingSidebar: React.FC = () => {
             ))}
             {filteredAgents.length === 0 && !agentsLoading && (
               <div className="text-gray-500 text-sm px-2 py-2 text-center">
-                No agents online
+                {t('sidebar.noAgents')}
               </div>
             )}
           </ul>
