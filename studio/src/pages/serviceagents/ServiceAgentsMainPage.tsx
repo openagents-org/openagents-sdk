@@ -1,5 +1,6 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import ServiceAgentList from "./components/ServiceAgentList";
 import ServiceAgentDetail from "./components/ServiceAgentDetail";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -9,6 +10,7 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
  * Page for managing service agents (admin only)
  */
 const ServiceAgentsMainPage: React.FC = () => {
+  const { t } = useTranslation('serviceAgent');
   const { isAdmin, isLoading } = useIsAdmin();
 
   // Show loading state while checking admin status
@@ -18,7 +20,7 @@ const ServiceAgentsMainPage: React.FC = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="text-gray-500 dark:text-gray-400 mt-3">
-            Checking permissions...
+            {t('main.checkingPermissions')}
           </p>
         </div>
       </div>
@@ -46,11 +48,11 @@ const ServiceAgentsMainPage: React.FC = () => {
             </svg>
           </div>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-            Access Denied
+            {t('main.accessDenied')}
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Service Agents Management is only available to administrators.
-            Please contact your network administrator if you need access.
+            {t('main.adminOnly')}
+            {t('main.contactAdmin')}
           </p>
         </div>
       </div>

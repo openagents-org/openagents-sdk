@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import Editor from "@monaco-editor/react";
 import {
   getAgentStatus,
@@ -25,6 +26,7 @@ type TabType = "status" | "logs" | "editor" | "env";
  * Shows detailed agent information, real-time log viewer, and code editor
  */
 const ServiceAgentDetail: React.FC = () => {
+  const { t } = useTranslation('serviceAgent');
   const { agentId } = useParams<{ agentId: string }>();
   const navigate = useNavigate();
   const [status, setStatus] = useState<AgentStatus | null>(null);
@@ -94,12 +96,12 @@ const ServiceAgentDetail: React.FC = () => {
       setLogs(logsData.logs || []);
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to fetch agent information";
+        err instanceof Error ? err.message : t('detail.messages.fetchStatusFailed');
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [agentId]);
+  }, [agentId, t]);
 
   // Fetch source code
   const fetchSource = useCallback(async () => {
@@ -114,12 +116,12 @@ const ServiceAgentDetail: React.FC = () => {
       setHasUnsavedChanges(false);
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to fetch agent source";
+        err instanceof Error ? err.message : t('detail.messages.fetchSourceFailed');
       toast.error(errorMessage);
     } finally {
       setLoadingSource(false);
     }
-  }, [agentId]);
+  }, [agentId, t]);
 
   // Load source when switching to editor tab
   useEffect(() => {
@@ -176,15 +178,15 @@ const ServiceAgentDetail: React.FC = () => {
       toast.success(result.message);
 
       if (result.needs_restart) {
-        toast.info("Agent is running. Restart required for changes to take effect.", {
+        toast.info(t('detail.env.restartRequired'), {
           action: {
-            label: "Restart Now",
+            label: t('detail.actions.restartNow'),
             onClick: async () => {
               try {
                 await restartServiceAgent(agentId);
-                toast.success("Agent restarted successfully");
+                toast.success(t('detail.messages.restartSuccess'));
               } catch (err) {
-                toast.error("Failed to restart agent");
+                toast.error(t('detail.messages.restartFailed'));
               }
             },
           },
@@ -192,7 +194,7 @@ const ServiceAgentDetail: React.FC = () => {
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to save environment variables";
+        err instanceof Error ? err.message : t('detail.env.saveFailed');
       toast.error(errorMessage);
     } finally {
       setSavingEnvVars(false);
@@ -208,11 +210,11 @@ const ServiceAgentDetail: React.FC = () => {
   // Handle add new env var
   const handleAddEnvVar = () => {
     if (!newEnvKey.trim()) {
-      toast.error("Variable name is required");
+      toast.error(t('detail.env.variableNameRequired'));
       return;
     }
     if (envVars[newEnvKey]) {
-      toast.error("Variable already exists");
+      toast.error(t('detail.env.variableExists'));
       return;
     }
     setEnvVars({ ...envVars, [newEnvKey]: newEnvValue });
@@ -244,15 +246,15 @@ const ServiceAgentDetail: React.FC = () => {
       toast.success(result.message);
 
       if (result.needs_restart) {
-        toast.info("Agent is running. Restart required for changes to take effect.", {
+        toast.info(t('detail.env.restartRequired'), {
           action: {
-            label: "Restart Now",
+            label: t('detail.actions.restartNow'),
             onClick: async () => {
               try {
                 await restartServiceAgent(agentId);
-                toast.success("Agent restarted successfully");
+                toast.success(t('detail.messages.restartSuccess'));
               } catch (err) {
-                toast.error("Failed to restart agent");
+                toast.error(t('detail.messages.restartFailed'));
               }
             },
           },
@@ -260,7 +262,7 @@ const ServiceAgentDetail: React.FC = () => {
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to save source";
+        err instanceof Error ? err.message : t('detail.messages.saveSourceFailed');
       toast.error(errorMessage);
     } finally {
       setSavingSource(false);
@@ -279,10 +281,10 @@ const ServiceAgentDetail: React.FC = () => {
     try {
       setStartingAgent(true);
       await startServiceAgent(agentId);
-      toast.success("Agent started successfully");
+      toast.success(t('detail.messages.startSuccess'));
       fetchData();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to start agent");
+      toast.error(err instanceof Error ? err.message : t('detail.messages.startFailed'));
     } finally {
       setStartingAgent(false);
     }
@@ -294,10 +296,10 @@ const ServiceAgentDetail: React.FC = () => {
     try {
       setStoppingAgent(true);
       await stopServiceAgent(agentId);
-      toast.success("Agent stopped successfully");
+      toast.success(t('detail.messages.stopSuccess'));
       fetchData();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to stop agent");
+      toast.error(err instanceof Error ? err.message : t('detail.messages.stopFailed'));
     } finally {
       setStoppingAgent(false);
     }
@@ -309,10 +311,10 @@ const ServiceAgentDetail: React.FC = () => {
     try {
       setStartingAgent(true);
       await restartServiceAgent(agentId);
-      toast.success("Agent restarted successfully");
+      toast.success(t('detail.messages.restartSuccess'));
       fetchData();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to restart agent");
+      toast.error(err instanceof Error ? err.message : t('detail.messages.restartFailed'));
     } finally {
       setStartingAgent(false);
     }
@@ -436,11 +438,29 @@ const ServiceAgentDetail: React.FC = () => {
     }
   };
 
+  // Get status label
+  const getStatusLabel = (statusValue: string) => {
+    switch (statusValue) {
+      case "running":
+        return t('list.status.running');
+      case "stopped":
+        return t('list.status.stopped');
+      case "error":
+        return t('list.status.error');
+      case "starting":
+        return t('list.status.starting');
+      case "stopping":
+        return t('list.status.stopping');
+      default:
+        return statusValue;
+    }
+  };
+
   if (!agentId) {
     return (
       <div className="p-6 dark:bg-gray-900 h-full">
         <div className="text-red-600 dark:text-red-400">
-          Invalid agent ID
+          {t('detail.messages.invalidId')}
         </div>
       </div>
     );
@@ -452,7 +472,7 @@ const ServiceAgentDetail: React.FC = () => {
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <span className="ml-3 text-gray-600 dark:text-gray-400">
-            Loading agent information...
+            {t('detail.messages.loadingInfo')}
           </span>
         </div>
       </div>
@@ -487,7 +507,7 @@ const ServiceAgentDetail: React.FC = () => {
                   d="M10 19l-7-7m0 0l7-7m-7 7h18"
                 />
               </svg>
-              Back
+              {t('detail.actions.back')}
             </button>
             <div className="flex items-center space-x-3">
               <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
@@ -495,7 +515,7 @@ const ServiceAgentDetail: React.FC = () => {
               </h1>
               {status && (
                 <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getStatusBadgeColor(status.status)}`}>
-                  {status.status}
+                  {getStatusLabel(status.status)}
                 </span>
               )}
             </div>
@@ -524,7 +544,7 @@ const ServiceAgentDetail: React.FC = () => {
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-            Refresh
+            {t('detail.actions.refresh')}
           </button>
         </div>
       </div>
@@ -538,10 +558,9 @@ const ServiceAgentDetail: React.FC = () => {
               onClick={() => setActiveTab("status")}
               className={`
                 px-4 py-3 text-sm font-medium border-b-2 transition-colors
-                ${
-                  activeTab === "status"
-                    ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
-                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                ${activeTab === "status"
+                  ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 }
               `}
             >
@@ -549,17 +568,16 @@ const ServiceAgentDetail: React.FC = () => {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
-                <span>Status</span>
+                <span>{t('detail.tabs.status')}</span>
               </div>
             </button>
             <button
               onClick={() => setActiveTab("logs")}
               className={`
                 px-4 py-3 text-sm font-medium border-b-2 transition-colors
-                ${
-                  activeTab === "logs"
-                    ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
-                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                ${activeTab === "logs"
+                  ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 }
               `}
             >
@@ -567,17 +585,16 @@ const ServiceAgentDetail: React.FC = () => {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <span>Logs</span>
+                <span>{t('detail.tabs.logs')}</span>
               </div>
             </button>
             <button
               onClick={() => setActiveTab("editor")}
               className={`
                 px-4 py-3 text-sm font-medium border-b-2 transition-colors
-                ${
-                  activeTab === "editor"
-                    ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
-                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                ${activeTab === "editor"
+                  ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 }
               `}
             >
@@ -585,9 +602,9 @@ const ServiceAgentDetail: React.FC = () => {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                 </svg>
-                <span>Source Code</span>
+                <span>{t('detail.tabs.editor')}</span>
                 {hasUnsavedChanges && (
-                  <span className="w-2 h-2 rounded-full bg-orange-500" title="Unsaved changes" />
+                  <span className="w-2 h-2 rounded-full bg-orange-500" title={t('detail.editor.unsaved')} />
                 )}
               </div>
             </button>
@@ -595,10 +612,9 @@ const ServiceAgentDetail: React.FC = () => {
               onClick={() => setActiveTab("env")}
               className={`
                 px-4 py-3 text-sm font-medium border-b-2 transition-colors
-                ${
-                  activeTab === "env"
-                    ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
-                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                ${activeTab === "env"
+                  ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 }
               `}
             >
@@ -606,9 +622,9 @@ const ServiceAgentDetail: React.FC = () => {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                 </svg>
-                <span>Environment</span>
+                <span>{t('detail.tabs.env')}</span>
                 {hasUnsavedEnvChanges && (
-                  <span className="w-2 h-2 rounded-full bg-orange-500" title="Unsaved changes" />
+                  <span className="w-2 h-2 rounded-full bg-orange-500" title={t('detail.editor.unsaved')} />
                 )}
               </div>
             </button>
@@ -625,7 +641,7 @@ const ServiceAgentDetail: React.FC = () => {
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Agent Status
+                      {t('detail.status.title')}
                     </h2>
                     <div className="flex items-center space-x-3">
                       {status.status === "stopped" && (
@@ -642,7 +658,7 @@ const ServiceAgentDetail: React.FC = () => {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                           )}
-                          Start Agent
+                          {t('detail.status.startAgent')}
                         </button>
                       )}
                       {status.status === "running" && (
@@ -659,7 +675,7 @@ const ServiceAgentDetail: React.FC = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                               </svg>
                             )}
-                            Restart
+                            {t('detail.status.restart')}
                           </button>
                           <button
                             onClick={handleStopAgent}
@@ -674,7 +690,7 @@ const ServiceAgentDetail: React.FC = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
                               </svg>
                             )}
-                            Stop Agent
+                            {t('detail.status.stopAgent')}
                           </button>
                         </>
                       )}
@@ -683,14 +699,14 @@ const ServiceAgentDetail: React.FC = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Status</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('detail.tabs.status')}</p>
                       <p className={`text-2xl font-bold capitalize ${getStatusColor(status.status)}`}>
-                        {status.status}
+                        {getStatusLabel(status.status)}
                       </p>
                     </div>
                     {status.uptime !== undefined && status.uptime !== null && (
                       <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Uptime</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('detail.status.uptime')}</p>
                         <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                           {Math.floor(status.uptime / 3600)}h {Math.floor((status.uptime % 3600) / 60)}m
                         </p>
@@ -698,7 +714,7 @@ const ServiceAgentDetail: React.FC = () => {
                     )}
                     {status.pid !== undefined && status.pid !== null && (
                       <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Process ID</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('detail.status.pid')}</p>
                         <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                           {status.pid}
                         </p>
@@ -706,7 +722,7 @@ const ServiceAgentDetail: React.FC = () => {
                     )}
                     {status.file_type && (
                       <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Agent Type</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('detail.status.type')}</p>
                         <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                           {status.file_type.toUpperCase()}
                         </p>
@@ -716,7 +732,7 @@ const ServiceAgentDetail: React.FC = () => {
 
                   {status.error_message && (
                     <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                      <p className="text-sm font-medium text-red-800 dark:text-red-300 mb-1">Error Message</p>
+                      <p className="text-sm font-medium text-red-800 dark:text-red-300 mb-1">{t('detail.status.error')}</p>
                       <p className="text-sm text-red-700 dark:text-red-400">
                         {status.error_message}
                       </p>
@@ -728,11 +744,11 @@ const ServiceAgentDetail: React.FC = () => {
                 {status.file_path && (
                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                      File Information
+                      {t('detail.status.fileInfo')}
                     </h2>
                     <div className="space-y-3">
                       <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">File Path</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{t('detail.status.filePath')}</p>
                         <p className="text-sm font-mono text-gray-900 dark:text-gray-100 mt-1 bg-gray-50 dark:bg-gray-900 p-2 rounded">
                           {status.file_path}
                         </p>
@@ -756,7 +772,7 @@ const ServiceAgentDetail: React.FC = () => {
                       <div className="flex items-center space-x-2">
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                         <span className="text-sm text-gray-600 dark:text-gray-400">
-                          Live
+                          {t('detail.logs.live')}
                         </span>
                       </div>
                     )}
@@ -775,7 +791,7 @@ const ServiceAgentDetail: React.FC = () => {
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                       <span className="text-sm text-gray-600 dark:text-gray-400">
-                        Auto-scroll
+                        {t('detail.logs.autoScroll')}
                       </span>
                     </label>
 
@@ -787,7 +803,7 @@ const ServiceAgentDetail: React.FC = () => {
                       }
                       className="rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="ALL">All Levels</option>
+                      <option value="ALL">{t('detail.logs.allLevels')}</option>
                       <option value="INFO">INFO</option>
                       <option value="WARN">WARN</option>
                       <option value="ERROR">ERROR</option>
@@ -798,7 +814,7 @@ const ServiceAgentDetail: React.FC = () => {
                       onClick={() => setLogs([])}
                       className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     >
-                      Clear
+                      {t('detail.logs.clear')}
                     </button>
                   </div>
                 </div>
@@ -812,7 +828,7 @@ const ServiceAgentDetail: React.FC = () => {
               >
                 {filteredLogs.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-                    No logs available
+                    {t('detail.logs.noLogs')}
                   </div>
                 ) : (
                   <div className="space-y-1">
@@ -854,10 +870,9 @@ const ServiceAgentDetail: React.FC = () => {
                       <>
                         <span
                           className={`text-xs px-2 py-1 rounded uppercase font-medium
-                            ${
-                              sourceInfo.file_type === "yaml"
-                                ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
-                                : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                            ${sourceInfo.file_type === "yaml"
+                              ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                              : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
                             }
                           `}
                         >
@@ -867,7 +882,7 @@ const ServiceAgentDetail: React.FC = () => {
                           {sourceInfo.file_name}
                         </span>
                         <span className="text-xs text-gray-400 dark:text-gray-500">
-                          {sourceCode.split("\n").length} lines
+                          {t('detail.editor.lines', { count: sourceCode.split("\n").length })}
                         </span>
                       </>
                     )}
@@ -884,7 +899,7 @@ const ServiceAgentDetail: React.FC = () => {
                       disabled={loadingSource}
                       className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
                     >
-                      Reload
+                      {t('detail.actions.reload')}
                     </button>
                     <button
                       onClick={handleDiscardChanges}
@@ -896,7 +911,7 @@ const ServiceAgentDetail: React.FC = () => {
                         }
                       `}
                     >
-                      Discard
+                      {t('detail.actions.discard')}
                     </button>
                     <button
                       onClick={handleSaveSource}
@@ -911,10 +926,10 @@ const ServiceAgentDetail: React.FC = () => {
                       {savingSource ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                          <span>Saving...</span>
+                          <span>{t('detail.actions.saving')}</span>
                         </>
                       ) : (
-                        <span>Save</span>
+                        <span>{t('detail.actions.save')}</span>
                       )}
                     </button>
                   </div>
@@ -928,7 +943,7 @@ const ServiceAgentDetail: React.FC = () => {
                     <div className="text-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
                       <p className="text-gray-500 dark:text-gray-400 mt-3">
-                        Loading source code...
+                        {t('detail.editor.loading')}
                       </p>
                     </div>
                   </div>
@@ -965,7 +980,7 @@ const ServiceAgentDetail: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {Object.keys(envVars).length} variable{Object.keys(envVars).length !== 1 ? "s" : ""}
+                      {t('detail.env.variables', { count: Object.keys(envVars).length })}
                     </span>
                   </div>
                   <div className="flex items-center space-x-3">
@@ -992,7 +1007,7 @@ const ServiceAgentDetail: React.FC = () => {
                         }
                       `}
                     >
-                      Discard
+                      {t('detail.actions.discard')}
                     </button>
                     <button
                       onClick={handleSaveEnvVars}
@@ -1007,10 +1022,10 @@ const ServiceAgentDetail: React.FC = () => {
                       {savingEnvVars ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                          <span>Saving...</span>
+                          <span>{t('detail.actions.saving')}</span>
                         </>
                       ) : (
-                        <span>Save</span>
+                        <span>{t('detail.actions.save')}</span>
                       )}
                     </button>
                   </div>
@@ -1024,7 +1039,7 @@ const ServiceAgentDetail: React.FC = () => {
                     <div className="text-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
                       <p className="text-gray-500 dark:text-gray-400 mt-3">
-                        Loading environment variables...
+                        {t('detail.env.loading')}
                       </p>
                     </div>
                   </div>
@@ -1033,12 +1048,12 @@ const ServiceAgentDetail: React.FC = () => {
                     {/* Add New Variable Form */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                       <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-                        Add New Variable
+                        {t('detail.env.addNew')}
                       </h3>
                       <div className="flex items-end space-x-3">
                         <div className="flex-1">
                           <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                            Name
+                            {t('detail.env.name')}
                           </label>
                           <input
                             type="text"
@@ -1050,7 +1065,7 @@ const ServiceAgentDetail: React.FC = () => {
                         </div>
                         <div className="flex-1">
                           <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                            Value
+                            {t('detail.env.value')}
                           </label>
                           <input
                             type="password"
@@ -1065,11 +1080,11 @@ const ServiceAgentDetail: React.FC = () => {
                           disabled={!newEnvKey.trim()}
                           className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
-                          Add
+                          {t('detail.env.add')}
                         </button>
                       </div>
                       <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        Common variables: OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY
+                        {t('detail.env.commonVars')}
                       </p>
                     </div>
 
@@ -1078,7 +1093,7 @@ const ServiceAgentDetail: React.FC = () => {
                       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
                         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                           <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                            Environment Variables
+                            {t('detail.env.title')}
                           </h3>
                         </div>
                         <div className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -1116,10 +1131,10 @@ const ServiceAgentDetail: React.FC = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                         </svg>
                         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                          No Environment Variables
+                          {t('detail.env.noVars')}
                         </h3>
                         <p className="text-gray-500 dark:text-gray-400">
-                          Add environment variables to configure API keys and other settings for this agent.
+                          {t('detail.env.noVarsHint')}
                         </p>
                       </div>
                     )}
@@ -1132,10 +1147,10 @@ const ServiceAgentDetail: React.FC = () => {
                         </svg>
                         <div>
                           <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                            Security Notice
+                            {t('detail.env.securityNotice')}
                           </h4>
                           <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                            Environment variables are stored in the workspace configuration. Keep your API keys secure and avoid sharing your workspace config files.
+                            {t('detail.env.securityText')}
                           </p>
                         </div>
                       </div>
