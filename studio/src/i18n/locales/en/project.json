@@ -1,0 +1,21 @@
+{
+    "sidebar": {
+        "newProject": "New Project",
+        "loading": "Loading...",
+        "noProjects": "No projects",
+        "createHint": "Click the button above to create a new project",
+        "status": {
+            "running": "Running",
+            "completed": "Completed",
+            "created": "Created",
+            "paused": "Paused",
+            "failed": "Failed",
+            "stopped": "Stopped"
+        },
+        "time": {
+            "today": "Today",
+            "yesterday": "Yesterday",
+            "daysAgo": "{{count}} days ago"
+        }
+    }
+}

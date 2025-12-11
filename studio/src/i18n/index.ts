@@ -22,6 +22,7 @@ import networkEN from './locales/en/network.json';
 import layoutEN from './locales/en/layout.json';
 import errorsEN from './locales/en/errors.json';
 import validationEN from './locales/en/validation.json';
+import projectEN from './locales/en/project.json';
 
 import commonZH from './locales/zh-CN/common.json';
 import authZH from './locales/zh-CN/auth.json';
@@ -36,6 +37,7 @@ import networkZH from './locales/zh-CN/network.json';
 import layoutZH from './locales/zh-CN/layout.json';
 import errorsZH from './locales/zh-CN/errors.json';
 import validationZH from './locales/zh-CN/validation.json';
+import projectZH from './locales/zh-CN/project.json';
 
 // Configure language detector
 const languageDetectorOptions = {
@@ -74,6 +76,7 @@ i18n
                 layout: layoutEN,
                 errors: errorsEN,
                 validation: validationEN,
+                project: projectEN,
             },
             'zh-CN': {
                 common: commonZH,
@@ -89,6 +92,7 @@ i18n
                 layout: layoutZH,
                 errors: errorsZH,
                 validation: validationZH,
+                project: projectZH,
             },
         },
 

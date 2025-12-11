@@ -1,0 +1,21 @@
+{
+    "sidebar": {
+        "newProject": "新建项目",
+        "loading": "加载中...",
+        "noProjects": "暂无项目",
+        "createHint": "点击上方按钮创建新项目",
+        "status": {
+            "running": "运行中",
+            "completed": "已完成",
+            "created": "已创建",
+            "paused": "已暂停",
+            "failed": "失败",
+            "stopped": "已停止"
+        },
+        "time": {
+            "today": "今天",
+            "yesterday": "昨天",
+            "daysAgo": "{{count}} 天前"
+        }
+    }
+}
