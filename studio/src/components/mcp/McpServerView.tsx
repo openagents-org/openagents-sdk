@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import ServerCard from './ServerCard';
 import { ServerIcon } from './icons';
 import { getAuth } from 'firebase/auth';
@@ -34,6 +35,7 @@ interface ServerConfig {
 }
 
 const McpServerView: React.FC = () => {
+  const { t } = useTranslation('mcp');
   const [servers, setServers] = useState<McpServerInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,12 +60,12 @@ const McpServerView: React.FC = () => {
   // Periodically refresh server list (every 10 seconds)
   useEffect(() => {
     if (!isVisible) return;
-    
+
     const refreshInterval = setInterval(() => {
       console.log('Auto-refreshing server list...');
       loadServers(false); // Silent load (without loading animation)
     }, 10000);
-    
+
     return () => clearInterval(refreshInterval);
   }, [isVisible]);
 
@@ -73,23 +75,23 @@ const McpServerView: React.FC = () => {
       if (showLoading) {
         setLoading(true);
       }
-      
+
       console.log('Loading MCP servers...');
-      
+
       // Use API to get server list
       const response = await fetch('/api/mcp/get-servers', {
         headers: {
           'Authorization': `Bearer ${await getAuthToken()}`
         }
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to load servers: ${response.statusText}`);
       }
-      
+
       const availableServers = await response.json();
       console.log(`Loaded ${Object.keys(availableServers).length} MCP servers:`, Object.keys(availableServers).join(', '));
-      
+
       // Check connection status of each server
       const serverStatuses = await Promise.all(
         Object.keys(availableServers)
@@ -101,7 +103,7 @@ const McpServerView: React.FC = () => {
                   'Authorization': `Bearer ${await getAuthToken()}`
                 }
               });
-              
+
               if (statusResponse.ok) {
                 const statusData = await statusResponse.json();
                 return { name, isRunning: statusData.isRunning };
@@ -113,23 +115,23 @@ const McpServerView: React.FC = () => {
             }
           })
       );
-      
+
       // Create server status lookup table
       const serverStatusMap = Object.fromEntries(
         serverStatuses.map(({ name, isRunning }) => [name, isRunning])
       );
-      
+
       // Transform server data into the format we need for display
       const serverList: McpServerInfo[] = Object.entries(availableServers)
         .filter(([name]) => name !== 'updatedAt') // Filter out the updatedAt metadata field
         .map(([name, configData]) => {
           // Type conversion
           const config = configData as ServerConfig;
-          
+
           // Generate a description based on the server name and type
           let description = '';
           let icon = 'default';
-          
+
           // Determine icon based on server name or URL
           if (name.includes('openai') || config.url?.includes('openai')) {
             icon = 'openai';
@@ -140,7 +142,7 @@ const McpServerView: React.FC = () => {
           } else if (name.includes('local') || config.url?.includes('localhost')) {
             icon = 'local';
           }
-          
+
           // Generate description based on server type and model
           if (name.startsWith('router-')) {
             const routerId = name.split('-')[1];
@@ -148,7 +150,7 @@ const McpServerView: React.FC = () => {
           } else {
             description = `${config.type || 'Standard'} MCP server ${config.model ? `with model ${config.model}` : ''}`;
           }
-          
+
           return {
             name,
             url: config.url || 'N/A',
@@ -159,7 +161,7 @@ const McpServerView: React.FC = () => {
             model: config.model
           };
         });
-      
+
       setServers(serverList);
     } catch (error) {
       console.error("Failed to load MCP servers:", error);
@@ -171,12 +173,12 @@ const McpServerView: React.FC = () => {
   };
 
   // Filter servers based on search query
-  const filteredServers = searchQuery 
-    ? servers.filter(server => 
-        server.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        server.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        server.type.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+  const filteredServers = searchQuery
+    ? servers.filter(server =>
+      server.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      server.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      server.type.toLowerCase().includes(searchQuery.toLowerCase())
+    )
     : servers;
 
   // Handle delete server
@@ -192,11 +194,11 @@ const McpServerView: React.FC = () => {
           type: 'danger'
         }
       );
-      
+
       if (!confirmed) {
         return; // User cancelled the deletion
       }
-      
+
       // Delete server via API
       const response = await fetch('/api/mcp/delete-server', {
         method: 'POST',
@@ -206,7 +208,7 @@ const McpServerView: React.FC = () => {
         },
         body: JSON.stringify({ serverName })
       });
-      
+
       if (response.ok) {
         // Remove the server from the list
         setServers(prevServers => prevServers.filter(server => server.name !== serverName));
@@ -225,23 +227,23 @@ const McpServerView: React.FC = () => {
       {/* Header and Search */}
       <div className="p-4 flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <h3 className="text-lg font-medium">My MCP Server</h3>
-          <button 
-            onClick={() => loadServers()} 
+          <h3 className="text-lg font-medium">{t('servers.title')}</h3>
+          <button
+            onClick={() => loadServers()}
             className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
           >
-            <svg 
-              className="w-4 h-4 mr-1" 
-              fill="none" 
-              viewBox="0 0 24 24" 
+            <svg
+              className="w-4 h-4 mr-1"
+              fill="none"
+              viewBox="0 0 24 24"
               stroke="currentColor"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            Refresh
+            {t('servers.actions.connect')}
           </button>
         </div>
-        
+
         {servers.length > 0 && (
           <div className="relative w-[350px]">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -251,7 +253,7 @@ const McpServerView: React.FC = () => {
             </div>
             <input
               type="text"
-              placeholder="Search servers..."
+              placeholder={t('servers.serverName')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -269,7 +271,7 @@ const McpServerView: React.FC = () => {
           </div>
         )}
       </div>
-      
+
       {/* Main Content */}
       {loading ? (
         <div className="flex-1 flex justify-center items-center">
@@ -284,7 +286,7 @@ const McpServerView: React.FC = () => {
             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m-6-8h6M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
             </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No servers</h3>
+            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{t('servers.noServers')}</h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               You haven't connected to any MCP routers yet.
             </p>
@@ -302,7 +304,7 @@ const McpServerView: React.FC = () => {
                 <svg className="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
                 </svg>
-                Go to MCP Router
+                {t('router.title')}
               </button>
             </div>
           </div>
@@ -311,7 +313,7 @@ const McpServerView: React.FC = () => {
         <div className="flex-1 overflow-y-auto px-6 pb-4">
           {filteredServers.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500 dark:text-gray-400">No servers match your search.</p>
+              <p className="text-gray-500 dark:text-gray-400">{t('servers.noServers')}</p>
             </div>
           ) : (
             <div className="grid auto-rows-fr justify-start gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, 350px)' }}>

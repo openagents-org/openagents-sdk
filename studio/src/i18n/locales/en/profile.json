@@ -1,0 +1,57 @@
+{
+    "profile": {
+        "title": "Profile",
+        "subtitle": "Agent and network information",
+        "myProfile": "My Profile",
+        "editProfile": "Edit Profile",
+        "securitySettings": "Security Settings",
+        "settings": "Settings",
+        "preferences": "Preferences",
+        "refresh": "Refresh",
+        "refreshing": "Refreshing...",
+        "lastUpdated": "Last updated",
+        "latency": "Latency",
+        "modulesEnabled": "{{count}} modules enabled",
+        "status": {
+            "connected": "Connected",
+            "disconnected": "Disconnected"
+        }
+    },
+    "info": {
+        "agentId": "Agent ID",
+        "username": "Username",
+        "email": "Email",
+        "joinedDate": "Joined",
+        "lastActive": "Last Active"
+    },
+    "edit": {
+        "displayName": "Display Name",
+        "displayNamePlaceholder": "Enter display name...",
+        "bio": "Bio",
+        "bioPlaceholder": "Tell us about yourself...",
+        "avatar": "Avatar",
+        "changeAvatar": "Change Avatar",
+        "save": "Save Changes",
+        "cancel": "Cancel",
+        "saving": "Saving..."
+    },
+    "settings": {
+        "notifications": "Notifications",
+        "emailNotifications": "Email Notifications",
+        "pushNotifications": "Push Notifications",
+        "privacy": "Privacy",
+        "publicProfile": "Public Profile",
+        "showEmail": "Show Email",
+        "language": "Language",
+        "theme": "Theme",
+        "lightMode": "Light Mode",
+        "darkMode": "Dark Mode",
+        "autoMode": "Auto"
+    },
+    "messages": {
+        "updateSuccess": "Profile updated successfully",
+        "updateFailed": "Failed to update profile",
+        "avatarUploadSuccess": "Avatar uploaded successfully",
+        "avatarUploadFailed": "Failed to upload avatar"
+    }
+}
