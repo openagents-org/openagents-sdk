@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { useLLMLogStore } from "@/stores/llmLogStore";
@@ -10,6 +11,7 @@ const baseInputClasses =
 const fullInputClass = `w-full ${baseInputClasses}`;
 
 const LLMLogsView: React.FC = () => {
+  const { t } = useTranslation('llmlogs');
   const { theme } = useThemeStore();
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -100,13 +102,13 @@ const LLMLogsView: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-sm uppercase tracking-wide text-blue-600 font-semibold mb-1">
-              LLM Logs System
+              {t('header.system')}
             </p>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              LLM Call Logs
+              {t('header.title')}
             </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              View all LLM prompts and completions for service agents
+              {t('header.subtitle')}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -148,19 +150,19 @@ const LLMLogsView: React.FC = () => {
                   d="M4 4v6h6M20 20v-6h-6M5 19A9 9 0 0119 5"
                 />
               </svg>
-              Refresh
+              {t('actions.refresh')}
             </button>
             <button
               onClick={expandAll}
               className="inline-flex items-center px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
-              Expand All
+              {t('actions.expandAll')}
             </button>
             <button
               onClick={collapseAll}
               className="inline-flex items-center px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
-              Collapse All
+              {t('actions.collapseAll')}
             </button>
           </div>
         </div>
@@ -169,43 +171,43 @@ const LLMLogsView: React.FC = () => {
         {stats && (
           <div className="mt-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-              <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">Total Calls</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">{t('stats.totalCalls')}</div>
               <div className="text-lg font-semibold text-gray-900 dark:text-white">
                 {stats.total_calls}
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-              <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">Total Tokens</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">{t('stats.totalTokens')}</div>
               <div className="text-lg font-semibold text-gray-900 dark:text-white">
                 {stats.total_tokens.toLocaleString()}
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-              <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">Prompt Tokens</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">{t('stats.promptTokens')}</div>
               <div className="text-lg font-semibold text-gray-900 dark:text-white">
                 {stats.total_prompt_tokens.toLocaleString()}
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-              <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">Completion Tokens</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">{t('stats.completionTokens')}</div>
               <div className="text-lg font-semibold text-gray-900 dark:text-white">
                 {stats.total_completion_tokens.toLocaleString()}
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-              <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">Avg Latency</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">{t('stats.avgLatency')}</div>
               <div className="text-lg font-semibold text-gray-900 dark:text-white">
                 {formatLatency(stats.average_latency_ms)}
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-              <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">Errors</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">{t('stats.errors')}</div>
               <div className="text-lg font-semibold text-red-600 dark:text-red-400">
                 {stats.error_count}
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-              <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">Models</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">{t('stats.models')}</div>
               <div className="text-lg font-semibold text-gray-900 dark:text-white">
                 {Object.keys(stats.models || {}).length}
               </div>
@@ -218,14 +220,14 @@ const LLMLogsView: React.FC = () => {
       <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-sm text-gray-600 dark:text-gray-300">
-            {filtersExpanded ? "Filters Expanded" : "Click to expand filters"}
+            {filtersExpanded ? t('filters.expanded') : t('filters.expandHint')}
           </div>
           <button
             type="button"
             onClick={() => setFiltersExpanded((prev) => !prev)}
             className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
           >
-            {filtersExpanded ? "Hide Filters" : "Show Filters"}
+            {filtersExpanded ? t('filters.hide') : t('filters.show')}
           </button>
         </div>
 
@@ -234,24 +236,24 @@ const LLMLogsView: React.FC = () => {
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1 min-w-[280px]">
                 <label className="text-xs font-semibold text-gray-500 uppercase">
-                  Search
+                  {t('filters.search')}
                 </label>
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search in prompts/completions"
+                  placeholder={t('filters.searchPlaceholder')}
                   className={`mt-1 ${fullInputClass}`}
                 />
               </div>
               <div className="flex-1 min-w-[220px]">
-                <label className="text-xs font-semibold text-gray-500 uppercase">Model</label>
+                <label className="text-xs font-semibold text-gray-500 uppercase">{t('filters.model')}</label>
                 <select
                   value={modelFilter}
                   onChange={(e) => setModelFilter(e.target.value)}
                   className={`mt-1 ${fullInputClass}`}
                 >
-                  <option value="">All Models</option>
+                  <option value="">{t('filters.allModels')}</option>
                   {availableModels.map((model) => (
                     <option key={model} value={model}>
                       {model}
@@ -263,7 +265,7 @@ const LLMLogsView: React.FC = () => {
 
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1 min-w-[220px]">
-                <label className="text-xs font-semibold text-gray-500 uppercase">Start Date (since)</label>
+                <label className="text-xs font-semibold text-gray-500 uppercase">{t('filters.startDate')}</label>
                 <input
                   type="text"
                   lang="en"
@@ -280,11 +282,11 @@ const LLMLogsView: React.FC = () => {
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   className={`mt-1 ${fullInputClass}`}
-                  title="Only show entries after this date"
+                  title={t('filters.startDateTitle')}
                 />
               </div>
               <div className="flex-1 min-w-[220px]">
-                <label className="text-xs font-semibold text-gray-500 uppercase">Error Filter</label>
+                <label className="text-xs font-semibold text-gray-500 uppercase">{t('filters.errorFilter')}</label>
                 <select
                   value={hasErrorFilter === undefined ? "" : hasErrorFilter ? "true" : "false"}
                   onChange={(e) =>
@@ -294,9 +296,9 @@ const LLMLogsView: React.FC = () => {
                   }
                   className={`mt-1 ${fullInputClass}`}
                 >
-                  <option value="">All</option>
-                  <option value="true">Errors Only</option>
-                  <option value="false">Success Only</option>
+                  <option value="">{t('filters.all')}</option>
+                  <option value="true">{t('filters.errorsOnly')}</option>
+                  <option value="false">{t('filters.successOnly')}</option>
                 </select>
               </div>
             </div>
@@ -304,8 +306,8 @@ const LLMLogsView: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="text-xs text-gray-500 dark:text-gray-400">
                 {Object.keys(filters).length > 0 || searchQuery
-                  ? "Filters Applied"
-                  : "No Filters Applied"}
+                  ? t('filters.applied')
+                  : t('filters.notApplied')}
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -313,14 +315,14 @@ const LLMLogsView: React.FC = () => {
                   onClick={handleApplyFilters}
                   className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-500"
                 >
-                  Apply Filters
+                  {t('actions.applyFilters')}
                 </button>
                 <button
                   type="button"
                   onClick={handleResetFilters}
                   className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
                 >
-                  Reset Filters
+                  {t('actions.resetFilters')}
                 </button>
               </div>
             </div>
@@ -337,14 +339,14 @@ const LLMLogsView: React.FC = () => {
         )}
 
         {logsLoading ? (
-          <div className="text-center text-gray-500 dark:text-gray-400 py-12">Loading...</div>
+          <div className="text-center text-gray-500 dark:text-gray-400 py-12">{t('list.loading')}</div>
         ) : logs.length === 0 ? (
           <div className="text-center py-16 border border-dashed border-gray-300 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-gray-900/50">
             <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-100">
-              No Logs Found
+              {t('list.noLogs')}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-              Try adjusting filters or refresh the page.
+              {t('list.noLogsHint')}
             </p>
           </div>
         ) : (
@@ -371,7 +373,7 @@ const LLMLogsView: React.FC = () => {
         <div className="px-8 pb-8">
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-5 py-4">
             <div className="text-sm text-gray-600 dark:text-gray-300">
-              Page {page} / {totalPages}, {totalLogs} logs total
+              {t('pagination.info', { page, total: totalPages, count: totalLogs })}
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -379,14 +381,14 @@ const LLMLogsView: React.FC = () => {
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
               >
-                Previous
+                {t('pagination.previous')}
               </button>
               <button
                 className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-200 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800"
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
               >
-                Next
+                {t('pagination.next')}
               </button>
               <select
                 value={pageSize}
@@ -395,7 +397,7 @@ const LLMLogsView: React.FC = () => {
               >
                 {[10, 20, 30, 50, 100, 200].map((size) => (
                   <option key={size} value={size}>
-                    {size} / page
+                    {size} {t('pagination.perPage')}
                   </option>
                 ))}
               </select>
@@ -428,15 +430,15 @@ const LogCard: React.FC<LogCardProps> = ({
   formatLatency,
   theme,
 }) => {
+  const { t } = useTranslation('llmlogs');
   const hasError = !!log.error;
 
   return (
     <div
-      className={`rounded-lg border ${
-        hasError
+      className={`rounded-lg border ${hasError
           ? "border-red-300 dark:border-red-500/60 bg-red-50 dark:bg-red-950/20"
           : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
-      } shadow-sm`}
+        } shadow-sm`}
     >
       {/* Header */}
       <div
@@ -475,24 +477,24 @@ const LogCard: React.FC<LogCardProps> = ({
               {formatTimestamp(log.timestamp)}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              Latency: {formatLatency(log.latency_ms)}
+              {t('card.latency', { value: formatLatency(log.latency_ms) })}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              Agent: {log.agent_id}
+              {t('card.agent', { name: log.agent_id })}
             </div>
             {log.has_tool_calls && (
               <span className="px-2 py-1 text-xs font-medium rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
-                Tool Calls
+                {t('card.toolCalls')}
               </span>
             )}
             {log.usage?.total_tokens && (
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                Tokens: {log.usage.total_tokens}
+                {t('card.tokens', { count: log.usage.total_tokens })}
               </div>
             )}
             {hasError && (
               <span className="px-2 py-1 text-xs font-medium rounded bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300">
-                Error
+                {t('card.errorLabel')}
               </span>
             )}
           </div>
@@ -504,7 +506,7 @@ const LogCard: React.FC<LogCardProps> = ({
         <div className="border-t border-gray-200 dark:border-gray-800 px-4 py-4 space-y-4">
           {hasError && (
             <div className="rounded-lg border border-red-300 dark:border-red-500/60 bg-red-50 dark:bg-red-950/40 px-4 py-3">
-              <div className="text-sm font-semibold text-red-800 dark:text-red-200 mb-1">Error:</div>
+              <div className="text-sm font-semibold text-red-800 dark:text-red-200 mb-1">{t('card.errorDisplay')}</div>
               <div className="text-sm text-red-700 dark:text-red-300 font-mono">
                 {log.error}
               </div>
@@ -515,19 +517,19 @@ const LogCard: React.FC<LogCardProps> = ({
           {log.usage && (
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Prompt Tokens</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{t('stats.promptTokens')}</div>
                 <div className="font-semibold text-gray-900 dark:text-white">
                   {log.usage.prompt_tokens || 0}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Completion Tokens</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{t('stats.completionTokens')}</div>
                 <div className="font-semibold text-gray-900 dark:text-white">
                   {log.usage.completion_tokens || 0}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Total Tokens</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{t('stats.totalTokens')}</div>
                 <div className="font-semibold text-gray-900 dark:text-white">
                   {log.usage.total_tokens || 0}
                 </div>
@@ -539,7 +541,7 @@ const LogCard: React.FC<LogCardProps> = ({
           {log.messages && log.messages.length > 0 && (
             <div className="space-y-2">
               <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Message History:
+                {t('card.messageHistory')}
               </div>
               {log.messages.map((msg, idx) => (
                 <div
@@ -561,7 +563,7 @@ const LogCard: React.FC<LogCardProps> = ({
           {log.tools && log.tools.length > 0 && (
             <div className="space-y-2">
               <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Available Tools:
+                {t('card.availableTools')}
               </div>
               {log.tools.map((tool: any, idx: number) => (
                 <div
@@ -590,7 +592,7 @@ const LogCard: React.FC<LogCardProps> = ({
           {log.tool_calls && log.tool_calls.length > 0 && (
             <div className="space-y-2">
               <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Tool Calls:
+                {t('card.toolCallsTitle')}
               </div>
               {log.tool_calls.map((toolCall: any, idx: number) => (
                 <div
@@ -601,8 +603,8 @@ const LogCard: React.FC<LogCardProps> = ({
                     {toolCall.name} (ID: {toolCall.id})
                   </div>
                   <div className="text-xs text-gray-700 dark:text-gray-300 font-mono whitespace-pre-wrap">
-                    {typeof toolCall.arguments === 'string' 
-                      ? toolCall.arguments 
+                    {typeof toolCall.arguments === 'string'
+                      ? toolCall.arguments
                       : JSON.stringify(toolCall.arguments, null, 2)}
                   </div>
                 </div>
@@ -613,7 +615,7 @@ const LogCard: React.FC<LogCardProps> = ({
           {/* Prompt */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">Prompt:</div>
+              <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('card.prompt')}</div>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -621,7 +623,7 @@ const LogCard: React.FC<LogCardProps> = ({
                 }}
                 className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
               >
-                {copiedId === `${log.id}_prompt` ? "Copied!" : "Copy"}
+                {copiedId === `${log.id}_prompt` ? t('actions.copied') : t('actions.copy')}
               </button>
             </div>
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -643,7 +645,7 @@ const LogCard: React.FC<LogCardProps> = ({
           {/* Completion */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">Completion:</div>
+              <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('card.completion')}</div>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -651,7 +653,7 @@ const LogCard: React.FC<LogCardProps> = ({
                 }}
                 className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
               >
-                {copiedId === `${log.id}_completion` ? "Copied!" : "Copy"}
+                {copiedId === `${log.id}_completion` ? t('actions.copied') : t('actions.copy')}
               </button>
             </div>
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
