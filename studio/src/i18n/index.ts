@@ -2,7 +2,6 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import {
-    DEFAULT_LANGUAGE,
     FALLBACK_LANGUAGE,
     NAMESPACES,
     DEFAULT_NAMESPACE,
@@ -86,7 +85,6 @@ i18n
         },
 
         // Language settings - DO NOT set lng here, let language detector handle it
-        // lng: DEFAULT_LANGUAGE, // REMOVED: This overrides language detector
         fallbackLng: FALLBACK_LANGUAGE,
 
         // Namespace settings
