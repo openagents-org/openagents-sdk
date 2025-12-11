@@ -23,6 +23,11 @@ import layoutEN from './locales/en/layout.json';
 import errorsEN from './locales/en/errors.json';
 import validationEN from './locales/en/validation.json';
 import projectEN from './locales/en/project.json';
+import artifactEN from './locales/en/artifact.json';
+import llmlogsEN from './locales/en/llmlogs.json';
+import serviceAgentEN from './locales/en/serviceAgent.json';
+import eventsEN from './locales/en/events.json';
+import agentWorldEN from './locales/en/agentWorld.json';
 
 import commonZH from './locales/zh-CN/common.json';
 import authZH from './locales/zh-CN/auth.json';
@@ -38,6 +43,11 @@ import layoutZH from './locales/zh-CN/layout.json';
 import errorsZH from './locales/zh-CN/errors.json';
 import validationZH from './locales/zh-CN/validation.json';
 import projectZH from './locales/zh-CN/project.json';
+import artifactZH from './locales/zh-CN/artifact.json';
+import llmlogsZH from './locales/zh-CN/llmlogs.json';
+import serviceAgentZH from './locales/zh-CN/serviceAgent.json';
+import eventsZH from './locales/zh-CN/events.json';
+import agentWorldZH from './locales/zh-CN/agentWorld.json';
 
 // Configure language detector
 const languageDetectorOptions = {
@@ -77,6 +87,11 @@ i18n
                 errors: errorsEN,
                 validation: validationEN,
                 project: projectEN,
+                artifact: artifactEN,
+                llmlogs: llmlogsEN,
+                serviceAgent: serviceAgentEN,
+                events: eventsEN,
+                agentWorld: agentWorldEN,
             },
             'zh-CN': {
                 common: commonZH,
@@ -93,6 +108,11 @@ i18n
                 errors: errorsZH,
                 validation: validationZH,
                 project: projectZH,
+                artifact: artifactZH,
+                llmlogs: llmlogsZH,
+                serviceAgent: serviceAgentZH,
+                events: eventsZH,
+                agentWorld: agentWorldZH,
             },
         },
 

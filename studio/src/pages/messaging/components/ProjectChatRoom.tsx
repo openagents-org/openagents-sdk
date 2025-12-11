@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import { useTranslation } from "react-i18next"
 import { useParams, useLocation, useNavigate } from "react-router-dom"
 import { useOpenAgents } from "@/context/OpenAgentsProvider"
 import MessageRenderer from "./MessageRenderer"
@@ -26,6 +27,7 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
   channelName: propChannelName,
   projectId: propProjectId,
 }) => {
+  const { t } = useTranslation('project')
   const { agentName } = useAuthStore()
   const { theme: currentTheme } = useThemeStore()
 
@@ -134,8 +136,8 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
               content: project.goal,
               timestamp: String(
                 project.started_timestamp ||
-                  project.created_timestamp ||
-                  Date.now()
+                project.created_timestamp ||
+                Date.now()
               ),
               type: "channel_message",
               channel: projectChannelName,
@@ -302,7 +304,7 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
     return () => {
       connector.off("rawEvent", handleProjectMessage)
     }
-  }, [isConnected, connector, projectId, channelName, connectionStatus.agentId])
+  }, [isConnected, connector, projectId, channelName, connectionStatus.agentId, t])
 
   // Smart auto-scroll: only scroll to bottom when user is already near bottom
   useEffect(() => {
@@ -353,7 +355,7 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
 
         if (eventProjectId === projectId) {
           console.log(`🎉 Project ${projectId} completed: ${summary}`)
-          toast.success(`Project completed`, {
+          toast.success(t('chat.messages.projectCompleted'), {
             description: summary,
             duration: 10000,
           })
@@ -362,11 +364,11 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
           setProjectInfo((prev) =>
             prev
               ? {
-                  ...prev,
-                  status: "completed",
-                  summary: summary,
-                  completed_timestamp: completedTimestamp,
-                }
+                ...prev,
+                status: "completed",
+                summary: summary,
+                completed_timestamp: completedTimestamp,
+              }
               : prev
           )
 
@@ -402,7 +404,7 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
 
         if (eventProjectId === projectId) {
           console.log(`⏹️ Project ${projectId} stopped: ${reason}`)
-          toast.info(`Project stopped`, {
+          toast.info(t('chat.messages.projectStopped'), {
             description: reason,
             duration: 10000,
           })
@@ -411,11 +413,11 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
           setProjectInfo((prev) =>
             prev
               ? {
-                  ...prev,
-                  status: "stopped",
-                  summary: reason,
-                  completed_timestamp: stoppedTimestamp,
-                }
+                ...prev,
+                status: "stopped",
+                summary: reason,
+                completed_timestamp: stoppedTimestamp,
+              }
               : prev
           )
 
@@ -448,7 +450,7 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
     return () => {
       connector.off("rawEvent", handleProjectCompletion)
     }
-  }, [isConnected, connector, projectId, channelName])
+  }, [isConnected, connector, projectId, channelName, t])
 
   // Handle sending messages
   const handleSendMessage = useCallback(
@@ -492,14 +494,14 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
           const newProjectId = startResponse.data.project_id
           console.log("✅ Project started:", newProjectId)
 
-          toast.success("Project started successfully!")
+          toast.success(t('chat.messages.startSuccess'))
 
           // Navigate to the actual project chat room
           navigate(`/project/${newProjectId}`, { replace: true })
         } catch (error: any) {
           console.error("Failed to start project:", error)
           toast.error(
-            `Failed to start project: ${error.message || "Unknown error"}`
+            t('chat.messages.startError', { error: error.message || "Unknown error" })
           )
         } finally {
           setIsStartingProject(false)
@@ -580,7 +582,7 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
       } catch (error: any) {
         console.error("Failed to send project message:", error)
         toast.error(
-          `Failed to send message: ${error.message || "Unknown error"}`
+          t('chat.messages.sendError', { error: error.message || "Unknown error" })
         )
       } finally {
         setSendingMessage(false)
@@ -595,6 +597,7 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
       isPendingProject,
       pendingTemplate,
       navigate,
+      t,
     ]
   )
 
@@ -663,9 +666,9 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
               d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
             />
           </svg>
-          <p className="text-lg mb-2">Select a Project</p>
+          <p className="text-lg mb-2">{t('chat.select.title')}</p>
           <p className="text-sm">
-            Choose a project from the left sidebar to view its private chat room
+            {t('chat.select.subtitle')}
           </p>
         </div>
       </div>
@@ -680,40 +683,38 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
           <div
             className="w-3 h-3 rounded-full"
             style={{ backgroundColor: getConnectionStatusColor }}
-            title={`Connection: ${connectionStatus.state}`}
+            title={t('chat.header.connection', { status: connectionStatus.state })}
           />
           <div className="flex items-center gap-2">
             <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {isPendingProject
-                ? `New Project: ${pendingTemplate?.name || "Pending"}`
+                ? t('chat.header.newProject', { name: pendingTemplate?.name || t('chat.header.pending') })
                 : channelName
-                  ? `#${
-                      channelName.startsWith("#")
-                        ? channelName.slice(1)
-                        : channelName
-                    }`
-                  : `Project ${projectId?.slice(0, 8)}...`}
+                  ? `#${channelName.startsWith("#")
+                    ? channelName.slice(1)
+                    : channelName
+                  }`
+                  : t('chat.header.projectPrefix', { id: projectId?.slice(0, 8) })}
             </span>
             <span
-              className={`px-2 py-1 text-xs font-medium rounded-full ${
-                isPendingProject
-                  ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                  : isProjectCompleted
-                    ? projectInfo?.status === "completed"
-                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                      : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
-                    : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-              }`}
-            >
-              {isPendingProject
-                ? "Waiting for Goal"
+              className={`px-2 py-1 text-xs font-medium rounded-full ${isPendingProject
+                ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
                 : isProjectCompleted
                   ? projectInfo?.status === "completed"
-                    ? "✓ Completed"
+                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                    : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+                  : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                }`}
+            >
+              {isPendingProject
+                ? t('chat.pending.status')
+                : isProjectCompleted
+                  ? projectInfo?.status === "completed"
+                    ? `✓ ${t('chat.status.completed')}`
                     : projectInfo?.status === "stopped"
-                      ? "⏹️ Stopped"
-                      : "Closed"
-                  : "Project Chat Room"}
+                      ? `⏹️ ${t('chat.status.stopped')}`
+                      : t('chat.status.closed')
+                  : t('chat.status.room')}
             </span>
           </div>
         </div>
@@ -754,23 +755,22 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
                     />
                   </svg>
                   <p className="text-lg mb-2 font-semibold">
-                    Ready to Start Project
+                    {t('chat.pending.title')}
                   </p>
                   <p className="text-sm mb-4">
-                    Template: <strong>{pendingTemplate?.name}</strong>
+                    {t('chat.pending.template')} <strong>{pendingTemplate?.name}</strong>
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Type your first message below to define the project goal and
-                    start the project.
+                    {t('chat.pending.instruction')}
                   </p>
                   <p className="text-xs mt-2 text-gray-400">
-                    Your message will be used as the project goal.
+                    {t('chat.pending.note')}
                   </p>
                 </>
               ) : (
                 <>
-                  <p className="text-lg mb-2">Welcome to Project Chat Room</p>
-                  <p className="text-sm">Send your first message!</p>
+                  <p className="text-lg mb-2">{t('chat.welcome.title')}</p>
+                  <p className="text-sm">{t('chat.welcome.subtitle')}</p>
                 </>
               )}
             </div>
@@ -785,12 +785,12 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
                 renderMode="flat"
                 onQuote={() => {
                   // Quote is not supported in project chat room
-                  toast.error("Quote is not supported in project chat room")
+                  toast.error(t('chat.messages.quoteNotSupported'))
                 }}
                 onReaction={() => {
                   // Reactions are not supported in project chat room
                   toast.error(
-                    "Reactions are not supported in project chat room"
+                    t('chat.messages.reactionNotSupported')
                   )
                 }}
                 networkHost={connector?.getHost()}
@@ -863,8 +863,8 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
             networkBaseUrl={connector?.getBaseUrl()}
             replyingTo={null}
             quotingMessage={null}
-            onCancelReply={() => {}}
-            onCancelQuote={() => {}}
+            onCancelReply={() => { }}
+            onCancelQuote={() => { }}
             disableEmoji={true}
             disableMentions={true}
             disableFileUpload={isPendingProject ? true : false}
