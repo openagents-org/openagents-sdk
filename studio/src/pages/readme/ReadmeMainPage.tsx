@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
 import { useReadmeStore } from "@/stores/readmeStore";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
@@ -7,6 +8,7 @@ import MarkdownRenderer from "@/components/common/MarkdownRenderer";
  * README Main Page - Displays README content fetched from /api/health
  */
 const ReadmeMainPage: React.FC = () => {
+  const { t } = useTranslation('readme');
   const { connector } = useOpenAgents();
   const [readmeContent, setReadmeContent] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
@@ -16,7 +18,7 @@ const ReadmeMainPage: React.FC = () => {
   useEffect(() => {
     const fetchReadme = async () => {
       if (!connector) {
-        setError("Not connected to network");
+        setError(t('error.notConnected'));
         setLoading(false);
         return;
       }
@@ -41,7 +43,7 @@ const ReadmeMainPage: React.FC = () => {
         }
       } catch (err) {
         console.error("Failed to fetch README:", err);
-        setError(err instanceof Error ? err.message : "Failed to fetch README");
+        setError(err instanceof Error ? err.message : t('error.default'));
         setReadmeContent("");
         setStoreContent("");
       } finally {
@@ -50,7 +52,7 @@ const ReadmeMainPage: React.FC = () => {
     };
 
     fetchReadme();
-  }, [connector, setStoreContent]);
+  }, [connector, setStoreContent, t]);
 
   // Loading state
   if (loading) {
@@ -59,7 +61,7 @@ const ReadmeMainPage: React.FC = () => {
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <span className="ml-3 text-gray-600 dark:text-gray-400">
-            Loading README...
+            {t('loading')}
           </span>
         </div>
       </div>
@@ -87,7 +89,7 @@ const ReadmeMainPage: React.FC = () => {
             </div>
             <div className="ml-3 text-center">
               <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
-                Failed to load README
+                {t('error.title')}
               </h3>
               <p className="mt-1 text-sm text-red-700 dark:text-red-300">
                 {error}
@@ -108,10 +110,10 @@ const ReadmeMainPage: React.FC = () => {
             📄
           </div>
           <h3 className="text-lg font-medium mb-2 text-gray-800 dark:text-gray-200">
-            No README Available
+            {t('empty.title')}
           </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-md mx-auto">
-            This network has not provided a README.
+            {t('empty.description')}
           </p>
         </div>
       </div>
@@ -124,10 +126,10 @@ const ReadmeMainPage: React.FC = () => {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-          README
+          {t('title')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Network documentation and instructions
+          {t('subtitle')}
         </p>
       </div>
 

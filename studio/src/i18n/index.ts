@@ -28,6 +28,7 @@ import llmlogsEN from './locales/en/llmlogs.json';
 import serviceAgentEN from './locales/en/serviceAgent.json';
 import eventsEN from './locales/en/events.json';
 import agentWorldEN from './locales/en/agentWorld.json';
+import readmeEN from './locales/en/readme.json';
 
 import commonZH from './locales/zh-CN/common.json';
 import authZH from './locales/zh-CN/auth.json';
@@ -48,6 +49,7 @@ import llmlogsZH from './locales/zh-CN/llmlogs.json';
 import serviceAgentZH from './locales/zh-CN/serviceAgent.json';
 import eventsZH from './locales/zh-CN/events.json';
 import agentWorldZH from './locales/zh-CN/agentWorld.json';
+import readmeZH from './locales/zh-CN/readme.json';
 
 // Configure language detector
 const languageDetectorOptions = {
@@ -92,6 +94,7 @@ i18n
                 serviceAgent: serviceAgentEN,
                 events: eventsEN,
                 agentWorld: agentWorldEN,
+                readme: readmeEN,
             },
             'zh-CN': {
                 common: commonZH,
@@ -113,6 +116,7 @@ i18n
                 serviceAgent: serviceAgentZH,
                 events: eventsZH,
                 agentWorld: agentWorldZH,
+                readme: readmeZH,
             },
         },
 
