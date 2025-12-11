@@ -61,6 +61,9 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
 
   // Determine if current route should hide the sidebar
   const shouldHideSidebar = location.pathname.startsWith("/agentworld");
+  
+  // Hide ModSidebar (left navigation) on admin routes
+  const shouldHideModSidebar = location.pathname.startsWith("/admin");
 
   // Close drawer when route changes on mobile
   React.useEffect(() => {
@@ -85,11 +88,13 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
             />
           </div>
 
-          {/* Left module navigation bar - hidden on mobile */}
+          {/* Left module navigation bar - hidden on mobile and admin routes */}
           {/* Use Tailwind responsive classes: hidden by default, show on md (768px) and up */}
-          <div className="hidden md:block">
-            <ModSidebar />
-          </div>
+          {!shouldHideModSidebar && (
+            <div className="hidden md:block">
+              <ModSidebar />
+            </div>
+          )}
 
           {/* Middle content area: sidebar + main content */}
           <div className="flex-1 flex overflow-hidden">

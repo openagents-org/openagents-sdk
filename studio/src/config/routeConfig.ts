@@ -20,6 +20,7 @@ import ModManagementPage from "@/pages/mod-management/ModManagementPage"
 import FeedMainPage from "@/pages/feed/FeedMainPage"
 import LLMLogsMainPage from "@/pages/llmlogs/LLMLogsMainPage"
 import ServiceAgentsMainPage from "@/pages/serviceagents/ServiceAgentsMainPage"
+import AdminMainPage from "@/pages/admin/AdminMainPage"
 
 // Navigation icon components
 export const NavigationIcons = {
@@ -297,6 +298,29 @@ export const NavigationIcons = {
       })
     )
   ),
+  Shield: React.memo(() =>
+    React.createElement(
+      "svg",
+      {
+        className: "w-6 h-6",
+        fill: "none",
+        stroke: "currentColor",
+        viewBox: "0 0 24 24",
+      },
+      React.createElement("path", {
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        strokeWidth: 2,
+        d: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+      }),
+      React.createElement("path", {
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        strokeWidth: 2,
+        d: "M9 12l2 2 4-4",
+      })
+    )
+  ),
   // MCP: React.memo(() =>
   //   React.createElement("svg",
   //     {
@@ -565,6 +589,21 @@ export const dynamicRouteConfig: RouteConfig[] = [
       icon: "LLMLogs",
       visible: true,
       order: 4,
+      group: "secondary",
+    },
+  },
+  {
+    path: "/admin/*",
+    element: AdminMainPage,
+    title: "Admin Dashboard",
+    requiresAuth: true,
+    requiresLayout: true,
+    navigationConfig: {
+      key: PLUGIN_NAME_ENUM.ADMIN,
+      label: "Admin",
+      icon: "Shield",
+      visible: false, // Will be dynamically controlled by useIsAdmin in ModSidebar
+      order: 4.5,
       group: "secondary",
     },
   },

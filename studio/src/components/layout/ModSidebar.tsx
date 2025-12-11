@@ -6,6 +6,7 @@ import {
 } from "@/config/routeConfig";
 import { useAuthStore } from "@/stores/authStore";
 import { PLUGIN_NAME_ENUM } from "@/types/plugins";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import ModIcon from "./ModIcon";
 import logo from "@/assets/images/open-agents-logo.png";
 
@@ -18,12 +19,44 @@ const ModSidebar: React.FC = () => {
   // 这个订阅确保在模块状态更新时，侧边栏会显示最新的路由
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const enabledModules = useAuthStore((state) => state.moduleState.enabledModules);
+  
+  // Check admin status
+  const { isAdmin } = useIsAdmin();
 
   // Generate icon groups using dynamic configuration
   // 直接计算，不使用 useMemo，确保每次渲染都获取最新的路由配置
   // 因为 dynamicRouteConfig 的 visible 属性可能被外部函数动态修改
   const primaryRoutes = getNavigationRoutesByGroup("primary");
-  const secondaryRoutes = getNavigationRoutesByGroup("secondary");
+  let secondaryRoutes = getNavigationRoutesByGroup("secondary");
+  
+  // Add admin route if user is admin
+  if (isAdmin) {
+    const adminRoute = secondaryRoutes.find(
+      (route) => route.navigationConfig?.key === PLUGIN_NAME_ENUM.ADMIN
+    );
+    // If admin route exists but is not visible, make it visible in this component
+    if (adminRoute && !adminRoute.navigationConfig?.visible) {
+      // Clone the route to avoid mutating the original
+      secondaryRoutes = [...secondaryRoutes];
+      const adminIndex = secondaryRoutes.findIndex(
+        (route) => route.navigationConfig?.key === PLUGIN_NAME_ENUM.ADMIN
+      );
+      if (adminIndex >= 0) {
+        secondaryRoutes[adminIndex] = {
+          ...secondaryRoutes[adminIndex],
+          navigationConfig: {
+            ...secondaryRoutes[adminIndex].navigationConfig!,
+            visible: true,
+          },
+        };
+      }
+    }
+  } else {
+    // Filter out admin route if user is not admin
+    secondaryRoutes = secondaryRoutes.filter(
+      (route) => route.navigationConfig?.key !== PLUGIN_NAME_ENUM.ADMIN
+    );
+  }
   
   // Debug: Log routes to console
   if (process.env.NODE_ENV === 'development') {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import { useAuthStore } from '../../stores/authStore';
 import { networkFetch } from '../../utils/httpClient';
@@ -15,6 +16,7 @@ interface GroupConfig {
 }
 
 const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -200,9 +202,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   }, [showAdminButton, isLoadingGroupConfig]);
 
   const handleAdminLogin = () => {
-    setIsAdminMode(true);
-    setError(null);
-    setIsSignUp(false); // Disable sign up in admin mode
+    // Navigate to admin login page
+    navigate("/admin-login");
   };
 
   const handleExitAdminMode = () => {

@@ -143,11 +143,16 @@ const AdminLoginPage: React.FC = () => {
       // Store the admin group in authStore
       setPasswordHash(passwordHash);
       setAgentGroup("admin");
-      setAgentName(agentNameTrimmed);
-
-      // Navigate to admin dashboard (or root if admin dashboard not available yet)
-      // TODO: Update to /admin/dashboard when admin dashboard is implemented
-      navigate("/");
+      
+      // Navigate first, then set agentName to avoid RouteGuard redirect
+      // This ensures we're already on /admin/dashboard before RouteGuard checks
+      navigate("/admin/dashboard", { replace: true });
+      
+      // Set agentName after navigation to avoid triggering redirects
+      // Use requestAnimationFrame to ensure navigation happens first
+      requestAnimationFrame(() => {
+        setAgentName(agentNameTrimmed);
+      });
     } catch (error) {
       console.error("Failed to verify admin credentials:", error);
       setPasswordError("Failed to connect as admin. Please check your password and try again.");
