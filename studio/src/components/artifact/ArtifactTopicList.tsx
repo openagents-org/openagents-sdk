@@ -1,10 +1,12 @@
 import React, { useEffect, useContext } from "react";
 import { useArtifactStore } from "@/stores/artifactStore";
+import { useTranslation } from "react-i18next";
 import ArtifactTopicItem from "./components/ArtifactTopicItem";
 import ArtifactPagination from "./components/ArtifactPagination";
 import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
 
 const ArtifactTopicList: React.FC = () => {
+  const { t } = useTranslation('artifact');
   const context = useContext(OpenAgentsContext);
   const openAgentsService = context?.connector;
   const isConnected = context?.isConnected;
@@ -72,7 +74,7 @@ const ArtifactTopicList: React.FC = () => {
       <div className="flex-1 flex items-center justify-center dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Loading artifacts...</p>
+          <p className="text-gray-600 dark:text-gray-400">{t('list.loading')}</p>
         </div>
       </div>
     );
@@ -102,7 +104,7 @@ const ArtifactTopicList: React.FC = () => {
             onClick={() => loadArtifacts()}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
-            Try Again
+            {t('list.tryAgain')}
           </button>
         </div>
       </div>
@@ -115,10 +117,10 @@ const ArtifactTopicList: React.FC = () => {
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between   bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Artifacts
+            {t('list.title')}
           </h1>
           <p className="text-sm mt-1 text-gray-600 dark:text-gray-400">
-            {totalItems} artifacts available
+            {t('list.count_available', { count: totalItems })}
           </p>
         </div>
 
@@ -145,10 +147,10 @@ const ArtifactTopicList: React.FC = () => {
               </svg>
             </div>
             <h3 className="text-lg font-medium mb-2 text-gray-700 dark:text-gray-300">
-              No artifacts yet
+              {t('list.noArtifacts')}
             </h3>
             <p className="mb-4 text-gray-600 dark:text-gray-400">
-              Create your first artifact using the "New Artifact" button in the sidebar!
+              {t('list.createFirst')}
             </p>
           </div>
         ) : (
