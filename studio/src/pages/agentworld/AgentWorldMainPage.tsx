@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/stores/authStore";
 import { getCurrentNetworkHealth } from "@/services/networkService";
 
@@ -6,6 +7,7 @@ import { getCurrentNetworkHealth } from "@/services/networkService";
  * AgentWorld main page - Use iframe to display external page
  */
 const AgentWorldMainPage: React.FC = () => {
+  const { t } = useTranslation('agentWorld');
   const [isLoading, setIsLoading] = useState(true);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { agentName, selectedNetwork } = useAuthStore();
@@ -103,7 +105,7 @@ const AgentWorldMainPage: React.FC = () => {
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-gray-600 dark:text-gray-400">
-              Loading AgentWorld...
+              {t('loading')}
             </p>
           </div>
         </div>
