@@ -23,5 +23,110 @@
         "disconnected": "Disconnected",
         "connectionFailed": "Connection failed",
         "retrying": "Retrying..."
+    },
+    "profile": {
+        "title": "Network Profile",
+        "subtitle": "Configure your network profile settings",
+        "basicInfo": "Basic Information",
+        "discoverable": "Discoverable",
+        "discoverableDesc": "Allow this network to be discovered publicly",
+        "name": "Network Name",
+        "description": "Description",
+        "icon": "Icon URL",
+        "website": "Website URL",
+        "country": "Country",
+        "tags": {
+            "title": "Tags",
+            "placeholder": "Enter a tag and press Enter",
+            "add": "Add"
+        },
+        "categories": {
+            "title": "Categories",
+            "placeholder": "Enter a category and press Enter",
+            "add": "Add"
+        },
+        "technical": "Technical Settings",
+        "version": "Required OpenAgents Version",
+        "capacity": "Capacity",
+        "host": "Host",
+        "port": "Port (HTTP Transport)",
+        "save": "Save Changes",
+        "saving": "Saving...",
+        "cancel": "Cancel",
+        "success": "Network profile updated successfully!",
+        "error": "Failed to update network profile"
+    },
+    "agents": {
+        "title": "Agent Management",
+        "subtitle": "Manage connected agents on the network",
+        "refresh": "Refresh",
+        "total": "Total Agents",
+        "online": "Online Agents",
+        "empty": "No agents connected",
+        "you": "(You)",
+        "kick": "Kick",
+        "kicking": "Kicking...",
+        "table": {
+            "id": "Agent ID",
+            "status": "Status",
+            "actions": "Actions"
+        },
+        "kickConfirm": {
+            "title": "Kick Agent",
+            "message": "Are you sure you want to kick agent \"{{name}}\"? This will disconnect them from the network.",
+            "confirm": "Kick",
+            "cancel": "Cancel"
+        },
+        "messages": {
+            "kickSelf": "You cannot kick yourself!",
+            "kickSuccess": "Successfully kicked {{name}}",
+            "kickSuccessDesc": "The agent has been removed from the network",
+            "kickError": "Failed to kick agent",
+            "fetchError": "Failed to fetch agents"
+        }
+    },
+    "groups": {
+        "title": "Agent Groups Management",
+        "subtitle": "Manage agent groups and their permissions",
+        "networkSettings": "Network Settings",
+        "defaultGroup": "Default Group",
+        "defaultGroupDesc": "Default group for agents without valid credentials",
+        "requirePassword": "Require Password",
+        "requirePasswordDesc": "Require password authentication for all agents",
+        "saveSettings": "Save Settings",
+        "saving": "Saving...",
+        "agentGroups": "Agent Groups",
+        "create": "Create Group",
+        "empty": "No agent groups configured",
+        "edit": "Edit",
+        "delete": "Delete",
+        "set": "Set",
+        "none": "None",
+        "table": {
+            "group": "Group",
+            "description": "Description",
+            "members": "Members",
+            "password": "Password",
+            "actions": "Actions"
+        },
+        "modal": {
+            "createTitle": "Create New Group",
+            "editTitle": "Edit Group: {{name}}",
+            "name": "Group Name",
+            "description": "Description",
+            "password": "Password (optional)",
+            "clearPassword": "Clear existing password",
+            "permissions": "Permissions (comma-separated)",
+            "cancel": "Cancel",
+            "create": "Create Group",
+            "save": "Save Changes"
+        },
+        "messages": {
+            "createSuccess": "Group created successfully",
+            "updateSuccess": "Group updated successfully",
+            "deleteSuccess": "Group deleted successfully",
+            "settingsSuccess": "Network settings saved successfully",
+            "deleteConfirm": "Are you sure you want to delete the group \"{{name}}\"? This action cannot be undone."
+        }
     }
 }

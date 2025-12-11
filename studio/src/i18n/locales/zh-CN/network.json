@@ -23,5 +23,110 @@
         "disconnected": "已断开",
         "connectionFailed": "连接失败",
         "retrying": "重试中..."
+    },
+    "profile": {
+        "title": "网络配置文件",
+        "subtitle": "配置您的网络设置",
+        "basicInfo": "基本信息",
+        "discoverable": "可被发现",
+        "discoverableDesc": "允许此网络别公开发现",
+        "name": "网络名称",
+        "description": "描述",
+        "icon": "图标 URL",
+        "website": "网站 URL",
+        "country": "国家/地区",
+        "tags": {
+            "title": "标签",
+            "placeholder": "输入标签并回车",
+            "add": "添加"
+        },
+        "categories": {
+            "title": "分类",
+            "placeholder": "输入分类并回车",
+            "add": "添加"
+        },
+        "technical": "技术设置",
+        "version": "所需 OpenAgents 版本",
+        "capacity": "容量",
+        "host": "主机",
+        "port": "端口 (HTTP 传输)",
+        "save": "保存更改",
+        "saving": "保存中...",
+        "cancel": "取消",
+        "success": "网络配置文件更新成功!",
+        "error": "更新网络配置文件失败"
+    },
+    "agents": {
+        "title": "智能体管理",
+        "subtitle": "管理网络中连接的智能体",
+        "refresh": "刷新",
+        "total": "智能体总数",
+        "online": "在线智能体",
+        "empty": "无连接的智能体",
+        "you": "(你)",
+        "kick": "踢出",
+        "kicking": "踢出中...",
+        "table": {
+            "id": "智能体 ID",
+            "status": "状态",
+            "actions": "操作"
+        },
+        "kickConfirm": {
+            "title": "踢出智能体",
+            "message": "确定要踢出智能体 \"{{name}}\" 吗? 这将断开其与网络的连接。",
+            "confirm": "踢出",
+            "cancel": "取消"
+        },
+        "messages": {
+            "kickSelf": "你不能踢出自己!",
+            "kickSuccess": "成功踢出 {{name}}",
+            "kickSuccessDesc": "该智能体已被移出网络",
+            "kickError": "踢出智能体失败",
+            "fetchError": "获取智能体失败"
+        }
+    },
+    "groups": {
+        "title": "智能体组管理",
+        "subtitle": "管理智能体组及其权限",
+        "networkSettings": "网络设置",
+        "defaultGroup": "默认组",
+        "defaultGroupDesc": "无有效凭证智能体的默认组",
+        "requirePassword": "需要密码",
+        "requirePasswordDesc": "所有智能体都需要密码验证",
+        "saveSettings": "保存设置",
+        "saving": "保存中...",
+        "agentGroups": "智能体组",
+        "create": "创建组",
+        "empty": "未配置智能体组",
+        "edit": "编辑",
+        "delete": "删除",
+        "set": "已设置",
+        "none": "无",
+        "table": {
+            "group": "组名",
+            "description": "描述",
+            "members": "成员",
+            "password": "密码",
+            "actions": "操作"
+        },
+        "modal": {
+            "createTitle": "创建新组",
+            "editTitle": "编辑组: {{name}}",
+            "name": "组名称",
+            "description": "描述",
+            "password": "密码 (可选)",
+            "clearPassword": "清除现有密码",
+            "permissions": "权限 (逗号分隔)",
+            "cancel": "取消",
+            "create": "创建组",
+            "save": "保存更改"
+        },
+        "messages": {
+            "createSuccess": "组创建成功",
+            "updateSuccess": "组更新成功",
+            "deleteSuccess": "组删除成功",
+            "settingsSuccess": "网络设置保存成功",
+            "deleteConfirm": "确定要删除组 \"{{name}}\" 吗? 此操作无法撤销。"
+        }
     }
 }

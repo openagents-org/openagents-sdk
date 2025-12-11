@@ -17,6 +17,7 @@ import wikiEN from './locales/en/wiki.json';
 import forumEN from './locales/en/forum.json';
 import feedEN from './locales/en/feed.json';
 import mcpEN from './locales/en/mcp.json';
+import profileEN from './locales/en/profile.json';
 import networkEN from './locales/en/network.json';
 import layoutEN from './locales/en/layout.json';
 import errorsEN from './locales/en/errors.json';
@@ -30,6 +31,7 @@ import wikiZH from './locales/zh-CN/wiki.json';
 import forumZH from './locales/zh-CN/forum.json';
 import feedZH from './locales/zh-CN/feed.json';
 import mcpZH from './locales/zh-CN/mcp.json';
+import profileZH from './locales/zh-CN/profile.json';
 import networkZH from './locales/zh-CN/network.json';
 import layoutZH from './locales/zh-CN/layout.json';
 import errorsZH from './locales/zh-CN/errors.json';
@@ -67,6 +69,7 @@ i18n
                 forum: forumEN,
                 feed: feedEN,
                 mcp: mcpEN,
+                profile: profileEN,
                 network: networkEN,
                 layout: layoutEN,
                 errors: errorsEN,
@@ -81,6 +84,7 @@ i18n
                 forum: forumZH,
                 feed: feedZH,
                 mcp: mcpZH,
+                profile: profileZH,
                 network: networkZH,
                 layout: layoutZH,
                 errors: errorsZH,
