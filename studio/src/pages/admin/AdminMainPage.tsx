@@ -13,6 +13,10 @@ import ModManagementPage from "@/pages/mod-management/ModManagementPage";
 import TransportConfig from "./TransportConfig";
 import ConnectionGuide from "./ConnectionGuide";
 
+// Admin-only pages
+import LLMLogsMainPage from "@/pages/llmlogs/LLMLogsMainPage";
+import ServiceAgentsMainPage from "@/pages/serviceagents/ServiceAgentsMainPage";
+
 /**
  * AdminMainPage - Main router for admin pages
  * All admin routes are protected by AdminRouteGuard
@@ -35,13 +39,15 @@ const AdminMainPage: React.FC = () => {
         {/* Agent Management */}
         <Route path="agents" element={<AgentManagement />} />
         <Route path="groups" element={<AgentGroupsManagement />} />
+        <Route path="service-agents/*" element={<ServiceAgentsMainPage />} />
         <Route path="connect" element={<ConnectionGuide />} />
-        
+
         {/* Modules */}
         <Route path="mods" element={<ModManagementPage />} />
-        
+
         {/* Monitoring */}
         <Route path="events" element={<EventLogs />} />
+        <Route path="llm-logs/*" element={<LLMLogsMainPage />} />
         <Route path="debugger" element={<EventDebugger />} />
       </Routes>
     </AdminRouteGuard>

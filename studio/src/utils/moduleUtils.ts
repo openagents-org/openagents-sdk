@@ -69,17 +69,17 @@ export const updateRouteVisibilityFromModules = (
 ): void => {
   // First hide all main routes (only keep Profile always visible, it's not a mod)
   // Settings should also be controlled by network if it exists as a mod
+  // LLM_LOGS and SERVICE_AGENTS are admin-only, controlled separately
   Object.values(PLUGIN_NAME_ENUM).forEach((plugin) => {
-    if (plugin !== PLUGIN_NAME_ENUM.PROFILE && plugin !== PLUGIN_NAME_ENUM.README && plugin !== PLUGIN_NAME_ENUM.LLM_LOGS && plugin !== PLUGIN_NAME_ENUM.SERVICE_AGENTS) {
+    if (plugin !== PLUGIN_NAME_ENUM.PROFILE && plugin !== PLUGIN_NAME_ENUM.README) {
       updateRouteVisibility(plugin, false)
     }
   })
 
-  // Ensure PROFILE, README, LLM_LOGS and SERVICE_AGENTS are always visible
+  // Ensure PROFILE and README are always visible
+  // LLM_LOGS and SERVICE_AGENTS are admin-only (shown in admin dashboard)
   updateRouteVisibility(PLUGIN_NAME_ENUM.PROFILE, true)
   updateRouteVisibility(PLUGIN_NAME_ENUM.README, true)
-  updateRouteVisibility(PLUGIN_NAME_ENUM.LLM_LOGS, true)
-  updateRouteVisibility(PLUGIN_NAME_ENUM.SERVICE_AGENTS, true)
 
   // Then enable routes based on mods returned from network
   enabledModules.forEach((moduleName) => {
@@ -141,6 +141,7 @@ export const isRouteAvailable = (
   const routeName = route.replace(/^\//, "").split("/")[0]
 
   // Check special routes (always available)
+  // Note: llm-logs and studio (service agents) are admin-only, accessed through admin dashboard
   const alwaysAvailableRoutes = [
     "profile",
     "settings",
@@ -151,10 +152,6 @@ export const isRouteAvailable = (
     "artifact",
     "readme",
     "events",
-    "artifact", // Artifact 始终可用，类似 Project
-    "readme", // README 始终可用，显示网络文档
-    "llm-logs", // LLM Logs 始终可用，用于查看 LLM 日志
-    "studio", // Studio 管理路由始终可用（如服务代理管理）
   ]
   if (alwaysAvailableRoutes.includes(routeName)) {
     return true

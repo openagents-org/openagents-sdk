@@ -572,7 +572,7 @@ export const dynamicRouteConfig: RouteConfig[] = [
       key: PLUGIN_NAME_ENUM.SERVICE_AGENTS,
       label: "Service Agents",
       icon: "ServiceAgents",
-      visible: true, // Visible to all authenticated users
+      visible: false, // Only visible in admin dashboard
       order: 7,
       group: "secondary",
     },
@@ -587,7 +587,7 @@ export const dynamicRouteConfig: RouteConfig[] = [
       key: PLUGIN_NAME_ENUM.LLM_LOGS,
       label: "LLM Logs",
       icon: "LLMLogs",
-      visible: true,
+      visible: false, // Only visible in admin dashboard
       order: 4,
       group: "secondary",
     },
