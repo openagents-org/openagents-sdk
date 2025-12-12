@@ -29,6 +29,18 @@ export interface NetworkListResponse {
   items: Network[];
 }
 
+// Helper function to validate health response data
+const isValidHealthResponse = (data: any): boolean => {
+  // Check that the response has expected structure
+  // A valid health response should have success: true and a data object with network_id
+  return (
+    data &&
+    data.success === true &&
+    data.data &&
+    typeof data.data.network_id === "string"
+  );
+};
+
 // Check if a local OpenAgents network is running
 // First checks the current origin, then falls back to localhost ports
 export const detectLocalNetwork =
@@ -53,20 +65,37 @@ export const detectLocalNetwork =
             method: "GET",
             timeout: 3000,
             useHttps,
+            // Disable cache to ensure we get fresh data
+            headers: {
+              "Cache-Control": "no-cache",
+              "Pragma": "no-cache",
+            },
           }
         );
 
         if (response.ok) {
-          console.log(
-            `OpenAgents network detected at current origin: ${currentUrl.protocol}//${currentHost}:${currentPort}`
-          );
-          return {
-            host: currentHost,
-            port: currentPort,
-            status: ConnectionStatusEnum.CONNECTED,
-            latency: 0,
-            useHttps,
-          };
+          // Validate that we received actual health data, not just a cached/empty response
+          try {
+            const healthData = await response.json();
+            if (isValidHealthResponse(healthData)) {
+              console.log(
+                `OpenAgents network detected at current origin: ${currentUrl.protocol}//${currentHost}:${currentPort}`
+              );
+              return {
+                host: currentHost,
+                port: currentPort,
+                status: ConnectionStatusEnum.CONNECTED,
+                latency: 0,
+                useHttps,
+              };
+            } else {
+              console.log(
+                `Invalid health response from current origin: ${currentUrl.protocol}//${currentHost}:${currentPort}`
+              );
+            }
+          } catch (parseError) {
+            console.log("Failed to parse health response from current origin");
+          }
         }
       } catch (error) {
         console.log("No OpenAgents network at current origin, trying localhost ports...");
@@ -85,20 +114,37 @@ export const detectLocalNetwork =
           {
             method: "GET",
             timeout: 3000,
+            // Disable cache to ensure we get fresh data
+            headers: {
+              "Cache-Control": "no-cache",
+              "Pragma": "no-cache",
+            },
           }
         );
 
         if (response.ok) {
-          console.log(
-            `Local OpenAgents network detected on HTTP port ${httpPort}`
-          );
-          return {
-            host: "localhost",
-            port: httpPort,
-            status: ConnectionStatusEnum.CONNECTED,
-            latency: 0,
-            useHttps: false,
-          };
+          // Validate that we received actual health data
+          try {
+            const healthData = await response.json();
+            if (isValidHealthResponse(healthData)) {
+              console.log(
+                `Local OpenAgents network detected on HTTP port ${httpPort}`
+              );
+              return {
+                host: "localhost",
+                port: httpPort,
+                status: ConnectionStatusEnum.CONNECTED,
+                latency: 0,
+                useHttps: false,
+              };
+            } else {
+              console.log(
+                `Invalid health response from localhost:${httpPort}`
+              );
+            }
+          } catch (parseError) {
+            console.log(`Failed to parse health response from localhost:${httpPort}`);
+          }
         }
       } catch (error) {
         // Continue to next port

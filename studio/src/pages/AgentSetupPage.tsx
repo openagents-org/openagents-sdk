@@ -92,7 +92,17 @@ const AgentNamePicker: React.FC = () => {
           const groupConfig: GroupConfig[] = healthData.data?.group_config || [];
           const defaultGroupName = healthData.data?.default_agent_group || "guest";
 
-          setAvailableGroups(groupConfig);
+          // If no groups are configured, create a default fallback group
+          if (groupConfig.length === 0) {
+            const fallbackGroup: GroupConfig = {
+              name: defaultGroupName,
+              description: "Default agent group",
+              has_password: false,
+            };
+            setAvailableGroups([fallbackGroup]);
+          } else {
+            setAvailableGroups(groupConfig);
+          }
           setDefaultGroup(defaultGroupName);
 
           // Pre-select the default group
@@ -104,6 +114,15 @@ const AgentNamePicker: React.FC = () => {
         }
       } catch (error) {
         console.error("Failed to fetch network config:", error);
+        // On error, provide a default fallback group so users can still connect
+        const fallbackGroupName = "guest";
+        const fallbackGroup: GroupConfig = {
+          name: fallbackGroupName,
+          description: "Default agent group",
+          has_password: false,
+        };
+        setAvailableGroups([fallbackGroup]);
+        setSelectedGroup(fallbackGroupName);
       } finally {
         setIsLoadingGroups(false);
       }
