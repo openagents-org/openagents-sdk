@@ -74,10 +74,10 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
         ? `flex items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 font-medium text-gray-700 dark:text-gray-300 ${sizeClasses[size].button}`
         : `flex items-center rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 transition-colors duration-200 font-medium text-gray-700 dark:text-gray-300 ${sizeClasses[size].button}`;
 
-    // 根据 align 决定下拉菜单位置
+    // 根据 align 决定下拉菜单位置 (opens downward with top-full)
     const dropdownClassName = align === 'right'
-        ? "absolute right-0 bottom-full mb-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden"
-        : "absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden";
+        ? "absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden"
+        : "absolute left-1/2 transform -translate-x-1/2 top-full mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden";
 
     return (
         <div className={`relative ${className}`} ref={dropdownRef}>
