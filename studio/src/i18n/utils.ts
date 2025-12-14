@@ -2,10 +2,33 @@ import i18n from 'i18next';
 import { SUPPORTED_LANGUAGES, SupportedLanguage, LANGUAGE_STORAGE_KEY } from './config';
 
 /**
- * Get current language
+ * Check if a language is supported
+ */
+export const isLanguageSupported = (language: string): language is SupportedLanguage => {
+    return language in SUPPORTED_LANGUAGES;
+};
+
+/**
+ * Get current language (with fallback to 'en' if not supported)
  */
 export const getCurrentLanguage = (): SupportedLanguage => {
-    return i18n.language as SupportedLanguage;
+    const lang = i18n.language;
+
+    // Check if exact match exists
+    if (lang && isLanguageSupported(lang)) {
+        return lang;
+    }
+
+    // Try language code without region (e.g., 'en' from 'en-US')
+    if (lang) {
+        const langCode = lang.split('-')[0];
+        if (isLanguageSupported(langCode)) {
+            return langCode;
+        }
+    }
+
+    // Fallback to default
+    return 'en';
 };
 
 /**
@@ -21,6 +44,9 @@ export const changeLanguage = async (language: SupportedLanguage): Promise<void>
  */
 export const getLanguageName = (language: SupportedLanguage, native = false): string => {
     const lang = SUPPORTED_LANGUAGES[language];
+    if (!lang) {
+        return native ? 'English' : 'English';
+    }
     return native ? lang.nativeName : lang.name;
 };
 
@@ -28,14 +54,11 @@ export const getLanguageName = (language: SupportedLanguage, native = false): st
  * Get language flag emoji
  */
 export const getLanguageFlag = (language: SupportedLanguage): string => {
-    return SUPPORTED_LANGUAGES[language].flag;
-};
-
-/**
- * Check if a language is supported
- */
-export const isLanguageSupported = (language: string): language is SupportedLanguage => {
-    return language in SUPPORTED_LANGUAGES;
+    const lang = SUPPORTED_LANGUAGES[language];
+    if (!lang) {
+        return SUPPORTED_LANGUAGES['en'].flag;
+    }
+    return lang.flag;
 };
 
 /**
