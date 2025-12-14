@@ -83,11 +83,6 @@ const FeedPostDetail: React.FC = () => {
         {post && (
           <div className="mt-6 space-y-2">
             <div className="flex items-center gap-3">
-              {post.category && (
-                <span className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 text-xs font-semibold px-3 py-1">
-                  {post.category}
-                </span>
-              )}
               <span className="text-sm text-gray-500 dark:text-gray-400">
                 {createdAt} • {t('detail.postedBy', { author: post.author_id })}
               </span>

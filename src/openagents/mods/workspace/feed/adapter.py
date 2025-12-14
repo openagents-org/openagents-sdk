@@ -4,7 +4,7 @@ Agent-level feed mod for OpenAgents.
 This standalone mod provides one-way information broadcasting functionality with:
 - Post creation (immutable once created)
 - Full-text search with relevance scoring
-- Filtering by category, tags, author, and date
+- Filtering by tags, author, and date
 - Quick retrieval of recent posts since timestamp
 """
 
@@ -28,7 +28,7 @@ class FeedAgentAdapter(BaseModAdapter):
     This standalone mod provides:
     - Post creation (immutable once created)
     - Full-text search with relevance scoring
-    - Category and tag-based filtering
+    - Tag-based filtering
     - Quick retrieval of recent posts for polling
     """
 
@@ -81,7 +81,6 @@ class FeedAgentAdapter(BaseModAdapter):
         self,
         title: str,
         content: str,
-        category: Optional[str] = None,
         tags: Optional[List[str]] = None,
         allowed_groups: Optional[List[str]] = None,
         attachments: Optional[List[Dict[str, Any]]] = None,
@@ -93,7 +92,6 @@ class FeedAgentAdapter(BaseModAdapter):
         Args:
             title: Title of the post (max 200 chars)
             content: Content/body of the post (markdown supported)
-            category: Optional category (announcements, updates, info, alerts)
             tags: Optional list of tags for filtering
             allowed_groups: List of group IDs that can view this post. If None or empty, post is visible to all
             attachments: Optional list of attachment metadata
@@ -124,7 +122,6 @@ class FeedAgentAdapter(BaseModAdapter):
             source_id=self.agent_id,
             title=title,
             content=content,
-            category=category,
             tags=tags,
             allowed_groups=allowed_groups,
             attachments=attachments,
@@ -171,7 +168,6 @@ class FeedAgentAdapter(BaseModAdapter):
         limit: int = 50,
         offset: int = 0,
         sort_by: str = "recent",
-        category: Optional[str] = None,
         tags: Optional[List[str]] = None,
         author_id: Optional[str] = None,
         since_date: Optional[float] = None,
@@ -182,7 +178,6 @@ class FeedAgentAdapter(BaseModAdapter):
             limit: Maximum number of posts to retrieve (1-500)
             offset: Number of posts to skip for pagination
             sort_by: Sort criteria ("recent", "oldest")
-            category: Filter by category
             tags: Filter by tags (all must match)
             author_id: Filter by author ID
             since_date: Filter posts created after this timestamp
@@ -195,7 +190,6 @@ class FeedAgentAdapter(BaseModAdapter):
             limit=limit,
             offset=offset,
             sort_by=sort_by,
-            category=category,
             tags=tags,
             author_id=author_id,
             since_date=since_date,
@@ -206,7 +200,6 @@ class FeedAgentAdapter(BaseModAdapter):
         query: str,
         limit: int = 50,
         offset: int = 0,
-        category: Optional[str] = None,
         tags: Optional[List[str]] = None,
         author_id: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
@@ -216,7 +209,6 @@ class FeedAgentAdapter(BaseModAdapter):
             query: Search query string
             limit: Maximum number of posts to retrieve (1-500)
             offset: Number of posts to skip for pagination
-            category: Filter by category
             tags: Filter by tags (all must match)
             author_id: Filter by author ID
 
@@ -228,7 +220,6 @@ class FeedAgentAdapter(BaseModAdapter):
             query=query,
             limit=limit,
             offset=offset,
-            category=category,
             tags=tags,
             author_id=author_id,
         )
@@ -237,7 +228,6 @@ class FeedAgentAdapter(BaseModAdapter):
         self,
         since_timestamp: Optional[float] = None,
         limit: int = 100,
-        category: Optional[str] = None,
         tags: Optional[List[str]] = None,
     ) -> Optional[Dict[str, Any]]:
         """Get posts created since a specific timestamp (for polling).
@@ -247,7 +237,6 @@ class FeedAgentAdapter(BaseModAdapter):
         Args:
             since_timestamp: Unix timestamp to get posts after
             limit: Maximum number of posts to retrieve
-            category: Filter by category
             tags: Filter by tags (all must match)
 
         Returns:
@@ -260,7 +249,6 @@ class FeedAgentAdapter(BaseModAdapter):
             "recent_posts",
             since_timestamp=since_timestamp,
             limit=limit,
-            category=category,
             tags=tags,
         )
 
@@ -418,11 +406,6 @@ class FeedAgentAdapter(BaseModAdapter):
                         "type": "string",
                         "description": "Content/body of the post (markdown supported)",
                     },
-                    "category": {
-                        "type": "string",
-                        "description": "Category of the post",
-                        "enum": ["announcements", "updates", "info", "alerts"],
-                    },
                     "tags": {
                         "type": "array",
                         "items": {"type": "string"},
@@ -465,11 +448,6 @@ class FeedAgentAdapter(BaseModAdapter):
                         "description": "Sort criteria",
                         "enum": ["recent", "oldest"],
                         "default": "recent",
-                    },
-                    "category": {
-                        "type": "string",
-                        "description": "Filter by category",
-                        "enum": ["announcements", "updates", "info", "alerts"],
                     },
                     "tags": {
                         "type": "array",
@@ -515,11 +493,6 @@ class FeedAgentAdapter(BaseModAdapter):
                         "minimum": 0,
                         "default": 0,
                     },
-                    "category": {
-                        "type": "string",
-                        "description": "Filter by category",
-                        "enum": ["announcements", "updates", "info", "alerts"],
-                    },
                     "tags": {
                         "type": "array",
                         "items": {"type": "string"},
@@ -553,11 +526,6 @@ class FeedAgentAdapter(BaseModAdapter):
                         "minimum": 1,
                         "maximum": 500,
                         "default": 100,
-                    },
-                    "category": {
-                        "type": "string",
-                        "description": "Filter by category",
-                        "enum": ["announcements", "updates", "info", "alerts"],
                     },
                     "tags": {
                         "type": "array",

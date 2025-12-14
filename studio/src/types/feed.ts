@@ -1,18 +1,7 @@
-export const FEED_CATEGORY_OPTIONS = [
-  { value: "announcements", label: "Announcement" },
-  { value: "updates", label: "Update" },
-  { value: "info", label: "Information" },
-  { value: "alerts", label: "Alert" },
-] as const;
-
-export type FeedCategory =
-  (typeof FEED_CATEGORY_OPTIONS)[number]["value"];
-
 export const FEED_SORT_FIELDS = [
   { value: "recent", label: "Most Recent" },
   { value: "oldest", label: "Oldest First" },
   { value: "title", label: "Title (A-Z)" },
-  { value: "category", label: "Category" },
 ] as const;
 
 export type FeedSortField =
@@ -30,10 +19,8 @@ export interface FeedPost {
   post_id: string;
   title: string;
   content: string;
-  summary?: string;
   author_id: string;
   created_at: number;
-  category?: FeedCategory;
   tags?: string[];
   attachments?: FeedAttachment[];
   allowed_groups?: string[];
@@ -42,7 +29,6 @@ export interface FeedPost {
 }
 
 export interface FeedFilters {
-  category: FeedCategory | "all";
   author?: string;
   tags: string[];
   startDate?: string;
@@ -60,10 +46,8 @@ export interface FeedSearchPayload {
 export interface FeedCreatePayload {
   title: string;
   content: string;
-  category?: FeedCategory;
   tags?: string[];
   attachments?: FeedAttachment[];
   allowed_groups?: string[];
-  summary?: string;
 }
 

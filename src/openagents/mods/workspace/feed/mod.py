@@ -5,7 +5,7 @@ This standalone mod enables information publishing functionality with:
 - One-way information broadcasting (announcements, updates, alerts)
 - Immutable posts (no updates/deletes once published)
 - Full-text search and filtering
-- Category and tag-based organization
+- Tag-based organization
 - Quick retrieval of recent posts
 """
 
@@ -23,10 +23,6 @@ from openagents.models.event import Event
 from openagents.models.event_response import EventResponse
 
 logger = logging.getLogger(__name__)
-
-# Valid categories for feed posts
-VALID_CATEGORIES = {"announcements", "updates", "info", "alerts"}
-
 
 @dataclass
 class Attachment:
@@ -64,7 +60,6 @@ class FeedPost:
     content: str  # Markdown content
     author_id: str
     created_at: float  # Unix timestamp
-    category: Optional[str] = None  # announcements, updates, info, alerts
     tags: List[str] = field(default_factory=list)
     allowed_groups: List[str] = field(default_factory=list)  # Empty = public
     attachments: List[Attachment] = field(default_factory=list)
@@ -77,7 +72,6 @@ class FeedPost:
             "content": self.content,
             "author_id": self.author_id,
             "created_at": self.created_at,
-            "category": self.category,
             "tags": self.tags,
             "allowed_groups": self.allowed_groups,
             "attachments": [att.to_dict() for att in self.attachments],
@@ -95,7 +89,6 @@ class FeedPost:
             content=data["content"],
             author_id=data["author_id"],
             created_at=data["created_at"],
-            category=data.get("category"),
             tags=data.get("tags", []),
             allowed_groups=data.get("allowed_groups", []),
             attachments=attachments,
@@ -109,7 +102,7 @@ class FeedNetworkMod(BaseMod):
     - One-way information broadcasting (announcements, updates)
     - Immutable posts (no updates/deletes)
     - Full-text search with relevance scoring
-    - Category and tag-based filtering
+    - Tag-based filtering
     - Quick retrieval of recent posts since timestamp
     """
 
@@ -221,7 +214,6 @@ class FeedNetworkMod(BaseMod):
                             "title": post_dict["title"],
                             "author_id": post_dict["author_id"],
                             "created_at": post_dict["created_at"],
-                            "category": post_dict.get("category"),
                             "tags": post_dict.get("tags", []),
                             "allowed_groups": post_dict.get("allowed_groups", []),
                         }
@@ -377,7 +369,6 @@ class FeedNetworkMod(BaseMod):
         payload = event.payload
         title = payload.get("title", "").strip()
         content = payload.get("content", "").strip()
-        category = payload.get("category")
         tags = payload.get("tags", [])
         allowed_groups = payload.get("allowed_groups", [])
         attachments_data = payload.get("attachments", [])
@@ -395,13 +386,6 @@ class FeedNetworkMod(BaseMod):
         # Validate content
         if not content:
             return EventResponse(success=False, message="Post content cannot be empty")
-
-        # Validate category
-        if category and category not in VALID_CATEGORIES:
-            return EventResponse(
-                success=False,
-                message=f"Invalid category. Must be one of: {', '.join(VALID_CATEGORIES)}",
-            )
 
         # Validate tags
         if not isinstance(tags, list):
@@ -435,7 +419,6 @@ class FeedNetworkMod(BaseMod):
             content=content,
             author_id=author_id,
             created_at=timestamp,
-            category=category,
             tags=tags,
             allowed_groups=allowed_groups if allowed_groups else [],
             attachments=attachments,
@@ -470,7 +453,6 @@ class FeedNetworkMod(BaseMod):
                 "post_id": post_id,
                 "title": title,
                 "created_at": timestamp,
-                "category": category,
                 "tags": tags,
             },
         )
@@ -492,7 +474,6 @@ class FeedNetworkMod(BaseMod):
         limit = int(payload.get("limit", 50))
         offset = int(payload.get("offset", 0))
         sort_by = payload.get("sort_by", "recent")
-        category = payload.get("category")
         author_id = payload.get("author_id")
         tags = payload.get("tags", [])
         since_date = payload.get("since_date")  # Unix timestamp
@@ -510,10 +491,6 @@ class FeedNetworkMod(BaseMod):
 
             # Check view permission
             if not self._can_agent_view_post(requester_id, post):
-                continue
-
-            # Filter by category
-            if category and post.category != category:
                 continue
 
             # Filter by author
@@ -573,7 +550,6 @@ class FeedNetworkMod(BaseMod):
         query = payload.get("query", "").strip().lower()
         limit = int(payload.get("limit", 50))
         offset = int(payload.get("offset", 0))
-        category = payload.get("category")
         tags = payload.get("tags", [])
         author_id = payload.get("author_id")
         requester_id = event.source_id
@@ -586,10 +562,6 @@ class FeedNetworkMod(BaseMod):
         for post in self.posts.values():
             # Check view permission
             if not self._can_agent_view_post(requester_id, post):
-                continue
-
-            # Filter by category
-            if category and post.category != category:
                 continue
 
             # Filter by author
@@ -667,7 +639,6 @@ class FeedNetworkMod(BaseMod):
         payload = event.payload
         since_timestamp = payload.get("since_timestamp", 0)
         limit = int(payload.get("limit", 100))
-        category = payload.get("category")
         tags = payload.get("tags", [])
         requester_id = event.source_id
 
@@ -686,10 +657,6 @@ class FeedNetworkMod(BaseMod):
 
             # Only include posts newer than timestamp
             if post.created_at <= since_timestamp:
-                continue
-
-            # Filter by category
-            if category and post.category != category:
                 continue
 
             # Filter by tags

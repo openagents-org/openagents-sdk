@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 import {
-  FEED_CATEGORY_OPTIONS,
   FeedAttachment,
   FeedCreatePayload,
 } from "@/types/feed";
@@ -29,8 +28,6 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
   const { t } = useTranslation('feed');
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [summary, setSummary] = useState("");
-  const [category, setCategory] = useState<string>("");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [allowedGroups, setAllowedGroups] = useState<string[]>([]);
@@ -43,8 +40,6 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
   const resetForm = () => {
     setTitle("");
     setContent("");
-    setSummary("");
-    setCategory("");
     setTags([]);
     setTagInput("");
     setAllowedGroups([]);
@@ -126,8 +121,6 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
     const payload: FeedCreatePayload = {
       title: title.trim(),
       content: content.trim(),
-      summary: summary.trim() || undefined,
-      category: category ? (category as any) : undefined,
       tags,
       allowed_groups: allowedGroups.length > 0 ? allowedGroups : undefined,
       attachments,
@@ -203,38 +196,6 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {t('createModal.titleLength', { current: title.length })}
             </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {t('createModal.category')}
-              </label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-              >
-                <option value="">{t('createModal.categoryOptional')}</option>
-                {FEED_CATEGORY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {t(`categories.${option.value}`)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {t('createModal.summary')}
-              </label>
-              <input
-                type="text"
-                value={summary}
-                onChange={(e) => setSummary(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder={t('createModal.summaryPlaceholder')}
-              />
-            </div>
           </div>
 
           <div className="space-y-2">
