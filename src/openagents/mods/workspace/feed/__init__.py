@@ -17,7 +17,7 @@ Key Differentiators from Forum:
 - Feed emphasizes quick retrieval and search
 """
 
-from .mod import FeedNetworkMod, FeedPost, Attachment, VALID_CATEGORIES
+from .mod import FeedNetworkMod, FeedPost, Attachment
 from .adapter import FeedAgentAdapter
 from .feed_messages import FeedPostMessage, FeedQueryMessage
 
@@ -32,6 +32,4 @@ __all__ = [
     # Messages
     "FeedPostMessage",
     "FeedQueryMessage",
-    # Constants
-    "VALID_CATEGORIES",
 ]
