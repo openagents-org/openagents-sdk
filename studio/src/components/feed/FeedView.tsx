@@ -5,10 +5,9 @@ import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
 import { useFeedStore } from "@/stores/feedStore";
 import FeedCreateModal from "./FeedCreateModal";
 import FeedPostCard from "./components/FeedPostCard";
-import { FEED_CATEGORY_OPTIONS, FEED_SORT_FIELDS } from "@/types/feed";
+import { FEED_SORT_FIELDS } from "@/types/feed";
 
 const INITIAL_FILTER_RESET = {
-  category: "all" as const,
   author: undefined,
   tags: [] as string[],
   startDate: undefined,
@@ -159,7 +158,6 @@ const FeedView: React.FC = () => {
 
   const filtersActive = useMemo(() => {
     return (
-      filters.category !== "all" ||
       !!filters.author ||
       filters.tags.length > 0 ||
       filters.startDate ||
@@ -340,25 +338,6 @@ const FeedView: React.FC = () => {
 
             <div className="space-y-4">
               <div className="flex flex-col lg:flex-row lg:flex-wrap gap-4">
-                <div className="flex-1 min-w-[220px]">
-                  <label className="text-xs font-semibold text-gray-500 uppercase">
-                    {t('filters.category')}
-                  </label>
-                  <select
-                    value={filters.category}
-                    onChange={(e) =>
-                      applyFilters({ category: e.target.value as any })
-                    }
-                    className={`mt-1 ${fullInputClass}`}
-                  >
-                    <option value="all">{t('filters.allCategories')}</option>
-                    {FEED_CATEGORY_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
                 <div className="flex-1 min-w-[220px]">
                   <label className="text-xs font-semibold text-gray-500 uppercase">
                     {t('filters.author')}

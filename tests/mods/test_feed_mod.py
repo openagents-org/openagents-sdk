@@ -15,7 +15,6 @@ from openagents.mods.workspace.feed.mod import (
     FeedNetworkMod,
     FeedPost,
     Attachment,
-    VALID_CATEGORIES,
 )
 from openagents.models.event import Event
 
@@ -37,7 +36,6 @@ class TestFeedPostModel:
         assert post.title == "Test Post"
         assert post.content == "This is test content"
         assert post.author_id == "agent-1"
-        assert post.category is None
         assert post.tags == []
         assert post.allowed_groups == []
         assert post.attachments == []
@@ -57,13 +55,11 @@ class TestFeedPostModel:
             content="Content with **markdown**",
             author_id="agent-2",
             created_at=time.time(),
-            category="announcements",
             tags=["important", "team-a"],
             allowed_groups=["group-1", "group-2"],
             attachments=[attachment],
         )
 
-        assert post.category == "announcements"
         assert "important" in post.tags
         assert "team-a" in post.tags
         assert len(post.allowed_groups) == 2
@@ -78,7 +74,6 @@ class TestFeedPostModel:
             content="Test content",
             author_id="agent-3",
             created_at=1700000000.0,
-            category="updates",
             tags=["release"],
         )
 
@@ -86,7 +81,6 @@ class TestFeedPostModel:
 
         assert post_dict["post_id"] == "test-789"
         assert post_dict["title"] == "Dict Test"
-        assert post_dict["category"] == "updates"
         assert post_dict["tags"] == ["release"]
 
     def test_post_from_dict(self):
@@ -97,7 +91,6 @@ class TestFeedPostModel:
             "content": "Loaded content",
             "author_id": "agent-4",
             "created_at": 1700000000.0,
-            "category": "info",
             "tags": ["test"],
             "allowed_groups": [],
             "attachments": [
@@ -114,7 +107,6 @@ class TestFeedPostModel:
 
         assert post.post_id == "test-abc"
         assert post.title == "From Dict"
-        assert post.category == "info"
         assert len(post.attachments) == 1
 
 
@@ -146,7 +138,6 @@ class TestFeedPersistence:
             content="This is a test post",
             author_id="test_agent_1",
             created_at=time.time(),
-            category="announcements",
             tags=["test", "important"],
         )
 
@@ -171,7 +162,6 @@ class TestFeedPersistence:
         assert loaded_post.title == "Test Post"
         assert loaded_post.content == "This is a test post"
         assert loaded_post.author_id == "test_agent_1"
-        assert loaded_post.category == "announcements"
         assert "test" in loaded_post.tags
         assert "important" in loaded_post.tags
 
@@ -218,7 +208,6 @@ class TestFeedPostCreation:
             payload={
                 "title": "New Announcement",
                 "content": "Important information here",
-                "category": "announcements",
                 "tags": ["urgent"],
             },
         )
@@ -228,7 +217,6 @@ class TestFeedPostCreation:
         assert response.success == True
         assert "post_id" in response.data
         assert response.data["title"] == "New Announcement"
-        assert response.data["category"] == "announcements"
 
     @pytest.mark.asyncio
     async def test_create_post_empty_title(self, feed_mod):
@@ -264,25 +252,6 @@ class TestFeedPostCreation:
         assert response.success == False
         assert "200" in response.message
 
-    @pytest.mark.asyncio
-    async def test_create_post_invalid_category(self, feed_mod):
-        """Test post creation with invalid category fails."""
-        event = Event(
-            event_name="feed.post.create",
-            source_id="agent-1",
-            payload={
-                "title": "Test",
-                "content": "Content",
-                "category": "invalid_category",
-            },
-        )
-
-        response = await feed_mod._create_post(event)
-
-        assert response.success == False
-        assert "category" in response.message.lower()
-
-
 class TestFeedSearch:
     """Test feed search functionality."""
 
@@ -309,7 +278,6 @@ class TestFeedSearch:
                 content="New features and bug fixes",
                 author_id="agent-1",
                 created_at=time.time() - 3600,
-                category="announcements",
                 tags=["release", "v2"],
             ),
             FeedPost(
@@ -318,7 +286,6 @@ class TestFeedSearch:
                 content="This week we worked on release preparation",
                 author_id="agent-2",
                 created_at=time.time() - 1800,
-                category="updates",
                 tags=["weekly"],
             ),
             FeedPost(
@@ -327,7 +294,6 @@ class TestFeedSearch:
                 content="Maintenance scheduled for tomorrow",
                 author_id="agent-1",
                 created_at=time.time(),
-                category="alerts",
                 tags=["maintenance"],
             ),
         ]
@@ -355,25 +321,6 @@ class TestFeedSearch:
 
         assert response.success == True
         assert len(response.data["posts"]) == 2  # "Release Notes" and "Weekly Update"
-
-    @pytest.mark.asyncio
-    async def test_search_with_category_filter(self, feed_mod_with_posts):
-        """Test searching with category filter."""
-        event = Event(
-            event_name="feed.posts.search",
-            source_id="agent-1",
-            payload={
-                "query": "release",
-                "category": "announcements",
-                "limit": 50,
-            },
-        )
-
-        response = await feed_mod_with_posts._search_posts(event)
-
-        assert response.success == True
-        assert len(response.data["posts"]) == 1
-        assert response.data["posts"][0]["title"] == "Release Notes v2.0"
 
     @pytest.mark.asyncio
     async def test_search_empty_query(self, feed_mod_with_posts):
@@ -526,7 +473,6 @@ class TestFeedPagination:
                 content=f"Content for post {i}",
                 author_id="agent-1" if i % 2 == 0 else "agent-2",
                 created_at=base_time - (i * 100),  # Older posts have lower timestamps
-                category="updates" if i % 2 == 0 else "info",
                 tags=[f"tag-{i % 3}"],
             )
             mod._save_post(post)
@@ -583,21 +529,6 @@ class TestFeedPagination:
         assert response.data["total_count"] == 5
         for post in response.data["posts"]:
             assert post["author_id"] == "agent-1"
-
-    @pytest.mark.asyncio
-    async def test_filter_by_category(self, feed_mod_with_many_posts):
-        """Test filtering by category."""
-        event = Event(
-            event_name="feed.posts.list",
-            source_id="agent-1",
-            payload={"limit": 50, "category": "updates"},
-        )
-
-        response = await feed_mod_with_many_posts._list_posts(event)
-
-        assert response.success == True
-        for post in response.data["posts"]:
-            assert post["category"] == "updates"
 
     @pytest.mark.asyncio
     async def test_filter_by_tags(self, feed_mod_with_many_posts):

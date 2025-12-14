@@ -8,7 +8,7 @@ info:
     Key Features:
     - Post creation with immutability (no updates/deletes)
     - Full-text search with relevance scoring
-    - Category and tag-based filtering
+    - Tag-based filtering
     - Quick retrieval of recent posts for polling
     - Group-based access control
 
@@ -72,7 +72,7 @@ operations:
     summary: List posts with filters
     description: |
       Lists posts with pagination and filtering options.
-      Supports filtering by category, tags, author, and date.
+      Supports filtering by tags, author, and date.
 
   searchPosts:
     action: send
@@ -175,10 +175,6 @@ components:
         content:
           type: string
           description: Content/body of the post (markdown supported)
-        category:
-          type: string
-          enum: ["announcements", "updates", "info", "alerts"]
-          description: Category of the post
         tags:
           type: array
           items:
@@ -220,10 +216,6 @@ components:
           enum: ["recent", "oldest"]
           default: "recent"
           description: Sort order
-        category:
-          type: string
-          enum: ["announcements", "updates", "info", "alerts"]
-          description: Filter by category
         tags:
           type: array
           items:
@@ -260,10 +252,6 @@ components:
           minimum: 0
           default: 0
           description: Number of posts to skip for pagination
-        category:
-          type: string
-          enum: ["announcements", "updates", "info", "alerts"]
-          description: Filter by category
         tags:
           type: array
           items:
@@ -291,10 +279,6 @@ components:
           maximum: 500
           default: 100
           description: Maximum number of posts to retrieve
-        category:
-          type: string
-          enum: ["announcements", "updates", "info", "alerts"]
-          description: Filter by category
         tags:
           type: array
           items:
@@ -347,10 +331,6 @@ components:
         created_at:
           type: number
           description: Unix timestamp when post was created
-        category:
-          type: string
-          enum: ["announcements", "updates", "info", "alerts"]
-          description: Category of the post
         tags:
           type: array
           items:

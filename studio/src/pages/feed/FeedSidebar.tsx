@@ -2,7 +2,6 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useFeedStore } from "@/stores/feedStore";
-import { FEED_CATEGORY_OPTIONS } from "@/types/feed";
 
 const FeedSidebar: React.FC = () => {
   const { t } = useTranslation('feed');
@@ -97,35 +96,6 @@ const FeedSidebar: React.FC = () => {
               {t(newPostCount > 1 ? 'sidebar.incomingPostsPlural' : 'sidebar.incomingPosts', { count: newPostCount })}
             </div>
           )}
-        </section>
-
-        <section>
-          <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
-            {t('sidebar.categoryFilters')}
-          </h3>
-          <div className="grid grid-cols-2 gap-2">
-            {FEED_CATEGORY_OPTIONS.map((category) => (
-              <button
-                key={category.value}
-                className="px-2 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800"
-                onClick={() => {
-                  applyFilters({ category: category.value });
-                  navigate("/feed");
-                }}
-              >
-                {t(`categories.${category.value}`)}
-              </button>
-            ))}
-            <button
-              className="px-2 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800"
-              onClick={() => {
-                applyFilters({ category: "all" });
-                navigate("/feed");
-              }}
-            >
-              {t('sidebar.showAll')}
-            </button>
-          </div>
         </section>
 
         <section>

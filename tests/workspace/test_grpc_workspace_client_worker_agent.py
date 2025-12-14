@@ -164,19 +164,36 @@ async def test_network():
     # Load config and use random port to avoid conflicts
     config = load_network_config(str(config_path))
 
-    # Update the gRPC transport port to avoid conflicts
-    grpc_port = random.randint(49000, 50000)
-    http_port = grpc_port + 100  # HTTP port should be different
+    # Try multiple times with different ports to avoid TIME_WAIT conflicts
+    max_retries = 3
+    last_error = None
+    network = None
 
-    for transport in config.network.transports:
-        if transport.type == "grpc":
-            transport.config["port"] = grpc_port
-        elif transport.type == "http":
-            transport.config["port"] = http_port
+    for attempt in range(max_retries):
+        # Use wider port range (30000-60000) to reduce collision probability
+        grpc_port = random.randint(30000, 60000)
+        http_port = grpc_port + 100  # HTTP port should be different
 
-    # Create and initialize network
-    network = create_network(config.network)
-    await network.initialize()
+        for transport in config.network.transports:
+            if transport.type == "grpc":
+                transport.config["port"] = grpc_port
+            elif transport.type == "http":
+                transport.config["port"] = http_port
+
+        # Create and initialize network
+        network = create_network(config.network)
+        try:
+            await network.initialize()
+            break  # Success
+        except OSError as e:
+            last_error = e
+            if "address already in use" in str(e).lower():
+                print(f"Port {grpc_port}/{http_port} in use, retrying... (attempt {attempt + 1}/{max_retries})")
+                await asyncio.sleep(0.5)
+                continue
+            raise
+    else:
+        raise last_error or RuntimeError("Failed to initialize network after retries")
 
     # Give network time to start up
     await asyncio.sleep(2.0)
@@ -222,7 +239,7 @@ async def worker_agent(test_network):
     agent = MockWorkerAgent(agent_id="test-worker-agent")
 
     # Connect to network using HTTP port (for health check) but the agent will use gRPC
-    await agent.async_start("localhost", http_port)
+    await agent.async_start(network_host="localhost", network_port=http_port)
 
     # Give agent time to connect and register
     await asyncio.sleep(2.0)
