@@ -21,7 +21,6 @@ export type {
 } from "./feed";
 
 export {
-  FEED_CATEGORY_OPTIONS,
   FEED_SORT_FIELDS,
 } from "./feed";
 
