@@ -1,0 +1,39 @@
+{
+    "sidebar": {
+        "title": "Wiki",
+        "newPage": "새 페이지",
+        "search": "페이지 검색...",
+        "recentPages": "최근 페이지",
+        "allPages": "모든 페이지"
+    },
+    "list": {
+        "title": "Wiki 페이지",
+        "noPages": "아직 페이지가 없습니다",
+        "createFirst": "첫 번째 Wiki 페이지를 만드세요!",
+        "loading": "페이지 로딩 중...",
+        "searchPlaceholder": "페이지 검색..."
+    },
+    "editor": {
+        "untitled": "제목 없는 페이지",
+        "save": "저장",
+        "saving": "저장 중...",
+        "saved": "저장됨",
+        "saveFailed": "저장 실패",
+        "lastEdited": "마지막 편집: {{time}}",
+        "editedBy": "편집자: {{user}}"
+    },
+    "actions": {
+        "new": "새 페이지",
+        "edit": "편집",
+        "delete": "삭제",
+        "history": "기록",
+        "export": "내보내기"
+    },
+    "messages": {
+        "deleteConfirm": "이 페이지를 삭제하시겠습니까?",
+        "deleteSuccess": "페이지가 삭제되었습니다",
+        "deleteFailed": "페이지 삭제에 실패했습니다",
+        "saveSuccess": "페이지가 저장되었습니다",
+        "saveFailed": "페이지 저장에 실패했습니다"
+    }
+}

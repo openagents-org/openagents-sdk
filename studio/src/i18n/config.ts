@@ -10,6 +10,16 @@ export const SUPPORTED_LANGUAGES = {
         nativeName: '简体中文',
         flag: '🇨🇳',
     },
+    ja: {
+        name: 'Japanese',
+        nativeName: '日本語',
+        flag: '🇯🇵',
+    },
+    ko: {
+        name: 'Korean',
+        nativeName: '한국어',
+        flag: '🇰🇷',
+    },
 } as const;
 
 // Type for supported language codes

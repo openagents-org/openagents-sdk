@@ -1,0 +1,54 @@
+{
+    "createModal": {
+        "title": "새 문서 만들기",
+        "documentName": "문서 이름",
+        "documentNamePlaceholder": "문서 이름 입력...",
+        "initialContent": "초기 내용",
+        "initialContentPlaceholder": "초기 문서 내용 입력... (선택사항)",
+        "cancel": "취소",
+        "create": "문서 만들기",
+        "creating": "생성 중...",
+        "errors": {
+            "nameRequired": "문서 이름은 필수입니다",
+            "createFailed": "문서 생성에 실패했습니다. 다시 시도해 주세요."
+        }
+    },
+    "list": {
+        "noDocuments": "아직 문서가 없습니다",
+        "createFirst": "첫 번째 문서를 만들어 시작하세요",
+        "loading": "문서 로딩 중...",
+        "searchPlaceholder": "문서 검색..."
+    },
+    "editor": {
+        "untitled": "제목 없는 문서",
+        "save": "저장",
+        "saving": "저장 중...",
+        "saved": "저장됨",
+        "saveFailed": "저장 실패",
+        "lastSaved": "마지막 저장: {{time}}",
+        "collaborators": "공동 작업자",
+        "onlineUsers": "온라인 사용자",
+        "noCollaborators": "아직 공동 작업자가 없습니다"
+    },
+    "actions": {
+        "new": "새 문서",
+        "delete": "삭제",
+        "rename": "이름 변경",
+        "share": "공유",
+        "export": "내보내기",
+        "duplicate": "복제"
+    },
+    "status": {
+        "online": "온라인",
+        "offline": "오프라인",
+        "syncing": "동기화 중...",
+        "synced": "동기화됨"
+    },
+    "messages": {
+        "deleteConfirm": "이 문서를 삭제하시겠습니까?",
+        "deleteSuccess": "문서가 삭제되었습니다",
+        "deleteFailed": "문서 삭제에 실패했습니다",
+        "renameSuccess": "문서 이름이 변경되었습니다",
+        "renameFailed": "문서 이름 변경에 실패했습니다"
+    }
+}

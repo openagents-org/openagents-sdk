@@ -51,6 +51,48 @@ import eventsZH from './locales/zh-CN/events.json';
 import agentWorldZH from './locales/zh-CN/agentWorld.json';
 import readmeZH from './locales/zh-CN/readme.json';
 
+import commonJA from './locales/ja/common.json';
+import authJA from './locales/ja/auth.json';
+import messagingJA from './locales/ja/messaging.json';
+import documentsJA from './locales/ja/documents.json';
+import wikiJA from './locales/ja/wiki.json';
+import forumJA from './locales/ja/forum.json';
+import feedJA from './locales/ja/feed.json';
+import mcpJA from './locales/ja/mcp.json';
+import profileJA from './locales/ja/profile.json';
+import networkJA from './locales/ja/network.json';
+import layoutJA from './locales/ja/layout.json';
+import errorsJA from './locales/ja/errors.json';
+import validationJA from './locales/ja/validation.json';
+import projectJA from './locales/ja/project.json';
+import artifactJA from './locales/ja/artifact.json';
+import llmlogsJA from './locales/ja/llmlogs.json';
+import serviceAgentJA from './locales/ja/serviceAgent.json';
+import eventsJA from './locales/ja/events.json';
+import agentWorldJA from './locales/ja/agentWorld.json';
+import readmeJA from './locales/ja/readme.json';
+
+import commonKO from './locales/ko/common.json';
+import authKO from './locales/ko/auth.json';
+import messagingKO from './locales/ko/messaging.json';
+import documentsKO from './locales/ko/documents.json';
+import wikiKO from './locales/ko/wiki.json';
+import forumKO from './locales/ko/forum.json';
+import feedKO from './locales/ko/feed.json';
+import mcpKO from './locales/ko/mcp.json';
+import profileKO from './locales/ko/profile.json';
+import networkKO from './locales/ko/network.json';
+import layoutKO from './locales/ko/layout.json';
+import errorsKO from './locales/ko/errors.json';
+import validationKO from './locales/ko/validation.json';
+import projectKO from './locales/ko/project.json';
+import artifactKO from './locales/ko/artifact.json';
+import llmlogsKO from './locales/ko/llmlogs.json';
+import serviceAgentKO from './locales/ko/serviceAgent.json';
+import eventsKO from './locales/ko/events.json';
+import agentWorldKO from './locales/ko/agentWorld.json';
+import readmeKO from './locales/ko/readme.json';
+
 // Configure language detector
 const languageDetectorOptions = {
     // Order of detection methods
@@ -117,6 +159,50 @@ i18n
                 events: eventsZH,
                 agentWorld: agentWorldZH,
                 readme: readmeZH,
+            },
+            ja: {
+                common: commonJA,
+                auth: authJA,
+                messaging: messagingJA,
+                documents: documentsJA,
+                wiki: wikiJA,
+                forum: forumJA,
+                feed: feedJA,
+                mcp: mcpJA,
+                profile: profileJA,
+                network: networkJA,
+                layout: layoutJA,
+                errors: errorsJA,
+                validation: validationJA,
+                project: projectJA,
+                artifact: artifactJA,
+                llmlogs: llmlogsJA,
+                serviceAgent: serviceAgentJA,
+                events: eventsJA,
+                agentWorld: agentWorldJA,
+                readme: readmeJA,
+            },
+            ko: {
+                common: commonKO,
+                auth: authKO,
+                messaging: messagingKO,
+                documents: documentsKO,
+                wiki: wikiKO,
+                forum: forumKO,
+                feed: feedKO,
+                mcp: mcpKO,
+                profile: profileKO,
+                network: networkKO,
+                layout: layoutKO,
+                errors: errorsKO,
+                validation: validationKO,
+                project: projectKO,
+                artifact: artifactKO,
+                llmlogs: llmlogsKO,
+                serviceAgent: serviceAgentKO,
+                events: eventsKO,
+                agentWorld: agentWorldKO,
+                readme: readmeKO,
             },
         },
 
