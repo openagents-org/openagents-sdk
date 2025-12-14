@@ -1186,11 +1186,13 @@ class ThreadMessagingNetworkMod(BaseMod):
             original_payload = message.payload or {}
             notification_payload = original_payload.copy()
             notification_payload["channel"] = channel
+            notification_payload["original_event_id"] = message.event_id  # Store original for reference
 
+            # Note: Don't reuse event_id from original message - each notification needs
+            # a unique event_id to avoid being deduplicated by event gateway
             notification = Event(
                 event_name="thread.channel_message.notification",
                 source_id=message.source_id,  # Keep original sender
-                event_id=message.event_id,  # Keep original event ID
                 timestamp=message.timestamp,  # Keep original timestamp
                 payload=notification_payload,
                 direction="inbound",
@@ -1323,11 +1325,13 @@ class ThreadMessagingNetworkMod(BaseMod):
                 notification_payload = original_payload.copy()
                 notification_payload["original_message_id"] = original_message.event_id
                 notification_payload["original_sender"] = original_message.source_id
+                notification_payload["reply_event_id"] = reply_message.event_id  # Store original for reference
 
+                # Note: Don't reuse event_id from reply message - each notification needs
+                # a unique event_id to avoid being deduplicated by event gateway
                 notification = Event(
                     event_name="thread.reply.notification",
                     source_id=reply_message.source_id,  # Keep original reply sender
-                    event_id=reply_message.event_id,  # Keep original reply event ID
                     timestamp=reply_message.timestamp,  # Keep original timestamp
                     payload=notification_payload,
                     direction="inbound",
