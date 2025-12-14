@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useOpenAgents } from '@/context/OpenAgentsProvider';
 import { useAuthStore } from '@/stores/authStore';
 import { useConfirm } from '@/context/ConfirmContext';
@@ -21,10 +22,11 @@ interface NetworkGroupSettings {
 }
 
 const AgentGroupsManagement: React.FC = () => {
+  const { t } = useTranslation('network');
   const { connector } = useOpenAgents();
   const { agentName } = useAuthStore();
   const { confirm } = useConfirm();
-  
+
   const [groupsData, setGroupsData] = useState<NetworkGroupSettings | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +35,7 @@ const AgentGroupsManagement: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingGroup, setEditingGroup] = useState<AgentGroupInfo | null>(null);
-  
+
   // Network settings
   const [defaultGroup, setDefaultGroup] = useState<string>('');
   const [requiresPassword, setRequiresPassword] = useState<boolean>(false);
@@ -62,16 +64,16 @@ const AgentGroupsManagement: React.FC = () => {
       setError(null);
 
       const healthData = await connector.getNetworkHealth();
-      
+
       if (healthData && healthData.group_config) {
         // Build agent_groups info from group_config
         const agentGroups: Record<string, AgentGroupInfo> = {};
         const groups = healthData.groups || {};
-        
+
         for (const groupConfig of healthData.group_config) {
           const groupName = groupConfig.name;
           const members = groups[groupName] || [];
-          
+
           agentGroups[groupName] = {
             name: groupName,
             description: groupConfig.description || '',
@@ -89,7 +91,7 @@ const AgentGroupsManagement: React.FC = () => {
           default_agent_group: healthData.default_agent_group || 'guest',
           requires_password: healthData.requires_password || false,
         });
-        
+
         setDefaultGroup(healthData.default_agent_group || 'guest');
         setRequiresPassword(healthData.requires_password || false);
       } else {
@@ -199,7 +201,7 @@ const AgentGroupsManagement: React.FC = () => {
     });
 
     if (result.success) {
-      setSuccess('Group created successfully');
+      setSuccess(t('groups.messages.createSuccess'));
       setShowCreateModal(false);
       setFormData({
         name: '',
@@ -254,7 +256,7 @@ const AgentGroupsManagement: React.FC = () => {
     });
 
     if (result.success) {
-      setSuccess('Group updated successfully');
+      setSuccess(t('groups.messages.updateSuccess'));
       setShowEditModal(false);
       setEditingGroup(null);
       setFormData({
@@ -273,8 +275,8 @@ const AgentGroupsManagement: React.FC = () => {
   // Handle delete group
   const handleDeleteGroup = async (groupName: string) => {
     const confirmed = await confirm(
-      'Delete Group',
-      `Are you sure you want to delete the group "${groupName}"? This action cannot be undone.`
+      t('groups.delete'),
+      t('groups.messages.deleteConfirm', { name: groupName })
     );
 
     if (!confirmed) return;
@@ -288,7 +290,7 @@ const AgentGroupsManagement: React.FC = () => {
     });
 
     if (result.success) {
-      setSuccess('Group deleted successfully');
+      setSuccess(t('groups.messages.deleteSuccess'));
       if (selectedGroup === groupName) {
         setSelectedGroup(null);
       }
@@ -330,7 +332,7 @@ const AgentGroupsManagement: React.FC = () => {
         }
       }
 
-      setSuccess('Network settings saved successfully');
+      setSuccess(t('groups.messages.settingsSuccess'));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save settings');
     } finally {
@@ -385,10 +387,10 @@ const AgentGroupsManagement: React.FC = () => {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-          Agent Groups Management
+          {t('groups.title')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Manage agent groups and their permissions
+          {t('groups.subtitle')}
         </p>
       </div>
 
@@ -418,16 +420,16 @@ const AgentGroupsManagement: React.FC = () => {
       {/* Network Settings */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Network Settings
+          {t('groups.networkSettings')}
         </h2>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Default Group
+                {t('groups.defaultGroup')}
               </label>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Default group for agents without valid credentials
+                {t('groups.defaultGroupDesc')}
               </p>
             </div>
             <select
@@ -445,10 +447,10 @@ const AgentGroupsManagement: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Require Password
+                {t('groups.requirePassword')}
               </label>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Require password authentication for all agents
+                {t('groups.requirePasswordDesc')}
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -467,7 +469,7 @@ const AgentGroupsManagement: React.FC = () => {
               disabled={savingSettings}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {savingSettings ? 'Saving...' : 'Save Settings'}
+              {savingSettings ? t('groups.saving') : t('groups.saveSettings')}
             </button>
           </div>
         </div>
@@ -477,30 +479,30 @@ const AgentGroupsManagement: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Agent Groups
+            {t('groups.agentGroups')}
           </h2>
           <button
             onClick={openCreateModal}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
           >
-            + Create Group
+            + {t('groups.create')}
           </button>
         </div>
 
         {groups.length === 0 ? (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            No agent groups configured
+            {t('groups.empty')}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Group</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Description</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Members</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Password</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">{t('groups.table.group')}</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">{t('groups.table.description')}</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">{t('groups.table.members')}</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">{t('groups.table.password')}</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">{t('groups.table.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -528,9 +530,9 @@ const AgentGroupsManagement: React.FC = () => {
                     </td>
                     <td className="py-3 px-4 text-sm">
                       {group.has_password ? (
-                        <span className="text-green-600 dark:text-green-400">✓ Set</span>
+                        <span className="text-green-600 dark:text-green-400">✓ {t('groups.set')}</span>
                       ) : (
-                        <span className="text-gray-400">✗ None</span>
+                        <span className="text-gray-400">✗ {t('groups.none')}</span>
                       )}
                     </td>
                     <td className="py-3 px-4">
@@ -542,7 +544,7 @@ const AgentGroupsManagement: React.FC = () => {
                           }}
                           className="px-3 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
                         >
-                          Edit
+                          {t('groups.edit')}
                         </button>
                         {!group.is_default && (
                           <button
@@ -552,7 +554,7 @@ const AgentGroupsManagement: React.FC = () => {
                             }}
                             className="px-3 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
                           >
-                            Delete
+                            {t('groups.delete')}
                           </button>
                         )}
                       </div>
@@ -569,7 +571,7 @@ const AgentGroupsManagement: React.FC = () => {
           <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Group: {selectedGroup}
+                {t('groups.table.group')}: {selectedGroup}
               </h3>
               <div className="flex gap-2">
                 <button
@@ -583,7 +585,7 @@ const AgentGroupsManagement: React.FC = () => {
                     onClick={() => handleDeleteGroup(selectedGroup)}
                     className="px-3 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
                   >
-                    Delete
+                    {t('groups.delete')}
                   </button>
                 )}
               </div>
@@ -596,9 +598,9 @@ const AgentGroupsManagement: React.FC = () => {
                 </span>
               </div>
               <div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Password: </span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('groups.table.password')}: </span>
                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {groupsData.agent_groups[selectedGroup].has_password ? '✓ Password set' : '✗ No password'}
+                  {groupsData.agent_groups[selectedGroup].has_password ? `✓ ${t('groups.set')}` : `✗ ${t('groups.none')}`}
                 </span>
               </div>
               {groupsData.agent_groups[selectedGroup].permissions.length > 0 && (
@@ -619,7 +621,7 @@ const AgentGroupsManagement: React.FC = () => {
               {groupsData.agent_groups[selectedGroup].members.length > 0 && (
                 <div>
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Members ({groupsData.agent_groups[selectedGroup].members.length}):
+                    {t('groups.table.members')} ({groupsData.agent_groups[selectedGroup].members.length}):
                   </span>
                   <div className="mt-2 space-y-1">
                     {groupsData.agent_groups[selectedGroup].members.map((member) => (
@@ -646,7 +648,7 @@ const AgentGroupsManagement: React.FC = () => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                  Create New Group
+                  {t('groups.modal.createTitle')}
                 </h2>
                 <button
                   onClick={() => setShowCreateModal(false)}
@@ -658,7 +660,7 @@ const AgentGroupsManagement: React.FC = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Group Name *
+                    {t('groups.modal.name')} *
                   </label>
                   <input
                     type="text"
@@ -709,13 +711,13 @@ const AgentGroupsManagement: React.FC = () => {
                     onClick={() => setShowCreateModal(false)}
                     className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
-                    Cancel
+                    {t('groups.modal.cancel')}
                   </button>
                   <button
                     onClick={handleCreateGroup}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    Create Group
+                    {t('groups.create')}
                   </button>
                 </div>
               </div>
@@ -731,7 +733,7 @@ const AgentGroupsManagement: React.FC = () => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                  Edit Group: {editingGroup.name}
+                  {t('groups.modal.editTitle', { name: editingGroup.name })}
                 </h2>
                 <button
                   onClick={() => {
@@ -746,7 +748,7 @@ const AgentGroupsManagement: React.FC = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Group Name
+                    {t('groups.modal.name')}
                   </label>
                   <input
                     type="text"
@@ -789,14 +791,14 @@ const AgentGroupsManagement: React.FC = () => {
                         className="mr-2"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300">
-                        Clear existing password
+                        {t('groups.modal.clearPassword')}
                       </span>
                     </label>
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Permissions (comma-separated)
+                    {t('groups.modal.permissions')}
                   </label>
                   <input
                     type="text"

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface CreateDocumentModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
   onCreateDocument,
   currentTheme
 }) => {
+  const { t } = useTranslation('documents');
   const [documentName, setDocumentName] = useState('');
   const [initialContent, setInitialContent] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -20,9 +22,9 @@ const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!documentName.trim()) {
-      setError('Document name is required');
+      setError(t('createModal.errors.nameRequired'));
       return;
     }
 
@@ -35,7 +37,7 @@ const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
       setInitialContent('');
       onClose();
     } catch (err) {
-      setError('Failed to create document. Please try again.');
+      setError(t('createModal.errors.createFailed'));
       console.error('Failed to create document:', err);
     } finally {
       setIsCreating(false);
@@ -63,16 +65,15 @@ const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
         <div className={`border-b p-6 ${currentTheme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
           <div className="flex items-center justify-between">
             <h2 className={`text-xl font-bold ${currentTheme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
-              Create New Document
+              {t('createModal.title')}
             </h2>
             <button
               onClick={handleClose}
               disabled={isCreating}
-              className={`p-2 rounded-lg transition-colors ${
-                currentTheme === 'dark'
+              className={`p-2 rounded-lg transition-colors ${currentTheme === 'dark'
                   ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                   : 'hover:bg-gray-100 text-gray-600 hover:text-gray-800'
-              } disabled:opacity-50`}
+                } disabled:opacity-50`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -91,16 +92,15 @@ const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
 
           {/* Document Name */}
           <div>
-            <label className={`block text-sm font-medium mb-2 ${
-              currentTheme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-            }`}>
-              Document Name *
+            <label className={`block text-sm font-medium mb-2 ${currentTheme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+              }`}>
+              {t('createModal.documentName')} *
             </label>
             <input
               type="text"
               value={documentName}
               onChange={(e) => setDocumentName(e.target.value)}
-              placeholder="Enter document name..."
+              placeholder={t('createModal.documentNamePlaceholder')}
               disabled={isCreating}
               className={`
                 w-full p-3 border rounded-lg transition-colors
@@ -117,15 +117,14 @@ const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
 
           {/* Initial Content */}
           <div>
-            <label className={`block text-sm font-medium mb-2 ${
-              currentTheme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-            }`}>
-              Initial Content
+            <label className={`block text-sm font-medium mb-2 ${currentTheme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+              }`}>
+              {t('createModal.initialContent')}
             </label>
             <textarea
               value={initialContent}
               onChange={(e) => setInitialContent(e.target.value)}
-              placeholder="Enter initial document content... (optional)"
+              placeholder={t('createModal.initialContentPlaceholder')}
               disabled={isCreating}
               rows={8}
               className={`
@@ -155,7 +154,7 @@ const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
                 disabled:opacity-50 disabled:cursor-not-allowed
               `}
             >
-              Cancel
+              {t('createModal.cancel')}
             </button>
             <button
               type="submit"
@@ -165,7 +164,7 @@ const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
               {isCreating && (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               )}
-              <span>{isCreating ? 'Creating...' : 'Create Document'}</span>
+              <span>{isCreating ? t('createModal.creating') : t('createModal.create')}</span>
             </button>
           </div>
         </form>

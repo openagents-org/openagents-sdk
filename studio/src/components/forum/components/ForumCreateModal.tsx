@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer';
 import { useForumStore } from '@/stores/forumStore';
 import { useHealthGroups } from '@/hooks/useHealthGroups';
@@ -12,6 +13,7 @@ const ForumCreateModal: React.FC<ForumCreateModalProps> = ({
   isOpen,
   onClose
 }) => {
+  const { t } = useTranslation('forum');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [showPreview, setShowPreview] = useState(false);
@@ -94,7 +96,7 @@ const ForumCreateModal: React.FC<ForumCreateModalProps> = ({
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                Create New Topic
+                {t('createModal.title')}
               </h3>
               <button
                 onClick={handleClose}
@@ -112,13 +114,13 @@ const ForumCreateModal: React.FC<ForumCreateModalProps> = ({
             {/* Title input */}
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                Title
+                {t('createModal.topicTitle')}
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter topic title..."
+                placeholder={t('createModal.topicTitlePlaceholder')}
                 className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
               />
             </div>
@@ -127,16 +129,15 @@ const ForumCreateModal: React.FC<ForumCreateModalProps> = ({
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Content (Markdown supported)
+                  {t('createModal.content')}
                 </label>
                 <button
                   type="button"
                   onClick={() => setShowPreview(!showPreview)}
-                  className={`text-xs px-3 py-1 rounded transition-colors ${
-                    showPreview
+                  className={`text-xs px-3 py-1 rounded transition-colors ${showPreview
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                  }`}
+                    }`}
                 >
                   {showPreview ? 'Edit' : 'Preview'}
                 </button>
@@ -158,7 +159,7 @@ const ForumCreateModal: React.FC<ForumCreateModalProps> = ({
                 <textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="Enter topic content... (Markdown supported)"
+                  placeholder={t('createModal.contentPlaceholder')}
                   rows={8}
                   className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                 />
@@ -270,18 +271,17 @@ const ForumCreateModal: React.FC<ForumCreateModalProps> = ({
               disabled={isSubmitting}
               className="px-4 py-2 text-sm font-medium rounded-md transition-colors bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
             >
-              Cancel
+              {t('createModal.cancel')}
             </button>
             <button
               onClick={handleSubmit}
               disabled={!title.trim() || !content.trim() || isSubmitting}
-              className={`px-4 py-2 text-sm font-medium text-white rounded-md transition-colors ${
-                !title.trim() || !content.trim() || isSubmitting
+              className={`px-4 py-2 text-sm font-medium text-white rounded-md transition-colors ${!title.trim() || !content.trim() || isSubmitting
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+                }`}
             >
-              {isSubmitting ? 'Creating...' : 'Create Topic'}
+              {isSubmitting ? t('createModal.creating') : t('createModal.create')}
             </button>
           </div>
         </div>

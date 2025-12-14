@@ -1,5 +1,5 @@
 // Common type definitions for the application
-import { NetworkConnection } from "@/types/connection";
+
 
 // Export new unified message types
 export type {
@@ -21,7 +21,6 @@ export type {
 } from "./feed";
 
 export {
-  FEED_CATEGORY_OPTIONS,
   FEED_SORT_FIELDS,
 } from "./feed";
 

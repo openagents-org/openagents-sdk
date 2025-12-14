@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Routes, Route } from "react-router-dom";
 import { useProfileData } from "./hooks/useProfileData";
 
@@ -19,6 +20,7 @@ import EventsMainPage from "../events/EventsMainPage";
  * Profile main page - handles all profile-related features
  */
 const ProfileMainPage: React.FC = () => {
+  const { t } = useTranslation('profile');
   return (
 
     <Routes>
@@ -32,7 +34,7 @@ const ProfileMainPage: React.FC = () => {
         element={
           <div className="p-6 dark:bg-gray-900 h-full">
             <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-              Edit Profile
+              {t('profile.editProfile')}
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
               Profile editing form coming soon...
@@ -47,7 +49,7 @@ const ProfileMainPage: React.FC = () => {
         element={
           <div className="p-6 dark:bg-gray-900 h-full">
             <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-              Security Settings
+              {t('profile.securitySettings')}
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
               Security configuration panel coming soon...
@@ -61,16 +63,16 @@ const ProfileMainPage: React.FC = () => {
       <Route path="network-profile" element={<NetworkProfile />} />
       <Route path="agent-groups" element={<AgentGroupsManagement />} />
       <Route path="mod-management" element={<ModManagementPage />} />
-      
+
       {/* Event Logs subpage */}
       <Route path="event-logs" element={<EventLogs />} />
-      
+
       {/* Event Debugger subpage */}
       <Route path="event-debugger" element={<EventDebugger />} />
-      
+
       {/* Event Explorer subpage */}
       <Route path="events/*" element={<EventsMainPage />} />
-      
+
     </Routes>
   );
 };
@@ -79,6 +81,7 @@ const ProfileMainPage: React.FC = () => {
  * Main Profile Dashboard component
  */
 const ProfileDashboard: React.FC = () => {
+  const { t } = useTranslation('profile');
   const {
     loading,
     error,
@@ -141,10 +144,10 @@ const ProfileDashboard: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Profile
+            {t('profile.title')}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Agent and network information
+            {t('profile.subtitle')}
           </p>
         </div>
 
@@ -152,12 +155,11 @@ const ProfileDashboard: React.FC = () => {
           {/* Connection Status */}
           <div className="flex items-center space-x-2">
             <div
-              className={`w-2 h-2 rounded-full ${
-                isConnected ? "bg-green-500" : "bg-red-500"
-              }`}
+              className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"
+                }`}
             />
             <span className="text-sm text-gray-600 dark:text-gray-400">
-              {isConnected ? "Connected" : "Disconnected"}
+              {isConnected ? t('profile.status.connected') : t('profile.status.disconnected')}
             </span>
           </div>
 
@@ -187,7 +189,7 @@ const ProfileDashboard: React.FC = () => {
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-            {loading ? "Refreshing..." : "Refresh"}
+            {loading ? t('profile.refreshing') : t('profile.refresh')}
           </button>
         </div>
       </div>
@@ -195,9 +197,9 @@ const ProfileDashboard: React.FC = () => {
       {/* Status Bar */}
       {formattedLastUpdated && (
         <div className="mb-6 text-sm text-gray-600 dark:text-gray-400">
-          Last updated: {formattedLastUpdated}
-          {formattedLatency && ` • Latency: ${formattedLatency}`}
-          {enabledModulesCount > 0 && ` • ${enabledModulesCount} modules enabled`}
+          {t('profile.lastUpdated')}: {formattedLastUpdated}
+          {formattedLatency && ` • ${t('profile.latency')}: ${formattedLatency}`}
+          {enabledModulesCount > 0 && ` • ${t('profile.modulesEnabled', { count: enabledModulesCount })}`}
         </div>
       )}
 

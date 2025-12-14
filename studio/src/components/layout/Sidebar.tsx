@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 // import OpenAgentsLogo from "@/components/icons/OpenAgentsLogo";
 import { useChatStore } from "@/stores/chatStore";
 import { clearAllOpenAgentsDataForLogout } from "@/utils/cookies";
@@ -8,18 +9,23 @@ import { useConfirm } from "@/context/ConfirmContext";
 import { useThemeStore } from "@/stores/themeStore";
 import SidebarContent from "./SidebarContent";
 import { useAuthStore } from "@/stores/authStore";
+import LanguageSwitcher from "@/components/common/LanguageSwitcher";
 
 // Header Component - cached component because content is static
-const SidebarHeader: React.FC = React.memo(() => (
-  <div className="flex flex-col px-4 py-2">
-    <div className="flex items-center justify-center">
-      {/* <OpenAgentsLogo className="w-10 h-10 mr-2 text-gray-900 dark:text-white" /> */}
-      <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent dark:bg-none dark:text-white">
-        OpenAgents Studio
-      </span>
+const SidebarHeader: React.FC = React.memo(() => {
+  const { t } = useTranslation('layout');
+
+  return (
+    <div className="flex flex-col px-4 py-2">
+      <div className="flex items-center justify-center">
+        {/* <OpenAgentsLogo className="w-10 h-10 mr-2 text-gray-900 dark:text-white" /> */}
+        <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent dark:bg-none dark:text-white">
+          {t('sidebar.appName')}
+        </span>
+      </div>
     </div>
-  </div>
-));
+  );
+});
 SidebarHeader.displayName = "SidebarHeader";
 
 // // Quick Action Button Component - cached component to avoid unnecessary re-renders
@@ -82,6 +88,7 @@ const SidebarFooter: React.FC<{
   toggleTheme: () => void;
   theme: string;
 }> = React.memo(({ toggleTheme, theme }) => {
+  const { t } = useTranslation('layout');
   const navigate = useNavigate();
   const { agentName, agentGroup, selectedNetwork, clearNetwork, clearAgentName, clearAgentGroup, clearPasswordHash } =
     useAuthStore();
@@ -95,11 +102,11 @@ const SidebarFooter: React.FC<{
     try {
       // Show confirmation dialog
       const confirmed = await confirm(
-        "Logout Confirmation",
-        "Are you sure you want to logout? You will need to reconnect to continue using the application.",
+        t('sidebar.logout.title'),
+        t('sidebar.logout.message'),
         {
-          confirmText: "Logout",
-          cancelText: "Cancel",
+          confirmText: t('sidebar.logout.confirm'),
+          cancelText: t('sidebar.logout.cancel'),
           type: "warning",
         }
       );
@@ -135,35 +142,37 @@ const SidebarFooter: React.FC<{
 
   return (
     <div className="mt-2 border-t border-gray-200 dark:border-gray-700">
-      <div className="flex items-center justify-between px-4 py-4">
-        <div className="flex items-center">
+      <div className="flex items-center justify-between px-4 py-4 gap-2">
+        <div className="flex items-center flex-1 min-w-0">
           <div
-            className={`w-3 h-3 rounded-full mr-3 shadow-sm ${
-              selectedNetwork ? "bg-green-500 animate-pulse" : "bg-red-500"
-            }`}
+            className={`w-3 h-3 rounded-full mr-3 shadow-sm flex-shrink-0 ${selectedNetwork ? "bg-green-500 animate-pulse" : "bg-red-500"
+              }`}
           />
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-              {selectedNetwork ? agentName || "Connected" : "Disconnected"}
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+              {selectedNetwork ? agentName || t('sidebar.status.connected') : t('sidebar.status.disconnected')}
             </span>
             {selectedNetwork && agentGroup && (
-              <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+              <span className="text-xs text-purple-600 dark:text-purple-400 font-medium truncate">
                 {agentGroup}
               </span>
             )}
             {selectedNetwork && (
-              <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate">
                 {selectedNetwork.host}:{selectedNetwork.port}
               </span>
             )}
           </div>
         </div>
-        <div className="flex items-center space-x-1">
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {/* Language switcher */}
+          <LanguageSwitcher showFlag={true} showFullName={false} />
+
           {/* Theme toggle button */}
           <button
             onClick={toggleTheme}
             className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all duration-200"
-            title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+            title={theme === "light" ? t('sidebar.theme.switchToDark') : t('sidebar.theme.switchToLight')}
           >
             {theme === "light" ? (
               <svg
@@ -200,7 +209,7 @@ const SidebarFooter: React.FC<{
           <button
             onClick={handleLogout}
             className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 group"
-            title="Logout and return to network selection"
+            title={t('sidebar.logout.button')}
           >
             <svg
               className="w-4 h-4 text-gray-600 group-hover:text-red-600 dark:text-gray-300 dark:group-hover:text-red-400 transition-colors"
@@ -238,9 +247,8 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
 
   return (
     <div
-      className={`sidebar h-full flex flex-col transition-all duration-200 bg-slate-100 dark:bg-gray-900 ${
-        className || ""
-      } flex flex-col overflow-hidden`}
+      className={`sidebar h-full flex flex-col transition-all duration-200 bg-slate-100 dark:bg-gray-900 ${className || ""
+        } flex flex-col overflow-hidden`}
       style={{ width: "19rem" }}
     >
       {/* Top: Header */}

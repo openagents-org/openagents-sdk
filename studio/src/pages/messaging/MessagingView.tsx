@@ -12,6 +12,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
+import { useTranslation } from "react-i18next";
 // useNavigate and useLocation moved to global handling, no longer needed here
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
 import { useChatStore, setChatStoreContext } from "@/stores/chatStore";
@@ -26,6 +27,7 @@ import { isProjectChannel, extractProjectIdFromChannel } from "@/utils/projectUt
 import ProjectChatRoom from "./components/ProjectChatRoom";
 
 const ThreadMessagingViewEventBased: React.FC = () => {
+  const { t } = useTranslation('messaging');
   const { agentName } = useAuthStore();
   // Use theme from store
   const { theme: currentTheme } = useThemeStore();
@@ -422,7 +424,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
 
       // In project channel, replies and quotes are not allowed
       if (isProjectChannelActive && (replyToId || _quotedMessageId)) {
-        toast.error("Replies and quotes are not allowed in project channel");
+        toast.error(t('errors.replyNotAllowed'));
         return;
       }
 
@@ -440,7 +442,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
         if (currentChannel) {
           // Check if this is a project channel
           const projectId = extractProjectIdFromChannel(currentChannel);
-          
+
           if (isProjectChannelActive && projectId && connector) {
             // Use project.message.send for project channels
             try {
@@ -505,6 +507,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
       isProjectChannelActive,
       connector,
       connectionStatus.agentId,
+      t,
     ]
   );
 
@@ -513,26 +516,26 @@ const ThreadMessagingViewEventBased: React.FC = () => {
     (messageId: string, text: string, author: string) => {
       // Disable reply features in project channel
       if (isProjectChannelActive) {
-        toast.error("Replies are not allowed in project channel");
+        toast.error(t('errors.replyNotAllowed'));
         return;
       }
       setReplyingTo({ messageId, text, author });
       setQuotingMessage(null); // Clear quote if replying
     },
-    [isProjectChannelActive]
+    [isProjectChannelActive, t]
   );
 
   const startQuote = useCallback(
     (messageId: string, text: string, author: string) => {
       // Disable quote features in project channel
       if (isProjectChannelActive) {
-        toast.error("Quotes are not allowed in project channel");
+        toast.error(t('errors.quoteNotAllowed'));
         return;
       }
       setQuotingMessage({ messageId, text, author });
       setReplyingTo(null); // Clear reply if quoting
     },
-    [isProjectChannelActive]
+    [isProjectChannelActive, t]
   );
 
   const cancelReply = useCallback(() => {
@@ -552,7 +555,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
     ) => {
       // Disable reaction features in project channel
       if (isProjectChannelActive) {
-        toast.error("Adding or removing reactions is not allowed in project channel");
+        toast.error(t('errors.reactionNotAllowed'));
         return;
       }
 
@@ -569,15 +572,15 @@ const ThreadMessagingViewEventBased: React.FC = () => {
         } else {
           console.error(`Failed to ${action} reaction`);
           // Show error toast
-          toast.error(`Failed to ${action} reaction "${reactionType}". Please try again.`);
+          toast.error(t('errors.reactionFailed', { action, reaction: reactionType }));
         }
       } catch (error) {
         console.error(`Failed to ${action} reaction:`, error);
         // Show network error toast
-        toast.error(`Network error while ${action}ing reaction "${reactionType}". Please check your connection and try again.`);
+        toast.error(t('errors.networkError', { action, reaction: reactionType }));
       }
     },
-    [addReaction, removeReaction, currentChannel, isProjectChannelActive]
+    [addReaction, removeReaction, currentChannel, isProjectChannelActive, t]
   );
 
   // Methods are managed through chatStore state, no ref needed
@@ -609,8 +612,8 @@ const ThreadMessagingViewEventBased: React.FC = () => {
   const getCurrentViewTitle = useMemo(() => {
     if (currentChannel) return `#${currentChannel}`;
     if (currentDirectMessage) return `@${currentDirectMessage}`;
-    return "Select a channel";
-  }, [currentChannel, currentDirectMessage]);
+    return t('header.selectChannel');
+  }, [currentChannel, currentDirectMessage, t]);
 
   // Check if its a project channel, if so use ProjectChatRoom component
   const projectId = useMemo(() => {
@@ -655,7 +658,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
       {/* Error display */}
       {lastError && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 text-sm dark:bg-red-900 dark:border-red-700 dark:text-red-100">
-          <span>Error: {lastError}</span>
+          <span>{t('errors.error')}: {lastError}</span>
           <button
             onClick={clearError}
             className="ml-2 text-red-500 hover:text-red-700 dark:text-red-300 dark:hover:text-red-100"
@@ -762,10 +765,10 @@ const ThreadMessagingViewEventBased: React.FC = () => {
                 return (
                   <div className="text-center text-gray-500 dark:text-gray-400 py-8">
                     {currentChannel
-                      ? `No messages in #${currentChannel} yet. Start the conversation!`
+                      ? t('empty.noMessagesChannel', { channel: currentChannel })
                       : currentDirectMessage
-                        ? `No messages with ${currentDirectMessage} yet.`
-                        : "Select a channel to start chatting."}
+                        ? t('empty.noMessagesDirect', { user: currentDirectMessage })
+                        : t('empty.selectChannelToChat')}
                   </div>
                 );
               }

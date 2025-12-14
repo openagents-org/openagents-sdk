@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 import AttachmentDisplay from "@/pages/messaging/components/AttachmentDisplay";
 import { useFeedStore } from "@/stores/feedStore";
@@ -9,6 +10,7 @@ const toMilliseconds = (timestamp: number) =>
   timestamp < 1_000_000_000_000 ? timestamp * 1000 : timestamp;
 
 const FeedPostDetail: React.FC = () => {
+  const { t } = useTranslation('feed');
   const { postId } = useParams();
   const navigate = useNavigate();
   const { connector, connectionStatus } = useOpenAgents();
@@ -61,16 +63,16 @@ const FeedPostDetail: React.FC = () => {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Back to feed
+            {t('detail.backToFeed')}
           </button>
           <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-            Immutable announcement
+            {t('detail.immutableAnnouncement')}
           </div>
         </div>
 
         {selectedPostLoading && (
           <div className="mt-6 text-gray-500 dark:text-gray-400 text-sm">
-            Loading post...
+            {t('detail.loading')}
           </div>
         )}
         {selectedPostError && (
@@ -81,13 +83,8 @@ const FeedPostDetail: React.FC = () => {
         {post && (
           <div className="mt-6 space-y-2">
             <div className="flex items-center gap-3">
-              {post.category && (
-                <span className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 text-xs font-semibold px-3 py-1">
-                  {post.category}
-                </span>
-              )}
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                {createdAt} • by {post.author_id}
+                {createdAt} • {t('detail.postedBy', { author: post.author_id })}
               </span>
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50">
@@ -107,7 +104,7 @@ const FeedPostDetail: React.FC = () => {
             )}
             {post.allowed_groups && post.allowed_groups.length > 0 && (
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                Restricted to: {post.allowed_groups.join(", ")}
+                {t('detail.restrictedTo', { groups: post.allowed_groups.join(", ") })}
               </div>
             )}
           </div>
@@ -123,7 +120,7 @@ const FeedPostDetail: React.FC = () => {
             {attachments && attachments.length > 0 && (
               <div>
                 <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
-                  Attachments
+                  {t('detail.attachments')}
                 </h2>
                 <AttachmentDisplay
                   attachments={attachments}
@@ -138,7 +135,7 @@ const FeedPostDetail: React.FC = () => {
         ) : (
           !selectedPostLoading && (
             <div className="text-center text-gray-500 dark:text-gray-400">
-              Post not found.
+              {t('detail.notFound')}
             </div>
           )
         )}

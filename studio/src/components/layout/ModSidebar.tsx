@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   NavigationIcons,
   getNavigationRoutesByGroup,
@@ -13,7 +14,8 @@ import logo from "@/assets/images/open-agents-logo.png";
 const ModSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  
+  const { t } = useTranslation('layout');
+
   // 获取模块状态，让组件响应模块变化
   // 当 enabledModules 变化时，组件会重新渲染，从而重新计算路由配置
   // 这个订阅确保在模块状态更新时，侧边栏会显示最新的路由
@@ -23,12 +25,32 @@ const ModSidebar: React.FC = () => {
   // Check admin status
   const { isAdmin } = useIsAdmin();
 
+  // Translation mapping for navigation labels
+  const getTranslatedLabel = (key: PLUGIN_NAME_ENUM): string => {
+    const labelMap: Partial<Record<PLUGIN_NAME_ENUM, string>> = {
+      [PLUGIN_NAME_ENUM.MESSAGING]: t('navigation.messages'),
+      [PLUGIN_NAME_ENUM.FEED]: t('navigation.infoFeed'),
+      [PLUGIN_NAME_ENUM.PROJECT]: t('navigation.projects'),
+      [PLUGIN_NAME_ENUM.FORUM]: t('navigation.forum'),
+      [PLUGIN_NAME_ENUM.ARTIFACT]: t('navigation.artifact'),
+      [PLUGIN_NAME_ENUM.WIKI]: t('navigation.wiki'),
+      [PLUGIN_NAME_ENUM.DOCUMENTS]: t('navigation.documents'),
+      [PLUGIN_NAME_ENUM.AGENTWORLD]: t('navigation.agentWorld'),
+      [PLUGIN_NAME_ENUM.PROFILE]: t('navigation.profile'),
+      [PLUGIN_NAME_ENUM.README]: t('navigation.readme'),
+      [PLUGIN_NAME_ENUM.MOD_MANAGEMENT]: t('navigation.modManagement'),
+      [PLUGIN_NAME_ENUM.SERVICE_AGENTS]: t('navigation.serviceAgents'),
+      [PLUGIN_NAME_ENUM.LLM_LOGS]: t('navigation.llmLogs'),
+    };
+    return labelMap[key] || key;
+  };
+
   // Generate icon groups using dynamic configuration
   // 直接计算，不使用 useMemo，确保每次渲染都获取最新的路由配置
   // 因为 dynamicRouteConfig 的 visible 属性可能被外部函数动态修改
   const primaryRoutes = getNavigationRoutesByGroup("primary");
   let secondaryRoutes = getNavigationRoutesByGroup("secondary");
-  
+
   // Add admin route if user is admin
   if (isAdmin) {
     const adminRoute = secondaryRoutes.find(
@@ -57,7 +79,8 @@ const ModSidebar: React.FC = () => {
       (route) => route.navigationConfig?.key !== PLUGIN_NAME_ENUM.ADMIN
     );
   }
-  
+
+
   // Debug: Log routes to console
   if (process.env.NODE_ENV === 'development') {
     console.log("🔍 ModSidebar - Secondary routes:", secondaryRoutes.map(r => ({
@@ -80,20 +103,20 @@ const ModSidebar: React.FC = () => {
   // Create pinned README icon config
   const pinnedReadmeIcon = readmeRoute
     ? {
-        key: readmeRoute.navigationConfig!.key,
-        label: readmeRoute.navigationConfig!.label,
-        icon: React.createElement(
-          NavigationIcons[readmeRoute.navigationConfig!.icon]
-        ),
-        route: readmeRoute.path.replace("/*", ""),
-      }
+      key: readmeRoute.navigationConfig!.key,
+      label: getTranslatedLabel(readmeRoute.navigationConfig!.key),
+      icon: React.createElement(
+        NavigationIcons[readmeRoute.navigationConfig!.icon]
+      ),
+      route: readmeRoute.path.replace("/*", ""),
+    }
     : null;
 
   const iconGroups = [
     // Primary group (main features) - excluding README which is pinned
     otherPrimaryRoutes.map((route) => ({
       key: route.navigationConfig!.key,
-      label: route.navigationConfig!.label,
+      label: getTranslatedLabel(route.navigationConfig!.key),
       icon: React.createElement(
         NavigationIcons[route.navigationConfig!.icon]
       ),
@@ -102,7 +125,7 @@ const ModSidebar: React.FC = () => {
     // Secondary group (settings-related)
     secondaryRoutes.map((route) => ({
       key: route.navigationConfig!.key,
-      label: route.navigationConfig!.label,
+      label: getTranslatedLabel(route.navigationConfig!.key),
       icon: React.createElement(
         NavigationIcons[route.navigationConfig!.icon]
       ),

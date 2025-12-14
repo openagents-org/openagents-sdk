@@ -1,0 +1,47 @@
+{
+    "sidebar": {
+        "appName": "OpenAgents Studio",
+        "status": {
+            "connected": "Connected",
+            "disconnected": "Disconnected"
+        },
+        "logout": {
+            "button": "Logout",
+            "title": "Logout Confirmation",
+            "message": "Are you sure you want to logout? You will need to reconnect to continue using the application.",
+            "confirm": "Logout",
+            "cancel": "Cancel"
+        },
+        "theme": {
+            "switchToDark": "Switch to dark mode",
+            "switchToLight": "Switch to light mode"
+        }
+    },
+    "navigation": {
+        "messages": "Messages",
+        "infoFeed": "Info Feed",
+        "projects": "Projects",
+        "forum": "Forum",
+        "artifact": "Artifact",
+        "wiki": "Wiki",
+        "documents": "Documents",
+        "agentWorld": "AgentWorld",
+        "profile": "Profile",
+        "readme": "README",
+        "modManagement": "Mod Management",
+        "serviceAgents": "Service Agents",
+        "llmLogs": "LLM Logs"
+    },
+    "defaultSidebar": {
+        "navigation": "Navigation content will appear here",
+        "settings": "Settings options will appear here",
+        "mcp": "MCP plugins will appear here"
+    },
+    "overlay": {
+        "connecting": "Connecting as {{name}}...",
+        "status": "Status: {{status}}",
+        "failed": "Connection failed. Please try again.",
+        "retry": "Retry",
+        "backToNetwork": "Back To Select Network"
+    }
+}

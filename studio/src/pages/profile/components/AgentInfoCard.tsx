@@ -1,8 +1,10 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/stores/authStore";
 import { profileSelectors } from "@/stores/profileStore";
 
 const AgentInfoCard: React.FC = () => {
+  const { t } = useTranslation('profile');
   const { agentName, agentGroup } = useAuthStore();
   const lastUpdated = profileSelectors.useLastUpdated();
   const connectionLatency = profileSelectors.useConnectionLatency();
@@ -12,16 +14,15 @@ const AgentInfoCard: React.FC = () => {
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Agent Information
+          {t('dashboard.agent.title')}
         </h3>
         <div className="flex items-center space-x-2">
           <div
-            className={`w-3 h-3 rounded-full ${
-              isOnline ? "bg-green-500" : "bg-gray-400"
-            }`}
+            className={`w-3 h-3 rounded-full ${isOnline ? "bg-green-500" : "bg-gray-400"
+              }`}
           />
           <span className="text-sm text-gray-600 dark:text-gray-400">
-            {isOnline ? "Active" : "Inactive"}
+            {isOnline ? t('dashboard.agent.active') : t('dashboard.agent.inactive')}
           </span>
         </div>
       </div>
@@ -30,7 +31,7 @@ const AgentInfoCard: React.FC = () => {
         {/* Agent Identity */}
         <div>
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Identity
+            {t('dashboard.agent.identity')}
           </h4>
           <div className="bg-gray-50 dark:bg-gray-700 rounded-md p-3">
             <div className="flex items-center space-x-4">
@@ -44,7 +45,7 @@ const AgentInfoCard: React.FC = () => {
                   {agentName || "Unknown Agent"}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">
-                  AI Agent
+                  {t('dashboard.agent.type')}
                 </div>
                 {agentGroup && (
                   <div className="mt-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
@@ -59,23 +60,22 @@ const AgentInfoCard: React.FC = () => {
         {/* Agent Status */}
         <div>
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Status Details
+            {t('dashboard.agent.statusDetails')}
           </h4>
           <div className="bg-gray-50 dark:bg-gray-700 rounded-md p-3">
             <div className="grid grid-cols-1 gap-2">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Status:</span>
-                <span className={`text-sm font-medium ${
-                  isOnline
+                <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.agent.status')}:</span>
+                <span className={`text-sm font-medium ${isOnline
                     ? "text-green-600 dark:text-green-400"
                     : "text-gray-600 dark:text-gray-400"
-                }`}>
-                  {isOnline ? "Online" : "Offline"}
+                  }`}>
+                  {isOnline ? t('dashboard.agent.online') : t('dashboard.agent.offline')}
                 </span>
               </div>
               {lastUpdated && (
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Last Active:</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.agent.lastActive')}:</span>
                   <span className="text-sm text-gray-900 dark:text-gray-100">
                     {lastUpdated.toLocaleTimeString()}
                   </span>
@@ -83,7 +83,7 @@ const AgentInfoCard: React.FC = () => {
               )}
               {connectionLatency && (
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Response Time:</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.agent.responseTime')}:</span>
                   <span className="text-sm text-gray-900 dark:text-gray-100">
                     {connectionLatency}ms
                   </span>
@@ -96,7 +96,7 @@ const AgentInfoCard: React.FC = () => {
         {/* Agent Capabilities */}
         <div>
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Capabilities
+            {t('dashboard.agent.capabilities')}
           </h4>
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-gray-50 dark:bg-gray-700 rounded-md p-3 text-center">
@@ -106,7 +106,7 @@ const AgentInfoCard: React.FC = () => {
                 </svg>
               </div>
               <div className="text-xs text-gray-600 dark:text-gray-400">
-                Messaging
+                {t('dashboard.agent.caps.messaging')}
               </div>
             </div>
 
@@ -117,7 +117,7 @@ const AgentInfoCard: React.FC = () => {
                 </svg>
               </div>
               <div className="text-xs text-gray-600 dark:text-gray-400">
-                Forum
+                {t('dashboard.agent.caps.forum')}
               </div>
             </div>
 
@@ -128,7 +128,7 @@ const AgentInfoCard: React.FC = () => {
                 </svg>
               </div>
               <div className="text-xs text-gray-600 dark:text-gray-400">
-                Wiki
+                {t('dashboard.agent.caps.wiki')}
               </div>
             </div>
 
@@ -140,7 +140,7 @@ const AgentInfoCard: React.FC = () => {
                 </svg>
               </div>
               <div className="text-xs text-gray-600 dark:text-gray-400">
-                Settings
+                {t('dashboard.agent.caps.settings')}
               </div>
             </div>
           </div>
@@ -155,7 +155,7 @@ const AgentInfoCard: React.FC = () => {
               </svg>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              No agent information available
+              {t('dashboard.agent.noAgent')}
             </p>
           </div>
         )}

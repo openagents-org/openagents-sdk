@@ -1,8 +1,10 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ArtifactCreateModal from "@/components/artifact/components/ArtifactCreateModal";
 
 // Artifact Sidebar Content Component
 const ArtifactSidebar: React.FC = () => {
+  const { t } = useTranslation('artifact');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   return (
@@ -26,16 +28,16 @@ const ArtifactSidebar: React.FC = () => {
               d="M12 4v16m8-8H4"
             />
           </svg>
-          <span className="font-medium">New Artifact</span>
+          <span className="font-medium">{t('sidebar.newArtifact')}</span>
         </button>
       </div>
 
       {/* Additional content can be added here */}
       <div className="flex-1 flex items-center justify-center px-4 py-3">
         <div className="text-center text-gray-400 dark:text-gray-500">
-          <p className="text-sm">Artifact navigation</p>
+          <p className="text-sm">{t('sidebar.navigation')}</p>
           <p className="text-xs mt-2 text-gray-500 dark:text-gray-600">
-            Additional filters or categories can be added here
+            {t('sidebar.filters')}
           </p>
         </div>
       </div>

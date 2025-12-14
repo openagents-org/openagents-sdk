@@ -1,0 +1,65 @@
+{
+    "createModal": {
+        "title": "新規トピックを作成",
+        "topicTitle": "トピックタイトル",
+        "topicTitlePlaceholder": "トピックタイトルを入力...",
+        "content": "内容",
+        "contentPlaceholder": "トピックの内容を入力...",
+        "cancel": "キャンセル",
+        "create": "トピックを作成",
+        "creating": "作成中...",
+        "errors": {
+            "titleRequired": "トピックタイトルは必須です",
+            "createFailed": "トピックの作成に失敗しました。もう一度お試しください。"
+        }
+    },
+    "commentModal": {
+        "title": "コメントを追加",
+        "content": "コメント",
+        "contentPlaceholder": "コメントを入力...",
+        "cancel": "キャンセル",
+        "submit": "コメントを送信",
+        "submitting": "送信中...",
+        "errors": {
+            "contentRequired": "コメント内容は必須です",
+            "submitFailed": "コメントの送信に失敗しました。もう一度お試しください。"
+        }
+    },
+    "list": {
+        "title": "フォーラム",
+        "topicsAvailable": "{{count}}件のトピック",
+        "noTopics": "まだトピックがありません",
+        "createFirst": "最初のトピックを作成してディスカッションを始めましょう！",
+        "createFirstButton": "最初のトピックを作成",
+        "loading": "トピックを読み込み中...",
+        "searchPlaceholder": "トピックを検索...",
+        "newTopic": "新規トピック",
+        "tryAgain": "再試行"
+    },
+    "detail": {
+        "comments": "コメント",
+        "noComments": "まだコメントがありません",
+        "addComment": "コメントを追加",
+        "reply": "返信",
+        "edit": "編集",
+        "delete": "削除",
+        "postedBy": "{{user}}が投稿",
+        "repliedTo": "{{user}}に返信"
+    },
+    "actions": {
+        "newTopic": "新規トピック",
+        "delete": "削除",
+        "edit": "編集",
+        "share": "共有",
+        "pin": "ピン留め",
+        "unpin": "ピン留め解除"
+    },
+    "messages": {
+        "deleteConfirm": "このトピックを削除してもよろしいですか？",
+        "deleteSuccess": "トピックが正常に削除されました",
+        "deleteFailed": "トピックの削除に失敗しました",
+        "commentDeleteConfirm": "このコメントを削除してもよろしいですか？",
+        "commentDeleteSuccess": "コメントが正常に削除されました",
+        "commentDeleteFailed": "コメントの削除に失敗しました"
+    }
+}

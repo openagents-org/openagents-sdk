@@ -1,7 +1,9 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { profileSelectors } from "@/stores/profileStore";
 
 const ModulesInfoCard: React.FC = () => {
+  const { t } = useTranslation('profile');
   const modulesInfo = profileSelectors.useModulesInfo();
   const enabledModulesCount = profileSelectors.useEnabledModulesCount();
 
@@ -11,11 +13,11 @@ const ModulesInfoCard: React.FC = () => {
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Modules Status
+          {t('dashboard.modules.title')}
         </h3>
         <div className="flex items-center space-x-2">
           <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-            {enabledModulesCount}/{totalModules} Enabled
+            {t('dashboard.modules.count_enabled', { count: enabledModulesCount, total: totalModules })}
           </span>
         </div>
       </div>
@@ -24,7 +26,7 @@ const ModulesInfoCard: React.FC = () => {
         {/* Modules Summary */}
         <div>
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Summary
+            {t('dashboard.modules.summary')}
           </h4>
           <div className="bg-gray-50 dark:bg-gray-700 rounded-md p-3">
             <div className="grid grid-cols-2 gap-4">
@@ -33,7 +35,7 @@ const ModulesInfoCard: React.FC = () => {
                   {enabledModulesCount}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Enabled
+                  {t('dashboard.modules.enabled')}
                 </div>
               </div>
               <div className="text-center">
@@ -41,7 +43,7 @@ const ModulesInfoCard: React.FC = () => {
                   {totalModules - enabledModulesCount}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Disabled
+                  {t('dashboard.modules.disabled')}
                 </div>
               </div>
             </div>
@@ -52,7 +54,7 @@ const ModulesInfoCard: React.FC = () => {
         {modulesInfo && modulesInfo.length > 0 ? (
           <div>
             <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Available Modules
+              {t('dashboard.modules.available')}
             </h4>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {modulesInfo.map((module, index) => (
@@ -62,11 +64,10 @@ const ModulesInfoCard: React.FC = () => {
                 >
                   <div className="flex items-center space-x-3">
                     <div
-                      className={`w-2 h-2 rounded-full ${
-                        module.enabled
+                      className={`w-2 h-2 rounded-full ${module.enabled
                           ? "bg-green-500"
                           : "bg-gray-400 dark:bg-gray-500"
-                      }`}
+                        }`}
                     />
                     <div>
                       <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -97,7 +98,7 @@ const ModulesInfoCard: React.FC = () => {
               </svg>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              No modules information available
+              {t('dashboard.modules.noModules')}
             </p>
           </div>
         )}
@@ -106,7 +107,7 @@ const ModulesInfoCard: React.FC = () => {
         {totalModules > 0 && (
           <div>
             <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
-              <span>Module Activation</span>
+              <span>{t('dashboard.modules.activation')}</span>
               <span>{Math.round((enabledModulesCount / totalModules) * 100)}%</span>
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">

@@ -466,10 +466,15 @@ class AgentRunner(ABC):
 
                     # Create a copy of conversation threads that doesn't include future messages
                     # But always include the agent's own messages so it can see what it said
+                    # Also exclude system threads (thread:system) - these contain internal events/logs
                     current_time = unprocessed_message.timestamp
                     filtered_threads = {}
 
                     for thread_id, thread in event_threads.items():
+                        # Skip system threads - they contain internal events and logs, not for agent prompts
+                        if thread_id.startswith("thread:system"):
+                            continue
+
                         # Create a new thread with only messages up to the current message's timestamp
                         # Exception: always include agent's own messages regardless of timestamp
                         # This ensures the agent can see its own previous responses in the conversation

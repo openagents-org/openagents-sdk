@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ArtifactPaginationProps {
   currentPage: number;
@@ -15,6 +16,7 @@ const ArtifactPagination: React.FC<ArtifactPaginationProps> = ({
   itemsPerPage,
   onPageChange,
 }) => {
+  const { t } = useTranslation('artifact');
   if (totalPages <= 1) {
     return null; // Don't show pagination if there's only one page or no items
   }
@@ -68,7 +70,7 @@ const ArtifactPagination: React.FC<ArtifactPaginationProps> = ({
       {/* Items info */}
       <div className="flex items-center text-sm text-gray-700 dark:text-gray-300">
         <span>
-          Showing {startItem} to {endItem} of {totalItems} artifacts
+          {t('pagination.showing', { start: startItem, end: endItem, total: totalItems })}
         </span>
       </div>
 
@@ -80,10 +82,9 @@ const ArtifactPagination: React.FC<ArtifactPaginationProps> = ({
           disabled={currentPage === 1}
           className={`
             px-3 py-2 text-sm font-medium rounded-md transition-colors
-            ${
-              currentPage === 1
-                ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
-                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            ${currentPage === 1
+              ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
+              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
             }
           `}
         >
@@ -105,10 +106,9 @@ const ArtifactPagination: React.FC<ArtifactPaginationProps> = ({
                   onClick={() => onPageChange(page as number)}
                   className={`
                     px-3 py-2 text-sm font-medium rounded-md transition-colors
-                    ${
-                      currentPage === page
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    ${currentPage === page
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                     }
                   `}
                 >
@@ -125,10 +125,9 @@ const ArtifactPagination: React.FC<ArtifactPaginationProps> = ({
           disabled={currentPage === totalPages}
           className={`
             px-3 py-2 text-sm font-medium rounded-md transition-colors
-            ${
-              currentPage === totalPages
-                ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
-                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            ${currentPage === totalPages
+              ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
+              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
             }
           `}
         >

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
 import { useProfileStore } from "@/stores/profileStore";
@@ -25,6 +26,7 @@ interface ProjectSummary {
  * - Project list
  */
 const ProjectSidebar: React.FC = () => {
+  const { t } = useTranslation('project');
   const navigate = useNavigate();
   const location = useLocation();
   const { connector, connectionStatus, isConnected } = useOpenAgents();
@@ -116,11 +118,11 @@ const ProjectSidebar: React.FC = () => {
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
     if (days === 0) {
-      return "Today";
+      return t('sidebar.time.today');
     } else if (days === 1) {
-      return "Yesterday";
+      return t('sidebar.time.yesterday');
     } else if (days < 7) {
-      return `${days} days ago`;
+      return t('sidebar.time.daysAgo', { count: days });
     } else {
       return date.toLocaleDateString();
     }
@@ -135,32 +137,32 @@ const ProjectSidebar: React.FC = () => {
       running: {
         bg: "bg-green-100 dark:bg-green-900",
         text: "text-green-800 dark:text-green-200",
-        label: "Running",
+        label: t('sidebar.status.running'),
       },
       completed: {
         bg: "bg-blue-100 dark:bg-blue-900",
         text: "text-blue-800 dark:text-blue-200",
-        label: "Completed",
+        label: t('sidebar.status.completed'),
       },
       created: {
         bg: "bg-gray-100 dark:bg-gray-700",
         text: "text-gray-800 dark:text-gray-200",
-        label: "Created",
+        label: t('sidebar.status.created'),
       },
       paused: {
         bg: "bg-yellow-100 dark:bg-yellow-900",
         text: "text-yellow-800 dark:text-yellow-200",
-        label: "Paused",
+        label: t('sidebar.status.paused'),
       },
       failed: {
         bg: "bg-red-100 dark:bg-red-900",
         text: "text-red-800 dark:text-red-200",
-        label: "Failed",
+        label: t('sidebar.status.failed'),
       },
       stopped: {
         bg: "bg-gray-100 dark:bg-gray-700",
         text: "text-gray-800 dark:text-gray-200",
-        label: "Stopped",
+        label: t('sidebar.status.stopped'),
       },
     };
 
@@ -177,7 +179,7 @@ const ProjectSidebar: React.FC = () => {
             onClick={() => setShowProjectDialog(true)}
             className="mb-5 w-full flex items-center justify-center px-4 py-3 rounded-lg text-sm font-medium text-white transition-all bg-gradient-to-r from-purple-600 via-purple-500 to-purple-400 hover:from-purple-700 hover:via-purple-600 hover:to-purple-500 shadow-md hover:shadow-lg mt-2"
           >
-            <span>New Project</span>
+            <span>{t('sidebar.newProject')}</span>
           </button>
         </div>
 
@@ -185,7 +187,7 @@ const ProjectSidebar: React.FC = () => {
         <div className="flex-1 overflow-y-auto">
           {loadingProjects ? (
             <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-              Loading...
+              {t('sidebar.loading')}
             </div>
           ) : projectList.length === 0 ? (
             <div className="p-4 text-center text-gray-500 dark:text-gray-400">
@@ -204,9 +206,9 @@ const ProjectSidebar: React.FC = () => {
                   />
                 </svg>
               </div>
-              <p className="text-sm">No projects</p>
+              <p className="text-sm">{t('sidebar.noProjects')}</p>
               <p className="text-xs mt-1">
-                Click the button above to create a new project
+                {t('sidebar.createHint')}
               </p>
             </div>
           ) : (
@@ -215,11 +217,10 @@ const ProjectSidebar: React.FC = () => {
                 <div
                   key={project.project_id}
                   onClick={() => handleProjectClick(project.project_id)}
-                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                    project.project_id === currentProjectId
-                      ? "bg-blue-100 dark:bg-blue-900/30 border-l-4 border-blue-500"
-                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
-                  }`}
+                  className={`p-3 rounded-lg cursor-pointer transition-colors ${project.project_id === currentProjectId
+                    ? "bg-blue-100 dark:bg-blue-900/30 border-l-4 border-blue-500"
+                    : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                    }`}
                 >
                   <div className="flex items-start justify-between mb-1">
                     <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate flex-1">
@@ -227,9 +228,8 @@ const ProjectSidebar: React.FC = () => {
                         `Project ${project.project_id.slice(0, 8)}`}
                     </h3>
                     <span
-                      className={`text-xs px-2 py-0.5 rounded-full ml-2 ${
-                        getStatusBadge(project.status).bg
-                      } ${getStatusBadge(project.status).text}`}
+                      className={`text-xs px-2 py-0.5 rounded-full ml-2 ${getStatusBadge(project.status).bg
+                        } ${getStatusBadge(project.status).text}`}
                     >
                       {getStatusBadge(project.status).label}
                     </span>

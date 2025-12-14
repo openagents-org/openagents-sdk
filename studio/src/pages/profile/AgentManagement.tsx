@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
 import { useConfirm } from "@/context/ConfirmContext";
 import { useAuthStore } from "@/stores/authStore";
@@ -11,6 +12,7 @@ interface AgentInfo {
 }
 
 const AgentManagement: React.FC = () => {
+  const { t } = useTranslation('network');
   const [agents, setAgents] = useState<AgentInfo[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +25,7 @@ const AgentManagement: React.FC = () => {
   // Fetch agents from /api/health
   const fetchAgents = useCallback(async () => {
     if (!connector) {
-      setError("Not connected to network");
+      setError(t('agents.messages.fetchError'));
       setLoading(false);
       return;
     }
@@ -49,12 +51,12 @@ const AgentManagement: React.FC = () => {
       }
     } catch (err) {
       console.error("Failed to fetch agents:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch agents");
+      setError(err instanceof Error ? err.message : t('agents.messages.fetchError'));
       setAgents([]);
     } finally {
       setLoading(false);
     }
-  }, [connector]);
+  }, [connector, t]);
 
   useEffect(() => {
     fetchAgents();
@@ -66,18 +68,18 @@ const AgentManagement: React.FC = () => {
 
     // Prevent kicking yourself
     if (targetAgentId === currentAgentName) {
-      alert("You cannot kick yourself!");
+      alert(t('agents.messages.kickSelf'));
       return;
     }
 
     try {
       // Show confirmation dialog
       const confirmed = await confirm(
-        "Kick Agent",
-        `Are you sure you want to kick agent "${targetAgentId}"? This will disconnect them from the network.`,
+        t('agents.kickConfirm.title'),
+        t('agents.kickConfirm.message', { name: targetAgentId }),
         {
-          confirmText: "Kick",
-          cancelText: "Cancel",
+          confirmText: t('agents.kickConfirm.confirm'),
+          cancelText: t('agents.kickConfirm.cancel'),
           type: "warning",
         }
       );
@@ -109,8 +111,8 @@ const AgentManagement: React.FC = () => {
           )
         );
 
-        toast.success(`Successfully kicked ${targetAgentId}`, {
-          description: "The agent has been removed from the network",
+        toast.success(t('agents.messages.kickSuccess', { name: targetAgentId }), {
+          description: t('agents.messages.kickSuccessDesc'),
         });
 
         // Refresh agents list after a short delay to get updated data
@@ -119,11 +121,11 @@ const AgentManagement: React.FC = () => {
         // }, 2000);
       } else {
         console.error(`❌ Failed to kick agent: ${response.message}`);
-        setError(response.message || "Failed to kick agent");
+        setError(response.message || t('agents.messages.kickError'));
       }
     } catch (err) {
       console.error("Error kicking agent:", err);
-      setError(err instanceof Error ? err.message : "Failed to kick agent");
+      setError(err instanceof Error ? err.message : t('agents.messages.kickError'));
     } finally {
       setKickingAgentId(null);
     }
@@ -148,10 +150,10 @@ const AgentManagement: React.FC = () => {
       <div className="flex items-center justify-between mb-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Agent Management
+            {t('agents.title')}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Manage connected agents on the network
+            {t('agents.subtitle')}
           </p>
         </div>
 
@@ -173,7 +175,7 @@ const AgentManagement: React.FC = () => {
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          Refresh
+          {t('agents.refresh')}
         </button>
       </div>
 
@@ -204,7 +206,7 @@ const AgentManagement: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-              Total Agents
+              {t('agents.total')}
             </dt>
             <dd className="mt-1 text-3xl font-semibold text-gray-900 dark:text-gray-100">
               {agents.length}
@@ -214,7 +216,7 @@ const AgentManagement: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-              Online Agents
+              {t('agents.online')}
             </dt>
             <dd className="mt-1 text-3xl font-semibold text-green-600 dark:text-green-400">
               {agents.filter((a) => a.status === "online").length}
@@ -229,13 +231,13 @@ const AgentManagement: React.FC = () => {
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Agent ID
+                {t('agents.table.id')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Status
+                {t('agents.table.status')}
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Actions
+                {t('agents.table.actions')}
               </th>
             </tr>
           </thead>
@@ -259,7 +261,7 @@ const AgentManagement: React.FC = () => {
                       d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                     />
                   </svg>
-                  <p className="mt-2">No agents connected</p>
+                  <p className="mt-2">{t('agents.empty')}</p>
                 </td>
               </tr>
             ) : (
@@ -279,7 +281,7 @@ const AgentManagement: React.FC = () => {
                         </div>
                         {agent.agent_id === currentAgentName && (
                           <div className="text-xs text-blue-600 dark:text-blue-400">
-                            (You)
+                            {t('agents.you')}
                           </div>
                         )}
                       </div>
@@ -287,11 +289,10 @@ const AgentManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        agent.status === "offline" || agent.isKicked
-                          ? "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400"
-                          : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                      }`}
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${agent.status === "offline" || agent.isKicked
+                        ? "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400"
+                        : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                        }`}
                     >
                       {agent.status === "offline" || agent.isKicked
                         ? "offline"
@@ -330,7 +331,7 @@ const AgentManagement: React.FC = () => {
                               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                             ></path>
                           </svg>
-                          Kicking...
+                          {t('agents.kicking')}
                         </>
                       ) : (
                         <>
@@ -347,7 +348,7 @@ const AgentManagement: React.FC = () => {
                               d="M6 18L18 6M6 6l12 12"
                             />
                           </svg>
-                          Kick
+                          {t('agents.kick')}
                         </>
                       )}
                     </button>

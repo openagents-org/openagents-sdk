@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useArtifactStore } from "@/stores/artifactStore";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
 
 const ArtifactTopicDetail: React.FC = () => {
+  const { t } = useTranslation('artifact');
   const context = useContext(OpenAgentsContext);
   const { artifactId } = useParams<{ artifactId: string }>();
   const navigate = useNavigate();
@@ -96,22 +98,22 @@ const ArtifactTopicDetail: React.FC = () => {
 
     if (success) {
       setIsEditing(false);
-      toast.success("Artifact updated successfully");
+      toast.success(t('detail.updateSuccess'));
     } else {
-      toast.error("Failed to update artifact");
+      toast.error(t('detail.updateFailed'));
     }
   };
 
   const handleDelete = async () => {
     if (!selectedArtifact) return;
 
-    if (window.confirm(`Are you sure you want to delete "${selectedArtifact.name}"?`)) {
+    if (window.confirm(t('detail.deleteConfirm', { name: selectedArtifact.name }))) {
       const success = await deleteArtifact(selectedArtifact.artifact_id);
       if (success) {
-        toast.success("Artifact deleted successfully");
+        toast.success(t('detail.deleteSuccess'));
         navigate("/artifact");
       } else {
-        toast.error("Failed to delete artifact");
+        toast.error(t('detail.deleteFailed'));
       }
     }
   };
@@ -124,8 +126,8 @@ const ArtifactTopicDetail: React.FC = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">
             {!openAgentsService
-              ? "Connecting to network..."
-              : "Establishing connection..."}
+              ? t('detail.connecting')
+              : t('detail.establishing')}
           </p>
         </div>
       </div>
@@ -138,7 +140,7 @@ const ArtifactTopicDetail: React.FC = () => {
       <div className="flex-1 flex items-center justify-center dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Loading artifact...</p>
+          <p className="text-gray-600 dark:text-gray-400">{t('detail.loading')}</p>
         </div>
       </div>
     );
@@ -165,13 +167,13 @@ const ArtifactTopicDetail: React.FC = () => {
             </svg>
           </div>
           <p className="mb-4 text-gray-700 dark:text-gray-300">
-            {artifactError || "Artifact not found"}
+            {artifactError || t('detail.notFound')}
           </p>
           <button
             onClick={handleBack}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
-            Back to Artifact List
+            {t('detail.backToList')}
           </button>
         </div>
       </div>
@@ -184,7 +186,7 @@ const ArtifactTopicDetail: React.FC = () => {
 
   // 格式化文件大小
   const formatFileSize = (bytes?: number) => {
-    if (!bytes) return "Unknown size";
+    if (!bytes) return t('detail.unknownSize');
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -235,10 +237,10 @@ const ArtifactTopicDetail: React.FC = () => {
       return (
         <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-md">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Content preview not available for {selectedArtifact.mime_type}
+            {t('detail.previewNotAvailable', { type: selectedArtifact.mime_type })}
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-            File size: {formatFileSize(selectedArtifact.file_size)}
+            {t('detail.fileSize', { size: formatFileSize(selectedArtifact.file_size) })}
           </p>
         </div>
       );
@@ -266,7 +268,7 @@ const ArtifactTopicDetail: React.FC = () => {
               d="M15 19l-7-7 7-7"
             />
           </svg>
-          <span>Back to Artifact List</span>
+          <span>{t('detail.backToList')}</span>
         </button>
 
         <div className="flex items-center space-x-2">
@@ -276,13 +278,13 @@ const ArtifactTopicDetail: React.FC = () => {
                 onClick={handleEdit}
                 className="px-4 py-2 text-sm font-medium rounded-md transition-colors bg-blue-600 text-white hover:bg-blue-700"
               >
-                Edit
+                {t('detail.edit')}
               </button>
               <button
                 onClick={handleDelete}
                 className="px-4 py-2 text-sm font-medium rounded-md transition-colors bg-red-600 text-white hover:bg-red-700"
               >
-                Delete
+                {t('detail.delete')}
               </button>
             </>
           ) : (
@@ -292,14 +294,14 @@ const ArtifactTopicDetail: React.FC = () => {
                 disabled={isSubmitting}
                 className="px-4 py-2 text-sm font-medium rounded-md transition-colors bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
               >
-                Cancel
+                {t('detail.cancel')}
               </button>
               <button
                 onClick={handleSave}
                 disabled={isSubmitting || !editedContent.trim()}
                 className="px-4 py-2 text-sm font-medium rounded-md transition-colors bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                {isSubmitting ? "Saving..." : "Save"}
+                {isSubmitting ? t('detail.saving') : t('detail.save')}
               </button>
             </>
           )}
@@ -327,7 +329,7 @@ const ArtifactTopicDetail: React.FC = () => {
                 )}
               </div>
               <span>
-                {selectedArtifact.created_by && `by ${selectedArtifact.created_by} • `}
+                {selectedArtifact.created_by && `${t('detail.by', { author: selectedArtifact.created_by })} • `}
                 {timeAgo}
               </span>
             </div>

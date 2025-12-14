@@ -1,5 +1,6 @@
 import React from "react"
 import { useLocation } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import DefaultSidebar from "./DefaultSidebar"
 import MessagingSidebar from "@/pages/messaging/MessagingSidebar"
 import DocumentsSidebar from "@/pages/documents/DocumentsSidebar"
@@ -17,6 +18,7 @@ import AdminSidebar from "@/pages/admin/AdminSidebar"
 // Each specific sidebar component manages its own data, no need to pass from outside
 const SidebarContent: React.FC = () => {
   const location = useLocation()
+  const { t } = useTranslation('layout')
 
   // Decide which sidebar content to display based on current route
   const renderContent = () => {
@@ -69,7 +71,7 @@ const SidebarContent: React.FC = () => {
     if (pathname.startsWith("/settings")) {
       return (
         <DefaultSidebar
-          message="Settings options will appear here"
+          message={t('defaultSidebar.settings')}
           icon={
             <svg
               className="w-8 h-8 text-gray-400"
@@ -110,7 +112,7 @@ const SidebarContent: React.FC = () => {
     if (pathname.startsWith("/mcp")) {
       return (
         <DefaultSidebar
-          message="MCP plugins will appear here"
+          message={t('defaultSidebar.mcp')}
           icon={
             <svg
               className="w-8 h-8 text-gray-400"

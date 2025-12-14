@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Artifact } from '@/stores/artifactStore';
 import { formatDateTime } from '@/utils/utils';
 
@@ -10,6 +11,7 @@ interface ArtifactTopicItemProps {
 const ArtifactTopicItem: React.FC<ArtifactTopicItemProps> = React.memo(({
   artifact
 }) => {
+  const { t } = useTranslation('artifact');
   const navigate = useNavigate();
 
   const handleClick = () => {
@@ -17,13 +19,13 @@ const ArtifactTopicItem: React.FC<ArtifactTopicItemProps> = React.memo(({
     navigate(`/artifact/${artifact.artifact_id}`);
   };
 
-  const timeAgo = artifact.created_at 
+  const timeAgo = artifact.created_at
     ? formatDateTime(artifact.created_at * 1000)
     : 'Unknown';
 
   // 格式化文件大小
   const formatFileSize = (bytes?: number) => {
-    if (!bytes) return 'Unknown size';
+    if (!bytes) return t('detail.unknownSize');
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;

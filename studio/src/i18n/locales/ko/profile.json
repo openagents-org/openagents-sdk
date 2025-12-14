@@ -1,0 +1,27 @@
+{
+    "title": "프로필",
+    "editProfile": "프로필 편집",
+    "settings": "설정",
+    "account": {
+        "title": "계정",
+        "username": "사용자명",
+        "email": "이메일",
+        "password": "비밀번호",
+        "changePassword": "비밀번호 변경"
+    },
+    "preferences": {
+        "title": "환경설정",
+        "language": "언어",
+        "theme": "테마",
+        "notifications": "알림"
+    },
+    "actions": {
+        "save": "변경사항 저장",
+        "cancel": "취소",
+        "logout": "로그아웃"
+    },
+    "messages": {
+        "updateSuccess": "프로필이 업데이트되었습니다",
+        "updateFailed": "프로필 업데이트에 실패했습니다"
+    }
+}

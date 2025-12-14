@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useArtifactStore } from '@/stores/artifactStore';
 import { useHealthGroups } from '@/hooks/useHealthGroups';
 
@@ -11,6 +12,7 @@ const ArtifactCreateModal: React.FC<ArtifactCreateModalProps> = ({
   isOpen,
   onClose
 }) => {
+  const { t } = useTranslation('artifact');
   const [name, setName] = useState('');
   const [content, setContent] = useState('');
   const [mimeType, setMimeType] = useState('application/json');
@@ -82,12 +84,12 @@ const ArtifactCreateModal: React.FC<ArtifactCreateModalProps> = ({
 
   // 常见的MIME类型选项
   const mimeTypeOptions = [
-    { value: 'application/json', label: 'JSON' },
-    { value: 'text/plain', label: 'Plain Text' },
-    { value: 'text/markdown', label: 'Markdown' },
-    { value: 'text/html', label: 'HTML' },
-    { value: 'application/xml', label: 'XML' },
-    { value: 'text/csv', label: 'CSV' },
+    { value: 'application/json', label: t('mimeType.json') },
+    { value: 'text/plain', label: t('mimeType.plainText') },
+    { value: 'text/markdown', label: t('mimeType.markdown') },
+    { value: 'text/html', label: t('mimeType.html') },
+    { value: 'application/xml', label: t('mimeType.xml') },
+    { value: 'text/csv', label: t('mimeType.csv') },
   ];
 
   return (
@@ -105,7 +107,7 @@ const ArtifactCreateModal: React.FC<ArtifactCreateModalProps> = ({
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                Create New Artifact
+                {t('create.title')}
               </h3>
               <button
                 onClick={handleClose}
@@ -123,13 +125,13 @@ const ArtifactCreateModal: React.FC<ArtifactCreateModalProps> = ({
             {/* 名称输入 */}
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                Name
+                {t('create.name')}
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Enter artifact name..."
+                placeholder={t('create.namePlaceholder')}
                 className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
               />
             </div>
@@ -137,7 +139,7 @@ const ArtifactCreateModal: React.FC<ArtifactCreateModalProps> = ({
             {/* MIME类型选择 */}
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                MIME Type
+                {t('create.mimeType')}
               </label>
               <select
                 value={mimeType}
@@ -155,12 +157,12 @@ const ArtifactCreateModal: React.FC<ArtifactCreateModalProps> = ({
             {/* 内容输入 */}
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                Content
+                {t('create.content')}
               </label>
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="Enter artifact content..."
+                placeholder={t('create.contentPlaceholder')}
                 rows={12}
                 className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 font-mono text-sm"
               />
@@ -169,10 +171,10 @@ const ArtifactCreateModal: React.FC<ArtifactCreateModalProps> = ({
             {/* Permission Groups (Optional) */}
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                Permission Groups (Optional)
+                {t('create.permissions')}
               </label>
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                Leave empty to make artifact visible to all users
+                {t('create.permissionsHint')}
               </p>
 
               <div className="relative" ref={dropdownRef}>
@@ -185,11 +187,11 @@ const ArtifactCreateModal: React.FC<ArtifactCreateModalProps> = ({
                   <span className="flex items-center space-x-2">
                     {selectedGroups.length === 0 ? (
                       <span className="text-gray-500 dark:text-gray-400">
-                        {groupsLoading ? 'Loading groups...' : 'Select permission groups...'}
+                        {groupsLoading ? t('create.loadingGroups') : t('create.selectGroups')}
                       </span>
                     ) : (
                       <span className="flex items-center space-x-2">
-                        <span>{selectedGroups.length} group{selectedGroups.length > 1 ? 's' : ''} selected</span>
+                        <span>{t('create.groupsSelected', { count: selectedGroups.length })}</span>
                         <span className="px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
                           {selectedGroups.length}
                         </span>
@@ -211,7 +213,7 @@ const ArtifactCreateModal: React.FC<ArtifactCreateModalProps> = ({
                   <div className="absolute z-10 w-full bottom-full mb-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto">
                     {groups.length === 0 ? (
                       <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
-                        No groups available
+                        {t('create.noGroups')}
                       </div>
                     ) : (
                       <div className="py-1">
@@ -271,18 +273,17 @@ const ArtifactCreateModal: React.FC<ArtifactCreateModalProps> = ({
               disabled={isSubmitting}
               className="px-4 py-2 text-sm font-medium rounded-md transition-colors bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
             >
-              Cancel
+              {t('detail.cancel')}
             </button>
             <button
               onClick={handleSubmit}
               disabled={!name.trim() || !content.trim() || isSubmitting}
-              className={`px-4 py-2 text-sm font-medium text-white rounded-md transition-colors ${
-                !name.trim() || !content.trim() || isSubmitting
+              className={`px-4 py-2 text-sm font-medium text-white rounded-md transition-colors ${!name.trim() || !content.trim() || isSubmitting
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+                }`}
             >
-              {isSubmitting ? 'Creating...' : 'Create Artifact'}
+              {isSubmitting ? t('create.creating') : t('create.create')}
             </button>
           </div>
         </div>

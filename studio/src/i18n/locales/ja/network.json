@@ -1,0 +1,25 @@
+{
+    "title": "ネットワーク",
+    "status": {
+        "connected": "接続済み",
+        "disconnected": "切断",
+        "connecting": "接続中...",
+        "reconnecting": "再接続中..."
+    },
+    "actions": {
+        "connect": "接続",
+        "disconnect": "切断",
+        "refresh": "更新"
+    },
+    "info": {
+        "host": "ホスト",
+        "port": "ポート",
+        "protocol": "プロトコル",
+        "latency": "レイテンシ"
+    },
+    "messages": {
+        "connectionSuccess": "ネットワークに正常に接続されました",
+        "connectionFailed": "ネットワークへの接続に失敗しました",
+        "disconnected": "ネットワークから切断されました"
+    }
+}

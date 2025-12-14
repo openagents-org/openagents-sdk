@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useContext } from "react";
+import { useTranslation } from "react-i18next";
 import { useForumStore } from "@/stores/forumStore";
 import ForumTopicItem from "./components/ForumTopicItem";
 import ForumCreateModal from "./components/ForumCreateModal";
 import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
 
 const ForumTopicList: React.FC = () => {
+  const { t } = useTranslation('forum');
   const context = useContext(OpenAgentsContext);
   const openAgentsService = context?.connector;
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -82,7 +84,7 @@ const ForumTopicList: React.FC = () => {
       <div className="flex-1 flex items-center justify-center dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Loading topics...</p>
+          <p className="text-gray-600 dark:text-gray-400">{t('list.loading')}</p>
         </div>
       </div>
     );
@@ -112,7 +114,7 @@ const ForumTopicList: React.FC = () => {
             onClick={loadTopics}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
-            Try Again
+            {t('list.tryAgain')}
           </button>
         </div>
       </div>
@@ -125,10 +127,10 @@ const ForumTopicList: React.FC = () => {
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between   bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Forum Topics
+            {t('list.title')}
           </h1>
           <p className="text-sm mt-1 text-gray-600 dark:text-gray-400">
-            {topics.length} topics available
+            {t('list.topicsAvailable', { count: topics.length })}
           </p>
         </div>
 
@@ -151,7 +153,7 @@ const ForumTopicList: React.FC = () => {
                 d="M12 4v16m8-8H4"
               />
             </svg>
-            <span>New Topic</span>
+            <span>{t('list.newTopic')}</span>
           </button>
         </div>
       </div>
@@ -176,16 +178,16 @@ const ForumTopicList: React.FC = () => {
               </svg>
             </div>
             <h3 className="text-lg font-medium mb-2 text-gray-700 dark:text-gray-300">
-              No topics yet
+              {t('list.noTopics')}
             </h3>
             <p className="mb-4 text-gray-600 dark:text-gray-400">
-              Be the first to start a discussion!
+              {t('list.createFirst')}
             </p>
             <button
               onClick={() => setShowCreateModal(true)}
               className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
-              Create First Topic
+              {t('list.createFirstButton')}
             </button>
           </div>
         ) : (

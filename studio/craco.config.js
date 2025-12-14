@@ -43,6 +43,17 @@ module.exports = {
     alias: {
       "@": path.resolve(__dirname, "src"),
     },
+    configure: (webpackConfig) => {
+      // Ignore Monaco Editor source map warnings
+      webpackConfig.ignoreWarnings = [
+        {
+          module: /node_modules\/monaco-editor/,
+          message: /Failed to parse source map/,
+        },
+      ];
+
+      return webpackConfig;
+    },
   },
   devServer: {
     proxy: proxyConfig,

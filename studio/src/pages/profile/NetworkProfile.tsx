@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useOpenAgents } from '@/context/OpenAgentsProvider';
 import { profileSelectors } from '@/stores/profileStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -19,10 +20,11 @@ interface NetworkProfileData {
 }
 
 const NetworkProfile: React.FC = () => {
+  const { t } = useTranslation('network');
   const { connector } = useOpenAgents();
   const { agentName } = useAuthStore();
   const healthData = profileSelectors.useHealthData();
-  
+
   // Get default port from HTTP transport if available
   const getDefaultPort = (): number => {
     if (healthData?.data?.transports) {
@@ -145,7 +147,7 @@ const NetworkProfile: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!connector) {
       setError('Not connected to network');
       return;
@@ -195,7 +197,7 @@ const NetworkProfile: React.FC = () => {
 
       if (response.success) {
         console.log('✅ Network profile updated successfully');
-        setSuccess('Network profile updated successfully!');
+        setSuccess(t('profile.success'));
         // Reload profile data after successful update
         setTimeout(async () => {
           try {
@@ -224,7 +226,7 @@ const NetworkProfile: React.FC = () => {
         }, 500);
       } else {
         console.error('❌ Failed to update network profile:', response.message);
-        setError(response.message || 'Failed to update network profile');
+        setError(response.message || t('profile.error'));
       }
     } catch (err: any) {
       console.error('Failed to save network profile:', err);
@@ -240,7 +242,7 @@ const NetworkProfile: React.FC = () => {
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <span className="ml-3 text-gray-600 dark:text-gray-400">
-            Loading network profile...
+            {t('status.connecting')}
           </span>
         </div>
       </div>
@@ -253,10 +255,10 @@ const NetworkProfile: React.FC = () => {
       <div className="mb-6 flex items-start justify-between gap-4">
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            Network Profile
+            {t('profile.title')}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Configure your network profile settings
+            {t('profile.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
@@ -265,7 +267,7 @@ const NetworkProfile: React.FC = () => {
             onClick={() => window.history.back()}
             className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
           >
-            Cancel
+            {t('profile.cancel')}
           </button>
           <button
             type="submit"
@@ -273,7 +275,7 @@ const NetworkProfile: React.FC = () => {
             disabled={isSaving || !formData.name || !formData.description}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isSaving ? 'Saving...' : 'Save Changes'}
+            {isSaving ? t('profile.saving') : t('profile.save')}
           </button>
         </div>
       </div>
@@ -306,7 +308,7 @@ const NetworkProfile: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           {/* Basic Information Section */}
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-            Basic Information
+            {t('profile.basicInfo')}
           </h2>
 
           <div className="space-y-4">
@@ -314,10 +316,10 @@ const NetworkProfile: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Discoverable
+                  {t('profile.discoverable')}
                 </label>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Allow this network to be discovered publicly
+                  {t('profile.discoverableDesc')}
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -334,7 +336,7 @@ const NetworkProfile: React.FC = () => {
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Network Name <span className="text-red-500">*</span>
+                {t('profile.name')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -349,7 +351,7 @@ const NetworkProfile: React.FC = () => {
             {/* Description */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Description <span className="text-red-500">*</span>
+                {t('profile.description')} <span className="text-red-500">*</span>
               </label>
               <textarea
                 value={formData.description}
@@ -364,7 +366,7 @@ const NetworkProfile: React.FC = () => {
             {/* Icon */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Icon URL
+                {t('profile.icon')}
               </label>
               <input
                 type="url"
@@ -390,7 +392,7 @@ const NetworkProfile: React.FC = () => {
             {/* Website */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Website URL
+                {t('profile.website')}
               </label>
               <input
                 type="url"
@@ -404,7 +406,7 @@ const NetworkProfile: React.FC = () => {
             {/* Country */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Country
+                {t('profile.country')}
               </label>
               <input
                 type="text"
@@ -420,9 +422,9 @@ const NetworkProfile: React.FC = () => {
         {/* Tags Section */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-            Tags
+            {t('profile.tags.title')}
           </h2>
-          
+
           <div className="space-y-4">
             {/* Tag Input */}
             <div className="flex gap-2">
@@ -437,7 +439,7 @@ const NetworkProfile: React.FC = () => {
                   }
                 }}
                 className="flex-1 p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter a tag and press Enter"
+                placeholder={t('profile.tags.placeholder')}
               />
               <button
                 type="button"
@@ -474,9 +476,9 @@ const NetworkProfile: React.FC = () => {
         {/* Categories Section */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-            Categories
+            {t('profile.categories.title')}
           </h2>
-          
+
           <div className="space-y-4">
             {/* Category Input */}
             <div className="flex gap-2">
@@ -491,7 +493,7 @@ const NetworkProfile: React.FC = () => {
                   }
                 }}
                 className="flex-1 p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter a category and press Enter"
+                placeholder={t('profile.categories.placeholder')}
               />
               <button
                 type="button"
@@ -528,14 +530,14 @@ const NetworkProfile: React.FC = () => {
         {/* Technical Settings Section */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-            Technical Settings
+            {t('profile.technical')}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Required OpenAgents Version */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Required OpenAgents Version
+                {t('profile.version')}
               </label>
               <input
                 type="text"
@@ -549,7 +551,7 @@ const NetworkProfile: React.FC = () => {
             {/* Capacity */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Capacity
+                {t('profile.capacity')}
               </label>
               <input
                 type="number"
@@ -564,7 +566,7 @@ const NetworkProfile: React.FC = () => {
             {/* Host */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Host
+                {t('profile.host')}
               </label>
               <input
                 type="text"
@@ -578,7 +580,7 @@ const NetworkProfile: React.FC = () => {
             {/* Port */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Port <span className="text-xs text-gray-500">(HTTP Transport)</span>
+                {t('profile.port')}
               </label>
               <input
                 type="number"
