@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { getServiceAgents, type ServiceAgent } from "@/services/serviceAgentsApi";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
@@ -8,6 +9,7 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
  * Displays a list of service agents with their status in the sidebar (admin only)
  */
 const ServiceAgentsSidebar: React.FC = () => {
+  const { t } = useTranslation('serviceAgent');
   const [agents, setAgents] = useState<ServiceAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -68,7 +70,7 @@ const ServiceAgentsSidebar: React.FC = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            Loading...
+            {t('sidebar.loading')}
           </p>
         </div>
       </div>
@@ -94,7 +96,7 @@ const ServiceAgentsSidebar: React.FC = () => {
             />
           </svg>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-            Admin access required
+            {t('sidebar.adminRequired')}
           </p>
         </div>
       </div>
@@ -106,10 +108,10 @@ const ServiceAgentsSidebar: React.FC = () => {
       {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Service Agents
+          {t('sidebar.title')}
         </h2>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          Manage workspace agents
+          {t('sidebar.subtitle')}
         </p>
 
         {/* Status summary */}
@@ -117,20 +119,20 @@ const ServiceAgentsSidebar: React.FC = () => {
           <div className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-green-500"></span>
             <span className="text-gray-600 dark:text-gray-400">
-              {runningCount} running
+              {t('sidebar.running', { count: runningCount })}
             </span>
           </div>
           <div className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-gray-400"></span>
             <span className="text-gray-600 dark:text-gray-400">
-              {stoppedCount} stopped
+              {t('sidebar.stopped', { count: stoppedCount })}
             </span>
           </div>
           {errorCount > 0 && (
             <div className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-red-500"></span>
               <span className="text-red-600 dark:text-red-400">
-                {errorCount} error
+                {t('sidebar.error', { count: errorCount })}
               </span>
             </div>
           )}
@@ -143,7 +145,7 @@ const ServiceAgentsSidebar: React.FC = () => {
           <div className="p-4 text-center">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              Loading agents...
+              {t('sidebar.loading')}
             </p>
           </div>
         ) : agents.length === 0 ? (
@@ -162,10 +164,10 @@ const ServiceAgentsSidebar: React.FC = () => {
               />
             </svg>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-              No agents found
+              {t('sidebar.noAgents')}
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-500">
-              Add .yaml or .py files to workspace/agents/
+              {t('sidebar.addHint')}
             </p>
           </div>
         ) : (
@@ -179,10 +181,9 @@ const ServiceAgentsSidebar: React.FC = () => {
                 className={`
                   w-full px-4 py-3 text-left transition-colors
                   hover:bg-gray-100 dark:hover:bg-gray-800
-                  ${
-                    isSelected(agent.agent_id)
-                      ? "bg-blue-50 dark:bg-blue-900/20 border-r-2 border-blue-600"
-                      : ""
+                  ${isSelected(agent.agent_id)
+                    ? "bg-blue-50 dark:bg-blue-900/20 border-r-2 border-blue-600"
+                    : ""
                   }
                 `}
               >
@@ -202,11 +203,10 @@ const ServiceAgentsSidebar: React.FC = () => {
                       </span>
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-medium
-                        ${
-                          agent.file_type === "yaml"
+                        ${agent.file_type === "yaml"
                             ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
                             : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                        }
+                          }
                       `}
                       >
                         {agent.file_type}
@@ -219,7 +219,7 @@ const ServiceAgentsSidebar: React.FC = () => {
                     )}
                     {agent.pid && agent.status === "running" && (
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                        PID: {agent.pid}
+                        {t('sidebar.pid', { pid: agent.pid })}
                       </p>
                     )}
                   </div>
@@ -253,7 +253,7 @@ const ServiceAgentsSidebar: React.FC = () => {
                      bg-blue-50 dark:bg-blue-900/20 rounded-lg
                      hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
         >
-          View All Agents
+          {t('sidebar.viewAll')}
         </button>
       </div>
     </div>

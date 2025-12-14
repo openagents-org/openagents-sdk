@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   getSavedAgentNameForNetwork,
   saveAgentNameForNetwork,
@@ -12,6 +13,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useNavigate } from "react-router-dom";
 import { hashPassword } from "@/utils/passwordHash";
 import { networkFetch } from "@/utils/httpClient";
+import LanguageSwitcher from "@/components/common/LanguageSwitcher";
 
 // Interface for group configuration from /api/health
 interface GroupConfig {
@@ -23,6 +25,7 @@ interface GroupConfig {
 }
 
 const AgentNamePicker: React.FC = () => {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const {
     selectedNetwork,
@@ -149,7 +152,7 @@ const AgentNamePicker: React.FC = () => {
 
     // Validate password requirement for selected group
     if (selectedGroupRequiresPassword && !password.trim()) {
-      setPasswordError(`Password is required for the '${selectedGroup}' group`);
+      setPasswordError(t('agentSetup.errors.passwordRequired', { group: selectedGroup }));
       return;
     }
 
@@ -200,8 +203,8 @@ const AgentNamePicker: React.FC = () => {
 
         // Check if error is related to invalid credentials
         if (errorMessage.toLowerCase().includes("invalid credentials") ||
-            errorMessage.toLowerCase().includes("password")) {
-          setPasswordError(`Invalid password for the '${selectedGroup}' group`);
+          errorMessage.toLowerCase().includes("password")) {
+          setPasswordError(t('agentSetup.errors.invalidPassword', { group: selectedGroup }));
         } else {
           setPasswordError(errorMessage);
         }
@@ -236,7 +239,7 @@ const AgentNamePicker: React.FC = () => {
       proceedWithConnection(passwordHash);
     } catch (error) {
       console.error("Failed to verify credentials:", error);
-      setPasswordError("Failed to connect to network. Please try again.");
+      setPasswordError(t('agentSetup.errors.connectionFailed'));
       setIsVerifying(false);
     }
   };
@@ -264,7 +267,7 @@ const AgentNamePicker: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-5 bg-gradient-to-br from-indigo-400 to-purple-500 dark:from-blue-800 dark:to-violet-800">
-      <div className="max-w-lg w-full text-center rounded-2xl p-10 bg-white shadow-2xl shadow-black/25 dark:bg-gray-800 dark:shadow-black/50">
+      <div className="max-w-lg w-full text-center rounded-2xl p-10 bg-white shadow-2xl shadow-black/25 dark:bg-gray-800 dark:shadow-black/50 relative">
         {/* Header */}
         <div className="mb-6">
           {/* Avatar */}
@@ -273,17 +276,17 @@ const AgentNamePicker: React.FC = () => {
           </div>
 
           <h1 className="text-3xl font-bold mb-3 text-gray-800 dark:text-gray-50">
-            Join OpenAgents Network
+            {t('agentSetup.title')}
           </h1>
           <p className="text-base leading-relaxed text-gray-500 dark:text-gray-300">
-            Choose your agent name and group to connect to the network.
+            {t('agentSetup.subtitle')}
           </p>
         </div>
 
         {/* Network Info */}
         <div className="rounded-xl p-4 mt-4 mb-4 text-left bg-gray-100 dark:bg-gray-700">
           <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-            Connecting to
+            {t('agentSetup.connectingTo')}
           </div>
           {selectedNetwork && (
             <div className="text-base font-semibold text-gray-800 dark:text-gray-100">
@@ -296,13 +299,13 @@ const AgentNamePicker: React.FC = () => {
         {savedAgentName && (
           <div className="bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-xl p-4 my-4 text-left">
             <div className="text-xs font-semibold uppercase tracking-wide mb-1 text-sky-700 dark:text-sky-400">
-              Previously used name
+              {t('agentSetup.previousName')}
             </div>
             <div className="text-base font-semibold text-sky-900 dark:text-sky-100">
               {savedAgentName}
             </div>
             <p className="text-xs text-sky-700 dark:text-sky-400 mt-1">
-              You can use your previous name or create a new one
+              {t('agentSetup.previousNameHint')}
             </p>
           </div>
         )}
@@ -315,7 +318,7 @@ const AgentNamePicker: React.FC = () => {
               htmlFor="agentName"
               className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300"
             >
-              Agent Name
+              {t('agentSetup.agentName')}
             </label>
             <input
               id="agentName"
@@ -323,7 +326,7 @@ const AgentNamePicker: React.FC = () => {
               value={pageAgentName || ""}
               onChange={(e) => setPageAgentName(e.target.value)}
               className="w-full px-4 py-3 border-2 rounded-lg text-base transition-all duration-150 focus:outline-none focus:ring-3 bg-white border-gray-300 text-gray-800 focus:border-blue-500 focus:ring-blue-500/10 dark:bg-gray-600 dark:border-gray-500 dark:text-gray-50 dark:focus:border-blue-400 dark:focus:ring-blue-400/10"
-              placeholder="Enter your agent name..."
+              placeholder={t('agentSetup.agentNamePlaceholder')}
               maxLength={32}
               autoComplete="off"
             />
@@ -335,7 +338,7 @@ const AgentNamePicker: React.FC = () => {
                 onClick={handleRandomize}
                 className="px-3 py-2 rounded-md text-sm cursor-pointer transition-all duration-150 bg-gray-100 border border-gray-300 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:bg-gray-500 dark:border-gray-400 dark:text-gray-100 dark:hover:bg-gray-400 dark:hover:text-gray-800"
               >
-                🎲 Generate Random Name
+                {t('agentSetup.buttons.randomName')}
               </button>
               {savedAgentName && pageAgentName !== savedAgentName && (
                 <button
@@ -343,14 +346,14 @@ const AgentNamePicker: React.FC = () => {
                   onClick={() => setPageAgentName(savedAgentName)}
                   className="px-3 py-2 rounded-md text-sm cursor-pointer transition-all duration-150 bg-blue-500 text-white border-none hover:bg-blue-600"
                 >
-                  ↶ Use Previous: {savedAgentName}
+                  {t('agentSetup.buttons.usePrevious', { name: savedAgentName })}
                 </button>
               )}
             </div>
 
             <div className="text-xs mt-2 leading-relaxed text-gray-500 dark:text-gray-400">
               {savedAgentName && (
-                <>💾 Your name will be automatically saved for this network.</>
+                <>💾 {t('agentSetup.nameSavedHint')}</>
               )}
             </div>
           </div>
@@ -361,11 +364,11 @@ const AgentNamePicker: React.FC = () => {
               htmlFor="agentGroup"
               className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300"
             >
-              Agent Group
+              {t('agentSetup.agentGroup')}
             </label>
             {isLoadingGroups ? (
               <div className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-500 rounded-lg bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-400">
-                Loading groups...
+                {t('agentSetup.loadingGroups')}
               </div>
             ) : (
               <select
@@ -391,7 +394,7 @@ const AgentNamePicker: React.FC = () => {
             {/* Group Description */}
             {selectedGroupConfig && (
               <div className="text-xs mt-2 leading-relaxed text-gray-500 dark:text-gray-400">
-                ℹ️ {selectedGroupConfig.description || `${selectedGroup} group`}
+                ℹ️ {selectedGroupConfig.description || t('agentSetup.groupDescription', { group: selectedGroup })}
               </div>
             )}
           </div>
@@ -403,7 +406,7 @@ const AgentNamePicker: React.FC = () => {
                 htmlFor="password"
                 className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300"
               >
-                Password <span className="text-red-500 ml-1">*</span>
+                {t('agentSetup.password')} <span className="text-red-500 ml-1">*</span>
               </label>
               <input
                 id="password"
@@ -413,12 +416,11 @@ const AgentNamePicker: React.FC = () => {
                   setPassword(e.target.value);
                   setPasswordError(""); // Clear error when user types
                 }}
-                className={`w-full px-4 py-3 border-2 rounded-lg text-base transition-all duration-150 focus:outline-none focus:ring-3 bg-white text-gray-800 focus:border-blue-500 focus:ring-blue-500/10 dark:bg-gray-600 dark:text-gray-50 dark:focus:border-blue-400 dark:focus:ring-blue-400/10 ${
-                  passwordError
-                    ? "border-red-500 dark:border-red-400"
-                    : "border-gray-300 dark:border-gray-500"
-                }`}
-                placeholder={`Enter password for '${selectedGroup}' group...`}
+                className={`w-full px-4 py-3 border-2 rounded-lg text-base transition-all duration-150 focus:outline-none focus:ring-3 bg-white text-gray-800 focus:border-blue-500 focus:ring-blue-500/10 dark:bg-gray-600 dark:text-gray-50 dark:focus:border-blue-400 dark:focus:ring-blue-400/10 ${passwordError
+                  ? "border-red-500 dark:border-red-400"
+                  : "border-gray-300 dark:border-gray-500"
+                  }`}
+                placeholder={t('agentSetup.passwordPlaceholder', { group: selectedGroup })}
                 autoComplete="off"
               />
 
@@ -433,9 +435,9 @@ const AgentNamePicker: React.FC = () => {
               {/* Password Hint */}
               <div className="text-xs mt-2 leading-relaxed text-gray-500 dark:text-gray-400">
                 <span className="text-amber-600 dark:text-amber-400 font-semibold">
-                  🔒 Password required
+                  🔒 {t('agentSetup.passwordRequired')}
                 </span>{" "}
-                for the '{selectedGroup}' group
+                {t('agentSetup.passwordRequiredHint', { group: selectedGroup })}
               </div>
             </div>
           )}
@@ -444,7 +446,7 @@ const AgentNamePicker: React.FC = () => {
           {!selectedGroupRequiresPassword && selectedGroup && (
             <div className="mb-4 text-left">
               <div className="text-xs leading-relaxed text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                ✓ No password required for the '{selectedGroup}' group
+                ✓ {t('agentSetup.noPasswordRequired', { group: selectedGroup })}
               </div>
             </div>
           )}
@@ -455,18 +457,17 @@ const AgentNamePicker: React.FC = () => {
               type="button"
               onClick={onBack}
               disabled={isVerifying}
-              className="flex-1 px-6 py-3 border rounded-lg text-base font-semibold cursor-pointer transition-all duration-150 bg-gray-50 border-gray-300 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-600 dark:border-gray-500 dark:text-gray-300 dark:hover:bg-gray-500 dark:hover:text-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-3 border rounded-lg text-base font-semibold cursor-pointer transition-all duration-150 bg-gray-50 border-gray-300 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-600 dark:border-gray-500 dark:text-gray-300 dark:hover:bg-gray-500 dark:hover:text-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              ← Back
+              {t('agentSetup.buttons.back')}
             </button>
             <button
               type="submit"
               disabled={!isValidName(pageAgentName) || isVerifying || isLoadingGroups}
-              className={`flex-[2] px-6 py-3 border-none rounded-lg text-base font-semibold cursor-pointer transition-all duration-150 text-white ${
-                !isValidName(pageAgentName) || isVerifying || isLoadingGroups
-                  ? "bg-gray-300 dark:bg-gray-500 cursor-not-allowed"
-                  : "bg-blue-500 hover:bg-blue-600 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/30"
-              }`}
+              className={`flex-[2] py-3 border-none rounded-lg text-base font-semibold cursor-pointer transition-all duration-150 text-white ${!isValidName(pageAgentName) || isVerifying || isLoadingGroups
+                ? "bg-gray-300 dark:bg-gray-500 cursor-not-allowed"
+                : "bg-blue-500 hover:bg-blue-600 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/30"
+                }`}
             >
               <div className="flex flex-wrap justify-center items-center gap-2">
                 {isVerifying ? (
@@ -491,11 +492,11 @@ const AgentNamePicker: React.FC = () => {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       ></path>
                     </svg>
-                    <span>Connecting...</span>
+                    <span>{t('agentSetup.buttons.connecting')}</span>
                   </>
                 ) : (
                   <>
-                    <span>Connect as {pageAgentName || "Agent"}</span>
+                    <span>{t('agentSetup.buttons.connect', { name: pageAgentName || "Agent" })}</span>
                     <span>→</span>
                   </>
                 )}
@@ -503,6 +504,12 @@ const AgentNamePicker: React.FC = () => {
             </button>
           </div>
         </form>
+        <div className="flex justify-end">
+          {/* Language Switcher - Bottom right of card, outside form */}
+          {/* <div className="absolute bottom-4 right-4"> */}
+          <LanguageSwitcher showFlag={true} showFullName={false} variant="minimal" align="right" size="md" />
+          {/* </div> */}
+        </div>
       </div>
     </div>
   );

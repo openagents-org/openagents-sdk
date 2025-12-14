@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { DocumentInfo } from "../../types";
 
@@ -13,6 +14,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
   currentTheme,
   onDocumentSelect,
 }) => {
+  const { t } = useTranslation('documents');
   const navigate = useNavigate();
   // Sort documents by last modified date (most recent first)
   const sortedDocuments = useMemo(() => {
@@ -45,9 +47,8 @@ const DocumentList: React.FC<DocumentListProps> = ({
     if (activeAgents.length === 1) return `${activeAgents[0]} is editing`;
     if (activeAgents.length <= 3)
       return `${activeAgents.join(", ")} are editing`;
-    return `${activeAgents.slice(0, 2).join(", ")} and ${
-      activeAgents.length - 2
-    } others are editing`;
+    return `${activeAgents.slice(0, 2).join(", ")} and ${activeAgents.length - 2
+      } others are editing`;
   };
 
   if (documents.length === 0) {
@@ -55,25 +56,22 @@ const DocumentList: React.FC<DocumentListProps> = ({
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <div
-            className={`text-6xl mb-4 ${
-              currentTheme === "dark" ? "text-gray-600" : "text-gray-400"
-            }`}
+            className={`text-6xl mb-4 ${currentTheme === "dark" ? "text-gray-600" : "text-gray-400"
+              }`}
           >
             📄
           </div>
           <h3
-            className={`text-lg font-medium mb-2 ${
-              currentTheme === "dark" ? "text-gray-200" : "text-gray-800"
-            }`}
+            className={`text-lg font-medium mb-2 ${currentTheme === "dark" ? "text-gray-200" : "text-gray-800"
+              }`}
           >
-            No documents yet
+            {t('list.noDocuments')}
           </h3>
           <p
-            className={`${
-              currentTheme === "dark" ? "text-gray-400" : "text-gray-600"
-            } mb-4`}
+            className={`${currentTheme === "dark" ? "text-gray-400" : "text-gray-600"
+              } mb-4`}
           >
-            Create your first shared document to start collaborating
+            {t('list.createFirst')}
           </p>
         </div>
       </div>
@@ -89,10 +87,9 @@ const DocumentList: React.FC<DocumentListProps> = ({
             onClick={() => navigate(`/documents/${document.document_id}`)}
             className={`
               p-6 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md
-              ${
-                currentTheme === "dark"
-                  ? "bg-gray-800 border-gray-700 hover:bg-gray-750 hover:border-gray-600"
-                  : "bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+              ${currentTheme === "dark"
+                ? "bg-gray-800 border-gray-700 hover:bg-gray-750 hover:border-gray-600"
+                : "bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300"
               }
             `}
           >
@@ -100,16 +97,14 @@ const DocumentList: React.FC<DocumentListProps> = ({
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1 min-w-0">
                 <h3
-                  className={`font-semibold text-lg truncate ${
-                    currentTheme === "dark" ? "text-gray-200" : "text-gray-800"
-                  }`}
+                  className={`font-semibold text-lg truncate ${currentTheme === "dark" ? "text-gray-200" : "text-gray-800"
+                    }`}
                 >
                   {document.name}
                 </h3>
                 <p
-                  className={`text-sm ${
-                    currentTheme === "dark" ? "text-gray-400" : "text-gray-600"
-                  }`}
+                  className={`text-sm ${currentTheme === "dark" ? "text-gray-400" : "text-gray-600"
+                    }`}
                 >
                   Created by {document.creator}
                 </p>
@@ -118,9 +113,8 @@ const DocumentList: React.FC<DocumentListProps> = ({
 
             {/* Last Modified */}
             <div
-              className={`text-sm mb-3 ${
-                currentTheme === "dark" ? "text-gray-400" : "text-gray-600"
-              }`}
+              className={`text-sm mb-3 ${currentTheme === "dark" ? "text-gray-400" : "text-gray-600"
+                }`}
             >
               <span className="flex items-center">
                 <svg
@@ -143,9 +137,8 @@ const DocumentList: React.FC<DocumentListProps> = ({
             {/* Active Agents */}
             <div className="flex items-center justify-between">
               <div
-                className={`text-sm ${
-                  currentTheme === "dark" ? "text-gray-400" : "text-gray-600"
-                }`}
+                className={`text-sm ${currentTheme === "dark" ? "text-gray-400" : "text-gray-600"
+                  }`}
               >
                 <span className="flex items-center">
                   <svg
@@ -170,11 +163,10 @@ const DocumentList: React.FC<DocumentListProps> = ({
                 <div className="flex items-center">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                   <span
-                    className={`ml-1 text-xs ${
-                      currentTheme === "dark"
+                    className={`ml-1 text-xs ${currentTheme === "dark"
                         ? "text-green-400"
                         : "text-green-600"
-                    }`}
+                      }`}
                   >
                     Active
                   </span>
@@ -185,9 +177,8 @@ const DocumentList: React.FC<DocumentListProps> = ({
             {/* Document actions hint */}
             <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
               <div
-                className={`text-xs ${
-                  currentTheme === "dark" ? "text-gray-500" : "text-gray-400"
-                } flex items-center justify-between`}
+                className={`text-xs ${currentTheme === "dark" ? "text-gray-500" : "text-gray-400"
+                  } flex items-center justify-between`}
               >
                 <span>Click to open</span>
                 <svg

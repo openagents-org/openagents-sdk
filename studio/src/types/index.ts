@@ -1,5 +1,5 @@
 // Common type definitions for the application
-import { NetworkConnection } from "@/types/connection";
+
 
 // Export new unified message types
 export type {

@@ -1,8 +1,10 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { profileSelectors } from "@/stores/profileStore";
 import { useAuthStore } from "@/stores/authStore";
 
 const NetworkInfoCard: React.FC = () => {
+  const { t } = useTranslation('profile');
   const { selectedNetwork } = useAuthStore();
   const networkInfo = profileSelectors.useNetworkInfo();
   const isOnline = profileSelectors.useIsOnline();
@@ -12,16 +14,15 @@ const NetworkInfoCard: React.FC = () => {
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Network Information
+          {t('dashboard.network.title')}
         </h3>
         <div className="flex items-center space-x-2">
           <div
-            className={`w-3 h-3 rounded-full ${
-              isOnline ? "bg-green-500" : "bg-red-500"
-            }`}
+            className={`w-3 h-3 rounded-full ${isOnline ? "bg-green-500" : "bg-red-500"
+              }`}
           />
           <span className="text-sm text-gray-600 dark:text-gray-400">
-            {isOnline ? "Online" : "Offline"}
+            {isOnline ? t('dashboard.network.online') : t('dashboard.network.offline')}
           </span>
         </div>
       </div>
@@ -30,25 +31,25 @@ const NetworkInfoCard: React.FC = () => {
         {/* Network Connection */}
         <div>
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Connection
+            {t('dashboard.network.connection')}
           </h4>
           <div className="bg-gray-50 dark:bg-gray-700 rounded-md p-3">
             <div className="grid grid-cols-1 gap-2">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Host:</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.network.host')}:</span>
                 <span className="text-sm font-mono text-gray-900 dark:text-gray-100">
                   {selectedNetwork?.host || "N/A"}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Port:</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.network.port')}:</span>
                 <span className="text-sm font-mono text-gray-900 dark:text-gray-100">
                   {selectedNetwork?.port || "N/A"}
                 </span>
               </div>
               {connectionLatency && (
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Latency:</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.network.latency')}:</span>
                   <span className="text-sm font-mono text-gray-900 dark:text-gray-100">
                     {connectionLatency}ms
                   </span>
@@ -62,40 +63,38 @@ const NetworkInfoCard: React.FC = () => {
         {networkInfo && (
           <div>
             <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Network Details
+              {t('dashboard.network.details')}
             </h4>
             <div className="bg-gray-50 dark:bg-gray-700 rounded-md p-3">
               <div className="grid grid-cols-1 gap-2">
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Network ID:</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.network.id')}:</span>
                   <span className="text-sm font-mono text-gray-900 dark:text-gray-100">
                     {networkInfo.networkId || "N/A"}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Network Name:</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.network.name')}:</span>
                   <span className="text-sm text-gray-900 dark:text-gray-100">
                     {networkInfo.networkName || "N/A"}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Status:</span>
-                  <span className={`text-sm font-medium ${
-                    networkInfo.isRunning
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.network.status')}:</span>
+                  <span className={`text-sm font-medium ${networkInfo.isRunning
                       ? "text-green-600 dark:text-green-400"
                       : "text-red-600 dark:text-red-400"
-                  }`}>
-                    {networkInfo.isRunning ? "Running" : "Stopped"}
+                    }`}>
+                    {networkInfo.isRunning ? t('dashboard.network.running') : t('dashboard.network.stopped')}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Health Status:</span>
-                  <span className={`text-sm font-medium ${
-                    networkInfo.status === "healthy"
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.network.health')}:</span>
+                  <span className={`text-sm font-medium ${networkInfo.status === "healthy"
                       ? "text-green-600 dark:text-green-400"
                       : "text-yellow-600 dark:text-yellow-400"
-                  }`}>
-                    {networkInfo.status || "Unknown"}
+                    }`}>
+                    {networkInfo.status || t('dashboard.network.unknown')}
                   </span>
                 </div>
               </div>
@@ -112,7 +111,7 @@ const NetworkInfoCard: React.FC = () => {
               </svg>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              No network connection available
+              {t('dashboard.network.noConnection')}
             </p>
           </div>
         )}

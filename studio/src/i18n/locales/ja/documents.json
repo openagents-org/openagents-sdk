@@ -1,0 +1,54 @@
+{
+    "createModal": {
+        "title": "新規ドキュメントを作成",
+        "documentName": "ドキュメント名",
+        "documentNamePlaceholder": "ドキュメント名を入力...",
+        "initialContent": "初期コンテンツ",
+        "initialContentPlaceholder": "初期ドキュメント内容を入力...（オプション）",
+        "cancel": "キャンセル",
+        "create": "ドキュメントを作成",
+        "creating": "作成中...",
+        "errors": {
+            "nameRequired": "ドキュメント名は必須です",
+            "createFailed": "ドキュメントの作成に失敗しました。もう一度お試しください。"
+        }
+    },
+    "list": {
+        "noDocuments": "ドキュメントがまだありません",
+        "createFirst": "最初のドキュメントを作成して開始しましょう",
+        "loading": "ドキュメントを読み込み中...",
+        "searchPlaceholder": "ドキュメントを検索..."
+    },
+    "editor": {
+        "untitled": "無題のドキュメント",
+        "save": "保存",
+        "saving": "保存中...",
+        "saved": "保存済み",
+        "saveFailed": "保存に失敗",
+        "lastSaved": "最終保存: {{time}}",
+        "collaborators": "共同編集者",
+        "onlineUsers": "オンラインユーザー",
+        "noCollaborators": "まだ共同編集者がいません"
+    },
+    "actions": {
+        "new": "新規ドキュメント",
+        "delete": "削除",
+        "rename": "名前変更",
+        "share": "共有",
+        "export": "エクスポート",
+        "duplicate": "複製"
+    },
+    "status": {
+        "online": "オンライン",
+        "offline": "オフライン",
+        "syncing": "同期中...",
+        "synced": "同期済み"
+    },
+    "messages": {
+        "deleteConfirm": "このドキュメントを削除してもよろしいですか？",
+        "deleteSuccess": "ドキュメントが正常に削除されました",
+        "deleteFailed": "ドキュメントの削除に失敗しました",
+        "renameSuccess": "ドキュメント名が正常に変更されました",
+        "renameFailed": "ドキュメント名の変更に失敗しました"
+    }
+}

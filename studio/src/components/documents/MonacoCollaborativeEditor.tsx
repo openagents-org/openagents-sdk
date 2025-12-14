@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import Editor, { useMonaco } from "@monaco-editor/react";
 import { useThemeStore } from "@/stores/themeStore";
 import { useDocumentStore } from "@/stores/documentStore";
@@ -12,18 +12,7 @@ interface MonacoCollaborativeEditorProps {
   onSave?: (content: string) => void;
 }
 
-interface EditOperation {
-  type: "insert" | "delete" | "replace";
-  line: number;
-  column: number;
-  text?: string;
-  length?: number;
-}
 
-interface CursorPosition {
-  line: number;
-  column: number;
-}
 
 interface UserCursor {
   agentId: string;
@@ -43,11 +32,35 @@ const MonacoCollaborativeEditor: React.FC<MonacoCollaborativeEditorProps> = ({
   const { theme } = useThemeStore();
   const monaco = useMonaco();
   const editorRef = useRef<any>(null);
-  const { documents } = useDocumentStore();
+  // User color mapping
+  const userColorsRef = useRef<Map<string, string>>(new Map());
+  const USER_COLORS = useMemo(() => [
+    "#3B82F6", // blue
+    "#EF4444", // red
+    "#10B981", // green
+    "#F59E0B", // amber
+    "#8B5CF6", // purple
+    "#EC4899", // pink
+    "#06B6D4", // cyan
+    "#84CC16", // lime
+  ], []);
+
+  // Get color for user
+  const getUserColor = useCallback((agentId: string): string => {
+    if (!userColorsRef.current.has(agentId)) {
+      const colorIndex =
+        userColorsRef.current.size % USER_COLORS.length;
+      userColorsRef.current.set(agentId, USER_COLORS[colorIndex]);
+    }
+    return userColorsRef.current.get(agentId)!;
+  }, [USER_COLORS]);
+
+  // Get documentStore methods
+  const { updateCursor: updateCursorInStore, getDocument, saveDocumentContent } = useDocumentStore();
 
   // State
   const [content, setContent] = useState(initialContent);
-  const [version, setVersion] = useState(initialVersion);
+  // Remove unused version state
   const [userCursors, setUserCursors] = useState<UserCursor[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
@@ -70,31 +83,23 @@ const MonacoCollaborativeEditor: React.FC<MonacoCollaborativeEditorProps> = ({
   // Last sync check timestamp
   const lastSyncCheckRef = useRef<number>(Date.now());
 
-  // User color mapping
-  const userColorsRef = useRef<Map<string, string>>(new Map());
-  const USER_COLORS = [
-    "#3B82F6", // blue
-    "#EF4444", // red
-    "#10B981", // green
-    "#F59E0B", // amber
-    "#8B5CF6", // purple
-    "#EC4899", // pink
-    "#06B6D4", // cyan
-    "#84CC16", // lime
-  ];
+  // ... (rest of the file content until useEffect cleanup)
 
-  // Get color for user
-  const getUserColor = useCallback((agentId: string): string => {
-    if (!userColorsRef.current.has(agentId)) {
-      const colorIndex =
-        userColorsRef.current.size % USER_COLORS.length;
-      userColorsRef.current.set(agentId, USER_COLORS[colorIndex]);
-    }
-    return userColorsRef.current.get(agentId)!;
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      if (editDebounceRef.current) clearTimeout(editDebounceRef.current);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      if (cursorThrottleRef.current) clearTimeout(cursorThrottleRef.current);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      if (syncCheckTimerRef.current) clearInterval(syncCheckTimerRef.current);
+    };
   }, []);
 
-  // Get documentStore methods
-  const { updateCursor: updateCursorInStore, getDocument, saveDocumentContent } = useDocumentStore();
+
 
   // Periodic sync check to ensure content consistency
   const performSyncCheck = useCallback(async () => {
@@ -362,7 +367,6 @@ const MonacoCollaborativeEditor: React.FC<MonacoCollaborativeEditorProps> = ({
     try {
       // Save current cursor position
       const currentPosition = editor.getPosition();
-      const currentSelection = editor.getSelection();
 
       // Apply remote content
       const fullRange = model.getFullModelRange();
@@ -562,15 +566,7 @@ const MonacoCollaborativeEditor: React.FC<MonacoCollaborativeEditorProps> = ({
     };
   }, [performSyncCheck]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (editDebounceRef.current) clearTimeout(editDebounceRef.current);
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      if (cursorThrottleRef.current) clearTimeout(cursorThrottleRef.current);
-      if (syncCheckTimerRef.current) clearInterval(syncCheckTimerRef.current);
-    };
-  }, []);
+
 
   return (
     <div className="h-full flex flex-col">
@@ -611,10 +607,10 @@ const MonacoCollaborativeEditor: React.FC<MonacoCollaborativeEditorProps> = ({
 
         /* User-specific colors */
         ${userCursors.map((cursor, idx) => {
-          const color = cursor.color;
-          const colorLight = `${color}20`;
-          const safeName = cursor.agentId.replace(/[^a-zA-Z0-9]/g, '_');
-          return `
+        const color = cursor.color;
+        const colorLight = `${color}20`;
+        const safeName = cursor.agentId.replace(/[^a-zA-Z0-9]/g, '_');
+        return `
             .remote-cursor-${safeName} .remote-cursor-caret {
               border-left-color: ${color} !important;
             }
@@ -626,32 +622,29 @@ const MonacoCollaborativeEditor: React.FC<MonacoCollaborativeEditorProps> = ({
               border-left-color: ${color} !important;
             }
           `;
-        }).join('\n')}
+      }).join('\n')}
       `}</style>
 
       {/* Toolbar */}
       <div
-        className={`flex items-center justify-between px-4 py-2 border-b ${
-          theme === "dark" ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-gray-50"
-        }`}
+        className={`flex items-center justify-between px-4 py-2 border-b ${theme === "dark" ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-gray-50"
+          }`}
       >
         <div className="flex items-center space-x-2">
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className={`px-3 py-1 text-sm rounded ${
-              isSaving
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700"
-            } text-white`}
+            className={`px-3 py-1 text-sm rounded ${isSaving
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700"
+              } text-white`}
           >
             {isSaving ? "Saving..." : "Save"}
           </button>
           {lastSaveTime && (
             <span
-              className={`text-xs ${
-                theme === "dark" ? "text-gray-400" : "text-gray-600"
-              }`}
+              className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-600"
+                }`}
             >
               Last saved: {lastSaveTime.toLocaleTimeString()}
             </span>

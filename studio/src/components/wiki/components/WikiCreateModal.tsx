@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { toast } from "sonner";
 import WikiEditor from './WikiEditor';
@@ -9,6 +10,7 @@ interface WikiCreateModalProps {
 }
 
 const WikiCreateModal: React.FC<WikiCreateModalProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation('wiki');
   const [pagePath, setPagePath] = useState('');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -33,7 +35,7 @@ const WikiCreateModal: React.FC<WikiCreateModalProps> = ({ isOpen, onClose }) =>
       onClose();
     } else {
       // Show error toast
-      toast.error('Failed to create wiki page. Page may already exist.');
+      toast.error(t('createModal.errors.createFailed'));
     }
   };
 
@@ -50,7 +52,7 @@ const WikiCreateModal: React.FC<WikiCreateModalProps> = ({ isOpen, onClose }) =>
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-              Create New Wiki Page
+              {t('createModal.title')}
             </h3>
             <button
               onClick={handleClose}
@@ -66,49 +68,49 @@ const WikiCreateModal: React.FC<WikiCreateModalProps> = ({ isOpen, onClose }) =>
         {/* Content */}
         <div className="flex-1 px-6 py-4 overflow-hidden">
 
-        <form id="wiki-form" onSubmit={handleSubmit} className="flex-1 flex flex-col space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-              Page Path
-            </label>
-            <input
-              type="text"
-              value={pagePath}
-              onChange={(e) => setPagePath(e.target.value)}
-              placeholder="Page path (e.g., /getting-started)"
-              className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
-              required
-            />
-          </div>
+          <form id="wiki-form" onSubmit={handleSubmit} className="flex-1 flex flex-col space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                {t('createModal.pagePath')}
+              </label>
+              <input
+                type="text"
+                value={pagePath}
+                onChange={(e) => setPagePath(e.target.value)}
+                placeholder={t('createModal.pagePathPlaceholder')}
+                className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
+                required
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-              Page Title
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Page title..."
-              className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
-              required
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                {t('createModal.pageTitle')}
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={t('createModal.pageTitlePlaceholder')}
+                className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
+                required
+              />
+            </div>
 
-          <div className="flex-1 flex flex-col">
-            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-              Content
-            </label>
-            <WikiEditor
-              value={content}
-              onChange={setContent}
-              modes={['edit', 'preview']}
-              style={{ minHeight: '200px', maxHeight: '200px' }}
-              placeholder="Enter page content in Markdown format..."
-              textareaProps={{ required: true }}
-            />
-          </div>
-        </form>
+            <div className="flex-1 flex flex-col">
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                {t('createModal.content')}
+              </label>
+              <WikiEditor
+                value={content}
+                onChange={setContent}
+                modes={['edit', 'preview']}
+                style={{ minHeight: '200px', maxHeight: '200px' }}
+                placeholder={t('createModal.contentPlaceholder')}
+                textareaProps={{ required: true }}
+              />
+            </div>
+          </form>
         </div>
 
         {/* Bottom buttons */}
@@ -118,7 +120,7 @@ const WikiCreateModal: React.FC<WikiCreateModalProps> = ({ isOpen, onClose }) =>
             onClick={handleClose}
             className="px-4 py-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
           >
-            Cancel
+            {t('createModal.cancel')}
           </button>
           <button
             type="submit"
@@ -126,7 +128,7 @@ const WikiCreateModal: React.FC<WikiCreateModalProps> = ({ isOpen, onClose }) =>
             disabled={!pagePath.trim() || !title.trim() || !content.trim()}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            Create Page
+            {t('createModal.create')}
           </button>
         </div>
       </div>

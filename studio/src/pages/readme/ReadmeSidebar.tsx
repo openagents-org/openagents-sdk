@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { useReadmeStore, HeadingItem } from "@/stores/readmeStore";
 
 /**
@@ -6,6 +7,7 @@ import { useReadmeStore, HeadingItem } from "@/stores/readmeStore";
  * Displays document structure / table of contents based on markdown headings
  */
 const ReadmeSidebar: React.FC = () => {
+  const { t } = useTranslation('readme');
   const headings = useReadmeStore((state) => state.headings);
 
   const handleHeadingClick = (id: string) => {
@@ -66,7 +68,7 @@ const ReadmeSidebar: React.FC = () => {
             />
           </svg>
           <span className="font-medium text-gray-700 dark:text-gray-300">
-            README Documentation
+            {t('sidebar.title')}
           </span>
         </div>
       </div>
@@ -107,7 +109,7 @@ const ReadmeSidebar: React.FC = () => {
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
               />
             </svg>
-            <p className="text-sm">No document structure</p>
+            <p className="text-sm">{t('sidebar.noStructure')}</p>
           </div>
         )}
       </div>

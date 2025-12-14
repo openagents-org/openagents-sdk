@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 import {
   FEED_CATEGORY_OPTIONS,
@@ -25,6 +26,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
   error,
   connector,
 }) => {
+  const { t } = useTranslation('feed');
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [summary, setSummary] = useState("");
@@ -151,10 +153,10 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
           <div>
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-              Publish a Feed Update
+              {t('createModal.title')}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Posts are immutable after publishing. Double-check your content.
+              {t('createModal.subtitle')}
             </p>
           </div>
           <button
@@ -188,7 +190,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
         >
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Title
+              {t('createModal.postTitle')}
             </label>
             <input
               type="text"
@@ -196,41 +198,41 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-              placeholder="Concise summary (max 200 characters)"
+              placeholder={t('createModal.postTitlePlaceholder')}
             />
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              {title.length}/200 characters
+              {t('createModal.titleLength', { current: title.length })}
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Category
+                {t('createModal.category')}
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
               >
-                <option value="">Optional</option>
+                <option value="">{t('createModal.categoryOptional')}</option>
                 {FEED_CATEGORY_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
-                    {option.label}
+                    {t(`categories.${option.value}`)}
                   </option>
                 ))}
               </select>
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Summary (optional)
+                {t('createModal.summary')}
               </label>
               <input
                 type="text"
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="Short TL;DR for list view"
+                placeholder={t('createModal.summaryPlaceholder')}
               />
             </div>
           </div>
@@ -238,21 +240,21 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Content
+                {t('createModal.content')}
               </label>
               <button
                 type="button"
                 onClick={() => setShowPreview((prev) => !prev)}
                 className="text-xs font-medium text-blue-600 hover:text-blue-500"
               >
-                {showPreview ? "Hide preview" : "Preview Markdown"}
+                {showPreview ? "Hide preview" : t('createModal.previewMarkdown')}
               </button>
             </div>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="w-full min-h-[200px] rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none"
-              placeholder="Supports Markdown for formatting, lists, attachments references, etc."
+              placeholder={t('createModal.contentPlaceholder')}
             />
             {showPreview && (
               <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3">
@@ -269,7 +271,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Tags
+              {t('createModal.tags')}
             </label>
             <div className="flex items-center space-x-2">
               <input
@@ -278,14 +280,14 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={handleTagKeyDown}
                 className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="Press Enter to add tag"
+                placeholder={t('createModal.tagsPlaceholder')}
               />
               <button
                 type="button"
                 onClick={handleAddTag}
                 className="px-3 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-500"
               >
-                Add
+                {t('createModal.addTag')}
               </button>
             </div>
             {tags.length > 0 && (
@@ -311,7 +313,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Allowed agent groups (optional)
+              {t('createModal.allowedGroups')}
             </label>
             {groupsLoading ? (
               <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -342,29 +344,28 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
               </select>
             )}
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Leave empty to make the post visible to everyone on this network.
+              {t('createModal.allowedGroupsHint')}
             </p>
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Attachments
+              {t('createModal.attachments')}
             </label>
             <div className="flex items-center justify-between rounded-xl border border-dashed border-gray-300 dark:border-gray-700 px-4 py-3">
               <div>
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Upload files or images
+                  {t('createModal.uploadFiles')}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Attach supporting materials (max 1 file per upload)
+                  {t('createModal.uploadHint')}
                 </p>
               </div>
               <label
-                className={`inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-lg cursor-pointer ${
-                  uploading || !connector
-                    ? "bg-indigo-300 cursor-not-allowed"
-                    : "bg-indigo-600 hover:bg-indigo-500"
-                }`}
+                className={`inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-lg cursor-pointer ${uploading || !connector
+                  ? "bg-indigo-300 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-500"
+                  }`}
                 title={
                   connector ? "Upload attachment" : "Connect to an agent to upload"
                 }
@@ -372,8 +373,8 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
                 {uploading
                   ? "Uploading..."
                   : connector
-                  ? "Select file"
-                  : "Connect to upload"}
+                    ? "Select file"
+                    : "Connect to upload"}
                 <input
                   type="file"
                   className="hidden"
@@ -419,7 +420,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
 
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
           <div className="text-xs text-gray-500 dark:text-gray-400">
-            Posts cannot be edited or deleted once published.
+            {t('createModal.immutableWarning')}
           </div>
           <div className="flex items-center space-x-3">
             <button
@@ -430,19 +431,18 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
               }}
               className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
-              Cancel
+              {t('createModal.cancel')}
             </button>
             <button
               type="submit"
               form="feed-create-form"
               disabled={!canSubmit || isSubmitting}
-              className={`px-4 py-2 rounded-lg text-white ${
-                canSubmit
-                  ? "bg-blue-600 hover:bg-blue-500"
-                  : "bg-blue-300 cursor-not-allowed"
-              }`}
+              className={`px-4 py-2 rounded-lg text-white ${canSubmit
+                ? "bg-blue-600 hover:bg-blue-500"
+                : "bg-blue-300 cursor-not-allowed"
+                }`}
             >
-              {isSubmitting ? "Publishing..." : "Publish"}
+              {isSubmitting ? t('createModal.creating') : t('createModal.create')}
             </button>
           </div>
         </div>

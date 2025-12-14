@@ -1,7 +1,4 @@
-interface ChatResponse {
-  message: string;
-  conversationId: string;
-}
+
 
 // Store active requests for aborting
 const activeRequests = new Map<string, AbortController>();
@@ -19,8 +16,8 @@ const parseSSEEvent = (eventText: string): any => {
 
 // API functions
 export const sendChatMessage = async (
-  message: string, 
-  conversationId: string, 
+  message: string,
+  conversationId: string,
   options: {
     onChunk?: (chunk: string) => void,
     onComplete?: (fullMessage: string) => void,
@@ -28,9 +25,9 @@ export const sendChatMessage = async (
     streamOutput?: boolean
   } = {}
 ): Promise<any> => {
-  const { 
-    onChunk, 
-    onComplete, 
+  const {
+    onChunk,
+    onComplete,
     onError,
     streamOutput = true
   } = options;
@@ -42,7 +39,7 @@ export const sendChatMessage = async (
   try {
     // --- Call backend API --- 
     const backendHeaders: Record<string, string> = {
-        'Content-Type': 'application/json'
+      'Content-Type': 'application/json'
     };
 
     if (streamOutput && onChunk) {
@@ -68,8 +65,8 @@ export const sendChatMessage = async (
       if (!response.ok) {
         let errorBody = `Server error: ${response.status}`;
         try {
-            const errorData = await response.json();
-            errorBody = errorData.error || errorBody;
+          const errorData = await response.json();
+          errorBody = errorData.error || errorBody;
         } catch (e) { /* Ignore parsing error */ }
         throw new Error(errorBody);
       }
@@ -84,7 +81,7 @@ export const sendChatMessage = async (
 
       try {
         console.log('Starting to read streaming response...');
-        
+
         while (true) {
           const { done, value } = await reader.read();
           if (done) {
@@ -95,15 +92,15 @@ export const sendChatMessage = async (
           // Simple decode of current data chunk
           const chunk = decoder.decode(value, { stream: true });
           console.log('Received raw data:', chunk);
-          
+
           // Try to parse the chunk directly as JSON
           try {
             const lines = chunk.split('\n').filter(line => line.trim());
-            
+
             for (const line of lines) {
               const data = parseSSEEvent(line);
               if (!data) continue;
-              
+
               if (data.type === 'start') {
                 console.log('Streaming response started, conversation ID:', data.conversationId);
               } else if (data.type === 'chunk' && data.chunk) {
@@ -146,7 +143,7 @@ export const sendChatMessage = async (
         conversationId,
         streamOutput: false
       });
-      
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: backendHeaders,
@@ -157,26 +154,26 @@ export const sendChatMessage = async (
         }),
         signal: abortController.signal
       });
-      
+
       if (!response.ok) {
         let errorBody = `Server error: ${response.status}`;
         try {
-            const errorData = await response.json();
-            errorBody = errorData.error || errorBody;
+          const errorData = await response.json();
+          errorBody = errorData.error || errorBody;
         } catch (e) { /* Ignore parsing error */ }
         throw new Error(errorBody);
       }
-      
+
       const data = await response.json();
       console.log('Received non-streaming response:', {
         conversationId,
         messageLength: data.message ? data.message.length : 0
       });
-      
+
       if (onComplete) {
         onComplete(data.message);
       }
-      
+
       return data;
     }
   } catch (error: any) {
@@ -197,12 +194,12 @@ export const sendChatMessage = async (
 
 export const abortChatMessage = async (conversationId: string): Promise<boolean> => {
   const abortController = activeRequests.get(conversationId);
-  
+
   if (abortController) {
     // Abort the request
     abortController.abort();
     activeRequests.delete(conversationId);
-    
+
     try {
       // Also notify backend to abort if possible
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -214,7 +211,7 @@ export const abortChatMessage = async (conversationId: string): Promise<boolean>
           conversationId
         })
       });
-      
+
       if (response.ok) {
         console.log('Successfully sent abort request to backend.');
         return true;

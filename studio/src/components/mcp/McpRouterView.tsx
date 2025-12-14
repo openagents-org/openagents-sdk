@@ -27,7 +27,7 @@ const McpRouterView: React.FC<McpRouterViewProps> = ({ onServerAdded }) => {
   const [marketplaceServers, setMarketplaceServers] = useState<MarketplaceServer[]>([]);
   const [loading, setLoading] = useState(true);
   // Toast is imported from sonner
-  
+
   // Fetch marketplace data on component mount
   useEffect(() => {
     const fetchMarketplaceData = async () => {
@@ -42,16 +42,16 @@ const McpRouterView: React.FC<McpRouterViewProps> = ({ onServerAdded }) => {
         setLoading(false);
       }
     };
-    
+
     fetchMarketplaceData();
-  }, [toast]);
-  
+  }, []);
+
   // Filter servers based on search query
   const filteredServers = useMemo(() => {
     if (!searchQuery) return marketplaceServers;
-    
+
     const query = searchQuery.toLowerCase();
-    return marketplaceServers.filter(server => 
+    return marketplaceServers.filter(server =>
       server.name.toLowerCase().includes(query) ||
       server.description.toLowerCase().includes(query) ||
       server.models.some(model => model.toLowerCase().includes(query))
@@ -69,16 +69,16 @@ const McpRouterView: React.FC<McpRouterViewProps> = ({ onServerAdded }) => {
   const handleUse = async (id: string, name: string, description: string, icon: string) => {
     try {
       setAdding(true);
-      
+
       // Find the server in the marketplace data
       const server = marketplaceServers.find(s => s.id === id);
-      
+
       if (!server) {
         throw new Error(`Server with ID ${id} not found in marketplace data`);
       }
 
       console.log(`Adding MCP server ${server.name} (${server.id})`);
-      
+
       // Create MCP configuration
       const serverConfig = {
         type: server.type,
@@ -86,7 +86,7 @@ const McpRouterView: React.FC<McpRouterViewProps> = ({ onServerAdded }) => {
         customHeaders: { ...server.customHeaders },
         model: server.models && server.models.length > 0 ? server.models[0] : undefined
       };
-      
+
       // Remove API key placeholders if present
       if (serverConfig.customHeaders) {
         if (serverConfig.customHeaders['x-api-key'] === '{apiKey}') {
@@ -96,7 +96,7 @@ const McpRouterView: React.FC<McpRouterViewProps> = ({ onServerAdded }) => {
           serverConfig.customHeaders['Authorization'] = 'Bearer ';
         }
       }
-      
+
       // Save server configuration
       const response = await fetch('/api/mcp/add-server', {
         method: 'POST',
@@ -109,23 +109,23 @@ const McpRouterView: React.FC<McpRouterViewProps> = ({ onServerAdded }) => {
           config: serverConfig
         })
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to add server: ${response.statusText}`);
       }
-      
+
       // Notify user of success
       toast.success(`${server.name} has been added to your MCP servers.`);
-      
+
       // Switch to server view if callback provided
       if (onServerAdded) {
         console.log("Switching to Server view after adding server");
         onServerAdded();
       }
-      
+
     } catch (error) {
       console.error("Failed to add MCP server:", error);
-      
+
       // Show relevant error message
       let errorMessage = "Failed to add server. Please try again.";
       if (error instanceof Error) {
@@ -139,7 +139,7 @@ const McpRouterView: React.FC<McpRouterViewProps> = ({ onServerAdded }) => {
           errorMessage = `Error: ${error.message}`;
         }
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setAdding(false);
@@ -264,7 +264,7 @@ const McpRouterView: React.FC<McpRouterViewProps> = ({ onServerAdded }) => {
             >
               Previous
             </button>
-            
+
             {getPageRange().map((page, index) => (
               <React.Fragment key={index}>
                 {page === '...' ? (
@@ -272,11 +272,10 @@ const McpRouterView: React.FC<McpRouterViewProps> = ({ onServerAdded }) => {
                 ) : (
                   <button
                     onClick={() => setCurrentPage(page as number)}
-                    className={`px-3 py-1 rounded-md ${
-                      currentPage === page
+                    className={`px-3 py-1 rounded-md ${currentPage === page
                         ? 'bg-blue-600 text-white'
                         : 'border border-gray-300 dark:border-gray-600'
-                    }`}
+                      }`}
                   >
                     {page}
                   </button>
@@ -294,7 +293,7 @@ const McpRouterView: React.FC<McpRouterViewProps> = ({ onServerAdded }) => {
           </div>
         </div>
       )}
-      
+
       {/* Loading overlay */}
       {adding && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">

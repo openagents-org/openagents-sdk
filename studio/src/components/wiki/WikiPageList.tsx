@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useWikiStore } from "@/stores/wikiStore";
 import { useRecentPagesStore } from "@/stores/recentPagesStore";
@@ -8,6 +9,7 @@ import { formatDateTime } from "@/utils/utils";
 import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
 
 const WikiPageList: React.FC = () => {
+  const { t } = useTranslation('wiki');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
@@ -93,7 +95,7 @@ const WikiPageList: React.FC = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">
-            Loading wiki pages...
+            {t('list.loading')}
           </p>
         </div>
       </div>
@@ -124,7 +126,7 @@ const WikiPageList: React.FC = () => {
             onClick={loadPages}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
-            Try Again
+            {t('list.tryAgain')}
           </button>
         </div>
       </div>
@@ -137,10 +139,10 @@ const WikiPageList: React.FC = () => {
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Wiki
+            {t('list.title')}
           </h1>
           <p className="text-sm mt-1 text-gray-600 dark:text-gray-400">
-            {pages.length} pages available
+            {t('list.pagesAvailable', { count: pages.length })}
           </p>
         </div>
 
@@ -165,8 +167,7 @@ const WikiPageList: React.FC = () => {
                 />
               </svg>
               <span>
-                Proposals (
-                {proposals.filter((p) => p.status === "pending").length})
+                {t('list.proposals', { count: proposals.filter((p) => p.status === "pending").length })}
               </span>
             </button>
           )}
@@ -189,7 +190,7 @@ const WikiPageList: React.FC = () => {
                 d="M12 4v16m8-8H4"
               />
             </svg>
-            <span>New Page</span>
+            <span>{t('list.newPage')}</span>
           </button>
         </div>
       </div>
@@ -201,7 +202,7 @@ const WikiPageList: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search wiki pages..."
+            placeholder={t('list.searchPlaceholder')}
             className="w-full pl-10 pr-4 py-2 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
           />
           <svg
@@ -240,19 +241,19 @@ const WikiPageList: React.FC = () => {
               </svg>
             </div>
             <h3 className="text-lg font-medium mb-2 text-gray-700 dark:text-gray-300">
-              {searchQuery ? "No pages found" : "No pages yet"}
+              {searchQuery ? t('list.noPagesFound') : t('list.noPages')}
             </h3>
             <p className="mb-4 text-gray-600 dark:text-gray-400">
               {searchQuery
-                ? "No pages found matching your search"
-                : "Create your first wiki page to get started!"}
+                ? t('list.noPagesFoundSearch')
+                : t('list.createFirst')}
             </p>
             {!searchQuery && (
               <button
                 onClick={() => setShowCreateModal(true)}
                 className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
-                Create First Page
+                {t('list.createFirstButton')}
               </button>
             )}
           </div>
@@ -267,18 +268,18 @@ const WikiPageList: React.FC = () => {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold mb-2 line-clamp-2 text-gray-900 dark:text-gray-100">
-                      {page.title || "Untitled"}
+                      {page.title || t('list.untitled')}
                     </h3>
                     <div className="text-sm mb-3 line-clamp-3 text-gray-600 dark:text-gray-400 wiki-list-preview">
                       <MarkdownRenderer
-                        content={page.wiki_content || "No content"}
+                        content={page.wiki_content || t('list.noContent')}
                         className="prose-sm max-w-none"
                       />
                     </div>
                     <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
-                      <span>{page.page_path || "Unknown path"}</span>
-                      <span>by {page.creator_id || "Unknown"}</span>
-                      <span>v{page.version || 1}</span>
+                      <span>{page.page_path || t('list.unknownPath')}</span>
+                      <span>{t('list.by', { user: page.creator_id || t('list.unknownCreator') })}</span>
+                      <span>{t('list.version', { version: page.version || 1 })}</span>
                       <span>{formatDateTime(page.last_modified)}</span>
                     </div>
                   </div>

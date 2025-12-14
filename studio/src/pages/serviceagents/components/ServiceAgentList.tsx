@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import {
   getServiceAgents,
   startServiceAgent,
@@ -14,6 +15,7 @@ import {
  * Displays all service agents with status indicators and control buttons
  */
 const ServiceAgentList: React.FC = () => {
+  const { t } = useTranslation('serviceAgent');
   const [agents, setAgents] = useState<ServiceAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,13 +30,13 @@ const ServiceAgentList: React.FC = () => {
       const data = await getServiceAgents();
       setAgents(data);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to fetch service agents list";
+      const errorMessage = err instanceof Error ? err.message : t('list.messages.fetchFailed');
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   // Initial load
   useEffect(() => {
@@ -51,26 +53,26 @@ const ServiceAgentList: React.FC = () => {
   ) => {
     try {
       setActionLoading((prev) => ({ ...prev, [agentId]: true }));
-      
+
       switch (action) {
         case "start":
           await startServiceAgent(agentId);
-          toast.success(`Service agent ${agentId} started`);
+          toast.success(t('list.messages.started', { id: agentId }));
           break;
         case "stop":
           await stopServiceAgent(agentId);
-          toast.success(`Service agent ${agentId} stopped`);
+          toast.success(t('list.messages.stopped', { id: agentId }));
           break;
         case "restart":
           await restartServiceAgent(agentId);
-          toast.success(`Service agent ${agentId} restarted`);
+          toast.success(t('list.messages.restarted', { id: agentId }));
           break;
       }
 
       // Refresh agents list after action
       await fetchAgents();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Operation failed";
+      const errorMessage = err instanceof Error ? err.message : t('list.messages.failed');
       toast.error(errorMessage);
     } finally {
       setActionLoading((prev) => ({ ...prev, [agentId]: false }));
@@ -98,15 +100,15 @@ const ServiceAgentList: React.FC = () => {
   const getStatusText = (status: string) => {
     switch (status) {
       case "running":
-        return "Running";
+        return t('list.status.running');
       case "stopped":
-        return "Stopped";
+        return t('list.status.stopped');
       case "error":
-        return "Error";
+        return t('list.status.error');
       case "starting":
-        return "Starting";
+        return t('list.status.starting');
       case "stopping":
-        return "Stopping";
+        return t('list.status.stopping');
       default:
         return status;
     }
@@ -119,7 +121,7 @@ const ServiceAgentList: React.FC = () => {
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <span className="ml-3 text-gray-600 dark:text-gray-400">
-            Loading service agents list...
+            {t('list.loading')}
           </span>
         </div>
       </div>
@@ -147,7 +149,7 @@ const ServiceAgentList: React.FC = () => {
             </div>
             <div className="ml-3 flex-1">
               <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
-                Load failed
+                {t('list.loadFailed')}
               </h3>
               <p className="mt-1 text-sm text-red-700 dark:text-red-300">
                 {error}
@@ -156,7 +158,7 @@ const ServiceAgentList: React.FC = () => {
                 onClick={fetchAgents}
                 className="mt-2 text-sm bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 px-3 py-1 rounded hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
               >
-                Retry
+                {t('list.retry')}
               </button>
             </div>
           </div>
@@ -171,10 +173,10 @@ const ServiceAgentList: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Service Agents Management
+            {t('list.title')}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Manage and monitor all service agents
+            {t('list.subtitle')}
           </p>
         </div>
 
@@ -203,7 +205,7 @@ const ServiceAgentList: React.FC = () => {
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          {loading ? "Refreshing..." : "Refresh"}
+          {loading ? t('list.refreshing') : t('list.refresh')}
         </button>
       </div>
 
@@ -224,10 +226,10 @@ const ServiceAgentList: React.FC = () => {
             />
           </svg>
           <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
-            No service agents
+            {t('list.noAgents')}
           </h3>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            No service agents available
+            {t('list.noAgentsHint')}
           </p>
         </div>
       ) : (
@@ -255,13 +257,12 @@ const ServiceAgentList: React.FC = () => {
                           )}`}
                         >
                           <span
-                            className={`w-1.5 h-1.5 mr-1.5 rounded-full ${
-                              agent.status === "running"
+                            className={`w-1.5 h-1.5 mr-1.5 rounded-full ${agent.status === "running"
                                 ? "bg-green-500"
                                 : agent.status === "error"
-                                ? "bg-red-500"
-                                : "bg-gray-400"
-                            }`}
+                                  ? "bg-red-500"
+                                  : "bg-gray-400"
+                              }`}
                           />
                           {getStatusText(agent.status)}
                         </span>
@@ -312,7 +313,7 @@ const ServiceAgentList: React.FC = () => {
                             d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                           />
                         </svg>
-                        View Details
+                        {t('list.viewDetails')}
                       </button>
 
                       {!isRunning && (
@@ -331,7 +332,7 @@ const ServiceAgentList: React.FC = () => {
                           {isLoading ? (
                             <>
                               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1.5"></div>
-                              Starting...
+                              {t('list.starting')}
                             </>
                           ) : (
                             <>
@@ -354,7 +355,7 @@ const ServiceAgentList: React.FC = () => {
                                   d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                                 />
                               </svg>
-                              Start
+                              {t('list.start')}
                             </>
                           )}
                         </button>
@@ -377,7 +378,7 @@ const ServiceAgentList: React.FC = () => {
                             {isLoading ? (
                               <>
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1.5"></div>
-                                Stopping...
+                                {t('list.stopping')}
                               </>
                             ) : (
                               <>
@@ -400,7 +401,7 @@ const ServiceAgentList: React.FC = () => {
                                     d="M9 10h6v4H9v-4z"
                                   />
                                 </svg>
-                                Stop
+                                {t('list.stop')}
                               </>
                             )}
                           </button>
@@ -419,7 +420,7 @@ const ServiceAgentList: React.FC = () => {
                             {isLoading ? (
                               <>
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-1.5"></div>
-                                Restarting...
+                                {t('list.restarting')}
                               </>
                             ) : (
                               <>
@@ -436,7 +437,7 @@ const ServiceAgentList: React.FC = () => {
                                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                                   />
                                 </svg>
-                                Restart
+                                {t('list.restart')}
                               </>
                             )}
                           </button>

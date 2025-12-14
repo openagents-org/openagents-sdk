@@ -1,0 +1,94 @@
+{
+    "header": {
+        "selectChannel": "选择频道",
+        "connectionStatus": "连接状态: {{status}}"
+    },
+    "empty": {
+        "noMessagesChannel": "#{{channel}} 还没有消息。开始对话吧!",
+        "noMessagesDirect": "与 {{user}} 还没有消息。",
+        "selectChannelToChat": "选择一个频道开始聊天。",
+        "selectChannelToType": "选择一个频道开始输入...",
+        "noMessagesYet": "还没有消息"
+    },
+    "errors": {
+        "error": "错误",
+        "loadFailed": "加载消息失败",
+        "sendFailed": "发送消息失败",
+        "reactionFailed": "{{action}} 表情 \"{{reaction}}\" 失败。请重试。",
+        "networkError": "{{action}} 表情 \"{{reaction}}\" 时网络错误。请检查连接后重试。",
+        "replyNotAllowed": "项目频道不允许回复",
+        "quoteNotAllowed": "项目频道不允许引用",
+        "reactionNotAllowed": "项目频道不允许添加或移除表情"
+    },
+    "input": {
+        "placeholder": "输入消息...",
+        "placeholderChannel": "发送到 #{{channel}}",
+        "placeholderDirect": "发送给 @{{user}}",
+        "replyingTo": "回复 {{user}}",
+        "quotingFrom": "引用 {{user}}",
+        "cancel": "取消",
+        "send": "发送",
+        "attach": "附加文件",
+        "emoji": "添加表情"
+    },
+    "message": {
+        "edited": "已编辑",
+        "deleted": "此消息已被删除",
+        "reply": "回复",
+        "quote": "引用",
+        "edit": "编辑",
+        "delete": "删除",
+        "copy": "复制",
+        "forward": "转发",
+        "react": "表情",
+        "viewThread": "查看主题",
+        "repliedTo": "回复了",
+        "quotedFrom": "引用自"
+    },
+    "notification": {
+        "title": "启用消息通知",
+        "description": "启用通知以及时接收以下提醒:",
+        "features": {
+            "directMessages": "来自他人的私信",
+            "mentions": "频道中的提及",
+            "replies": "对您消息的回复"
+        },
+        "guide": {
+            "title": "💡 启用通知的两个步骤:",
+            "browserSettings": "1. 浏览器设置:",
+            "browserInstructions": "Chrome: 设置 → 隐私和安全 → 网站设置 → 通知 → 确保此网站设置为 \\\"允许\\\"",
+            "systemSettings": "2. 系统设置:",
+            "systemInstructions": "macOS: 系统偏好设置 → 通知与专注 → 找到 Chrome → 启用通知"
+        },
+        "permissionDeniedTitle": "权限被拒绝:",
+        "permissionDeniedHint": "请点击浏览器地址栏中的锁图标,将通知设置为 \\\"允许\\\",然后刷新页面。",
+        "enable": "允许通知",
+        "dismiss": "忽略",
+        "notNow": "暂不启用",
+        "dontAskAgain": "不再询问",
+        "permissionDenied": "权限被拒绝",
+        "permissionGranted": "通知已启用"
+    },
+    "project": {
+        "completed": "项目已完成",
+        "messageSent": "项目消息已发送"
+    },
+    "sidebar": {
+        "channels": "频道",
+        "directMessages": "私信",
+        "loadingChannels": "正在加载频道...",
+        "noChannels": "暂无可用频道",
+        "loadingAgents": "正在加载成员...",
+        "noAgents": "暂无在线成员"
+    },
+    "status": {
+        "loading": "加载中...",
+        "sending": "发送中...",
+        "sent": "已发送",
+        "failed": "失败",
+        "typing": "{{user}} 正在输入...",
+        "online": "在线",
+        "offline": "离线",
+        "away": "离开"
+    }
+}

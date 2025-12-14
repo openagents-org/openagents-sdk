@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
 import { useFeedStore } from "@/stores/feedStore";
 import FeedCreateModal from "./FeedCreateModal";
@@ -22,6 +23,7 @@ const fullInputClass = `w-full ${baseInputClasses}`;
 const flexInputClass = `flex-1 ${baseInputClasses}`;
 
 const FeedView: React.FC = () => {
+  const { t } = useTranslation('feed');
   const navigate = useNavigate();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
@@ -173,14 +175,13 @@ const FeedView: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-sm uppercase tracking-wide text-blue-600 font-semibold mb-1">
-              Intelligence Feed
+              {t('header.title')}
             </p>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Network-wide Announcements
+              {t('header.subtitle')}
             </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Broadcast immutable updates, alerts, and information for all
-              agents.
+              {t('header.description')}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -202,7 +203,7 @@ const FeedView: React.FC = () => {
                   d="M4 4v6h6M20 20v-6h-6M5 19A9 9 0 0119 5"
                 />
               </svg>
-              Refresh
+              {t('actions.refresh')}
             </button>
             <button
               onClick={() => setIsCreateOpen(true)}
@@ -221,19 +222,19 @@ const FeedView: React.FC = () => {
                   d="M12 4v16m8-8H4"
                 />
               </svg>
-              New Post
+              {t('actions.newPost')}
             </button>
           </div>
         </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-          <span>{totalPosts} posts</span>
+        <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+          <span>{t('stats.posts', { count: totalPosts })}</span>
           <span>•</span>
           <span>
-            Page {page} / {totalPages}
+            {t('stats.page', { current: page, total: totalPages })}
           </span>
           <span>•</span>
-          <span>{filters.tags.length} tag filters</span>
+          <span>{t('stats.tagFilters', { count: filters.tags.length })}</span>
         </div>
       </div>
 
@@ -241,15 +242,15 @@ const FeedView: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-sm text-gray-600 dark:text-gray-300">
             {filtersActive
-              ? "Filters applied — expand to view details."
-              : "No filters applied."}
+              ? t('filters.applied')
+              : t('filters.none')}
           </div>
           <button
             type="button"
             onClick={() => setFiltersExpanded((prev) => !prev)}
             className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
           >
-            {filtersExpanded ? "Hide filters" : "Show filters"}
+            {filtersExpanded ? t('filters.hide') : t('filters.show')}
           </button>
         </div>
 
@@ -261,14 +262,14 @@ const FeedView: React.FC = () => {
             >
               <div className="flex-1 min-w-[280px]">
                 <label className="text-xs font-semibold text-gray-500 uppercase">
-                  Full-text search
+                  {t('filters.fullTextSearch')}
                 </label>
                 <div className="mt-1 flex gap-2">
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search titles and body content"
+                    placeholder={t('filters.searchPlaceholder')}
                     className={flexInputClass}
                   />
                 </div>
@@ -294,7 +295,7 @@ const FeedView: React.FC = () => {
               </div>
               <div className="flex-1 min-w-[220px]">
                 <label className="text-xs font-semibold text-gray-500 uppercase">
-                  Tag search
+                  {t('filters.tagSearch')}
                 </label>
                 <div className="mt-1 flex gap-2">
                   <input
@@ -303,20 +304,20 @@ const FeedView: React.FC = () => {
                     onChange={(e) => setSearchTagInput(e.target.value)}
                     onKeyDown={handleSearchTagKeyDown}
                     className={flexInputClass}
-                    placeholder="Press Enter to add"
+                    placeholder={t('filters.tagFilterPlaceholder')}
                   />
                   <button
                     type="button"
                     onClick={handleAddSearchTag}
                     className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
                   >
-                    Add
+                    {t('filters.add')}
                   </button>
                 </div>
               </div>
               <div className="w-full lg:w-auto flex flex-col justify-end min-w-[360px]">
                 <span className="text-xs font-semibold uppercase text-gray-500 mb-1">
-                  Actions
+                  {t('filters.actions')}
                 </span>
                 <div className="flex gap-2">
                   <button
@@ -324,14 +325,14 @@ const FeedView: React.FC = () => {
                     className="flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-500"
                     disabled={searchLoading}
                   >
-                    Search
+                    {t('filters.search')}
                   </button>
                   <button
                     type="button"
                     onClick={clearSearch}
                     className="flex-1 h-[42px] flex items-center justify-center px-4 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-blue-700 dark:text-blue-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                   >
-                    Clear search
+                    {t('filters.clearSearch')}
                   </button>
                 </div>
               </div>
@@ -341,7 +342,7 @@ const FeedView: React.FC = () => {
               <div className="flex flex-col lg:flex-row lg:flex-wrap gap-4">
                 <div className="flex-1 min-w-[220px]">
                   <label className="text-xs font-semibold text-gray-500 uppercase">
-                    Category
+                    {t('filters.category')}
                   </label>
                   <select
                     value={filters.category}
@@ -350,7 +351,7 @@ const FeedView: React.FC = () => {
                     }
                     className={`mt-1 ${fullInputClass}`}
                   >
-                    <option value="all">All categories</option>
+                    <option value="all">{t('filters.allCategories')}</option>
                     {FEED_CATEGORY_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
@@ -360,7 +361,7 @@ const FeedView: React.FC = () => {
                 </div>
                 <div className="flex-1 min-w-[220px]">
                   <label className="text-xs font-semibold text-gray-500 uppercase">
-                    Author
+                    {t('filters.author')}
                   </label>
                   <input
                     type="text"
@@ -374,13 +375,13 @@ const FeedView: React.FC = () => {
                       }
                     }}
                     className={`mt-1 ${fullInputClass}`}
-                    placeholder="Filter by agent id"
+                    placeholder={t('filters.authorPlaceholder')}
                   />
                 </div>
                 <div className="flex flex-1 min-w-[220px] gap-3">
                   <div className="flex-1">
                     <label className="text-xs font-semibold text-gray-500 uppercase">
-                      From date
+                      {t('filters.fromDate')}
                     </label>
                     <input
                       type="text"
@@ -404,7 +405,7 @@ const FeedView: React.FC = () => {
                   </div>
                   <div className="flex-1">
                     <label className="text-xs font-semibold text-gray-500 uppercase">
-                      To date
+                      {t('filters.toDate')}
                     </label>
                     <input
                       type="text"
@@ -498,8 +499,8 @@ const FeedView: React.FC = () => {
                       }
                       className={`w-28 ${baseInputClasses}`}
                     >
-                      <option value="desc">Desc</option>
-                      <option value="asc">Asc</option>
+                      <option value="desc">{t('filters.desc')}</option>
+                      <option value="asc">{t('filters.asc')}</option>
                     </select>
                   </div>
                 </div>
@@ -507,7 +508,7 @@ const FeedView: React.FC = () => {
 
               <div className="flex items-center justify-between">
                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {filtersActive ? "Filters applied" : "No filters applied"}
+                  {filtersActive ? t('filters.appliedShort') : t('filters.none')}
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -516,14 +517,14 @@ const FeedView: React.FC = () => {
                     className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
                     disabled={recentLoading}
                   >
-                    {recentLoading ? "Checking..." : "Check new posts"}
+                    {recentLoading ? t('filters.checking') : t('filters.checkNewPosts')}
                   </button>
                   <button
                     type="button"
                     onClick={resetFilters}
                     className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
                   >
-                    Reset filters
+                    {t('filters.resetFilters')}
                   </button>
                 </div>
               </div>
