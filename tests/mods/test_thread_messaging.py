@@ -961,9 +961,12 @@ async def test_reaction_system(alice_client, bob_client):
     channel_notification = bob_messages[0]
     assert channel_notification.event_name == "thread.channel_message.notification"
 
-    # Extract the actual message ID from the notification
-    # The event_id of the notification is the same as the original message event_id
-    actual_stored_message_id = channel_notification.event_id
+    # Extract the actual message ID from the notification payload
+    # The notification's event_id is different from the original message event_id
+    # We need to use original_event_id from payload which references the stored message
+    actual_stored_message_id = channel_notification.payload.get(
+        "original_event_id", channel_notification.event_id
+    )
     print(f"📋 Actual stored message ID from notification: {actual_stored_message_id}")
 
     # Bob adds a reaction to Alice's message using the actual stored message ID
