@@ -1,18 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
+import { useAuthStore } from '../../stores/authStore';
+import { networkFetch } from '../../utils/httpClient';
 
 interface LoginViewProps {
   onLoginSuccess: () => void;
 }
 
+interface GroupConfig {
+  name: string;
+  description?: string;
+  has_password: boolean;
+  metadata?: Record<string, any>;
+}
+
 const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [showAdminButton, setShowAdminButton] = useState(false);
+  const [isLoadingGroupConfig, setIsLoadingGroupConfig] = useState(false);
   
   const { signIn, signUp, signInWithGoogle, signInWithGitHub, isLoading } = useAuth();
+  const { selectedNetwork } = useAuthStore();
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,15 +68,166 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     setError(null);
   };
 
+  // Fetch group_config to check if admin group exists
+  useEffect(() => {
+    const fetchGroupConfig = async () => {
+      // Try to get network from selectedNetwork or use default localhost:8700
+      const network = selectedNetwork || { host: 'localhost', port: 8700, useHttps: false };
+      
+      console.log('Fetching group config from network:', network);
+
+      setIsLoadingGroupConfig(true);
+      try {
+        const response = await networkFetch(
+          network.host,
+          network.port,
+          "/api/health",
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+            },
+            useHttps: network.useHttps,
+          }
+        );
+        console.log("response",response)
+        if (response.ok) {
+          const healthData = await response.json();
+          console.log('Health data received:', healthData);
+          console.log('Full healthData structure:', JSON.stringify(healthData, null, 2));
+          
+          // Try different possible data structures
+          let groupConfig: GroupConfig[] = [];
+          
+          if (healthData.data?.group_config) {
+            groupConfig = healthData.data.group_config;
+            console.log('Found group_config in healthData.data.group_config');
+          } else if (healthData.group_config) {
+            groupConfig = healthData.group_config;
+            console.log('Found group_config in healthData.group_config');
+          } else {
+            console.warn('No group_config found in healthData');
+            console.log('Available keys in healthData:', Object.keys(healthData));
+            if (healthData.data) {
+              console.log('Available keys in healthData.data:', Object.keys(healthData.data));
+            }
+          }
+          
+          console.log('Group config extracted:', groupConfig);
+          console.log('Group config type:', typeof groupConfig);
+          console.log('Is array:', Array.isArray(groupConfig));
+          console.log('Group config length:', groupConfig.length);
+          
+          if (groupConfig.length > 0) {
+            console.log('Group config items:', groupConfig.map(g => ({ name: g.name, has_password: g.has_password })));
+          } else {
+            console.warn('⚠️ Group config is empty!');
+            console.log('Full healthData for debugging:', JSON.stringify(healthData, null, 2));
+          }
+          
+          // Check if admin group exists in group_config
+          let hasAdminGroup = false;
+          
+          console.log('🔍 Starting admin group check...');
+          console.log('🔍 groupConfig is array?', Array.isArray(groupConfig));
+          console.log('🔍 groupConfig length:', groupConfig.length);
+          
+          if (Array.isArray(groupConfig) && groupConfig.length > 0) {
+            console.log('✅ groupConfig is valid array with items, checking for admin...');
+            
+            // Try multiple ways to check for admin
+            for (let i = 0; i < groupConfig.length; i++) {
+              const group = groupConfig[i];
+              console.log(`🔍 Group[${i}]:`, group);
+              console.log(`🔍 Group[${i}].name:`, group?.name);
+              console.log(`🔍 Group[${i}].name === 'admin'?`, group?.name === 'admin');
+              console.log(`🔍 Group[${i}].name === 'admin' (strict)?`, group?.name === 'admin');
+              
+              if (group && group.name === 'admin') {
+                console.log('✅ FOUND ADMIN GROUP!');
+                hasAdminGroup = true;
+                break;
+              }
+            }
+            
+            // Also try .some() method
+            const hasAdminSome = groupConfig.some(group => {
+              const isAdmin = group && group.name === 'admin';
+              console.log(`🔍 .some() check - group: ${group?.name}, isAdmin: ${isAdmin}`);
+              return isAdmin;
+            });
+            
+            console.log('🔍 hasAdminGroup (for loop):', hasAdminGroup);
+            console.log('🔍 hasAdminGroup (.some()):', hasAdminSome);
+            
+            // Use the result from .some() as it's more reliable
+            hasAdminGroup = hasAdminSome;
+          } else {
+            console.warn('⚠️ Cannot check for admin group: groupConfig is not a valid array or is empty');
+            console.warn('⚠️ groupConfig type:', typeof groupConfig);
+            console.warn('⚠️ groupConfig value:', groupConfig);
+          }
+          
+          console.log('✅ FINAL: Has admin group:', hasAdminGroup);
+          console.log('✅ FINAL: Setting showAdminButton to:', hasAdminGroup);
+          
+          // Force state update
+          setShowAdminButton(hasAdminGroup);
+          
+          // Double check after a short delay
+          setTimeout(() => {
+            console.log('After state update - showAdminButton should be:', hasAdminGroup);
+          }, 100);
+        } else {
+          console.error('Health endpoint returned error:', response.status, response.statusText);
+          const errorText = await response.text();
+          console.error('Error response body:', errorText);
+          setShowAdminButton(false);
+        }
+      } catch (error) {
+        console.error("Failed to fetch group config:", error);
+        setShowAdminButton(false);
+      } finally {
+        setIsLoadingGroupConfig(false);
+      }
+    };
+
+    fetchGroupConfig();
+  }, [selectedNetwork]);
+
+  // Debug: Log state changes
+  useEffect(() => {
+    console.log('showAdminButton state changed to:', showAdminButton);
+    console.log('isLoadingGroupConfig state changed to:', isLoadingGroupConfig);
+  }, [showAdminButton, isLoadingGroupConfig]);
+
+  const handleAdminLogin = () => {
+    // Navigate to admin login page
+    navigate("/admin-login");
+  };
+
+  const handleExitAdminMode = () => {
+    setIsAdminMode(false);
+    setError(null);
+    setEmail('');
+    setPassword('');
+  };
+
   return (
     <div className="auth-container">
       <div className="auth-form-wrapper">
-        <h1>{isSignUp ? 'Create Account' : 'Sign In'}</h1>
+        <h1>{isAdminMode ? 'Admin Login' : isSignUp ? 'Create Account' : 'Sign In'}</h1>
+        
+        {isAdminMode && (
+          <div className="text-sm text-amber-600 dark:text-amber-400 mb-4 text-center">
+            Please log in with your admin credentials
+          </div>
+        )}
         
         {error && <div className="auth-error">{error}</div>}
         
         <form onSubmit={handleEmailSubmit} className="auth-form">
-          {isSignUp && (
+          {isSignUp && !isAdminMode && (
             <div className="form-group">
               <label htmlFor="displayName">Name</label>
               <input
@@ -106,18 +272,33 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           >
             {isLoading 
               ? 'Loading...' 
-              : isSignUp 
-                ? 'Sign Up with Email' 
-                : 'Sign In with Email'
+              : isAdminMode
+                ? 'Login as Admin'
+                : isSignUp 
+                  ? 'Sign Up with Email' 
+                  : 'Sign In with Email'
             }
           </button>
         </form>
         
-        <div className="auth-separator">
-          <span>OR</span>
-        </div>
+        {isAdminMode && (
+          <button
+            type="button"
+            onClick={handleExitAdminMode}
+            className="auth-toggle-button"
+            style={{ marginTop: '1rem', display: 'block', width: '100%', textAlign: 'center' }}
+          >
+            ← Back to Regular Login
+          </button>
+        )}
         
-        <div className="auth-social-buttons">
+        {!isAdminMode && (
+          <>
+            <div className="auth-separator">
+              <span>OR</span>
+            </div>
+            
+            <div className="auth-social-buttons">
           <button 
             type="button" 
             onClick={handleGoogleSignIn}
@@ -144,21 +325,46 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             </svg>
             Continue with GitHub
           </button>
-        </div>
-        
-        <div className="auth-toggle">
-          {isSignUp 
-            ? 'Already have an account?' 
-            : 'Need an account?'
-          } 
-          <button 
-            type="button" 
-            onClick={toggleMode} 
-            className="auth-toggle-button"
-          >
-            {isSignUp ? 'Sign In' : 'Sign Up'}
-          </button>
-        </div>
+          </div>
+          
+          <div className="auth-toggle">
+            {isSignUp 
+              ? 'Already have an account?' 
+              : 'Need an account?'
+            } 
+            <button 
+              type="button" 
+              onClick={toggleMode} 
+              className="auth-toggle-button"
+            >
+              {isSignUp ? 'Sign In' : 'Sign Up'}
+            </button>
+          </div>
+
+          {/* Admin Login Button - Only show if admin group exists in group_config */}
+          {/* Debug info - remove in production */}
+          {process.env.NODE_ENV === 'development' && (
+            <div style={{ fontSize: '10px', color: 'gray', marginTop: '10px' }}>
+              Debug: showAdminButton={String(showAdminButton)}, isLoadingGroupConfig={String(isLoadingGroupConfig)}
+            </div>
+          )}
+          {showAdminButton && !isLoadingGroupConfig && (
+            <>
+              <div className="auth-separator">
+                <span>────────────────────</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleAdminLogin}
+                className="admin-login-button"
+                disabled={isLoading}
+              >
+                Login as Admin
+              </button>
+            </>
+          )}
+        </>
+        )}
       </div>
     </div>
   );

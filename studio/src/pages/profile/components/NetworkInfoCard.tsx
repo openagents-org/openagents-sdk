@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { profileSelectors } from "@/stores/profileStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -9,6 +9,16 @@ const NetworkInfoCard: React.FC = () => {
   const networkInfo = profileSelectors.useNetworkInfo();
   const isOnline = profileSelectors.useIsOnline();
   const connectionLatency = profileSelectors.useConnectionLatency();
+  const healthData = profileSelectors.useHealthData();
+  
+  // Format uptime_seconds to 3 decimal places
+  const uptimeDisplay = useMemo(() => {
+    const uptimeSeconds = (healthData as any)?.uptime_seconds;
+    if (uptimeSeconds !== undefined && uptimeSeconds !== null) {
+      return `${Number(uptimeSeconds).toFixed(3)}s`;
+    }
+    return "N/A";
+  }, [healthData]);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -95,6 +105,12 @@ const NetworkInfoCard: React.FC = () => {
                       : "text-yellow-600 dark:text-yellow-400"
                     }`}>
                     {networkInfo.status || t('dashboard.network.unknown')}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Uptime:</span>
+                  <span className="text-sm font-mono text-gray-900 dark:text-gray-100">
+                    {uptimeDisplay}
                   </span>
                 </div>
               </div>

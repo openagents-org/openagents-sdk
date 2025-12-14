@@ -264,10 +264,14 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     // Special case: project routes (/project and /project/:projectId) are always available
     // as they provide project management and private chat room functionality
     const isProjectRoute = currentPath.startsWith("/project")
+    // Special case: admin routes (/admin/*) are always available for admin users
+    // AdminRouteGuard will handle permission checking
+    const isAdminRoute = currentPath.startsWith("/admin")
 
     if (
       isModulesLoaded &&
       !isProjectRoute &&
+      !isAdminRoute &&
       !isRouteAvailable(currentPath, enabledModules)
     ) {
       console.log(
@@ -281,7 +285,14 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   }
 
   // Handle invalid paths - redirect to appropriate page
+  // Don't redirect if we're on an admin route - let AdminRouteGuard handle it
+  const isAdminRoute = currentPath.startsWith("/admin")
+  
   if (selectedNetwork && agentName) {
+    // If on admin route, let it pass through to AdminRouteGuard
+    if (isAdminRoute) {
+      return <>{children}</>
+    }
     console.log(
       `🔄 Invalid route ${currentPath} with complete setup, redirecting to ${defaultRoute}`
     )

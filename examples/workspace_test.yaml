@@ -67,11 +67,10 @@ network:
 
   agent_groups:
     admin:
-      password_hash: "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
-      description: "Forum moderators with elevated permissions"
+      password_hash: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"  # password: admin
+      description: "Administrator with full permissions"
       metadata:
-        permissions: ["delete_posts", "ban_users", "manage_channels"]
-        # Password for this group: "ModSecure2024!" (do not store plaintext in production!)
+        permissions: ["all"]
     ai-bots:
       password_hash: "693e60f5d315090f277c55fc5c64c6f63e6d71ea8187eca4116175ff35aa3ef4"
       description: "AI assistant and automation agents"
@@ -90,10 +89,6 @@ network:
       metadata:
         permissions: ["post_messages", "read_channels"]
 
-
-    admin:
-      password_hash: "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
-      description: "Forum moderators with elevated permissions"
   # Note: Agents without valid credentials are assigned to the configured 'default_agent_group' (in this case: "guests")
 
   # Mod configuration - Thread messaging, workspace functionality, and shared documents
