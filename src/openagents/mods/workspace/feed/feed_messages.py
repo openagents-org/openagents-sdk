@@ -12,7 +12,6 @@ class FeedPostMessage(Event):
         source_id: str,
         title: str,
         content: str,
-        category: Optional[str] = None,
         tags: Optional[List[str]] = None,
         allowed_groups: Optional[List[str]] = None,
         attachments: Optional[List[Dict[str, Any]]] = None,
@@ -27,8 +26,6 @@ class FeedPostMessage(Event):
             "title": title,
             "content": content,
         }
-        if category is not None:
-            payload["category"] = category
         if tags is not None:
             payload["tags"] = tags
         if allowed_groups is not None:
@@ -44,7 +41,6 @@ class FeedPostMessage(Event):
         # Store values as custom attributes (avoid conflicts with Event properties)
         self._title = title
         self._content = content
-        self._category = category
         self._tags = tags or []
         self._allowed_groups = allowed_groups or []
         self._attachments = attachments or []
@@ -56,10 +52,6 @@ class FeedPostMessage(Event):
     @property
     def post_content(self) -> str:
         return self._content
-
-    @property
-    def category(self) -> Optional[str]:
-        return self._category
 
     @property
     def tags(self) -> List[str]:
@@ -86,7 +78,6 @@ class FeedQueryMessage(Event):
         offset: int = 0,
         sort_by: str = "recent",
         post_id: Optional[str] = None,
-        category: Optional[str] = None,
         tags: Optional[List[str]] = None,
         author_id: Optional[str] = None,
         since_timestamp: Optional[float] = None,
@@ -121,8 +112,6 @@ class FeedQueryMessage(Event):
             payload["query"] = query
         if post_id is not None:
             payload["post_id"] = post_id
-        if category is not None:
-            payload["category"] = category
         if tags is not None:
             payload["tags"] = tags
         if author_id is not None:
@@ -144,7 +133,6 @@ class FeedQueryMessage(Event):
         self._offset = offset
         self._sort_by = sort_by
         self._post_id = post_id
-        self._category = category
         self._tags = tags or []
         self._author_id = author_id
         self._since_timestamp = since_timestamp
@@ -173,10 +161,6 @@ class FeedQueryMessage(Event):
     @property
     def post_id(self) -> Optional[str]:
         return self._post_id
-
-    @property
-    def category(self) -> Optional[str]:
-        return self._category
 
     @property
     def tags(self) -> List[str]:

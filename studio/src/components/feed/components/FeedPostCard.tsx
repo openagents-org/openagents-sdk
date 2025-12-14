@@ -23,11 +23,10 @@ const FeedPostCard: React.FC<FeedPostCardProps> = ({
   const attachmentsCount = post.attachments?.length || 0;
 
   const snippet = useMemo(() => {
-    if (post.summary) return post.summary;
     const text = post.content.replace(/[#*_`>\-[\]()*~]/g, "");
     if (text.length <= 200) return text;
     return `${text.slice(0, 200)}...`;
-  }, [post.summary, post.content]);
+  }, [post.content]);
 
   return (
     <article
@@ -58,22 +57,15 @@ const FeedPostCard: React.FC<FeedPostCardProps> = ({
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {post.category && (
-              <span className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/40 px-3 py-1 text-xs font-medium text-blue-700 dark:text-blue-200">
-                {post.category}
-              </span>
-            )}
-            {isRecent && (
-              <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-                NEW
-              </span>
-            )}
-          </div>
+          {isRecent && (
+            <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+              NEW
+            </span>
+          )}
         </div>
 
         <p className="text-sm text-gray-700 dark:text-gray-200 leading-6">
-          {snippet || "No summary available."}
+          {snippet || "No content available."}
         </p>
 
         <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">

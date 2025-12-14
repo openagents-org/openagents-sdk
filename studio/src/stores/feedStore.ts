@@ -11,7 +11,6 @@ import {
 const FEED_DESTINATION_ID = "mod:openagents.mods.workspace.feed";
 
 const INITIAL_FILTERS: FeedFilters = {
-  category: "all",
   tags: [],
   sortBy: "recent",
   sortDirection: "desc",
@@ -21,10 +20,8 @@ const normalizePost = (raw: any): FeedPost => ({
   post_id: raw.post_id || raw.id,
   title: raw.title,
   content: raw.content || "",
-  summary: raw.summary,
   author_id: raw.author_id || raw.owner_id || raw.created_by || "unknown",
   created_at: raw.created_at || raw.timestamp || Date.now(),
-  category: raw.category,
   tags: raw.tags || [],
   attachments: raw.attachments || [],
   allowed_groups: raw.allowed_groups,
@@ -33,9 +30,6 @@ const normalizePost = (raw: any): FeedPost => ({
 });
 
 const matchesFilters = (post: FeedPost, filters: FeedFilters): boolean => {
-  if (filters.category !== "all" && post.category !== filters.category) {
-    return false;
-  }
   if (filters.author && !post.author_id?.includes(filters.author.trim())) {
     return false;
   }
@@ -124,9 +118,6 @@ interface FeedState {
 
 const buildFilterPayload = (filters: FeedFilters) => {
   const payload: Record<string, any> = {};
-  if (filters.category && filters.category !== "all") {
-    payload.category = filters.category;
-  }
   if (filters.author) {
     payload.author = filters.author.trim();
   }
@@ -189,9 +180,9 @@ export const useFeedStore = create<FeedState>((set, get) => ({
     }
     set({ postsLoading: true, postsError: null });
     try {
-      // For title and category sorting, we need to get all matching posts and sort on client side
+      // For title sorting, we need to get all matching posts and sort on client side
       // For recent and oldest, we can use backend sorting
-      const needsClientSort = filters.sortBy === "title" || filters.sortBy === "category";
+      const needsClientSort = filters.sortBy === "title";
       
       // Convert page to offset: offset = (page - 1) * pageSize
       // If client sort is needed, get all matching posts first (use a large limit)
@@ -209,23 +200,20 @@ export const useFeedStore = create<FeedState>((set, get) => ({
         // For recent, check sortDirection: if asc, use oldest instead
         sort_by = filters.sortDirection === "asc" ? "oldest" : "recent";
       }
-      // For title and category, backend doesn't support, so we'll sort on client side
+      // For title, backend doesn't support, so we'll sort on client side
       // Use "recent" as default backend sort, then override on client
-      
+
       // Build filter payload and merge into main payload
       const filterPayload = buildFilterPayload(filters);
-      
+
       // Build the payload in the format expected by backend
       const payload: Record<string, any> = {
         limit: limit,
         offset: offset,
         sort_by: sort_by,
       };
-      
+
       // Merge filter fields into payload
-      if (filterPayload.category) {
-        payload.category = filterPayload.category;
-      }
       if (filterPayload.author) {
         payload.author_id = filterPayload.author;
       }
@@ -261,25 +249,22 @@ export const useFeedStore = create<FeedState>((set, get) => ({
           posts = posts.filter((post) => post.created_at <= endTimestamp);
         }
         
-        // Apply client-side sorting for title and category
+        // Apply client-side sorting for title
         if (needsClientSort) {
           const sortField = filters.sortBy;
           const sortDir = filters.sortDirection === "asc" ? 1 : -1;
-          
+
           posts.sort((a, b) => {
             let aVal: any;
             let bVal: any;
-            
+
             if (sortField === "title") {
               aVal = (a.title || "").toLowerCase();
               bVal = (b.title || "").toLowerCase();
-            } else if (sortField === "category") {
-              aVal = (a.category || "").toLowerCase();
-              bVal = (b.category || "").toLowerCase();
             } else {
               return 0;
             }
-            
+
             if (aVal < bVal) return -1 * sortDir;
             if (aVal > bVal) return 1 * sortDir;
             return 0;
@@ -530,8 +515,6 @@ export const useFeedStore = create<FeedState>((set, get) => ({
         payload: {
           title: payload.title.trim(),
           content: payload.content.trim(),
-          summary: payload.summary?.trim(),
-          category: payload.category,
           tags: payload.tags && payload.tags.length > 0 ? payload.tags : undefined,
           attachments:
             payload.attachments && payload.attachments.length > 0
