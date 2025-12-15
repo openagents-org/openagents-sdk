@@ -127,6 +127,21 @@
             "deleteSuccess": "Group deleted successfully",
             "settingsSuccess": "Network settings saved successfully",
             "deleteConfirm": "Are you sure you want to delete the group \"{{name}}\"? This action cannot be undone."
+        },
+        "changePassword": {
+            "button": "Change Password",
+            "modal": {
+                "title": "Change Password - {{group}}",
+                "newPasswordLabel": "New Password *",
+                "newPasswordPlaceholder": "Enter new password (at least 4 characters)",
+                "passwordHint": "Password must be at least 4 characters",
+                "cancel": "Cancel",
+                "confirm": "Confirm Change",
+                "changing": "Changing...",
+                "passwordRequired": "Password is required",
+                "passwordMinLength": "Password must be at least 4 characters",
+                "failed": "Failed to change password"
+            }
         }
     }
 }

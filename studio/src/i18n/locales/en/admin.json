@@ -1,0 +1,93 @@
+{
+  "dashboard": {
+    "title": "Admin Dashboard",
+    "subtitle": "Network overview and management",
+    "loading": "Loading dashboard...",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing...",
+    "networkInfo": "Network",
+    "stats": {
+      "agents": "Agents",
+      "online": "online",
+      "channels": "Channels",
+      "active": "active",
+      "uptime": "Uptime",
+      "networkStatus": "Network status",
+      "eventsPerMin": "Events/min",
+      "activityRate": "Activity rate"
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "networkProfile": "Network Profile",
+      "networkProfileDesc": "Configure network settings",
+      "transports": "Transports",
+      "transportsDesc": "Manage transport protocols",
+      "importExport": "Import / Export",
+      "importExportDesc": "Backup or restore config",
+      "connectedAgents": "Connected Agents",
+      "connectedAgentsDesc": "View all connected agents",
+      "agentGroups": "Agent Groups",
+      "agentGroupsDesc": "Manage agent groups",
+      "connectionGuide": "Connection Guide",
+      "connectionGuideDesc": "Setup connection steps",
+      "modManagement": "Mod Management",
+      "modManagementDesc": "Enable or disable mods",
+      "eventLogs": "Event Logs",
+      "eventLogsDesc": "View system event logs",
+      "eventDebugger": "Event Debugger",
+      "eventDebuggerDesc": "Debug and test events",
+      "restartNetwork": "Restart Network",
+      "restartNetworkDesc": "Restart network server",
+      "broadcastMessage": "Broadcast Message",
+      "broadcastMessageDesc": "Send message to all agents",
+      "updateAdminPassword": "Update Admin Password",
+      "updateAdminPasswordDesc": "Change admin group password",
+      "startTour": "Start Tour"
+    },
+    "recentActivity": {
+      "title": "Recent Activity",
+      "noActivity": "No recent activity"
+    },
+    "broadcast": {
+      "title": "Broadcast Message",
+      "subtitle": "Send a message to all connected agents",
+      "placeholder": "Enter your message...",
+      "cancel": "Cancel",
+      "send": "Send Broadcast",
+      "sending": "Sending...",
+      "enterMessage": "Please enter a message",
+      "success": "Broadcast message sent successfully",
+      "failed": "Failed to send broadcast message"
+    },
+    "restart": {
+      "title": "Restart Network",
+      "confirm": "Are you sure you want to restart the network? This will disconnect all agents.",
+      "restart": "Restart",
+      "cancel": "Cancel",
+      "requested": "Network restart requested. This feature requires backend support.",
+      "failed": "Failed to restart network"
+    }
+  },
+  "tour": {
+    "step1": {
+      "title": "Dashboard Overview",
+      "content": "Here you can see key network statistics including online agents, channels, uptime, and event frequency. Click on cards to quickly access related pages."
+    },
+    "step2": {
+      "title": "Quick Actions",
+      "content": "The Quick Actions area provides quick access to commonly used features, including network configuration, agent management, module management, and other important functions."
+    },
+    "step3": {
+      "title": "Agent Groups Management",
+      "content": "Agent Groups management allows you to create and manage different agent groups, set permissions and password protection. This is an important tool for managing network access control."
+    },
+    "step4": {
+      "title": "Update Admin Password",
+      "content": "For security, we recommend that you immediately change the default password for the admin group. Click this button to quickly go to the password change page."
+    },
+    "previous": "Previous",
+    "next": "Next",
+    "complete": "Complete"
+  }
+}
+

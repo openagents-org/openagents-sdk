@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { useOpenAgents } from '@/context/OpenAgentsProvider';
 import { useAuthStore } from '@/stores/authStore';
 import { useConfirm } from '@/context/ConfirmContext';
@@ -26,6 +27,7 @@ const AgentGroupsManagement: React.FC = () => {
   const { connector } = useOpenAgents();
   const { agentName } = useAuthStore();
   const { confirm } = useConfirm();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [groupsData, setGroupsData] = useState<NetworkGroupSettings | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -35,6 +37,10 @@ const AgentGroupsManagement: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingGroup, setEditingGroup] = useState<AgentGroupInfo | null>(null);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [changingPasswordGroup, setChangingPasswordGroup] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState<string>('');
+  const [changingPassword, setChangingPassword] = useState<boolean>(false);
 
   // Network settings
   const [defaultGroup, setDefaultGroup] = useState<string>('');
@@ -112,6 +118,28 @@ const AgentGroupsManagement: React.FC = () => {
   useEffect(() => {
     fetchGroupsData();
   }, [fetchGroupsData]);
+
+  // Open change password modal
+  const openChangePasswordModal = (groupName: string) => {
+    setChangingPasswordGroup(groupName);
+    setNewPassword('');
+    setShowChangePasswordModal(true);
+  };
+
+  // Check URL parameter for auto-opening change password modal
+  useEffect(() => {
+    const changePasswordParam = searchParams.get('changePassword');
+    if (changePasswordParam && !loading && groupsData) {
+      // Check if the group exists
+      if (groupsData.agent_groups[changePasswordParam]) {
+        openChangePasswordModal(changePasswordParam);
+        // Remove the parameter from URL
+        const newSearchParams = new URLSearchParams(searchParams);
+        newSearchParams.delete('changePassword');
+        setSearchParams(newSearchParams, { replace: true });
+      }
+    }
+  }, [searchParams, loading, groupsData, setSearchParams]);
 
   // Update agent groups via system event
   const updateAgentGroups = async (action: string, payload: any) => {
@@ -225,11 +253,6 @@ const AgentGroupsManagement: React.FC = () => {
       return;
     }
 
-    if (formData.password && formData.password.length < 4) {
-      setError('Password must be at least 4 characters');
-      return;
-    }
-
     setError(null);
     setSuccess(null);
 
@@ -242,12 +265,6 @@ const AgentGroupsManagement: React.FC = () => {
       description: formData.description.trim(),
       permissions: permissions,
     };
-
-    if (formData.clearPassword) {
-      groupConfig.clear_password = true;
-    } else if (formData.password) {
-      groupConfig.password = formData.password;
-    }
 
     const result = await updateAgentGroups('update', {
       action: 'update',
@@ -269,6 +286,46 @@ const AgentGroupsManagement: React.FC = () => {
       });
     } else {
       setError(result.message || 'Failed to update group');
+    }
+  };
+
+  // Handle change password
+  const handleChangePassword = async () => {
+    if (!changingPasswordGroup) return;
+
+    if (!newPassword.trim()) {
+      setError(t('groups.changePassword.modal.passwordRequired'));
+      return;
+    }
+
+    if (newPassword.length < 4) {
+      setError(t('groups.changePassword.modal.passwordMinLength'));
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setChangingPassword(true);
+
+    try {
+      const result = await updateAgentGroups('update', {
+        action: 'update',
+        group_name: changingPasswordGroup,
+        group_config: {
+          password: newPassword.trim(),
+        },
+      });
+
+      if (result.success) {
+        setSuccess(t('groups.messages.updateSuccess'));
+        setShowChangePasswordModal(false);
+        setChangingPasswordGroup(null);
+        setNewPassword('');
+      } else {
+        setError(result.message || t('groups.changePassword.modal.failed'));
+      }
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -546,6 +603,17 @@ const AgentGroupsManagement: React.FC = () => {
                         >
                           {t('groups.edit')}
                         </button>
+                        {group.has_password && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openChangePasswordModal(group.name);
+                            }}
+                            className="px-3 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors whitespace-nowrap"
+                          >
+                            {t('groups.changePassword.button')}
+                          </button>
+                        )}
                         {!group.is_default && (
                           <button
                             onClick={(e) => {
@@ -773,31 +841,6 @@ const AgentGroupsManagement: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Password (optional)
-                  </label>
-                  <input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter new password or leave empty"
-                  />
-                  <div className="mt-2">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={formData.clearPassword}
-                        onChange={(e) => setFormData({ ...formData, clearPassword: e.target.checked })}
-                        className="mr-2"
-                      />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">
-                        {t('groups.modal.clearPassword')}
-                      </span>
-                    </label>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('groups.modal.permissions')}
                   </label>
                   <input
@@ -822,6 +865,69 @@ const AgentGroupsManagement: React.FC = () => {
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     Update Group
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {showChangePasswordModal && changingPasswordGroup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  {t('groups.changePassword.modal.title', { group: changingPasswordGroup })}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowChangePasswordModal(false);
+                    setChangingPasswordGroup(null);
+                    setNewPassword('');
+                  }}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  ✗
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('groups.changePassword.modal.newPasswordLabel')}
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder={t('groups.changePassword.modal.newPasswordPlaceholder')}
+                    disabled={changingPassword}
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {t('groups.changePassword.modal.passwordHint')}
+                  </p>
+                </div>
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    onClick={() => {
+                      setShowChangePasswordModal(false);
+                      setChangingPasswordGroup(null);
+                      setNewPassword('');
+                    }}
+                    disabled={changingPassword}
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {t('groups.changePassword.modal.cancel')}
+                  </button>
+                  <button
+                    onClick={handleChangePassword}
+                    disabled={changingPassword || !newPassword.trim()}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {changingPassword ? t('groups.changePassword.modal.changing') : t('groups.changePassword.modal.confirm')}
                   </button>
                 </div>
               </div>

@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
 import { useAuthStore } from "@/stores/authStore";
 import { useConfirm } from "@/context/ConfirmContext";
 import { toast } from "sonner";
+import DashboardTour from "@/components/admin/DashboardTour";
 
 interface DashboardStats {
   totalAgents: number;
@@ -22,6 +24,7 @@ interface RecentActivity {
 }
 
 const AdminDashboard: React.FC = () => {
+  const { t } = useTranslation('admin');
   const navigate = useNavigate();
   const { connector } = useOpenAgents();
   const { selectedNetwork, agentName } = useAuthStore();
@@ -45,6 +48,59 @@ const AdminDashboard: React.FC = () => {
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [sendingBroadcast, setSendingBroadcast] = useState(false);
+  const [showTour, setShowTour] = useState(false);
+
+  // Check if user has seen the tour
+  useEffect(() => {
+    const hasSeenTour = localStorage.getItem('admin-dashboard-tour-seen');
+    if (!hasSeenTour) {
+      // Wait for page to load before showing tour
+      setTimeout(() => {
+        setShowTour(true);
+      }, 1000);
+    }
+  }, []);
+
+  const tourSteps = [
+    {
+      target: '[data-tour="stats"]',
+      title: t('tour.step1.title'),
+      content: t('tour.step1.content'),
+      position: 'bottom' as const,
+    },
+    {
+      target: '[data-tour="quick-actions"]',
+      title: t('tour.step2.title'),
+      content: t('tour.step2.content'),
+      position: 'bottom' as const,
+    },
+    {
+      target: '[data-tour="agent-groups"]',
+      title: t('tour.step3.title'),
+      content: t('tour.step3.content'),
+      position: 'bottom' as const,
+    },
+    {
+      target: '[data-tour="update-password"]',
+      title: t('tour.step4.title'),
+      content: t('tour.step4.content'),
+      position: 'top' as const,
+    },
+  ];
+
+  const handleTourComplete = () => {
+    setShowTour(false);
+    localStorage.setItem('admin-dashboard-tour-seen', 'true');
+  };
+
+  const handleTourClose = () => {
+    setShowTour(false);
+    localStorage.setItem('admin-dashboard-tour-seen', 'true');
+  };
+
+  const startTour = () => {
+    setShowTour(true);
+  };
 
   const fetchDashboardData = useCallback(async () => {
     if (!connector) {
@@ -133,13 +189,13 @@ const AdminDashboard: React.FC = () => {
   }, [fetchDashboardData]);
 
   const handleRestartNetwork = async () => {
-    const confirmed = await confirm(
-      "Restart Network",
-      "Are you sure you want to restart the network? This will disconnect all agents.",
+      const confirmed = await confirm(
+      t('dashboard.restart.title'),
+      t('dashboard.restart.confirm'),
       {
         type: "danger",
-        confirmText: "Restart",
-        cancelText: "Cancel",
+        confirmText: t('dashboard.restart.restart'),
+        cancelText: t('dashboard.restart.cancel'),
       }
     );
     if (!confirmed || !connector) {
@@ -154,9 +210,7 @@ const AdminDashboard: React.FC = () => {
       //   payload: {},
       // });
 
-      toast.info(
-        "Network restart requested. This feature requires backend support."
-      );
+      toast.info(t('dashboard.restart.requested'));
 
       // Simulate data refresh after restart
       setTimeout(() => {
@@ -164,7 +218,7 @@ const AdminDashboard: React.FC = () => {
       }, 2000);
     } catch (error) {
       console.error("Failed to restart network:", error);
-      toast.error("Failed to restart network");
+      toast.error(t('dashboard.restart.failed'));
     }
   };
 
@@ -174,7 +228,7 @@ const AdminDashboard: React.FC = () => {
 
   const handleSendBroadcast = async () => {
     if (!broadcastMessage.trim() || !connector) {
-      toast.error("Please enter a message");
+      toast.error(t('dashboard.broadcast.enterMessage'));
       return;
     }
 
@@ -193,17 +247,17 @@ const AdminDashboard: React.FC = () => {
       });
 
       if (response.success) {
-        toast.success("Broadcast message sent successfully");
+        toast.success(t('dashboard.broadcast.success'));
         setBroadcastMessage("");
         setShowBroadcastModal(false);
         // Refresh activity list
         fetchDashboardData();
       } else {
-        toast.error(response.message || "Failed to send broadcast message");
+        toast.error(response.message || t('dashboard.broadcast.failed'));
       }
     } catch (error) {
       console.error("Failed to send broadcast:", error);
-      toast.error("Failed to send broadcast message");
+      toast.error(t('dashboard.broadcast.failed'));
     } finally {
       setSendingBroadcast(false);
     }
@@ -215,7 +269,7 @@ const AdminDashboard: React.FC = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">
-            Loading dashboard...
+            {t('dashboard.loading')}
           </p>
         </div>
       </div>
@@ -228,14 +282,34 @@ const AdminDashboard: React.FC = () => {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Admin Dashboard
+            {t('dashboard.title')}
           </h1>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Network overview and management
+            {t('dashboard.subtitle')}
           </p>
         </div>
 
         <div className="flex items-center space-x-2">
+          <button
+            onClick={startTour}
+            className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            title={t('dashboard.quickActions.startTour')}
+          >
+            <svg
+              className="w-3 h-3 mr-1.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            {t('dashboard.quickActions.startTour')}
+          </button>
           <button
             onClick={fetchDashboardData}
             disabled={refreshing}
@@ -261,7 +335,7 @@ const AdminDashboard: React.FC = () => {
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-            {refreshing ? "Refreshing..." : "Refresh"}
+            {refreshing ? t('dashboard.refreshing') : t('dashboard.refresh')}
           </button>
         </div>
       </div>
@@ -270,13 +344,13 @@ const AdminDashboard: React.FC = () => {
       {selectedNetwork && (
         <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
           <div className="text-xs font-semibold text-blue-900 dark:text-blue-100">
-            Network: {selectedNetwork.host}:{selectedNetwork.port}
+            {t('dashboard.networkInfo')}: {selectedNetwork.host}:{selectedNetwork.port}
           </div>
         </div>
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4" data-tour="stats">
         {/* Agents Card */}
         <div
           className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer"
@@ -284,7 +358,7 @@ const AdminDashboard: React.FC = () => {
         >
           <div className="flex items-center justify-between mb-1">
             <h3 className="text-xs font-medium text-gray-600 dark:text-gray-400">
-              Agents
+              {t('dashboard.stats.agents')}
             </h3>
             <svg
               className="w-4 h-4 text-gray-400"
@@ -304,7 +378,7 @@ const AdminDashboard: React.FC = () => {
             {stats.totalAgents}
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            {stats.onlineAgents} online
+            {stats.onlineAgents} {t('dashboard.stats.online')}
           </div>
         </div>
 
@@ -315,7 +389,7 @@ const AdminDashboard: React.FC = () => {
         >
           <div className="flex items-center justify-between mb-1">
             <h3 className="text-xs font-medium text-gray-600 dark:text-gray-400">
-              Channels
+              {t('dashboard.stats.channels')}
             </h3>
             <svg
               className="w-4 h-4 text-gray-400"
@@ -335,7 +409,7 @@ const AdminDashboard: React.FC = () => {
             {stats.totalChannels}
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            {stats.activeChannels} active
+            {stats.activeChannels} {t('dashboard.stats.active')}
           </div>
         </div>
 
@@ -343,7 +417,7 @@ const AdminDashboard: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-1">
             <h3 className="text-xs font-medium text-gray-600 dark:text-gray-400">
-              Uptime
+              {t('dashboard.stats.uptime')}
             </h3>
             <svg
               className="w-4 h-4 text-gray-400"
@@ -363,7 +437,7 @@ const AdminDashboard: React.FC = () => {
             {stats.uptime}
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Network status
+            {t('dashboard.stats.networkStatus')}
           </div>
         </div>
 
@@ -371,7 +445,7 @@ const AdminDashboard: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-1">
             <h3 className="text-xs font-medium text-gray-600 dark:text-gray-400">
-              Events/min
+              {t('dashboard.stats.eventsPerMin')}
             </h3>
             <svg
               className="w-4 h-4 text-gray-400"
@@ -391,15 +465,15 @@ const AdminDashboard: React.FC = () => {
             {stats.eventsPerMinute}
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Activity rate
+            {t('dashboard.stats.activityRate')}
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="mb-4">
+      <div className="mb-4" data-tour="quick-actions">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-          Quick Actions
+          {t('dashboard.quickActions.title')}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {/* Network Profile */}
@@ -424,10 +498,10 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                Network Profile
+                {t('dashboard.quickActions.networkProfile')}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                Configure network settings
+                {t('dashboard.quickActions.networkProfileDesc')}
               </div>
             </div>
           </button>
@@ -454,10 +528,10 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                Transports
+                {t('dashboard.quickActions.transports')}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                Manage transport protocols
+                {t('dashboard.quickActions.transportsDesc')}
               </div>
             </div>
           </button>
@@ -484,10 +558,10 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                Import / Export
+                {t('dashboard.quickActions.importExport')}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                Backup or restore config
+                {t('dashboard.quickActions.importExportDesc')}
               </div>
             </div>
           </button>
@@ -514,10 +588,10 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                Connected Agents
+                {t('dashboard.quickActions.connectedAgents')}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                View all connected agents
+                {t('dashboard.quickActions.connectedAgentsDesc')}
               </div>
             </div>
           </button>
@@ -525,6 +599,7 @@ const AdminDashboard: React.FC = () => {
           {/* Agent Groups */}
           <button
             onClick={() => navigate("/admin/groups")}
+            data-tour="agent-groups"
             className="flex items-center space-x-2 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
           >
             <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center flex-shrink-0">
@@ -544,10 +619,10 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                Agent Groups
+                {t('dashboard.quickActions.agentGroups')}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                Manage agent groups
+                {t('dashboard.quickActions.agentGroupsDesc')}
               </div>
             </div>
           </button>
@@ -574,10 +649,10 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                Connection Guide
+                {t('dashboard.quickActions.connectionGuide')}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                Setup connection steps
+                {t('dashboard.quickActions.connectionGuideDesc')}
               </div>
             </div>
           </button>
@@ -604,10 +679,10 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                Mod Management
+                {t('dashboard.quickActions.modManagement')}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                Enable or disable mods
+                {t('dashboard.quickActions.modManagementDesc')}
               </div>
             </div>
           </button>
@@ -634,10 +709,10 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                Event Logs
+                {t('dashboard.quickActions.eventLogs')}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                View system event logs
+                {t('dashboard.quickActions.eventLogsDesc')}
               </div>
             </div>
           </button>
@@ -670,10 +745,10 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                Event Debugger
+                {t('dashboard.quickActions.eventDebugger')}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                Debug and test events
+                {t('dashboard.quickActions.eventDebuggerDesc')}
               </div>
             </div>
           </button>
@@ -700,10 +775,10 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                Restart Network
+                {t('dashboard.quickActions.restartNetwork')}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                Restart network server
+                {t('dashboard.quickActions.restartNetworkDesc')}
               </div>
             </div>
           </button>
@@ -730,10 +805,41 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                Broadcast Message
+                {t('dashboard.quickActions.broadcastMessage')}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                Send message to all agents
+                {t('dashboard.quickActions.broadcastMessageDesc')}
+              </div>
+            </div>
+          </button>
+
+          {/* Update Admin Password */}
+          <button
+            onClick={() => navigate("/admin/groups?changePassword=admin")}
+            data-tour="update-password"
+            className="flex items-center space-x-2 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
+          >
+            <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center flex-shrink-0">
+              <svg
+                className="w-4 h-4 text-emerald-600 dark:text-emerald-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                {t('dashboard.quickActions.updateAdminPassword')}
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                {t('dashboard.quickActions.updateAdminPasswordDesc')}
               </div>
             </div>
           </button>
@@ -743,12 +849,12 @@ const AdminDashboard: React.FC = () => {
       {/* Recent Activity */}
       <div>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-          Recent Activity
+          {t('dashboard.recentActivity.title')}
         </h2>
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           {recentActivities.length === 0 ? (
             <div className="p-6 text-center text-gray-500 dark:text-gray-400">
-              No recent activity
+              {t('dashboard.recentActivity.noActivity')}
             </div>
           ) : (
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -791,10 +897,10 @@ const AdminDashboard: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                Broadcast Message
+                {t('dashboard.broadcast.title')}
               </h2>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Send a message to all connected agents
+                {t('dashboard.broadcast.subtitle')}
               </p>
             </div>
 
@@ -802,7 +908,7 @@ const AdminDashboard: React.FC = () => {
               <textarea
                 value={broadcastMessage}
                 onChange={(e) => setBroadcastMessage(e.target.value)}
-                placeholder="Enter your message..."
+                placeholder={t('dashboard.broadcast.placeholder')}
                 rows={6}
                 className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 disabled={sendingBroadcast}
@@ -819,7 +925,7 @@ const AdminDashboard: React.FC = () => {
                 disabled={sendingBroadcast}
                 className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Cancel
+                {t('dashboard.broadcast.cancel')}
               </button>
               <button
                 type="button"
@@ -827,12 +933,20 @@ const AdminDashboard: React.FC = () => {
                 disabled={sendingBroadcast || !broadcastMessage.trim()}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {sendingBroadcast ? "Sending..." : "Send Broadcast"}
+                {sendingBroadcast ? t('dashboard.broadcast.sending') : t('dashboard.broadcast.send')}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Dashboard Tour */}
+      <DashboardTour
+        steps={tourSteps}
+        isActive={showTour}
+        onClose={handleTourClose}
+        onComplete={handleTourComplete}
+      />
     </div>
   );
 };

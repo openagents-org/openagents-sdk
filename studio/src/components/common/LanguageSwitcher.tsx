@@ -10,6 +10,7 @@ interface LanguageSwitcherProps {
     variant?: 'default' | 'minimal'; // 新增: 样式变体
     align?: 'left' | 'right'; // 新增: 下拉菜单对齐方式
     size?: 'sm' | 'md' | 'lg'; // 新增: 尺寸大小
+    direction?: 'up' | 'down'; // 新增: 下拉菜单展开方向
 }
 
 /**
@@ -22,6 +23,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
     variant = 'default',
     align = 'left',
     size = 'sm',
+    direction = 'down',
 }) => {
     const { currentLanguage, switchLanguage } = useI18n();
     const [isOpen, setIsOpen] = useState(false);
@@ -74,10 +76,13 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
         ? `flex items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 font-medium text-gray-700 dark:text-gray-300 ${sizeClasses[size].button}`
         : `flex items-center rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 transition-colors duration-200 font-medium text-gray-700 dark:text-gray-300 ${sizeClasses[size].button}`;
 
-    // 根据 align 决定下拉菜单位置 (opens downward with top-full)
-    const dropdownClassName = align === 'right'
-        ? "absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden"
-        : "absolute left-1/2 transform -translate-x-1/2 top-full mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden";
+    // 根据 align 和 direction 决定下拉菜单位置
+    const getDropdownClassName = () => {
+        const baseClasses = "absolute w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden";
+        const verticalPosition = direction === 'up' ? 'bottom-full mb-2' : 'top-full mt-2';
+        const horizontalPosition = align === 'right' ? 'right-0' : 'left-1/2 transform -translate-x-1/2';
+        return `${baseClasses} ${verticalPosition} ${horizontalPosition}`;
+    };
 
     return (
         <div className={`relative ${className}`} ref={dropdownRef}>
@@ -93,7 +98,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
 
             {/* Dropdown menu */}
             {isOpen && (
-                <div className={dropdownClassName}>
+                <div className={getDropdownClassName()}>
                     {Object.entries(SUPPORTED_LANGUAGES).map(([code, lang]) => {
                         const langCode = code as SupportedLanguage;
                         const isActive = langCode === currentLanguage;

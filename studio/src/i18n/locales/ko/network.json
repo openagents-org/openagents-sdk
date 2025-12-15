@@ -21,5 +21,22 @@
         "connectionSuccess": "네트워크에 연결되었습니다",
         "connectionFailed": "네트워크 연결에 실패했습니다",
         "disconnected": "네트워크 연결이 해제되었습니다"
+    },
+    "groups": {
+        "changePassword": {
+            "button": "비밀번호 변경",
+            "modal": {
+                "title": "비밀번호 변경 - {{group}}",
+                "newPasswordLabel": "새 비밀번호 *",
+                "newPasswordPlaceholder": "새 비밀번호를 입력하세요 (최소 4자)",
+                "passwordHint": "비밀번호는 최소 4자 이상이어야 합니다",
+                "cancel": "취소",
+                "confirm": "변경 확인",
+                "changing": "변경 중...",
+                "passwordRequired": "비밀번호는 필수입니다",
+                "passwordMinLength": "비밀번호는 최소 4자 이상이어야 합니다",
+                "failed": "비밀번호 변경에 실패했습니다"
+            }
+        }
     }
 }
