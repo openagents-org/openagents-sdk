@@ -15,6 +15,7 @@ import EventLogs from "./EventLogs";
 import EventDebugger from "./EventDebugger";
 import ModManagementPage from "../mod-management/ModManagementPage";
 import EventsMainPage from "../events/EventsMainPage";
+import NetworkImportExport from "./NetworkImportExport";
 
 /**
  * Profile main page - handles all profile-related features
@@ -63,6 +64,8 @@ const ProfileMainPage: React.FC = () => {
       <Route path="network-profile" element={<NetworkProfile />} />
       <Route path="agent-groups" element={<AgentGroupsManagement />} />
       <Route path="mod-management" element={<ModManagementPage />} />
+      <Route path="network-import-export" element={<NetworkImportExport />} />
+
 
       {/* Event Logs subpage */}
       <Route path="event-logs" element={<EventLogs />} />
