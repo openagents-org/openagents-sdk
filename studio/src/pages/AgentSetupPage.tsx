@@ -694,8 +694,8 @@ const AgentNamePicker: React.FC = () => {
           </>
         )}
         <div className="flex justify-end mt-4">
-          {/* Language Switcher - Bottom right of card, outside form */}
-          <LanguageSwitcher showFlag={true} showFullName={false} variant="minimal" align="right" size="md" />
+          {/* Language Switcher - Bottom right of card, opens upward */}
+          <LanguageSwitcher showFlag={true} showFullName={false} variant="minimal" align="right" size="md" direction="up" />
         </div>
       </div>
     </div>

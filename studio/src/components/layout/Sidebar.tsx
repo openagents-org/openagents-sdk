@@ -166,7 +166,7 @@ const SidebarFooter: React.FC<{
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           {/* Language switcher */}
-          <LanguageSwitcher showFlag={true} showFullName={false} />
+          <LanguageSwitcher showFlag={true} showFullName={false} direction="up" />
 
           {/* Theme toggle button */}
           <button
