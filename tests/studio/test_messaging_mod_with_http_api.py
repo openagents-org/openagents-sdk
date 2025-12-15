@@ -792,7 +792,9 @@ class TestMessagingFlow:
             if "content" in payload and isinstance(payload["content"], dict):
                 text = payload["content"].get("text", "")
             if text == original_message:
-                received_message_id = msg.get("event_id")
+                # Use original_event_id from payload (the actual stored message ID)
+                # NOT the notification's event_id which is a different ID
+                received_message_id = payload.get("original_event_id", msg.get("event_id"))
                 break
 
         assert (
@@ -914,7 +916,9 @@ class TestMessagingFlow:
             if "content" in payload and isinstance(payload["content"], dict):
                 text = payload["content"].get("text", "")
             if text == original_message:
-                received_message_id = msg.get("event_id")
+                # Use original_event_id from payload (the actual stored message ID)
+                # NOT the notification's event_id which is a different ID
+                received_message_id = payload.get("original_event_id", msg.get("event_id"))
                 break
 
         assert (
