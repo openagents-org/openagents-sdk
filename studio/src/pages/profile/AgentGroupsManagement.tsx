@@ -603,15 +603,17 @@ const AgentGroupsManagement: React.FC = () => {
                         >
                           {t('groups.edit')}
                         </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openChangePasswordModal(group.name);
-                          }}
-                          className="px-3 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors whitespace-nowrap"
-                        >
-                          {t('groups.changePassword.button')}
-                        </button>
+                        {group.has_password && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openChangePasswordModal(group.name);
+                            }}
+                            className="px-3 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors whitespace-nowrap"
+                          >
+                            {t('groups.changePassword.button')}
+                          </button>
+                        )}
                         {!group.is_default && (
                           <button
                             onClick={(e) => {
