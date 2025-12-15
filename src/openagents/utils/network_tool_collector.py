@@ -182,6 +182,14 @@ class NetworkToolCollector:
                     if hasattr(adapter_instance, "bind_agent"):
                         adapter_instance.bind_agent("mcp_client")
 
+                # Bind the network mod to the adapter if supported
+                # This allows adapters to access mod state (e.g., templates)
+                if hasattr(adapter_instance, "bind_mod"):
+                    mod_instance = mods.get(mod_name)
+                    if mod_instance:
+                        adapter_instance.bind_mod(mod_instance)
+                        logger.debug(f"Bound mod '{mod_name}' to adapter")
+
                 # Get tools from the adapter
                 if hasattr(adapter_instance, "get_tools"):
                     mod_tools = adapter_instance.get_tools()

@@ -62,6 +62,8 @@ class DefaultProjectNetworkMod(BaseMod):
 
     def _load_templates(self) -> None:
         """Load project templates from configuration."""
+        from .template_tools import validate_template_tool_names
+
         for template_id, template_data in self.template_config.items():
             try:
                 template = ProjectTemplate(
@@ -69,12 +71,23 @@ class DefaultProjectNetworkMod(BaseMod):
                     name=template_data.get("name", template_id),
                     description=template_data.get("description", ""),
                     agent_groups=template_data.get("agent_groups", []),
-                    context=template_data.get("context", "")
+                    context=template_data.get("context", ""),
+                    # Tool configuration fields
+                    expose_as_tool=template_data.get("expose_as_tool", False),
+                    tool_name=template_data.get("tool_name"),
+                    tool_description=template_data.get("tool_description"),
+                    input_schema=template_data.get("input_schema")
                 )
                 self.templates[template_id] = template
-                logger.info(f"Loaded template: {template_id}")
+                tool_info = f" (exposed as tool)" if template.expose_as_tool else ""
+                logger.info(f"Loaded template: {template_id}{tool_info}")
             except Exception as e:
                 logger.error(f"Failed to load template {template_id}: {e}")
+
+        # Validate tool names are unique
+        errors = validate_template_tool_names(self.templates)
+        for error in errors:
+            logger.error(f"Template tool configuration error: {error}")
 
     def shutdown(self) -> bool:
         """Shutdown the mod gracefully."""
