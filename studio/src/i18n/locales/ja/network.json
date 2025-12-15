@@ -21,5 +21,22 @@
         "connectionSuccess": "ネットワークに正常に接続されました",
         "connectionFailed": "ネットワークへの接続に失敗しました",
         "disconnected": "ネットワークから切断されました"
+    },
+    "groups": {
+        "changePassword": {
+            "button": "パスワードを変更",
+            "modal": {
+                "title": "パスワードを変更 - {{group}}",
+                "newPasswordLabel": "新しいパスワード *",
+                "newPasswordPlaceholder": "新しいパスワードを入力してください（4文字以上）",
+                "passwordHint": "パスワードは4文字以上である必要があります",
+                "cancel": "キャンセル",
+                "confirm": "変更を確認",
+                "changing": "変更中...",
+                "passwordRequired": "パスワードは必須です",
+                "passwordMinLength": "パスワードは4文字以上である必要があります",
+                "failed": "パスワードの変更に失敗しました"
+            }
+        }
     }
 }

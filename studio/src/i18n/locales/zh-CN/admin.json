@@ -1,0 +1,93 @@
+{
+  "dashboard": {
+    "title": "管理控制台",
+    "subtitle": "网络概览和管理",
+    "loading": "加载中...",
+    "refresh": "刷新",
+    "refreshing": "刷新中...",
+    "networkInfo": "网络",
+    "stats": {
+      "agents": "代理",
+      "online": "在线",
+      "channels": "通道",
+      "active": "活跃",
+      "uptime": "运行时间",
+      "networkStatus": "网络状态",
+      "eventsPerMin": "事件/分钟",
+      "activityRate": "活动频率"
+    },
+    "quickActions": {
+      "title": "快捷操作",
+      "networkProfile": "网络配置",
+      "networkProfileDesc": "配置网络设置",
+      "transports": "传输协议",
+      "transportsDesc": "管理传输协议",
+      "importExport": "导入 / 导出",
+      "importExportDesc": "备份或恢复配置",
+      "connectedAgents": "已连接代理",
+      "connectedAgentsDesc": "查看所有已连接的代理",
+      "agentGroups": "代理组",
+      "agentGroupsDesc": "管理代理组",
+      "connectionGuide": "连接指南",
+      "connectionGuideDesc": "设置连接步骤",
+      "modManagement": "模块管理",
+      "modManagementDesc": "启用或禁用模块",
+      "eventLogs": "事件日志",
+      "eventLogsDesc": "查看系统事件日志",
+      "eventDebugger": "事件调试器",
+      "eventDebuggerDesc": "调试和测试事件",
+      "restartNetwork": "重启网络",
+      "restartNetworkDesc": "重启网络服务器",
+      "broadcastMessage": "广播消息",
+      "broadcastMessageDesc": "向所有代理发送消息",
+      "updateAdminPassword": "修改 Admin 密码",
+      "updateAdminPasswordDesc": "修改 admin 组密码",
+      "startTour": "新手引导"
+    },
+    "recentActivity": {
+      "title": "最近活动",
+      "noActivity": "没有最近活动"
+    },
+    "broadcast": {
+      "title": "广播消息",
+      "subtitle": "向所有已连接的代理发送消息",
+      "placeholder": "请输入您的消息...",
+      "cancel": "取消",
+      "send": "发送广播",
+      "sending": "发送中...",
+      "enterMessage": "请输入消息",
+      "success": "广播消息发送成功",
+      "failed": "发送广播消息失败"
+    },
+    "restart": {
+      "title": "重启网络",
+      "confirm": "您确定要重启网络吗？这将断开所有代理的连接。",
+      "restart": "重启",
+      "cancel": "取消",
+      "requested": "网络重启请求已发送。此功能需要后端支持。",
+      "failed": "重启网络失败"
+    }
+  },
+  "tour": {
+    "step1": {
+      "title": "Dashboard 概览",
+      "content": "这里显示网络的关键统计信息，包括在线代理数量、通道数量、运行时间和事件频率。点击卡片可以快速访问相关页面。"
+    },
+    "step2": {
+      "title": "快捷操作",
+      "content": "快速操作区域提供了常用功能的快速访问，包括网络配置、代理管理、模块管理等重要功能。"
+    },
+    "step3": {
+      "title": "代理组管理",
+      "content": "代理组管理功能允许您创建和管理不同的代理组，设置权限和密码保护。这是管理网络访问控制的重要工具。"
+    },
+    "step4": {
+      "title": "修改 Admin 密码",
+      "content": "为了安全，建议您立即修改 admin 组的默认密码。点击此按钮可以快速进入密码修改页面。"
+    },
+    "previous": "上一步",
+    "next": "下一步",
+    "complete": "完成"
+  }
+}
+

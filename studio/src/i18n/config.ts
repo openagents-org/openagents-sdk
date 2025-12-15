@@ -53,6 +53,7 @@ export const NAMESPACES = [
     'events',
     'agentWorld',
     'readme',
+    'admin',
 ] as const;
 
 // Type for namespaces

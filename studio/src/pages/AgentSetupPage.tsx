@@ -178,12 +178,12 @@ const AgentNamePicker: React.FC = () => {
 
     // Validate password requirements
     if (isAdminMode && !adminPassword.trim()) {
-      setPasswordError("Admin password is required")
+      setPasswordError(t('agentSetup.errors.adminPasswordRequired'))
       return
     }
 
     if (!isAdminMode && selectedGroupRequiresPassword && !groupPassword.trim()) {
-      setPasswordError(`Password is required for the '${selectedGroup}' group`)
+      setPasswordError(t('agentSetup.errors.passwordRequired', { group: selectedGroup }))
       return
     }
 
