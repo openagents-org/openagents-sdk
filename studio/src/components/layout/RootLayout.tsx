@@ -10,6 +10,8 @@ import {
 import { useAuthStore } from "@/stores/authStore";
 import { Navigate, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/useMediaQuery";
+import { LayoutProvider } from "./components/context";
+import { HeaderBreadcrumbs } from "./components/header-breadcrumbs";
 
 interface RootLayoutProps {
   children: ReactNode;
@@ -78,7 +80,7 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
       {context && !isConnected && <ConnectionLoadingOverlay />}
 
       {context && isConnected && (
-        <>
+        <LayoutProvider>
           {/* Mobile Drawer - only shown on mobile */}
           {/* Use both conditional rendering and ensure it's hidden on larger screens */}
           <div className="md:hidden">
@@ -90,14 +92,14 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
 
           {/* Left module navigation bar - hidden on mobile and admin routes */}
           {/* Use Tailwind responsive classes: hidden by default, show on md (768px) and up */}
-          {!shouldHideModSidebar && (
+          {/* {!shouldHideModSidebar && (
             <div className="hidden md:block">
               <ModSidebar />
             </div>
-          )}
+          )} */}
 
           {/* Middle content area: sidebar + main content */}
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex overflow-hidden relative">
             {/* Feature sidebar - hidden on mobile, shown in drawer instead */}
             {/* Use Tailwind responsive classes: hidden by default, show on md (768px) and up */}
             {!shouldHideSidebar && (
@@ -147,10 +149,21 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
                   </svg>
                 </button>
               )}
-              {children}
+              
+              {/* Breadcrumb Navigation */}
+              {!shouldHideSidebar && (
+                <div className="flex-shrink-0">
+                  <HeaderBreadcrumbs />
+                </div>
+              )}
+              
+              {/* Page Content */}
+              <div className="flex-1 overflow-auto">
+                {children}
+              </div>
             </main>
           </div>
-        </>
+        </LayoutProvider>
       )}
     </div>
   );

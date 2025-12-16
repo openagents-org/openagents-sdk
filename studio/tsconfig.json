@@ -23,7 +23,8 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "radix-ui": ["src/lib/radix-ui"]
     }
   },
   "include": [
