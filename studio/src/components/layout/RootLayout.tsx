@@ -53,6 +53,34 @@ const RootLayout: React.FC<RootLayoutProps> = ({ children }) => {
   );
 };
 
+// Internal component that can access LayoutProvider context
+const MainContentArea: React.FC<{ children: ReactNode; shouldHideSidebar: boolean }> = ({ children, shouldHideSidebar }) => {
+  const isMobile = useIsMobile();
+
+  return (
+    <main className={`
+      flex-1 flex flex-col overflow-hidden relative
+      ${isMobile 
+        ? 'm-0 rounded-none border-0' 
+        : 'm-1 rounded-xl shadow-md border border-gray-200 dark:border-gray-700'
+      }
+      bg-gradient-to-br from-white via-blue-50 to-purple-50 dark:bg-gray-800
+    `}>
+      {/* Breadcrumb Navigation - includes expand/collapse button */}
+      {!shouldHideSidebar && (
+        <div className="flex-shrink-0">
+          <HeaderBreadcrumbs />
+        </div>
+      )}
+      
+      {/* Page Content */}
+      <div className="flex-1 overflow-auto">
+        {children}
+      </div>
+    </main>
+  );
+};
+
 // Actual layout content component
 const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
   const context = useContext(OpenAgentsContext);
@@ -75,7 +103,7 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
   }, [location.pathname, isMobile]);
 
   return (
-    <div className="h-screen w-screen flex overflow-hidden bg-slate-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div className="h-screen w-screen flex overflow-hidden bg-[#F4F4F5] dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* Connection status overlay - only shown when OpenAgentsProvider exists but not connected */}
       {context && !isConnected && <ConnectionLoadingOverlay />}
 
@@ -108,15 +136,6 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
               </div>
             )}
 
-            {/* Main content area */}
-            <main className={`
-              flex-1 flex flex-col overflow-hidden
-              ${isMobile 
-                ? 'm-0 rounded-none border-0' 
-                : 'm-1 rounded-xl shadow-md border border-gray-200 dark:border-gray-700'
-              }
-              bg-gradient-to-br from-white via-blue-50 to-purple-50 dark:bg-gray-800
-            `}>
               {/* Mobile menu button - only shown on mobile */}
               {/* Use Tailwind responsive classes: show by default, hide on md (768px) and up */}
               {!shouldHideSidebar && (
@@ -149,19 +168,11 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
                   </svg>
                 </button>
               )}
-              
-              {/* Breadcrumb Navigation */}
-              {!shouldHideSidebar && (
-                <div className="flex-shrink-0">
-                  <HeaderBreadcrumbs />
-                </div>
-              )}
-              
-              {/* Page Content */}
-              <div className="flex-1 overflow-auto">
-                {children}
-              </div>
-            </main>
+
+            {/* Main content area - uses internal component to access LayoutProvider context */}
+            <MainContentArea shouldHideSidebar={shouldHideSidebar}>
+              {children}
+            </MainContentArea>
           </div>
         </LayoutProvider>
       )}

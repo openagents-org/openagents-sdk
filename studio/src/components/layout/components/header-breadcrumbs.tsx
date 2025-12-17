@@ -1,9 +1,16 @@
 /* eslint-disable react/jsx-no-undef */
 import { useMemo, Fragment, type MouseEvent } from "react";
-import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbSeparator, BreadcrumbLink, BreadcrumbPage } from "@/components/ui/breadcrumb";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbSeparator,
+  BreadcrumbLink,
+  BreadcrumbPage,
+} from "@/components/ui/breadcrumb";
 import { useLayout } from "./context";
 import { Button } from "@/components/ui/button";
-import { PanelRight } from "lucide-react";
+import { PanelRight, PanelLeft } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getNavigationRoutesByGroup } from "@/config/routeConfig";
@@ -11,10 +18,10 @@ import { PLUGIN_NAME_ENUM } from "@/types/plugins";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 export function HeaderBreadcrumbs() {
-  const { isMobile, sidebarToggle } = useLayout();
+  const { isMobile, sidebarToggle, isSidebarOpen } = useLayout();
   const location = useLocation();
   const navigate = useNavigate();
-  const { t } = useTranslation('layout');
+  const { t } = useTranslation("layout");
   const { isAdmin } = useIsAdmin();
 
   // Generate breadcrumb items based on current route
@@ -25,20 +32,20 @@ export function HeaderBreadcrumbs() {
     // Translation mapping for navigation labels
     const getTranslatedLabel = (key: PLUGIN_NAME_ENUM): string => {
       const labelMap: Partial<Record<PLUGIN_NAME_ENUM, string>> = {
-        [PLUGIN_NAME_ENUM.MESSAGING]: t('navigation.messages'),
-        [PLUGIN_NAME_ENUM.FEED]: t('navigation.infoFeed'),
-        [PLUGIN_NAME_ENUM.PROJECT]: t('navigation.projects'),
-        [PLUGIN_NAME_ENUM.FORUM]: t('navigation.forum'),
-        [PLUGIN_NAME_ENUM.ARTIFACT]: t('navigation.artifact'),
-        [PLUGIN_NAME_ENUM.WIKI]: t('navigation.wiki'),
-        [PLUGIN_NAME_ENUM.DOCUMENTS]: t('navigation.documents'),
-        [PLUGIN_NAME_ENUM.AGENTWORLD]: t('navigation.agentWorld'),
-        [PLUGIN_NAME_ENUM.PROFILE]: t('navigation.profile'),
-        [PLUGIN_NAME_ENUM.README]: t('navigation.readme'),
-        [PLUGIN_NAME_ENUM.MOD_MANAGEMENT]: t('navigation.modManagement'),
-        [PLUGIN_NAME_ENUM.SERVICE_AGENTS]: t('navigation.serviceAgents'),
-        [PLUGIN_NAME_ENUM.LLM_LOGS]: t('navigation.llmLogs'),
-        [PLUGIN_NAME_ENUM.ADMIN]: t('navigation.admin'),
+        [PLUGIN_NAME_ENUM.MESSAGING]: t("navigation.messages"),
+        [PLUGIN_NAME_ENUM.FEED]: t("navigation.infoFeed"),
+        [PLUGIN_NAME_ENUM.PROJECT]: t("navigation.projects"),
+        [PLUGIN_NAME_ENUM.FORUM]: t("navigation.forum"),
+        [PLUGIN_NAME_ENUM.ARTIFACT]: t("navigation.artifact"),
+        [PLUGIN_NAME_ENUM.WIKI]: t("navigation.wiki"),
+        [PLUGIN_NAME_ENUM.DOCUMENTS]: t("navigation.documents"),
+        [PLUGIN_NAME_ENUM.AGENTWORLD]: t("navigation.agentWorld"),
+        [PLUGIN_NAME_ENUM.PROFILE]: t("navigation.profile"),
+        [PLUGIN_NAME_ENUM.README]: t("navigation.readme"),
+        [PLUGIN_NAME_ENUM.MOD_MANAGEMENT]: t("navigation.modManagement"),
+        [PLUGIN_NAME_ENUM.SERVICE_AGENTS]: t("navigation.serviceAgents"),
+        [PLUGIN_NAME_ENUM.LLM_LOGS]: t("navigation.llmLogs"),
+        [PLUGIN_NAME_ENUM.ADMIN]: t("navigation.admin"),
       };
       return labelMap[key] || key;
     };
@@ -95,23 +102,23 @@ export function HeaderBreadcrumbs() {
     };
 
     // Add home/dashboard as first item (only if not on root path)
-    if (pathname !== '/') {
+    if (pathname !== "/") {
       items.push({
-        label: 'Home',
-        href: '/',
+        label: "Home",
+        href: "/",
         isActive: false,
       });
     }
 
     // Find current route
     const currentRoute = findRoute(pathname);
-    
+
     if (currentRoute && currentRoute.navigationConfig) {
       const routePath = currentRoute.path.replace("/*", "");
       const label = getTranslatedLabel(currentRoute.navigationConfig.key);
-      
+
       // If it's the root route, don't add duplicate
-      if (routePath !== '/') {
+      if (routePath !== "/") {
         items.push({
           label,
           href: routePath,
@@ -121,13 +128,15 @@ export function HeaderBreadcrumbs() {
 
       // Handle sub-routes (e.g., /wiki/detail/xxx)
       if (pathname !== routePath && pathname.startsWith(routePath)) {
-        const subPath = pathname.replace(routePath, '');
-        const segments = subPath.split('/').filter(Boolean);
-        
+        const subPath = pathname.replace(routePath, "");
+        const segments = subPath.split("/").filter(Boolean);
+
         if (segments.length > 0) {
           // Add sub-route segments
           segments.forEach((segment, index) => {
-            const segmentPath = `${routePath}/${segments.slice(0, index + 1).join('/')}`;
+            const segmentPath = `${routePath}/${segments
+              .slice(0, index + 1)
+              .join("/")}`;
             items.push({
               label: decodeURIComponent(segment),
               href: segmentPath,
@@ -138,9 +147,9 @@ export function HeaderBreadcrumbs() {
       }
     } else {
       // If no route found, use pathname segments
-      const segments = pathname.split('/').filter(Boolean);
+      const segments = pathname.split("/").filter(Boolean);
       segments.forEach((segment, index) => {
-        const segmentPath = '/' + segments.slice(0, index + 1).join('/');
+        const segmentPath = "/" + segments.slice(0, index + 1).join("/");
         items.push({
           label: decodeURIComponent(segment),
           href: segmentPath,
@@ -152,25 +161,28 @@ export function HeaderBreadcrumbs() {
     return items;
   }, [location.pathname, t, isAdmin]);
 
-  const handleBreadcrumbClick = (href: string, e: MouseEvent<HTMLAnchorElement>) => {
+  const handleBreadcrumbClick = (
+    href: string,
+    e: MouseEvent<HTMLAnchorElement>
+  ) => {
     e.preventDefault();
     navigate(href);
   };
 
   return (
-    <div className="flex flex-row items-center flex-wrap gap-2 h-[var(--header-height)] px-4 lg:px-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-      {!isMobile && (
-        <Button 
-          variant="ghost" 
-          mode="icon" 
-          onClick={sidebarToggle} 
-          className="hidden in-data-[sidebar-open=false]:inline-flex text-muted-foreground hover:text-foreground"
+    <div className="flex flex-row items-center gap-2 h-[var(--header-height)] px-4 lg:px-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      {!isMobile && !isSidebarOpen && (
+        <Button
+          mode="icon"
+          variant="ghost"
+          onClick={sidebarToggle}
+          className="hidden lg:inline-flex text-muted-foreground hover:text-foreground"
         >
-          <PanelRight className="opacity-100" />
+          <PanelLeft className="opacity-100 size-4" />
         </Button>
       )}
-      <Breadcrumb className="flex-1">
-        <BreadcrumbList className="gap-1.5 items-center">
+      <Breadcrumb className="flex-1 min-w-0 overflow-hidden">
+        <BreadcrumbList className="gap-1.5 items-center flex-wrap min-w-0">
           {breadcrumbItems.map((item, index) => (
             <Fragment key={`${item.href}-${index}`}>
               <BreadcrumbItem>
@@ -179,7 +191,7 @@ export function HeaderBreadcrumbs() {
                     {item.label}
                   </BreadcrumbPage>
                 ) : (
-                  <BreadcrumbLink 
+                  <BreadcrumbLink
                     href={item.href}
                     onClick={(e) => handleBreadcrumbClick(item.href, e)}
                     className="text-sm font-normal text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors duration-200 cursor-pointer"

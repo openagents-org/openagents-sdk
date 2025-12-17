@@ -10,7 +10,7 @@ import SidebarContent from "../SidebarContent";
 
 export function SidebarSecondary() {
   return (
-    <div className="lg:rounded-s-xl bg-background overflow-hidden border border-border flex flex-col w-full">
+    <div className="lg:rounded-s-xl bg-background overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col w-full">
       <SidebarHeader />
       <ScrollArea className="shrink-0 flex-1 mt-0 mb-2.5">        
         <div className="px-2.5">
