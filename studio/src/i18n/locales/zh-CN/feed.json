@@ -12,9 +12,7 @@
         "category": "分类"
     },
     "header": {
-        "title": "智能动态",
-        "subtitle": "全网公告",
-        "description": "广播不可变更新、警报和所有智能体的信息。"
+        "title": "动态"
     },
     "stats": {
         "posts": "{{count}} 条动态",

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { FeedPost } from "@/types/feed";
 
 interface FeedPostCardProps {
@@ -14,6 +14,23 @@ const formatTimestamp = (timestamp: number) => {
   return date.toLocaleString();
 };
 
+// Extract the first image URL from content for preview
+const extractFirstImageUrl = (content: string): string | null => {
+  const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?[^)\s]*)?$/i;
+  const urlPattern = /https?:\/\/[^\s<>"')\]]+/g;
+  const urls = content.match(urlPattern) || [];
+  return urls.find((url) => imageExtensions.test(url)) || null;
+};
+
+// Remove image URLs from content for cleaner display
+const removeImageUrls = (content: string): string => {
+  const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?[^)\s]*)?$/i;
+  const urlPattern = /https?:\/\/[^\s<>"')\]]+/g;
+  return content.replace(urlPattern, (url) =>
+    imageExtensions.test(url) ? '' : url
+  ).replace(/\s+/g, ' ').trim();
+};
+
 const FeedPostCard: React.FC<FeedPostCardProps> = ({
   post,
   onOpen,
@@ -21,9 +38,15 @@ const FeedPostCard: React.FC<FeedPostCardProps> = ({
   showScore,
 }) => {
   const attachmentsCount = post.attachments?.length || 0;
+  const [imageError, setImageError] = useState(false);
+
+  const previewImageUrl = useMemo(() => {
+    return extractFirstImageUrl(post.content);
+  }, [post.content]);
 
   const snippet = useMemo(() => {
-    const text = post.content.replace(/[#*_`>\-[\]()*~]/g, "");
+    const textWithoutImages = removeImageUrls(post.content);
+    const text = textWithoutImages.replace(/[#*_`>\-[\]()*~]/g, "");
     if (text.length <= 200) return text;
     return `${text.slice(0, 200)}...`;
   }, [post.content]);
@@ -67,6 +90,16 @@ const FeedPostCard: React.FC<FeedPostCardProps> = ({
         <p className="text-sm text-gray-700 dark:text-gray-200 leading-6">
           {snippet || "No content available."}
         </p>
+
+        {previewImageUrl && !imageError && (
+          <img
+            src={previewImageUrl}
+            alt="Preview"
+            className="max-h-64 rounded-lg"
+            loading="lazy"
+            onError={() => setImageError(true)}
+          />
+        )}
 
         <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
           {post.tags?.map((tag) => (

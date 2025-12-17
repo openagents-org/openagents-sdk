@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
@@ -8,6 +8,23 @@ import { useOpenAgents } from "@/context/OpenAgentsProvider";
 
 const toMilliseconds = (timestamp: number) =>
   timestamp < 1_000_000_000_000 ? timestamp * 1000 : timestamp;
+
+// Extract image URLs from content
+const extractImageUrls = (content: string): string[] => {
+  const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?[^)\s]*)?$/i;
+  const urlPattern = /https?:\/\/[^\s<>"')\]]+/g;
+  const urls = content.match(urlPattern) || [];
+  return [...new Set(urls.filter((url) => imageExtensions.test(url)))];
+};
+
+// Remove image URLs from content for cleaner display
+const removeImageUrls = (content: string): string => {
+  const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?[^)\s]*)?$/i;
+  const urlPattern = /https?:\/\/[^\s<>"')\]]+/g;
+  return content.replace(urlPattern, (url) =>
+    imageExtensions.test(url) ? '' : url
+  ).trim();
+};
 
 const FeedPostDetail: React.FC = () => {
   const { t } = useTranslation('feed');
@@ -37,6 +54,16 @@ const FeedPostDetail: React.FC = () => {
     filename: attachment.filename,
     size: attachment.size,
   }));
+
+  const imageUrls = useMemo(() => {
+    if (!post?.content) return [];
+    return extractImageUrls(post.content);
+  }, [post?.content]);
+
+  const cleanedContent = useMemo(() => {
+    if (!post?.content) return '';
+    return removeImageUrls(post.content);
+  }, [post?.content]);
 
   const createdAt = post
     ? new Date(toMilliseconds(post.created_at)).toLocaleString()
@@ -115,8 +142,31 @@ const FeedPostDetail: React.FC = () => {
         {post ? (
           <>
             <div className="prose prose-slate max-w-none dark:prose-invert">
-              <MarkdownRenderer content={post.content} />
+              <MarkdownRenderer content={cleanedContent} />
             </div>
+            {imageUrls.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {imageUrls.map((url, index) => (
+                  <a
+                    key={index}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 transition-colors"
+                  >
+                    <img
+                      src={url}
+                      alt={`Attachment ${index + 1}`}
+                      className="w-full h-auto object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </a>
+                ))}
+              </div>
+            )}
             {attachments && attachments.length > 0 && (
               <div>
                 <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
