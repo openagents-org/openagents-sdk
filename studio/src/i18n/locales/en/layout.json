@@ -14,8 +14,13 @@
         },
         "theme": {
             "switchToDark": "Switch to dark mode",
-            "switchToLight": "Switch to light mode"
-        }
+            "switchToLight": "Switch to light mode",
+            "darkMode": "Dark Mode",
+            "lightMode": "Light Mode"
+        },
+        "language": "Language",
+        "signOut": "Sign out",
+        "dashboard": "Dashboard"
     },
     "navigation": {
         "messages": "Messages",

@@ -124,7 +124,7 @@ export function SidebarHeader() {
     if (isAdminRoute) {
       items.push({
         icon: LayoutDashboard,
-        name: "Dashboard",
+        name: t("sidebar.dashboard"),
         color: "bg-blue-500 text-white",
         route: "/admin/dashboard",
         active:
@@ -315,7 +315,7 @@ export function SidebarHeader() {
                   disabled
                   className="text-muted-foreground text-sm"
                 >
-                  No menu items available
+                  {t("defaultSidebar.navigation")}
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>

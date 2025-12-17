@@ -17,6 +17,7 @@ import {
   Moon,
   Users,
   LayoutDashboard,
+  Globe,
 } from "lucide-react";
 import {
   Avatar,
@@ -52,6 +53,9 @@ import { PLUGIN_NAME_ENUM } from "@/types/plugins";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useChatStore } from "@/stores/chatStore";
 import { clearAllOpenAgentsDataForLogout } from "@/utils/cookies";
+import { useI18n } from "@/hooks/useI18n";
+import { SUPPORTED_LANGUAGES, SupportedLanguage } from "@/i18n/config";
+import { useConfirm } from "@/context/ConfirmContext";
 import logo from "@/assets/images/open-agents-logo.png";
 
 export function SidebarPrimary() {
@@ -59,6 +63,8 @@ export function SidebarPrimary() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation("layout");
+  const { currentLanguage, switchLanguage } = useI18n();
+  const { confirm } = useConfirm();
 
   const isDarkMode = theme === "dark";
 
@@ -166,7 +172,7 @@ export function SidebarPrimary() {
       // Add Dashboard menu item
       items.push({
         icon: LayoutDashboard,
-        label: "Dashboard",
+        label: t("sidebar.dashboard"),
         href: "/admin/dashboard",
         active:
           isRouteActive("/admin/dashboard") ||
@@ -257,6 +263,23 @@ export function SidebarPrimary() {
   const handleLogout = async () => {
     console.log("🚪 Logout button clicked - showing confirmation dialog");
 
+    // Show confirmation dialog
+    const confirmed = await confirm(
+      t("sidebar.logout.title"),
+      t("sidebar.logout.message"),
+      {
+        confirmText: t("sidebar.logout.confirm"),
+        cancelText: t("sidebar.logout.cancel"),
+        type: "warning",
+      }
+    );
+
+    // Only proceed if user confirmed
+    if (!confirmed) {
+      console.log("🚪 Logout cancelled by user");
+      return;
+    }
+
     try {
       // Clear network state
       clearNetwork();
@@ -326,7 +349,7 @@ export function SidebarPrimary() {
         </Button> */}
 
         <DropdownMenu>
-          <DropdownMenuTrigger className="cursor-pointer mb-2.5">
+          <DropdownMenuTrigger className="cursor-pointer mb-2.5 focus:outline-none focus:ring-0 focus:border-0 border-0 rounded-full">
             <Avatar className="size-7">
               <AvatarImage
                 src={toAbsoluteUrl("/media/avatars/300-2.png")}
@@ -376,17 +399,62 @@ export function SidebarPrimary() {
               ) : (
                 <Moon className="size-4" />
               )}
-              <span>{isDarkMode ? "Light Mode" : "Dark Mode"}</span>
+              <span>{isDarkMode ? t("sidebar.theme.lightMode") : t("sidebar.theme.darkMode")}</span>
             </DropdownMenuItem>
 
-            {/* Profile */}
-            <DropdownMenuItem
-              onClick={() => navigate("/profile")}
-              className="cursor-pointer data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-gray-800 transition-colors"
-            >
-              <User className="size-4" />
-              <span>{t("navigation.profile")}</span>
-            </DropdownMenuItem>
+            {/* Language Switcher */}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="cursor-pointer data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-gray-800 transition-colors focus:outline-none focus:ring-0 focus:border-0 data-[here]:border-0 data-[highlighted]:border-0 hover:border-0 border-0">
+                <Globe className="size-4" />
+                <span>{t("sidebar.language")}</span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                {Object.entries(SUPPORTED_LANGUAGES).map(([code, lang]) => {
+                  const langCode = code as SupportedLanguage;
+                  const isActive = langCode === currentLanguage;
+                  return (
+                    <DropdownMenuItem
+                      key={code}
+                      onClick={() => switchLanguage(langCode)}
+                      className={`cursor-pointer data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-gray-800 transition-colors ${
+                        isActive
+                          ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                          : ""
+                      }`}
+                    >
+                      <span className="mr-2">{lang.flag}</span>
+                      <span>{lang.nativeName}</span>
+                      {isActive && (
+                        <span className="ml-auto">
+                          <svg
+                            className="w-4 h-4"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </span>
+                      )}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+
+            {/* Profile - Hide in admin mode */}
+            {!isAdminRoute && (
+              <DropdownMenuItem
+                onClick={() => navigate("/profile")}
+                className="cursor-pointer data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-gray-800 transition-colors"
+              >
+                <User className="size-4" />
+                <span>{t("navigation.profile")}</span>
+              </DropdownMenuItem>
+            )}
 
             <DropdownMenuSeparator />
 
@@ -396,7 +464,7 @@ export function SidebarPrimary() {
               className="cursor-pointer data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-gray-800 transition-colors"
             >
               <LogOut />
-              <span>Sign out</span>
+              <span>{t("sidebar.signOut")}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

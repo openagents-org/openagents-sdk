@@ -88,6 +88,30 @@
     "previous": "Previous",
     "next": "Next",
     "complete": "Complete"
+  },
+  "sidebar": {
+    "title": "Admin Dashboard",
+    "sections": {
+      "overview": "OVERVIEW",
+      "network": "NETWORK",
+      "agents": "AGENTS",
+      "modules": "MODULES",
+      "monitoring": "MONITORING"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "networkProfile": "Network Profile",
+      "transports": "Transports",
+      "importExport": "Import / Export",
+      "connectedAgents": "Connected Agents",
+      "agentGroups": "Agent Groups",
+      "serviceAgents": "Service Agents",
+      "connectionGuide": "Connection Guide",
+      "modManagement": "Mod Management",
+      "eventLogs": "Event Logs",
+      "llmLogs": "LLM Logs",
+      "eventDebugger": "Event Debugger"
+    }
   }
 }
 

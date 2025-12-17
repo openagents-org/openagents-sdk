@@ -88,6 +88,30 @@
     "previous": "前へ",
     "next": "次へ",
     "complete": "完了"
+  },
+  "sidebar": {
+    "title": "管理ダッシュボード",
+    "sections": {
+      "overview": "概要",
+      "network": "ネットワーク",
+      "agents": "エージェント",
+      "modules": "モジュール",
+      "monitoring": "モニタリング"
+    },
+    "items": {
+      "dashboard": "ダッシュボード",
+      "networkProfile": "ネットワークプロファイル",
+      "transports": "トランスポート",
+      "importExport": "インポート / エクスポート",
+      "connectedAgents": "接続済みエージェント",
+      "agentGroups": "エージェントグループ",
+      "serviceAgents": "サービスエージェント",
+      "connectionGuide": "接続ガイド",
+      "modManagement": "モジュール管理",
+      "eventLogs": "イベントログ",
+      "llmLogs": "LLM ログ",
+      "eventDebugger": "イベントデバッガー"
+    }
   }
 }
 

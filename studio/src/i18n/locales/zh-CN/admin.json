@@ -88,6 +88,30 @@
     "previous": "上一步",
     "next": "下一步",
     "complete": "完成"
+  },
+  "sidebar": {
+    "title": "管理控制台",
+    "sections": {
+      "overview": "概览",
+      "network": "网络",
+      "agents": "代理",
+      "modules": "模块",
+      "monitoring": "监控"
+    },
+    "items": {
+      "dashboard": "仪表板",
+      "networkProfile": "网络配置",
+      "transports": "传输协议",
+      "importExport": "导入 / 导出",
+      "connectedAgents": "已连接代理",
+      "agentGroups": "代理组",
+      "serviceAgents": "服务代理",
+      "connectionGuide": "连接指南",
+      "modManagement": "模块管理",
+      "eventLogs": "事件日志",
+      "llmLogs": "LLM 日志",
+      "eventDebugger": "事件调试器"
+    }
   }
 }
 

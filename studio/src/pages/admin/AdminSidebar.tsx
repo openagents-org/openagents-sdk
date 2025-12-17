@@ -1,10 +1,12 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 const AdminSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation("admin");
   const { isAdmin } = useIsAdmin();
 
   const isActive = (path: string) => {
@@ -23,11 +25,11 @@ const AdminSidebar: React.FC = () => {
 
   const navSections = [
     {
-      title: "OVERVIEW",
+      title: t("sidebar.sections.overview"),
       items: [
         {
           id: "dashboard",
-          label: "Dashboard",
+          label: t("sidebar.items.dashboard"),
           path: "/admin/dashboard",
           icon: (
             <svg
@@ -48,11 +50,11 @@ const AdminSidebar: React.FC = () => {
       ],
     },
     {
-      title: "NETWORK",
+      title: t("sidebar.sections.network"),
       items: [
         {
           id: "network-profile",
-          label: "Network Profile",
+          label: t("sidebar.items.networkProfile"),
           path: "/admin/network",
           icon: (
             <svg
@@ -72,7 +74,7 @@ const AdminSidebar: React.FC = () => {
         },
         {
           id: "transports",
-          label: "Transports",
+          label: t("sidebar.items.transports"),
           path: "/admin/transports",
           icon: (
             <svg
@@ -92,7 +94,7 @@ const AdminSidebar: React.FC = () => {
         },
         {
           id: "import-export",
-          label: "Import / Export",
+          label: t("sidebar.items.importExport"),
           path: "/admin/import-export",
           icon: (
             <svg
@@ -113,11 +115,11 @@ const AdminSidebar: React.FC = () => {
       ],
     },
     {
-      title: "AGENTS",
+      title: t("sidebar.sections.agents"),
       items: [
         {
           id: "agents",
-          label: "Connected Agents",
+          label: t("sidebar.items.connectedAgents"),
           path: "/admin/agents",
           icon: (
             <svg
@@ -137,7 +139,7 @@ const AdminSidebar: React.FC = () => {
         },
         {
           id: "groups",
-          label: "Agent Groups",
+          label: t("sidebar.items.agentGroups"),
           path: "/admin/groups",
           icon: (
             <svg
@@ -159,7 +161,7 @@ const AdminSidebar: React.FC = () => {
           ? [
               {
                 id: "service-agents",
-                label: "Service Agents",
+                label: t("sidebar.items.serviceAgents"),
                 path: "/admin/service-agents",
                 icon: (
                   <svg
@@ -181,7 +183,7 @@ const AdminSidebar: React.FC = () => {
           : []),
         {
           id: "connect",
-          label: "Connection Guide",
+          label: t("sidebar.items.connectionGuide"),
           path: "/admin/connect",
           icon: (
             <svg
@@ -202,11 +204,11 @@ const AdminSidebar: React.FC = () => {
       ],
     },
     {
-      title: "MODULES",
+      title: t("sidebar.sections.modules"),
       items: [
         {
           id: "mods",
-          label: "Mod Management",
+          label: t("sidebar.items.modManagement"),
           path: "/admin/mods",
           icon: (
             <svg
@@ -227,11 +229,11 @@ const AdminSidebar: React.FC = () => {
       ],
     },
     {
-      title: "MONITORING",
+      title: t("sidebar.sections.monitoring"),
       items: [
         {
           id: "events",
-          label: "Event Logs",
+          label: t("sidebar.items.eventLogs"),
           path: "/admin/events",
           icon: (
             <svg
@@ -253,7 +255,7 @@ const AdminSidebar: React.FC = () => {
           ? [
               {
                 id: "llm-logs",
-                label: "LLM Logs",
+                label: t("sidebar.items.llmLogs"),
                 path: "/admin/llm-logs",
                 icon: (
                   <svg
@@ -275,7 +277,7 @@ const AdminSidebar: React.FC = () => {
           : []),
         {
           id: "debugger",
-          label: "Event Debugger",
+          label: t("sidebar.items.eventDebugger"),
           path: "/admin/debugger",
           icon: (
             <svg
@@ -308,7 +310,7 @@ const AdminSidebar: React.FC = () => {
       {/* Header */}
       <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Admin Dashboard
+          {t("sidebar.title")}
         </h2>
       </div>
 

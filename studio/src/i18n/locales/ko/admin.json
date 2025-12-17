@@ -88,6 +88,30 @@
     "previous": "이전",
     "next": "다음",
     "complete": "완료"
+  },
+  "sidebar": {
+    "title": "관리자 대시보드",
+    "sections": {
+      "overview": "개요",
+      "network": "네트워크",
+      "agents": "에이전트",
+      "modules": "모듈",
+      "monitoring": "모니터링"
+    },
+    "items": {
+      "dashboard": "대시보드",
+      "networkProfile": "네트워크 프로필",
+      "transports": "전송",
+      "importExport": "가져오기 / 내보내기",
+      "connectedAgents": "연결된 에이전트",
+      "agentGroups": "에이전트 그룹",
+      "serviceAgents": "서비스 에이전트",
+      "connectionGuide": "연결 가이드",
+      "modManagement": "모듈 관리",
+      "eventLogs": "이벤트 로그",
+      "llmLogs": "LLM 로그",
+      "eventDebugger": "이벤트 디버거"
+    }
   }
 }
 
