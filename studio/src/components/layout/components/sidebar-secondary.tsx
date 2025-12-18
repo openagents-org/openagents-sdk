@@ -10,10 +10,10 @@ import SidebarContent from "../SidebarContent";
 
 export function SidebarSecondary() {
   return (
-    <div className="lg:rounded-s-xl bg-background overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col w-full">
+    <div className="lg:rounded-s-xl bg-white dark:bg-[#09090B] overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col w-full h-full">
       <SidebarHeader />
-      <ScrollArea className="shrink-0 flex-1 mt-0 mb-2.5">        
-        <div className="px-2.5">
+      <ScrollArea className="shrink-0 flex-1 mt-0 mb-2.5 h-full">        
+        <div className="px-2.5 h-full">
           {/* Dynamic content based on route */}
           <SidebarContent />
         </div>

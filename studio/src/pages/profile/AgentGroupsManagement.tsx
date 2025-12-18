@@ -426,7 +426,7 @@ const AgentGroupsManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="p-6 dark:bg-gray-900 h-full">
+      <div className="p-6 dark:bg-[#09090B] h-full">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <span className="ml-3 text-gray-600 dark:text-gray-400">
@@ -440,7 +440,7 @@ const AgentGroupsManagement: React.FC = () => {
   const groups = groupsData ? Object.values(groupsData.agent_groups) : [];
 
   return (
-    <div className="p-6 dark:bg-gray-900 h-full min-h-screen overflow-y-auto">
+    <div className="p-6 dark:bg-[#09090B] h-full min-h-screen overflow-y-auto">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
@@ -636,7 +636,7 @@ const AgentGroupsManagement: React.FC = () => {
 
         {/* Group Details Panel */}
         {selectedGroup && groupsData && groupsData.agent_groups[selectedGroup] && (
-          <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="mt-6 p-4 bg-gray-50 dark:bg-[#09090B] rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {t('groups.table.group')}: {selectedGroup}

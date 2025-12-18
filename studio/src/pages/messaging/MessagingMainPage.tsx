@@ -8,7 +8,7 @@ import ProjectChatRoom from "./components/ProjectChatRoom";
 const MessagingMainPage: React.FC = () => {
 
   return (
-    <div className="h-full dark:bg-gray-900">
+    <div className="h-full dark:bg-[#09090B]">
       <Routes>
         {/* Project private chat room independent route */}
         <Route

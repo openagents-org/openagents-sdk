@@ -238,7 +238,7 @@ const NetworkProfile: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="p-6 dark:bg-gray-900 h-full">
+      <div className="p-6 dark:bg-[#09090B] h-full">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <span className="ml-3 text-gray-600 dark:text-gray-400">
@@ -250,7 +250,7 @@ const NetworkProfile: React.FC = () => {
   }
 
   return (
-    <div className="p-6 dark:bg-gray-900 h-full min-h-screen overflow-y-auto">
+    <div className="p-6 dark:bg-[#09090B] h-full min-h-screen overflow-y-auto">
       {/* Header */}
       <div className="mb-6 flex items-start justify-between gap-4">
         <div className="flex-1">

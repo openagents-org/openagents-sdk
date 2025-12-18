@@ -30,7 +30,7 @@ const ChannelItem: React.FC<{
       onClick={onClick}
       className={`w-full text-left text-sm truncate px-2 py-2 font-medium rounded transition-colors
         ${isActive
-          ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 border-l-2 border-indigo-500 dark:border-indigo-400 pl-2 shadow-sm"
+          ? "bg-[#F4F4F5] text-gray-900 dark:bg-[#F4F4F5] dark:text-gray-900 pl-2"
           : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 pl-2.5"
         }
       `}
@@ -64,7 +64,7 @@ const AgentItem: React.FC<{
       onClick={onClick}
       className={`w-full text-left text-sm truncate px-2 py-2 font-medium rounded transition-colors
         ${isActive
-          ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 border-l-2 border-indigo-500 dark:border-indigo-400 pl-2 shadow-sm"
+          ? "bg-[#F4F4F5] text-gray-900 dark:bg-[#F4F4F5] dark:text-gray-900 pl-2"
           : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 pl-2.5"
         }
       `}
@@ -213,7 +213,7 @@ const MessagingSidebar: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Channels Section */}
       <SectionHeader title={t('sidebar.channels')} />
       <div className="px-3">

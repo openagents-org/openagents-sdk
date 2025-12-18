@@ -23,7 +23,7 @@ const ForumTopicItem: React.FC<ForumTopicItemProps> = React.memo(({
   return (
     <div
       onClick={handleClick}
-      className="p-4 rounded-lg border cursor-pointer transition-all hover:shadow-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 hover:border-gray-300 dark:hover:border-gray-600"
+      className="p-4 rounded-lg border cursor-pointer transition-all hover:shadow-lg bg-white dark:bg-black border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-600"
     >
       {/* Topic title */}
       <h3 className="text-lg font-semibold mb-2 line-clamp-2 text-gray-900 dark:text-gray-100">

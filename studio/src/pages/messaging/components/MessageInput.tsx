@@ -53,7 +53,7 @@ const styles = `
   }
   
   .thread-input-container.dark {
-    background: #1e293b;
+    background: #000000;
     border-top: 1px solid #334155;
   }
   
@@ -186,7 +186,7 @@ const styles = `
   }
   
   .message-textarea.dark {
-    background: #374151;
+    background: #000000;
     border-color: #4b5563;
     color: #f9fafb;
   }
@@ -211,7 +211,7 @@ const styles = `
   }
   
   .message-textarea.dark:disabled {
-    background: #1f2937;
+    background: #09090B;
     color: #6b7280;
   }
   

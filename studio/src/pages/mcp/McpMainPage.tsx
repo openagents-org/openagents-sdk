@@ -9,7 +9,7 @@ const McpMainPage: React.FC = () => {
 
 
   return (
-    <div className="h-full dark:bg-gray-900">
+    <div className="h-full dark:bg-[#09090B]">
       <Routes>
         {/* Default MCP view */}
         <Route
@@ -21,7 +21,7 @@ const McpMainPage: React.FC = () => {
         <Route
           path="config"
           element={
-            <div className="p-6 h-full dark:bg-gray-900">
+            <div className="p-6 h-full dark:bg-[#09090B]">
               <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
                 MCP Configuration
               </h1>
@@ -36,7 +36,7 @@ const McpMainPage: React.FC = () => {
         <Route
           path="status"
           element={
-            <div className="p-6 h-full dark:bg-gray-900">
+            <div className="p-6 h-full dark:bg-[#09090B]">
               <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
                 MCP Status
               </h1>

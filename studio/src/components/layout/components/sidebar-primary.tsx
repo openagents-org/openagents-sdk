@@ -471,7 +471,11 @@ export function SidebarPrimary() {
             {!isAdminRoute && (
               <DropdownMenuItem
                 onClick={() => navigate("/profile")}
-                className="cursor-pointer data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-gray-800 transition-colors"
+                className={`cursor-pointer data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-gray-800 transition-colors ${
+                  location.pathname.startsWith("/profile")
+                    ? "bg-[#F4F4F5] dark:bg-black text-gray-900 dark:text-gray-100"
+                    : ""
+                }`}
               >
                 <User className="size-4" />
                 <span>{t("navigation.profile")}</span>

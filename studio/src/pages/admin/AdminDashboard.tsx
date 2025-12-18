@@ -248,13 +248,10 @@ const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <div className="p-4 h-full overflow-y-auto dark:bg-gray-900">
+    <div className="p-4 h-full overflow-y-auto dark:bg-[#09090B]">
       {/* Header with Stats Tags */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {t('dashboard.title')}
-          </h1>
           {/* Stats Tags */}
           <div className="flex flex-wrap items-center gap-2" data-tour="stats">
             <span

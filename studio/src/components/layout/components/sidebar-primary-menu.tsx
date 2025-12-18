@@ -27,7 +27,7 @@ export function SidebarPrimaryMenu() {
       className="space-y-7.5 px-2.5"
       classNames={{
         label: 'text-xs font-normal text-muted-foreground mb-2',
-        item: 'h-8.5 px-2.5 text-sm font-normal text-foreground hover:text-primary data-[selected=true]:bg-muted data-[selected=true]:text-foreground [&[data-selected=true]_svg]:opacity-100',
+        item: 'h-8.5 px-2.5 text-sm font-normal text-foreground hover:text-primary data-[selected=true]:bg-gray-100 data-[selected=true]:text-foreground [&[data-selected=true]_svg]:opacity-100',
         group: '',
       }}
     >

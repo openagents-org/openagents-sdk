@@ -10,7 +10,7 @@
     @apply h-full text-gray-900 bg-white;
   }
   .dark body {
-    @apply bg-gray-900 text-gray-100;
+    @apply bg-[#09090B] text-gray-100;
   }
 }
 

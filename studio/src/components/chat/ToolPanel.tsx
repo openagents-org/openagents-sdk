@@ -183,7 +183,7 @@ const ToolPanel: React.FC<ToolPanelProps> = ({ isOpen, onClose, toolSection }) =
       <div className="absolute inset-0 overflow-hidden">
         {/* Backdrop with click handler to close */}
         <div 
-          className={`absolute inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-80 transition-opacity duration-300 ${isAnimating ? 'opacity-100' : 'opacity-0'}`}
+          className={`absolute inset-0 bg-gray-500 bg-opacity-75 dark:bg-[#09090B] dark:bg-opacity-80 transition-opacity duration-300 ${isAnimating ? 'opacity-100' : 'opacity-0'}`}
           onClick={onClose}
         />
         
@@ -245,7 +245,7 @@ const ToolPanel: React.FC<ToolPanelProps> = ({ isOpen, onClose, toolSection }) =
                   {toolSection.content && (
                     <div className="w-full max-w-full">
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Original Content</h4>
-                      <div className="mt-1 bg-gray-50 dark:bg-gray-900 p-3 rounded-lg overflow-auto max-h-40 w-full">
+                      <div className="mt-1 bg-gray-50 dark:bg-[#09090B] p-3 rounded-lg overflow-auto max-h-40 w-full">
                         <div className="tool-panel-content prose prose-sm dark:prose-invert max-w-full w-full break-words">
                           <CustomReactMarkdown>
                             {toolSection.content}
@@ -259,7 +259,7 @@ const ToolPanel: React.FC<ToolPanelProps> = ({ isOpen, onClose, toolSection }) =
                   {toolSection.input && (
                     <div className="w-full max-w-full">
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Input Parameters</h4>
-                      <div className="mt-1 bg-gray-50 dark:bg-gray-900 p-3 rounded-lg overflow-auto w-full">
+                      <div className="mt-1 bg-gray-50 dark:bg-[#09090B] p-3 rounded-lg overflow-auto w-full">
                         <pre className="tool-panel-json text-sm text-gray-900 dark:text-gray-100 break-words w-full" style={{ maxWidth: '100%', overflowWrap: 'break-word' }}>
                           {typeof toolSection.input === 'string' 
                             ? toolSection.input 
@@ -273,7 +273,7 @@ const ToolPanel: React.FC<ToolPanelProps> = ({ isOpen, onClose, toolSection }) =
                   {toolSection.result && (
                     <div className="w-full max-w-full">
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Result</h4>
-                      <div className="mt-1 bg-gray-50 dark:bg-gray-900 p-3 rounded-lg overflow-auto w-full">
+                      <div className="mt-1 bg-gray-50 dark:bg-[#09090B] p-3 rounded-lg overflow-auto w-full">
                         <div className="tool-panel-content prose prose-sm dark:prose-invert max-w-full w-full break-words" style={{ maxWidth: '100%' }}>
                           {typeof toolSection.result === 'string' ? (
                             <CustomReactMarkdown>

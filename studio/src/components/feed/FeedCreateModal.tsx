@@ -142,7 +142,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-      <div className="bg-white dark:bg-gray-900 w-full max-w-4xl rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 max-h-[95vh] overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-[#09090B] w-full max-w-4xl rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 max-h-[95vh] overflow-hidden flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
           <div>
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -190,7 +190,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
               maxLength={200}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#09090B] px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
               placeholder={t('createModal.postTitlePlaceholder')}
             />
             <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -214,7 +214,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="w-full min-h-[200px] rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full min-h-[200px] rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#09090B] px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none"
               placeholder={t('createModal.contentPlaceholder')}
             />
             {showPreview && (
@@ -240,7 +240,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={handleTagKeyDown}
-                className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#09090B] px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                 placeholder={t('createModal.tagsPlaceholder')}
               />
               <button
@@ -295,7 +295,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
                     )
                   )
                 }
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none h-32"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#09090B] px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none h-32"
               >
                 {groups.map((group) => (
                   <option key={group} value={group}>
@@ -379,7 +379,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
           )}
         </form>
 
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#09090B]/50">
           <div className="text-xs text-gray-500 dark:text-gray-400">
             {t('createModal.immutableWarning')}
           </div>

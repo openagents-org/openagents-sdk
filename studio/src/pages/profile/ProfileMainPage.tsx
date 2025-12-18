@@ -21,7 +21,7 @@ import ModManagementPage from "../mod-management/ModManagementPage";
 const ProfileMainPage: React.FC = () => {
   const { t } = useTranslation('profile');
   return (
-    <div className="h-full dark:bg-gray-900">
+    <div className="h-full dark:bg-[#09090B]">
     <Routes>
 
       {/* Default profile view */}
@@ -31,7 +31,7 @@ const ProfileMainPage: React.FC = () => {
       <Route
         path="edit"
         element={
-          <div className="p-6 dark:bg-gray-900 h-full">
+          <div className="p-6 dark:bg-[#09090B] h-full">
             <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
               {t('profile.editProfile')}
             </h1>
@@ -46,7 +46,7 @@ const ProfileMainPage: React.FC = () => {
       <Route
         path="security"
         element={
-          <div className="p-6 dark:bg-gray-900 h-full">
+          <div className="p-6 dark:bg-[#09090B] h-full">
             <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
               {t('profile.securitySettings')}
             </h1>
@@ -136,7 +136,7 @@ const ProfileDashboard: React.FC = () => {
   }
 
   return (
-    <div className="p-6 dark:bg-gray-900 h-full min-h-screen overflow-y-auto">
+      <div className="p-6 dark:bg-[#09090B] h-full min-h-screen overflow-y-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

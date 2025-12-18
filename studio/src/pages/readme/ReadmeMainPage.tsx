@@ -57,7 +57,7 @@ const ReadmeMainPage: React.FC = () => {
   // Loading state
   if (loading) {
     return (
-      <div className="p-6 dark:bg-gray-900 h-full">
+      <div className="p-6 dark:bg-[#09090B] h-full">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <span className="ml-3 text-gray-600 dark:text-gray-400">
@@ -104,7 +104,7 @@ const ReadmeMainPage: React.FC = () => {
   // Empty content state
   if (!readmeContent) {
     return (
-      <div className="h-full flex items-center justify-center dark:bg-gray-900">
+      <div className="h-full flex items-center justify-center dark:bg-[#09090B]">
         <div className="text-center">
           <div className="text-6xl mb-4 text-gray-400 dark:text-gray-600">
             📄
@@ -122,7 +122,7 @@ const ReadmeMainPage: React.FC = () => {
 
   // Display README content
   return (
-    <div className="p-6 dark:bg-gray-900 h-full min-h-screen overflow-y-auto">
+    <div className="p-6 dark:bg-[#09090B] h-full min-h-screen overflow-y-auto">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">

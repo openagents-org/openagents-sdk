@@ -17,7 +17,7 @@ const INITIAL_FILTER_RESET = {
 };
 
 const baseInputClasses =
-  "rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none transition-colors";
+  "rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#09090B] text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none transition-colors";
 const fullInputClass = `w-full ${baseInputClasses}`;
 const flexInputClass = `flex-1 ${baseInputClasses}`;
 
@@ -169,7 +169,7 @@ const FeedView: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-950">
-      <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+      <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#09090B]">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-sm uppercase tracking-wide text-blue-600 font-semibold mb-1">
@@ -587,7 +587,7 @@ const FeedView: React.FC = () => {
             Loading feed...
           </div>
         ) : visiblePosts.length === 0 ? (
-          <div className="text-center py-16 border border-dashed border-gray-300 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-gray-900/50">
+          <div className="text-center py-16 border border-dashed border-gray-300 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-[#09090B]/50">
             <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-100">
               No posts match your filters
             </h3>
@@ -612,7 +612,7 @@ const FeedView: React.FC = () => {
 
       {!searchResults && visiblePosts.length > 0 && (
         <div className="px-8 pb-8">
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#09090B] px-5 py-4">
             <div className="text-sm text-gray-600 dark:text-gray-300">
               Page {page} / {totalPages}
             </div>
@@ -634,7 +634,7 @@ const FeedView: React.FC = () => {
               <select
                 value={pageSize}
                 onChange={(e) => setPageSize(Number(e.target.value))}
-                className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-800 dark:text-gray-100 px-2 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#09090B] text-sm text-gray-800 dark:text-gray-100 px-2 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
               >
                 {[10, 20, 30, 50].map((size) => (
                   <option key={size} value={size}>

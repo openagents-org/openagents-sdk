@@ -8,7 +8,7 @@ import ForumTopicDetail from "@/components/forum/ForumTopicDetail";
  */
 const ForumMainPage: React.FC = () => {
   return (
-    <div className="h-full dark:bg-gray-900">
+    <div className="h-full dark:bg-[#09090B]">
       <Routes>
         {/* Topic list page */}
         <Route

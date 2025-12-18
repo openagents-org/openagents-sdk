@@ -10,8 +10,9 @@ import {
 import { useAuthStore } from "@/stores/authStore";
 import { Navigate, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/useMediaQuery";
-import { LayoutProvider } from "./components/context";
+import { LayoutProvider, useLayout } from "./components/context";
 import { HeaderBreadcrumbs } from "./components/header-breadcrumbs";
+import { SidebarSecondary } from "./components/sidebar-secondary";
 
 interface RootLayoutProps {
   children: ReactNode;
@@ -54,29 +55,55 @@ const RootLayout: React.FC<RootLayoutProps> = ({ children }) => {
 };
 
 // Internal component that can access LayoutProvider context
-const MainContentArea: React.FC<{ children: ReactNode; shouldHideSidebar: boolean }> = ({ children, shouldHideSidebar }) => {
+const MainContentArea: React.FC<{
+  children: ReactNode;
+  shouldHideSidebar: boolean;
+}> = ({ children, shouldHideSidebar }) => {
   const isMobile = useIsMobile();
+  const { isSidebarOpen } = useLayout();
 
   return (
-    <main className={`
+    <main
+      className={`
       flex-1 flex flex-col overflow-hidden relative
-      ${isMobile
-        ? 'm-0 rounded-none border-0'
-        : 'm-1 rounded-xl shadow-md border border-gray-200 dark:border-gray-700'
+      ${
+        isMobile
+          ? "m-0 rounded-none border-0"
+          : "m-2 rounded-xl shadow-md border border-gray-200 dark:border-gray-700"
       }
-      bg-gradient-to-br from-white via-blue-50 to-purple-50
-      dark:from-gray-900 dark:via-gray-900 dark:to-gray-900
-    `}>
-      {/* Breadcrumb Navigation - includes expand/collapse button */}
-      {!shouldHideSidebar && (
-        <div className="flex-shrink-0">
-          <HeaderBreadcrumbs />
-        </div>
-      )}
+      bg-white
+      dark:bg-[#09090B]
+    `}
+    >
+      {/* Content area with secondary sidebar */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Secondary Sidebar */}
+        {!shouldHideSidebar && isSidebarOpen && (
+          <div
+            className="hidden md:block flex-shrink-0"
+            style={{
+              width:
+                "calc(var(--sidebar-width) - var(--sidebar-collapsed-width))",
+            }}
+          >
+            <SidebarSecondary />
+          </div>
+        )}
 
-      {/* Page Content */}
-      <div className="flex-1 overflow-auto dark:bg-gray-900">
-        {children}
+        {/* Page Content Area */}
+        <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-[#09090B]">
+          {/* Breadcrumb Navigation - fixed at top, doesn't scroll */}
+          {!shouldHideSidebar && (
+            <div className="flex-shrink-0">
+              <HeaderBreadcrumbs />
+            </div>
+          )}
+          
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-auto bg-white dark:bg-[#09090B]">
+            {children}
+          </div>
+        </div>
       </div>
     </main>
   );
@@ -92,7 +119,7 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
 
   // Determine if current route should hide the sidebar
   const shouldHideSidebar = location.pathname.startsWith("/agentworld");
-  
+
   // Hide ModSidebar (left navigation) on admin routes
   const shouldHideModSidebar = location.pathname.startsWith("/admin");
 
@@ -104,7 +131,7 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
   }, [location.pathname, isMobile]);
 
   return (
-    <div className="h-screen w-screen flex overflow-hidden bg-[#F4F4F5] dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div className="h-screen w-screen flex overflow-hidden bg-[#F4F4F5] dark:bg-[#09090B] text-gray-900 dark:text-gray-100">
       {/* Connection status overlay - only shown when OpenAgentsProvider exists but not connected */}
       {context && !isConnected && <ConnectionLoadingOverlay />}
 
@@ -137,12 +164,12 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
               </div>
             )}
 
-              {/* Mobile menu button - only shown on mobile */}
-              {/* Use Tailwind responsive classes: show by default, hide on md (768px) and up */}
-              {!shouldHideSidebar && (
-                <button
-                  onClick={() => setIsDrawerOpen(true)}
-                  className="
+            {/* Mobile menu button - only shown on mobile */}
+            {/* Use Tailwind responsive classes: show by default, hide on md (768px) and up */}
+            {!shouldHideSidebar && (
+              <button
+                onClick={() => setIsDrawerOpen(true)}
+                className="
                     fixed top-4 left-4 z-30
                     p-3 rounded-lg
                     bg-white dark:bg-gray-800
@@ -152,23 +179,23 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
                     border border-gray-200 dark:border-gray-700
                     md:hidden
                   "
-                  aria-label="Open menu"
+                aria-label="Open menu"
+              >
+                <svg
+                  className="w-6 h-6 text-gray-600 dark:text-gray-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <svg
-                    className="w-6 h-6 text-gray-600 dark:text-gray-300"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 6h16M4 12h16M4 18h16"
-                    />
-                  </svg>
-                </button>
-              )}
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+              </button>
+            )}
 
             {/* Main content area - uses internal component to access LayoutProvider context */}
             <MainContentArea shouldHideSidebar={shouldHideSidebar}>

@@ -328,11 +328,11 @@ const AdminSidebar: React.FC = () => {
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      {/* <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           {t("sidebar.title")}
         </h2>
-      </div>
+      </div> */}
 
       {/* Navigation Sections */}
       <div className="flex-1 overflow-y-auto">
@@ -362,7 +362,7 @@ const AdminSidebar: React.FC = () => {
                     onClick={() => navigate(item.path)}
                     className={`w-full flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                       isActive(item.path)
-                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                        ? "bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-300"
                         : "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
                     }`}
                   >

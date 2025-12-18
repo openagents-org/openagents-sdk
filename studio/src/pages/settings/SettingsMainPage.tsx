@@ -6,13 +6,13 @@ import { Routes, Route } from "react-router-dom";
  */
 const SettingsMainPage: React.FC = () => {
   return (
-    <div className="h-full dark:bg-gray-900">
+    <div className="h-full dark:bg-[#09090B]">
     <Routes>
       {/* Default settings view */}
       <Route
         index
         element={
-          <div className="p-6 dark:bg-gray-900 h-full">
+          <div className="p-6 dark:bg-[#09090B] h-full">
             <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
               Settings
             </h1>
@@ -43,7 +43,7 @@ const SettingsMainPage: React.FC = () => {
       <Route
         path="network"
         element={
-          <div className="p-6 h-full dark:bg-gray-900">
+          <div className="p-6 h-full dark:bg-[#09090B]">
             <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
               Network Settings
             </h1>
@@ -58,7 +58,7 @@ const SettingsMainPage: React.FC = () => {
       <Route
         path="theme"
         element={
-          <div className="p-6 h-full dark:bg-gray-900">
+          <div className="p-6 h-full dark:bg-[#09090B]">
             <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
               Theme Settings
             </h1>

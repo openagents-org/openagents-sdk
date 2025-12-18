@@ -63,7 +63,7 @@ const DocumentsMainPage: React.FC = () => {
   );
 
   return (
-    <div className="h-full dark:bg-gray-900">
+    <div className="h-full dark:bg-[#09090B]">
       <Routes>
         {/* Default document view */}
         <Route

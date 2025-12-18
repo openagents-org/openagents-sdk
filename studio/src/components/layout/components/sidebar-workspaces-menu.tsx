@@ -31,7 +31,7 @@ export function SidebarWorkspacesMenu() {
       defaultValue="workspace-trigger"
       className="space-y-7.5 px-2.5"
       classNames={{
-        item: 'h-8.5 px-2.5 text-sm font-normal text-foreground hover:text-primary hover:bg-background data-[selected=true]:bg-background data-[selected=true]:text-foreground [&[data-selected=true]_svg]:opacity-100',
+        item: 'h-8.5 px-2.5 text-sm font-normal text-foreground hover:text-primary hover:bg-background data-[selected=true]:bg-gray-100 data-[selected=true]:text-foreground [&[data-selected=true]_svg]:opacity-100',
         subTrigger: 'text-xs font-normal text-muted-foreground hover:bg-transparent group [&_[data-slot="accordion-menu-sub-indicator"]]:hidden',
         subContent: 'ps-0',
         indicator: 'ms-auto flex items-center font-medium',

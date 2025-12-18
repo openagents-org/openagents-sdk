@@ -89,22 +89,22 @@ const WikiPageList: React.FC = () => {
     navigate(`/wiki/detail/${encodeURIComponent(pagePath)}`);
   };
 
-  if (pagesLoading && pages.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">
-            {t('list.loading')}
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // if (pagesLoading && pages.length === 0) {
+  //   return (
+  //     <div className="flex-1 flex items-center justify-center dark:bg-[#09090B]">
+  //       <div className="text-center">
+  //         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
+  //         <p className="text-gray-600 dark:text-gray-400">
+  //           {t('list.loading')}
+  //         </p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   if (pagesError) {
     return (
-      <div className="flex-1 flex items-center justify-center dark:bg-gray-900">
+      <div className="flex-1 flex items-center justify-center dark:bg-[#09090B]">
         <div className="text-center">
           <div className={`text-red-500 mb-4`}>
             <svg
@@ -134,9 +134,9 @@ const WikiPageList: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full dark:bg-gray-900">
+    <div className="flex-1 flex flex-col h-full dark:bg-[#09090B]">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-800">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-black">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {t('list.title')}
@@ -196,14 +196,14 @@ const WikiPageList: React.FC = () => {
       </div>
 
       {/* Search bar */}
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black">
         <div className="relative">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('list.searchPlaceholder')}
-            className="w-full pl-10 pr-4 py-2 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
+            className="w-full pl-10 pr-4 py-2 rounded-lg border bg-white dark:bg-black border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
           />
           <svg
             className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400"
@@ -222,7 +222,7 @@ const WikiPageList: React.FC = () => {
       </div>
 
       {/* Page list */}
-      <div className="flex-1 overflow-y-hidden py-6 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+      <div className="flex-1 overflow-y-hidden py-6 dark:border-gray-700 bg-gray-50 dark:bg-[#09090B]">
         {pages.length === 0 ? (
           <div className="text-center py-12 h-full flex flex-col items-center justify-center">
             <div className="mb-4 text-gray-500 dark:text-gray-400">

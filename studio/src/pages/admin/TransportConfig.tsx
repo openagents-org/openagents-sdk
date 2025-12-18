@@ -211,7 +211,7 @@ const TransportConfigPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6 h-full overflow-y-auto dark:bg-gray-900">
+    <div className="p-6 h-full overflow-y-auto dark:bg-[#09090B]">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

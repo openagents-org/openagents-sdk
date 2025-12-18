@@ -8,7 +8,7 @@ import ArtifactTopicDetail from "@/components/artifact/ArtifactTopicDetail";
  */
 const ArtifactMainPage: React.FC = () => {
   return (
-    <div className="h-full dark:bg-gray-900">
+    <div className="h-full dark:bg-[#09090B]">
       <Routes>
         {/* Artifact列表页 */}
         <Route

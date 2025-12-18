@@ -286,7 +286,7 @@ export function SidebarHeader() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="w-56 bg-white dark:bg-gray-900 shadow-lg z-[100] min-w-[14rem]"
+              className="w-56 bg-white dark:bg-[#09090B] shadow-lg z-[100] min-w-[14rem]"
               side="bottom"
               align="start"
               sideOffset={8}
