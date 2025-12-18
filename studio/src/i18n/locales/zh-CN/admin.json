@@ -88,6 +88,60 @@
     "previous": "上一步",
     "next": "下一步",
     "complete": "完成"
+  },
+  "publish": {
+    "title": "发布网络",
+    "subtitle": "将您的网络发布到 OpenAgents 目录，让其他人可以发现它。",
+    "form": {
+      "networkId": "网络 ID",
+      "networkIdPlaceholder": "例如: my-awesome-network",
+      "networkIdHelp": "网络的唯一标识符（最少 7 个字符）",
+      "networkName": "网络名称",
+      "networkNamePlaceholder": "例如: 我的优秀网络",
+      "networkNameHelp": "网络的显示名称（可选，会从健康端点自动检测）",
+      "organization": "组织",
+      "organizationPlaceholder": "例如: openagents",
+      "organizationHelp": "您在 OpenAgents 上的组织标识符",
+      "host": "主机",
+      "hostPlaceholder": "例如: mynetwork.example.com",
+      "port": "端口"
+    },
+    "buttons": {
+      "validate": "验证配置",
+      "validating": "验证中...",
+      "publish": "发布网络",
+      "publishing": "发布中..."
+    },
+    "validation": {
+      "success": "网络配置有效！",
+      "successToast": "验证成功！",
+      "detectedName": "检测到的名称：",
+      "onlineAgents": "在线代理：",
+      "enabledMods": "已启用的模块："
+    },
+    "errors": {
+      "networkIdRequired": "网络 ID 是必填项",
+      "hostRequired": "主机是必填项",
+      "portRequired": "端口是必填项",
+      "invalidPort": "端口必须在 1 到 65535 之间",
+      "networkIdTooShort": "网络 ID 必须至少 7 个字符",
+      "organizationRequired": "组织是必填项",
+      "healthCheckFailed": "健康检查失败",
+      "networkUnreachable": "无法连接到网络。请确保它正在运行并且可以访问。",
+      "validationFailed": "验证失败",
+      "validationError": "验证过程中发生错误",
+      "validateFirst": "请先验证配置",
+      "publishFailed": "发布网络失败",
+      "publishError": "发布过程中发生错误"
+    },
+    "success": "网络发布成功！",
+    "info": {
+      "title": "关于发布",
+      "point1": "您的网络必须在指定的主机和端口上公开可访问。",
+      "point2": "健康端点 (/api/health) 必须可访问以进行验证。",
+      "point3": "发布的网络将显示在 OpenAgents 目录中。",
+      "point4": "您需要在 OpenAgents 上注册组织才能发布。"
+    }
   }
 }
 
