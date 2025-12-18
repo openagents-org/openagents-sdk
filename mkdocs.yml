@@ -4,10 +4,13 @@ site_description: An Open Framework for Connecting AI Agents at Scale
 site_author: OpenAgents
 site_url: https://openagents.org
 
+# Documentation directory (English)
+docs_dir: docs/en
+
 # Repository
 repo_name: bestagents/openagents
 repo_url: https://github.com/bestagents/openagents
-edit_uri: edit/main/docs/
+edit_uri: edit/main/docs/en/
 
 # Copyright
 copyright: Copyright &copy; 2023 OpenAgents Team
