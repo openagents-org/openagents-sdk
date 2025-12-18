@@ -16,7 +16,7 @@ const ServiceAgentsMainPage: React.FC = () => {
   // Show loading state while checking admin status
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full dark:bg-[#09090B]">
+      <div className="flex items-center justify-center h-full dark:bg-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="text-gray-500 dark:text-gray-400 mt-3">
@@ -30,7 +30,7 @@ const ServiceAgentsMainPage: React.FC = () => {
   // Show access denied for non-admin users
   if (!isAdmin) {
     return (
-      <div className="flex items-center justify-center h-full dark:bg-[#09090B]">
+      <div className="flex items-center justify-center h-full dark:bg-gray-800">
         <div className="text-center max-w-md px-6">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
             <svg
@@ -60,7 +60,7 @@ const ServiceAgentsMainPage: React.FC = () => {
   }
 
   return (
-    <div className="h-full dark:bg-[#09090B]">
+    <div className="h-full dark:bg-gray-800">
       <Routes>
         {/* Default: Service agents list */}
         <Route index element={<ServiceAgentList />} />

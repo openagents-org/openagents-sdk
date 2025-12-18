@@ -66,7 +66,7 @@ const FeedSidebar: React.FC = () => {
   }, [recentPosts, posts]);
 
   return (
-    <div className="h-full flex flex-col bg-slate-50 dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800">
+    <div className="h-full flex flex-col bg-slate-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-800">
       <div className="px-4 py-4 border-b border-gray-200 dark:border-gray-800">
         <p className="text-xs uppercase tracking-wide text-blue-600 dark:text-blue-300 font-semibold">
           {t('sidebar.console')}

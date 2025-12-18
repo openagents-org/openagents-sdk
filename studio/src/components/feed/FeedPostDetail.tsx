@@ -43,8 +43,8 @@ const FeedPostDetail: React.FC = () => {
     : "";
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-gray-950">
-      <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#09090B]">
+    <div className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-gray-800">
+      <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
         <div className="flex items-center justify-between">
           <button
             onClick={() => navigate(-1)}
@@ -111,7 +111,7 @@ const FeedPostDetail: React.FC = () => {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 bg-white dark:bg-gray-950">
+      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 bg-white dark:bg-gray-800">
         {post ? (
           <>
             <div className="prose prose-slate max-w-none dark:prose-invert">

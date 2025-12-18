@@ -58,7 +58,7 @@ const AdminMainPage: React.FC = () => {
 
 const ImportExportPlaceholder: React.FC = () => {
   return (
-    <div className="p-6 h-full overflow-y-auto dark:bg-[#09090B]">
+    <div className="p-6 h-full overflow-y-auto dark:bg-gray-800">
       <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
         Import / Export
       </h1>

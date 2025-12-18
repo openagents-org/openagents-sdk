@@ -101,7 +101,7 @@ const AgentWorldMainPage: React.FC = () => {
   return (
     <div className="h-full w-full relative">
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-[#09090B] z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-800 z-10">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-gray-600 dark:text-gray-400">

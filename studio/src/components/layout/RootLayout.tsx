@@ -72,7 +72,7 @@ const MainContentArea: React.FC<{
           : "m-2 rounded-xl shadow-md border border-gray-200 dark:border-gray-700"
       }
       bg-white
-      dark:bg-[#09090B]
+      dark:bg-gray-800
     `}
     >
       {/* Content area with secondary sidebar */}
@@ -91,7 +91,7 @@ const MainContentArea: React.FC<{
         )}
 
         {/* Page Content Area */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-[#09090B]">
+        <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-gray-800">
           {/* Breadcrumb Navigation - fixed at top, doesn't scroll */}
           {!shouldHideSidebar && (
             <div className="flex-shrink-0">
@@ -100,7 +100,7 @@ const MainContentArea: React.FC<{
           )}
           
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-auto bg-white dark:bg-[#09090B]">
+          <div className="flex-1 overflow-auto bg-white dark:bg-gray-800">
             {children}
           </div>
         </div>
@@ -131,7 +131,7 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
   }, [location.pathname, isMobile]);
 
   return (
-    <div className="h-screen w-screen flex overflow-hidden bg-[#F4F4F5] dark:bg-[#09090B] text-gray-900 dark:text-gray-100">
+    <div className="h-screen w-screen flex overflow-hidden bg-[#F4F4F5] dark:bg-gray-800 text-gray-900 dark:text-gray-100">
       {/* Connection status overlay - only shown when OpenAgentsProvider exists but not connected */}
       {context && !isConnected && <ConnectionLoadingOverlay />}
 

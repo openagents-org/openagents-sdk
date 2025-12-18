@@ -634,12 +634,12 @@ const ThreadMessagingViewEventBased: React.FC = () => {
   }
 
   return (
-    <div className="thread-messaging-view h-full flex flex-col bg-white dark:bg-black">
+    <div className="thread-messaging-view h-full flex flex-col bg-white dark:bg-gray-800">
       {/* Notification Permission Overlay */}
       <NotificationPermissionOverlay />
 
       {/* Header */}
-      <div className="thread-header flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black">
+      <div className="thread-header flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
         <div className="flex items-center space-x-3">
           <div
             className="w-3 h-3 rounded-full"

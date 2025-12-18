@@ -133,7 +133,7 @@ const NotificationPermissionOverlay: React.FC<
         : "opacity-100 translate-x-0 scale-100"
         } ${className}`}
     >
-      <div className="bg-white dark:bg-black rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-6 relative">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-6 relative">
         {/* Close button */}
         <button
           onClick={handleClose}
@@ -235,7 +235,7 @@ const NotificationPermissionOverlay: React.FC<
             onClick={requestPermission}
             disabled={permissionStatus === "denied"}
             className={`w-full px-4 py-2 rounded-md text-sm font-medium transition-colors ${permissionStatus === "denied"
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-black dark:text-gray-500"
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500"
               : "bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
               }`}
           >

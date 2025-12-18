@@ -29,7 +29,7 @@ const LLMLogsMainPage: React.FC = () => {
   }, [openAgentsService, isConnected, loadLogs, loadStats]);
 
   return (
-    <div className="h-full dark:bg-[#09090B]">
+    <div className="h-full dark:bg-gray-800">
       <Routes>
         <Route index element={<LLMLogsView />} />
       </Routes>

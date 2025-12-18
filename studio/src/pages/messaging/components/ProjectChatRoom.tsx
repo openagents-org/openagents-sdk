@@ -651,7 +651,7 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
   // If no projectId and not a pending project, show selection prompt
   if (!projectId && !isPendingProject) {
     return (
-      <div className="project-chat-room h-full flex items-center justify-center bg-white dark:bg-black">
+      <div className="project-chat-room h-full flex items-center justify-center bg-white dark:bg-gray-800">
         <div className="text-center text-gray-500 dark:text-gray-400 py-8">
           <svg
             className="w-16 h-16 mx-auto mb-4 text-gray-400"
@@ -676,9 +676,9 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
   }
 
   return (
-    <div className="project-chat-room h-full flex flex-col bg-white dark:bg-black">
+    <div className="project-chat-room h-full flex flex-col bg-white dark:bg-gray-800">
       {/* Header */}
-      <div className="thread-header flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black">
+      <div className="thread-header flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
         <div className="flex items-center space-x-3">
           <div
             className="w-3 h-3 rounded-full"

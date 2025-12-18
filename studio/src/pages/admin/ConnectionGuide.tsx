@@ -283,7 +283,7 @@ messages = response.json()`;
   }
 
   return (
-    <div className="p-6 h-full overflow-y-auto dark:bg-[#09090B]">
+    <div className="p-6 h-full overflow-y-auto dark:bg-gray-800">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">

@@ -30,7 +30,7 @@ const FeedPostCard: React.FC<FeedPostCardProps> = ({
 
   return (
     <article
-      className={`rounded-2xl border transition-all duration-200 cursor-pointer bg-white dark:bg-[#09090B] ${
+      className={`rounded-2xl border transition-all duration-200 cursor-pointer bg-white dark:bg-gray-800 ${
         isRecent
           ? "border-amber-400 shadow-lg shadow-amber-100/40"
           : "border-gray-200 dark:border-gray-800 hover:shadow-lg"

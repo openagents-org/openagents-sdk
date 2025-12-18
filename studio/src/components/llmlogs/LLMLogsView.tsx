@@ -7,7 +7,7 @@ import { useThemeStore } from "@/stores/themeStore";
 import type { LLMLogEntry } from "@/types/llmLogs";
 
 const baseInputClasses =
-  "rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#09090B] text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none transition-colors";
+  "rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none transition-colors";
 const fullInputClass = `w-full ${baseInputClasses}`;
 
 const LLMLogsView: React.FC = () => {
@@ -96,9 +96,9 @@ const LLMLogsView: React.FC = () => {
   const totalPages = Math.max(1, Math.ceil(totalLogs / pageSize));
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-950">
+    <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-800">
       {/* Header */}
-      <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#09090B]">
+      <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-sm uppercase tracking-wide text-blue-600 font-semibold mb-1">
@@ -217,7 +217,7 @@ const LLMLogsView: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 space-y-4">
+      <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-sm text-gray-600 dark:text-gray-300">
             {filtersExpanded ? t('filters.expanded') : t('filters.expandHint')}
@@ -331,7 +331,7 @@ const LLMLogsView: React.FC = () => {
       </div>
 
       {/* Logs List */}
-      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4 bg-white dark:bg-gray-950">
+      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4 bg-white dark:bg-gray-800">
         {logsError && (
           <div className="rounded-lg border border-red-200 dark:border-red-500/60 bg-red-50 dark:bg-red-950/40 px-4 py-2 text-sm text-red-700 dark:text-red-200">
             {logsError}
@@ -341,7 +341,7 @@ const LLMLogsView: React.FC = () => {
         {logsLoading ? (
           <div className="text-center text-gray-500 dark:text-gray-400 py-12">{t('list.loading')}</div>
         ) : logs.length === 0 ? (
-          <div className="text-center py-16 border border-dashed border-gray-300 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-[#09090B]/50">
+          <div className="text-center py-16 border border-dashed border-gray-300 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-gray-800/50">
             <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-100">
               {t('list.noLogs')}
             </h3>
@@ -371,7 +371,7 @@ const LLMLogsView: React.FC = () => {
       {/* Pagination */}
       {logs.length > 0 && (
         <div className="px-8 pb-8">
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#09090B] px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 px-5 py-4">
             <div className="text-sm text-gray-600 dark:text-gray-300">
               {t('pagination.info', { page, total: totalPages, count: totalLogs })}
             </div>
@@ -393,7 +393,7 @@ const LLMLogsView: React.FC = () => {
               <select
                 value={pageSize}
                 onChange={(e) => setPageSize(Number(e.target.value))}
-                className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#09090B] text-sm text-gray-800 dark:text-gray-100 px-2 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-100 px-2 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
               >
                 {[10, 20, 30, 50, 100, 200].map((size) => (
                   <option key={size} value={size}>
@@ -437,7 +437,7 @@ const LogCard: React.FC<LogCardProps> = ({
     <div
       className={`rounded-lg border ${hasError
           ? "border-red-300 dark:border-red-500/60 bg-red-50 dark:bg-red-950/20"
-          : "border-gray-200 dark:border-gray-800 bg-white dark:bg-[#09090B]"
+          : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800"
         } shadow-sm`}
     >
       {/* Header */}

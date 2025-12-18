@@ -94,7 +94,7 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
   // Display connection waiting status
   if (!openAgentsService || !isConnected) {
     return (
-      <div className="flex-1 flex items-center justify-center dark:bg-[#09090B]">
+      <div className="flex-1 flex items-center justify-center dark:bg-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">
@@ -110,7 +110,7 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
   // Display loading state
   if (commentsLoading && !selectedTopic) {
     return (
-      <div className="flex-1 flex items-center justify-center dark:bg-[#09090B]">
+      <div className="flex-1 flex items-center justify-center dark:bg-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">Loading topic...</p>
@@ -122,7 +122,7 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
   // Display error state
   if (commentsError || !selectedTopic) {
     return (
-      <div className="flex-1 flex items-center justify-center dark:bg-[#09090B]">
+      <div className="flex-1 flex items-center justify-center dark:bg-gray-800">
         <div className="text-center">
           <div className={`text-red-500 mb-4`}>
             <svg
@@ -156,7 +156,7 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
   const timeAgo = new Date(selectedTopic.timestamp * 1000).toLocaleString();
 
   return (
-    <div className="flex-1 flex flex-col h-full dark:bg-[#09090B]">
+    <div className="flex-1 flex flex-col h-full dark:bg-gray-800">
       {/* Header navigation */}
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center bg-gray-50 dark:bg-gray-800">
         <button
@@ -181,10 +181,10 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
       </div>
 
       {/* Main content - using full width */}
-      <div className="flex-1 flex flex-col overflow-hidden dark:bg-[#09090B] border-gray-200 dark:border-gray-700">
+      <div className="flex-1 flex flex-col overflow-hidden dark:bg-gray-800 border-gray-200 dark:border-gray-700">
         <div className="flex-1 flex flex-col overflow-y-auto">
           {/* Topic content */}
-          <div className="p-6 border-b bg-white dark:bg-[#09090B] border-gray-200 dark:border-gray-700">
+          <div className="p-6 border-b bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
             {/* Topic title */}
             <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
               {selectedTopic.title}

@@ -12,7 +12,7 @@ import ProjectChatRoom from "@/pages/messaging/components/ProjectChatRoom"
  */
 const ProjectMainPage: React.FC = () => {
   return (
-    <div className="h-full bg-white dark:bg-[#09090B]">
+    <div className="h-full bg-white dark:bg-gray-800">
       <Routes>
         {/* Default route - display project list and selection prompt */}
         <Route index element={<ProjectChatRoom />} />

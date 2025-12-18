@@ -289,7 +289,7 @@ const WikiView: React.FC<WikiViewProps> = ({
 
   if (isLoading || !connection) {
     return (
-      <div className="h-full flex items-center justify-center dark:bg-[#09090B]">
+      <div className="h-full flex items-center justify-center dark:bg-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">
@@ -302,7 +302,7 @@ const WikiView: React.FC<WikiViewProps> = ({
 
   if (error) {
     return (
-      <div className="h-full flex items-center justify-center dark:bg-[#09090B]">
+      <div className="h-full flex items-center justify-center dark:bg-gray-800">
         <div className="text-center">
           <div className="text-red-500 mb-4">
             <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -331,7 +331,7 @@ const WikiView: React.FC<WikiViewProps> = ({
     const isOwner = selectedPage.creator_id === connection?.getAgentId();
 
     return (
-      <div className="h-full flex flex-col dark:bg-[#09090B]">
+      <div className="h-full flex flex-col dark:bg-gray-800">
         {/* Header */}
         <div className="border-b border-gray-200 dark:border-gray-700 dark:bg-gray-800 p-6">
           <div className="flex items-center space-x-3">
@@ -375,7 +375,7 @@ const WikiView: React.FC<WikiViewProps> = ({
         </div>
 
         {/* Page content */}
-        <div className="flex-1 overflow-y-auto p-6 dark:bg-[#09090B]">
+        <div className="flex-1 overflow-y-auto p-6 dark:bg-gray-800">
           <div className="prose max-w-none dark:prose-invert">
             <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
               {selectedPage.wiki_content || 'No content available'}
@@ -391,7 +391,7 @@ const WikiView: React.FC<WikiViewProps> = ({
     const isOwner = selectedPage.creator_id === connection?.getAgentId();
 
     return (
-      <div className="h-full flex flex-col dark:bg-[#09090B]">
+      <div className="h-full flex flex-col dark:bg-gray-800">
         {/* Header */}
         <div className="border-b border-gray-200 dark:border-gray-700 dark:bg-gray-800 p-6">
           <div className="flex items-center space-x-3">
@@ -410,7 +410,7 @@ const WikiView: React.FC<WikiViewProps> = ({
         </div>
 
         {/* Edit form */}
-        <div className="flex-1 flex flex-col p-6 space-y-4 dark:bg-[#09090B]">
+        <div className="flex-1 flex flex-col p-6 space-y-4 dark:bg-gray-800">
           <div className="flex-1">
             <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
               Content
@@ -467,7 +467,7 @@ const WikiView: React.FC<WikiViewProps> = ({
   // Proposals view
   if (currentView === 'proposals') {
     return (
-      <div className="h-full flex flex-col dark:bg-[#09090B]">
+      <div className="h-full flex flex-col dark:bg-gray-800">
         {/* Header */}
         <div className="border-b border-gray-200 dark:border-gray-700 dark:bg-gray-800 p-6">
           <div className="flex items-center space-x-3">
@@ -486,7 +486,7 @@ const WikiView: React.FC<WikiViewProps> = ({
         </div>
 
         {/* Proposals list */}
-        <div className="flex-1 overflow-y-auto p-6 dark:bg-[#09090B]">
+        <div className="flex-1 overflow-y-auto p-6 dark:bg-gray-800">
           <div className="space-y-4">
             {proposals.filter(p => p.status === 'pending').map((proposal) => (
               <div
@@ -546,7 +546,7 @@ const WikiView: React.FC<WikiViewProps> = ({
 
   // Pages list view (default)
   return (
-    <div className="h-full flex flex-col dark:bg-[#09090B]">
+    <div className="h-full flex flex-col dark:bg-gray-800">
       {/* Header */}
       <div className="border-b border-gray-200 dark:border-gray-700 dark:bg-gray-800 p-6">
         <div className="flex items-center justify-between mb-4">
@@ -591,7 +591,7 @@ const WikiView: React.FC<WikiViewProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search wiki pages..."
-            className="w-full pl-10 pr-4 py-2 rounded-lg border bg-white dark:bg-black border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
+            className="w-full pl-10 pr-4 py-2 rounded-lg border bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
           />
           <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -600,7 +600,7 @@ const WikiView: React.FC<WikiViewProps> = ({
       </div>
 
       {/* Pages list */}
-      <div className="flex-1 overflow-y-auto p-6 dark:bg-[#09090B]">
+      <div className="flex-1 overflow-y-auto p-6 dark:bg-gray-800">
         <div className="space-y-4">
           {pages.map((page) => (
             <div

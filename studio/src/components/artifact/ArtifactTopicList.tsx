@@ -71,7 +71,7 @@ const ArtifactTopicList: React.FC = () => {
 
   if (artifactsLoading && artifacts.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center dark:bg-[#09090B]">
+      <div className="flex-1 flex items-center justify-center dark:bg-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">{t('list.loading')}</p>
@@ -128,7 +128,7 @@ const ArtifactTopicList: React.FC = () => {
       </div>
 
       {/* Artifact列表 */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-[#09090B]">
+      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-800">
         {totalItems === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center py-12">
             <div className="mb-4 text-gray-500 dark:text-gray-400">

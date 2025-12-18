@@ -12,7 +12,7 @@ const McpView: React.FC = () => {
   }, []);
 
   return (
-    <div className="h-full flex flex-col dark:bg-[#09090B]">
+    <div className="h-full flex flex-col dark:bg-gray-800">
       <div className="flex items-center justify-center p-4 border-b border-gray-200 dark:border-gray-800 dark:bg-gray-800">
         <h2 className="text-lg font-medium">MCP</h2>
       </div>
