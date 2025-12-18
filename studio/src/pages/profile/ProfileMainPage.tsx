@@ -14,7 +14,6 @@ import AgentGroupsManagement from "./AgentGroupsManagement";
 import EventLogs from "./EventLogs";
 import EventDebugger from "./EventDebugger";
 import ModManagementPage from "../mod-management/ModManagementPage";
-import EventsMainPage from "../events/EventsMainPage";
 
 /**
  * Profile main page - handles all profile-related features
@@ -22,7 +21,7 @@ import EventsMainPage from "../events/EventsMainPage";
 const ProfileMainPage: React.FC = () => {
   const { t } = useTranslation('profile');
   return (
-
+    <div className="h-full dark:bg-gray-900">
     <Routes>
 
       {/* Default profile view */}
@@ -70,10 +69,8 @@ const ProfileMainPage: React.FC = () => {
       {/* Event Debugger subpage */}
       <Route path="event-debugger" element={<EventDebugger />} />
 
-      {/* Event Explorer subpage */}
-      <Route path="events/*" element={<EventsMainPage />} />
-
     </Routes>
+    </div>
   );
 };
 

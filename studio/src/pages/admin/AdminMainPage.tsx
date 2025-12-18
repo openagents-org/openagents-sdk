@@ -16,6 +16,7 @@ import ConnectionGuide from "./ConnectionGuide";
 // Admin-only pages
 import LLMLogsMainPage from "@/pages/llmlogs/LLMLogsMainPage";
 import ServiceAgentsMainPage from "@/pages/serviceagents/ServiceAgentsMainPage";
+import EventsMainPage from "@/pages/events/EventsMainPage";
 
 /**
  * AdminMainPage - Main router for admin pages
@@ -47,6 +48,7 @@ const AdminMainPage: React.FC = () => {
 
         {/* Monitoring */}
         <Route path="events" element={<EventLogs />} />
+        <Route path="event-explorer/*" element={<EventsMainPage />} />
         <Route path="llm-logs/*" element={<LLMLogsMainPage />} />
         <Route path="debugger" element={<EventDebugger />} />
       </Routes>
@@ -56,7 +58,7 @@ const AdminMainPage: React.FC = () => {
 
 const ImportExportPlaceholder: React.FC = () => {
   return (
-    <div className="p-6 h-full">
+    <div className="p-6 h-full overflow-y-auto dark:bg-gray-900">
       <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
         Import / Export
       </h1>

@@ -104,7 +104,7 @@ const WikiPageDetail: React.FC = () => {
 
   if (pagesError) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center dark:bg-gray-900">
         <div className="text-center">
           <div className={`text-red-500 mb-4`}>
             <svg
@@ -136,9 +136,9 @@ const WikiPageDetail: React.FC = () => {
   const isOwner = selectedPage.creator_id === openAgentsService?.getAgentId();
 
   return (
-    <div className="flex-1 flex flex-col h-full">
+    <div className="flex-1 flex flex-col h-full dark:bg-gray-900">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-800">
         <div className="flex items-center space-x-3">
           <button
             onClick={handleBack}

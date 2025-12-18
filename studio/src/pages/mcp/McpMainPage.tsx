@@ -9,43 +9,45 @@ const McpMainPage: React.FC = () => {
 
 
   return (
-    <Routes>
-      {/* Default MCP view */}
-      <Route
-        index
-        element={<McpView />}
-      />
+    <div className="h-full dark:bg-gray-900">
+      <Routes>
+        {/* Default MCP view */}
+        <Route
+          index
+          element={<McpView />}
+        />
 
-      {/* MCP configuration subpage */}
-      <Route
-        path="config"
-        element={
-          <div className="p-6">
-            <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-              MCP Configuration
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              MCP configuration panel coming soon...
-            </p>
-          </div>
-        }
-      />
+        {/* MCP configuration subpage */}
+        <Route
+          path="config"
+          element={
+            <div className="p-6 h-full dark:bg-gray-900">
+              <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+                MCP Configuration
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                MCP configuration panel coming soon...
+              </p>
+            </div>
+          }
+        />
 
-      {/* MCP status subpage */}
-      <Route
-        path="status"
-        element={
-          <div className="p-6">
-            <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-              MCP Status
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              MCP status monitoring coming soon...
-            </p>
-          </div>
-        }
-      />
-    </Routes>
+        {/* MCP status subpage */}
+        <Route
+          path="status"
+          element={
+            <div className="p-6 h-full dark:bg-gray-900">
+              <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+                MCP Status
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                MCP status monitoring coming soon...
+              </p>
+            </div>
+          }
+        />
+      </Routes>
+    </div>
   );
 };
 

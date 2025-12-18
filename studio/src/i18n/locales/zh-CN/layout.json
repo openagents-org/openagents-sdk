@@ -35,7 +35,9 @@
         "readme": "README",
         "modManagement": "模块管理",
         "serviceAgents": "智能体服务",
-        "llmLogs": "LLM 日志"
+        "llmLogs": "LLM 日志",
+        "connectionGuide": "连接代理",
+        "admin": "管理"
     },
     "defaultSidebar": {
         "navigation": "导航内容将显示在这里",

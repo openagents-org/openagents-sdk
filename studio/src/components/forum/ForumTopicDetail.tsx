@@ -122,7 +122,7 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
   // Display error state
   if (commentsError || !selectedTopic) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center dark:bg-gray-900">
         <div className="text-center">
           <div className={`text-red-500 mb-4`}>
             <svg
@@ -156,9 +156,9 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
   const timeAgo = new Date(selectedTopic.timestamp * 1000).toLocaleString();
 
   return (
-    <div className="flex-1 flex flex-col h-full">
+    <div className="flex-1 flex flex-col h-full dark:bg-gray-900">
       {/* Header navigation */}
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center bg-gray-50 dark:bg-gray-800">
         <button
           onClick={handleBack}
           className="flex items-center space-x-2 text-sm transition-colors text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"

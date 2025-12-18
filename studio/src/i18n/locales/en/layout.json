@@ -35,7 +35,9 @@
         "readme": "README",
         "modManagement": "Mod Management",
         "serviceAgents": "Service Agents",
-        "llmLogs": "LLM Logs"
+        "llmLogs": "LLM Logs",
+        "connectionGuide": "Connect Agent",
+        "admin": "Admin"
     },
     "defaultSidebar": {
         "navigation": "Navigation content will appear here",

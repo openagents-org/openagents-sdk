@@ -104,7 +104,7 @@ const ReadmeMainPage: React.FC = () => {
   // Empty content state
   if (!readmeContent) {
     return (
-      <div className="h-full flex items-center justify-center">
+      <div className="h-full flex items-center justify-center dark:bg-gray-900">
         <div className="text-center">
           <div className="text-6xl mb-4 text-gray-400 dark:text-gray-600">
             📄

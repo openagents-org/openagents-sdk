@@ -151,6 +151,7 @@ const EventsMainPage: React.FC = () => {
   };
 
   return (
+    <div className="h-full dark:bg-gray-900">
     <Routes>
       <Route
         index
@@ -286,6 +287,7 @@ const EventsMainPage: React.FC = () => {
         element={<EventDetailPage />}
       />
     </Routes>
+    </div>
   );
 };
 

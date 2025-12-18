@@ -289,7 +289,7 @@ const WikiView: React.FC<WikiViewProps> = ({
 
   if (isLoading || !connection) {
     return (
-      <div className="h-full flex items-center justify-center">
+      <div className="h-full flex items-center justify-center dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">
@@ -302,7 +302,7 @@ const WikiView: React.FC<WikiViewProps> = ({
 
   if (error) {
     return (
-      <div className="h-full flex items-center justify-center">
+      <div className="h-full flex items-center justify-center dark:bg-gray-900">
         <div className="text-center">
           <div className="text-red-500 mb-4">
             <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -331,7 +331,7 @@ const WikiView: React.FC<WikiViewProps> = ({
     const isOwner = selectedPage.creator_id === connection?.getAgentId();
 
     return (
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col dark:bg-gray-900">
         {/* Header */}
         <div className="border-b border-gray-200 dark:border-gray-700 dark:bg-gray-800 p-6">
           <div className="flex items-center space-x-3">
@@ -391,7 +391,7 @@ const WikiView: React.FC<WikiViewProps> = ({
     const isOwner = selectedPage.creator_id === connection?.getAgentId();
 
     return (
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col dark:bg-gray-900">
         {/* Header */}
         <div className="border-b border-gray-200 dark:border-gray-700 dark:bg-gray-800 p-6">
           <div className="flex items-center space-x-3">
@@ -467,7 +467,7 @@ const WikiView: React.FC<WikiViewProps> = ({
   // Proposals view
   if (currentView === 'proposals') {
     return (
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col dark:bg-gray-900">
         {/* Header */}
         <div className="border-b border-gray-200 dark:border-gray-700 dark:bg-gray-800 p-6">
           <div className="flex items-center space-x-3">
@@ -546,7 +546,7 @@ const WikiView: React.FC<WikiViewProps> = ({
 
   // Pages list view (default)
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col dark:bg-gray-900">
       {/* Header */}
       <div className="border-b border-gray-200 dark:border-gray-700 dark:bg-gray-800 p-6">
         <div className="flex items-center justify-between mb-4">

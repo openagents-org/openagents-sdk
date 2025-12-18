@@ -60,11 +60,12 @@ const MainContentArea: React.FC<{ children: ReactNode; shouldHideSidebar: boolea
   return (
     <main className={`
       flex-1 flex flex-col overflow-hidden relative
-      ${isMobile 
-        ? 'm-0 rounded-none border-0' 
+      ${isMobile
+        ? 'm-0 rounded-none border-0'
         : 'm-1 rounded-xl shadow-md border border-gray-200 dark:border-gray-700'
       }
-      bg-gradient-to-br from-white via-blue-50 to-purple-50 dark:bg-gray-800
+      bg-gradient-to-br from-white via-blue-50 to-purple-50
+      dark:from-gray-900 dark:via-gray-900 dark:to-gray-900
     `}>
       {/* Breadcrumb Navigation - includes expand/collapse button */}
       {!shouldHideSidebar && (
@@ -72,9 +73,9 @@ const MainContentArea: React.FC<{ children: ReactNode; shouldHideSidebar: boolea
           <HeaderBreadcrumbs />
         </div>
       )}
-      
+
       {/* Page Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto dark:bg-gray-900">
         {children}
       </div>
     </main>

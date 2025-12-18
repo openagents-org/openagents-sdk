@@ -4,6 +4,7 @@ import {
   ChevronsUpDown,
   PanelRight,
   LayoutDashboard,
+  Link,
 } from "lucide-react";
 import { useLayout } from "./context";
 import { Button } from "@/components/ui/button";
@@ -120,7 +121,7 @@ export function SidebarHeader() {
     // Check if we're in admin route
     const isAdminRoute = location.pathname.startsWith("/admin");
 
-    // If in admin route, only show dashboard
+    // If in admin route, show dashboard, service agents and connect agent
     if (isAdminRoute) {
       items.push({
         icon: LayoutDashboard,
@@ -131,6 +132,20 @@ export function SidebarHeader() {
           isRouteActive("/admin/dashboard") ||
           location.pathname === "/admin" ||
           location.pathname === "/admin/",
+      });
+      items.push({
+        icon: NavigationIcons.ServiceAgents as React.ComponentType,
+        name: t("navigation.serviceAgents"),
+        color: "bg-indigo-500 text-white",
+        route: "/admin/service-agents",
+        active: isRouteActive("/admin/service-agents"),
+      });
+      items.push({
+        icon: Link as React.ComponentType,
+        name: t("navigation.connectionGuide"),
+        color: "bg-teal-500 text-white",
+        route: "/admin/connect",
+        active: isRouteActive("/admin/connect"),
       });
       return items;
     }

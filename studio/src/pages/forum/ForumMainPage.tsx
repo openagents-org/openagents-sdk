@@ -8,19 +8,21 @@ import ForumTopicDetail from "@/components/forum/ForumTopicDetail";
  */
 const ForumMainPage: React.FC = () => {
   return (
-    <Routes>
-      {/* Topic list page */}
-      <Route
-        index
-        element={<ForumTopicList />}
-      />
+    <div className="h-full dark:bg-gray-900">
+      <Routes>
+        {/* Topic list page */}
+        <Route
+          index
+          element={<ForumTopicList />}
+        />
 
-      {/* Topic detail page */}
-      <Route
-        path=":topicId"
-        element={<ForumTopicDetail />}
-      />
-    </Routes>
+        {/* Topic detail page */}
+        <Route
+          path=":topicId"
+          element={<ForumTopicDetail />}
+        />
+      </Routes>
+    </div>
   );
 };
 

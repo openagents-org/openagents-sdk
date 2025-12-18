@@ -183,6 +183,28 @@ export function SidebarPrimary() {
         index: currentIndex++,
       });
 
+      // Add Service Agents quick access
+      items.push({
+        icon: NavigationIcons.ServiceAgents as React.ComponentType,
+        label: t("navigation.serviceAgents"),
+        href: "/admin/service-agents",
+        active: isRouteActive("/admin/service-agents"),
+        className:
+          "border-white bg-indigo-500 hover:bg-indigo-600 text-white hover:text-white",
+        index: currentIndex++,
+      });
+
+      // Add Connection Guide quick access
+      items.push({
+        icon: Users,
+        label: t("navigation.connectionGuide") || "Connection Guide",
+        href: "/admin/connect",
+        active: isRouteActive("/admin/connect"),
+        className:
+          "border-white bg-teal-500 hover:bg-teal-600 text-white hover:text-white",
+        index: currentIndex++,
+      });
+
       // Add Admin menu item
       const adminRoute = secondaryRoutes.find(
         (route) => route.navigationConfig?.key === PLUGIN_NAME_ENUM.ADMIN

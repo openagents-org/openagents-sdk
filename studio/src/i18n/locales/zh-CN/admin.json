@@ -44,6 +44,11 @@
       "updateAdminPasswordDesc": "修改 admin 组密码",
       "startTour": "新手引导"
     },
+    "menuGroups": {
+      "serviceAgentsDesc": "管理服务代理",
+      "eventExplorerDesc": "搜索和浏览事件",
+      "llmLogsDesc": "查看 LLM 请求日志"
+    },
     "recentActivity": {
       "title": "最近活动",
       "noActivity": "没有最近活动"
@@ -109,6 +114,7 @@
       "connectionGuide": "连接指南",
       "modManagement": "模块管理",
       "eventLogs": "事件日志",
+      "eventExplorer": "事件浏览器",
       "llmLogs": "LLM 日志",
       "eventDebugger": "事件调试器"
     }

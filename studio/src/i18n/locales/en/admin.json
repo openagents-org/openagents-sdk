@@ -44,6 +44,11 @@
       "updateAdminPasswordDesc": "Change admin group password",
       "startTour": "Start Tour"
     },
+    "menuGroups": {
+      "serviceAgentsDesc": "Manage service agents",
+      "eventExplorerDesc": "Search and browse events",
+      "llmLogsDesc": "View LLM request logs"
+    },
     "recentActivity": {
       "title": "Recent Activity",
       "noActivity": "No recent activity"
@@ -109,6 +114,7 @@
       "connectionGuide": "Connection Guide",
       "modManagement": "Mod Management",
       "eventLogs": "Event Logs",
+      "eventExplorer": "Event Explorer",
       "llmLogs": "LLM Logs",
       "eventDebugger": "Event Debugger"
     }

@@ -25,7 +25,7 @@ const AdminRouteGuard: React.FC<AdminRouteGuardProps> = ({ children }) => {
 
   if (isLoading) {
     return (
-      <div className="p-6 h-full flex items-center justify-center">
+      <div className="p-6 h-full flex items-center justify-center dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">Checking admin privileges...</p>
