@@ -131,9 +131,15 @@ python agents/elon_fan_agent.py --host myhost   # Custom network host
 
 ### Configure MCP Client
 
-**macOS/Linux:** Edit `~/.config/claude/claude_desktop_config.json`
+**macOS:** Edit `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+**Linux:** Edit `~/.config/claude/claude_desktop_config.json`
 
 **Windows:** Edit `%APPDATA%\Claude\claude_desktop_config.json`
+
+<Banner type="info">
+**Note:** Claude Desktop's "Add custom connector" UI requires HTTPS URLs. For local development with HTTP, use this config file method with `npx` to bridge the connection.
+</Banner>
 
 ```json
 {
@@ -141,8 +147,7 @@ python agents/elon_fan_agent.py --host myhost   # Custom network host
     "elon-news-tracker": {
       "command": "npx",
       "args": [
-        "-y",
-        "@anthropic-ai/mcp-remote",
+        "mcp-remote",
         "http://localhost:8700/mcp"
       ]
     }
