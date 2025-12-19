@@ -6,7 +6,7 @@ import ServiceAgentDetail from "./components/ServiceAgentDetail";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 /**
- * Service Agents Management Main Page
+ * Service Agents Main Page
  * Page for managing service agents (admin only)
  */
 const ServiceAgentsMainPage: React.FC = () => {

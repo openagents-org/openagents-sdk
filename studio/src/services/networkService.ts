@@ -479,3 +479,117 @@ export const getCurrentNetworkHealth = async (
 
   return fetchNetworkHealth(selectedNetwork);
 };
+
+/**
+ * Upload network icon to the assets folder
+ * @param connection Network connection information
+ * @param file The image file to upload
+ * @returns Upload result with the asset URL
+ */
+export const uploadNetworkIcon = async (
+  connection: NetworkConnection,
+  file: File
+): Promise<{
+  success: boolean;
+  url?: string;
+  error?: string;
+}> => {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("type", "icon");
+
+    const protocol = connection.useHttps ? 'https' : 'http';
+    const baseUrl = `${protocol}://${connection.host}:${connection.port}`;
+
+    const response = await fetch(`${baseUrl}/api/assets/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return {
+        success: false,
+        error: `Upload failed: ${errorText}`,
+      };
+    }
+
+    const data = await response.json();
+
+    if (data.success && data.url) {
+      return {
+        success: true,
+        url: data.url,
+      };
+    } else {
+      return {
+        success: false,
+        error: data.error || "Upload failed",
+      };
+    }
+  } catch (error: any) {
+    console.error("Failed to upload icon:", error);
+    return {
+      success: false,
+      error: error.message || "Upload failed",
+    };
+  }
+};
+
+/**
+ * Check if a network is published on OpenAgents directory
+ * @param host The network host
+ * @param port The network port
+ * @returns Lookup result with network ID if published
+ */
+export const lookupNetworkPublication = async (
+  host: string,
+  port: number
+): Promise<{
+  published: boolean;
+  networkId?: string;
+  networkName?: string;
+  error?: string;
+}> => {
+  try {
+    const response = await fetch(
+      `https://endpoint.openagents.org/v1/networks/lookup?host=${encodeURIComponent(host)}&port=${port}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(10000),
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return { published: false };
+      }
+      return {
+        published: false,
+        error: `HTTP ${response.status}: ${response.statusText}`,
+      };
+    }
+
+    const result = await response.json();
+
+    if (result.code === 200 && result.data) {
+      return {
+        published: true,
+        networkId: result.data.id,
+        networkName: result.data.profile?.name,
+      };
+    }
+
+    return { published: false };
+  } catch (error: any) {
+    console.error("Failed to lookup network publication:", error);
+    return {
+      published: false,
+      error: error.message || "Lookup failed",
+    };
+  }
+};

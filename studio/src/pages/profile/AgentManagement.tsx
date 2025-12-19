@@ -15,6 +15,7 @@ interface AgentInfo {
 const AgentManagement: React.FC = () => {
   const { t } = useTranslation('network');
   const [agents, setAgents] = useState<AgentInfo[]>([]);
+  const [groups, setGroups] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [kickingAgentId, setKickingAgentId] = useState<string | null>(null);
@@ -47,6 +48,11 @@ const AgentManagement: React.FC = () => {
         );
 
         setAgents(agentsList);
+
+        // Store groups data
+        if (healthData.groups) {
+          setGroups(healthData.groups);
+        }
       } else {
         setAgents([]);
       }
@@ -62,6 +68,17 @@ const AgentManagement: React.FC = () => {
   useEffect(() => {
     fetchAgents();
   }, [fetchAgents]);
+
+  // Get group names for an agent
+  const getAgentGroups = useCallback((agentId: string): string[] => {
+    const agentGroups: string[] = [];
+    for (const [groupName, members] of Object.entries(groups)) {
+      if (Array.isArray(members) && members.includes(agentId)) {
+        agentGroups.push(groupName);
+      }
+    }
+    return agentGroups;
+  }, [groups]);
 
   // Handle kick agent
   const handleKickAgent = async (targetAgentId: string) => {
@@ -151,7 +168,7 @@ const AgentManagement: React.FC = () => {
       <div className="flex items-center justify-between mb-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {t('agents.title')}
+            Connected Agents
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             {t('agents.subtitle')}
@@ -236,6 +253,9 @@ const AgentManagement: React.FC = () => {
                 {t('agents.table.id')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Group
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 {t('agents.table.status')}
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -247,7 +267,7 @@ const AgentManagement: React.FC = () => {
             {agents.length === 0 ? (
               <tr>
                 <td
-                  colSpan={3}
+                  colSpan={4}
                   className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
                 >
                   <svg
@@ -287,6 +307,26 @@ const AgentManagement: React.FC = () => {
                           </div>
                         )}
                       </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex flex-wrap gap-1">
+                      {getAgentGroups(agent.agent_id).length > 0 ? (
+                        getAgentGroups(agent.agent_id).map((group) => (
+                          <span
+                            key={group}
+                            className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                              group === 'admin'
+                                ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                                : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                            }`}
+                          >
+                            {group}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-gray-400 dark:text-gray-500 text-xs">-</span>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

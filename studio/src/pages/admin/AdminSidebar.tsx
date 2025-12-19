@@ -97,6 +97,16 @@ const AdminSidebar: React.FC = () => {
     {
       title: t("sidebar.sections.agents"),
       items: [
+        ...(isAdmin
+          ? [
+              {
+                id: "service-agents",
+                label: t("sidebar.items.serviceAgents"),
+                path: "/admin/service-agents",
+                icon: Server,
+              },
+            ]
+          : []),
         {
           id: "agents",
           label: t("sidebar.items.connectedAgents"),
@@ -109,16 +119,6 @@ const AdminSidebar: React.FC = () => {
           path: "/admin/groups",
           icon: UserCog,
         },
-        ...(isAdmin
-          ? [
-              {
-                id: "service-agents",
-                label: t("sidebar.items.serviceAgents"),
-                path: "/admin/service-agents",
-                icon: Server,
-              },
-            ]
-          : []),
         {
           id: "connect",
           label: t("sidebar.items.connectionGuide"),
@@ -224,8 +224,10 @@ const AdminSidebar: React.FC = () => {
               {/* Section Items */}
               <div className="space-y-0.5">
                 {section.items.map((item) => {
-                  const IconComponent = item.icon;
                   const active = isActive(item.path);
+                  // Check if icon is a React element (JSX) or a component
+                  const isJsxElement = React.isValidElement(item.icon);
+                  const IconComponent = item.icon as React.ComponentType<{ className?: string }>;
                   return (
                     <Button
                       key={item.id}
@@ -242,7 +244,11 @@ const AdminSidebar: React.FC = () => {
                       `}
                       onClick={() => navigate(item.path)}
                     >
-                      <IconComponent className="w-5 h-5 flex-shrink-0 mr-3" />
+                      {isJsxElement ? (
+                        <span className="flex-shrink-0 mr-3">{item.icon as React.ReactNode}</span>
+                      ) : (
+                        <IconComponent className="w-5 h-5 flex-shrink-0 mr-3" />
+                      )}
                       <span className="text-left">{item.label}</span>
                     </Button>
                   );

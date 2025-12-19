@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useOpenAgents } from '@/context/OpenAgentsProvider';
 import { profileSelectors } from '@/stores/profileStore';
@@ -8,7 +8,8 @@ import { Input } from '@/components/layout/ui/input';
 import { Textarea } from '@/components/layout/ui/textarea';
 import { Switch, SwitchWrapper } from '@/components/layout/ui/switch';
 import { Badge } from '@/components/layout/ui/badge';
-import { AlertCircle, CheckCircle2, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, X, Upload, Loader2 } from 'lucide-react';
+import { uploadNetworkIcon } from '@/services/networkService';
 
 interface NetworkProfileData {
   discoverable: boolean;
@@ -28,16 +29,18 @@ interface NetworkProfileData {
 const NetworkProfile: React.FC = () => {
   const { t } = useTranslation('network');
   const { connector } = useOpenAgents();
-  const { agentName } = useAuthStore();
+  const { agentName, selectedNetwork } = useAuthStore();
   const healthData = profileSelectors.useHealthData();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Get default port from HTTP transport if available
   const getDefaultPort = (): number => {
+    // healthData from store is HealthResponse type with .data wrapper
     if (healthData?.data?.transports) {
       const httpTransport = healthData.data.transports.find(
         (t: any) => t.type === 'http'
       );
-      return httpTransport?.port || 8700;
+      return httpTransport?.config?.port || httpTransport?.port || 8700;
     }
     return 8700;
   };
@@ -61,6 +64,7 @@ const NetworkProfile: React.FC = () => {
   const [categoryInput, setCategoryInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingIcon, setIsUploadingIcon] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -78,8 +82,8 @@ const NetworkProfile: React.FC = () => {
         const healthResponse = await connector.getNetworkHealth();
         console.log('📡 Health response:', healthResponse);
 
-        // Try different possible field names for profile
-        const profile = healthResponse?.data?.network_profile;
+        // getNetworkHealth() already returns response.data, so no extra .data needed
+        const profile = healthResponse?.network_profile;
 
         if (profile) {
           console.log('✅ Found profile data:', profile);
@@ -149,6 +153,52 @@ const NetworkProfile: React.FC = () => {
       'categories',
       formData.categories.filter(cat => cat !== categoryToRemove)
     );
+  };
+
+  // Handle icon file upload
+  const handleIconUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image file must be less than 5MB');
+      return;
+    }
+
+    if (!selectedNetwork) {
+      setError('No network connection available');
+      return;
+    }
+
+    try {
+      setIsUploadingIcon(true);
+      setError(null);
+
+      const result = await uploadNetworkIcon(selectedNetwork, file);
+
+      if (result.success && result.url) {
+        handleInputChange('icon', result.url);
+        setSuccess('Icon uploaded successfully');
+      } else {
+        setError(result.error || 'Failed to upload icon');
+      }
+    } catch (err: any) {
+      console.error('Failed to upload icon:', err);
+      setError(err.message || 'Failed to upload icon');
+    } finally {
+      setIsUploadingIcon(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -374,14 +424,45 @@ const NetworkProfile: React.FC = () => {
               <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {t('profile.icon')}
               </label>
-              <Input
-                type="url"
-                variant="lg"
-                value={formData.icon}
-                onChange={(e) => handleInputChange('icon', e.target.value)}
-                className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="https://openagents.org/icons/work-test.png"
-              />
+              <div className="flex gap-3">
+                <Input
+                  type="url"
+                  variant="lg"
+                  value={formData.icon}
+                  onChange={(e) => handleInputChange('icon', e.target.value)}
+                  className="flex-1 p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="https://openagents.org/icons/work-test.png"
+                />
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleIconUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingIcon}
+                  variant="outline"
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  {isUploadingIcon ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Enter a URL or upload an image (max 5MB). Uploaded images will be saved to the network's assets folder.
+              </p>
               {formData.icon && (
                 <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 inline-block">
                   <img

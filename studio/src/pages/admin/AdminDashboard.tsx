@@ -30,7 +30,14 @@ import {
   Search,
   Monitor,
   Bug,
+  Wifi,
+  Network,
+  CheckCircle,
+  XCircle,
+  Radio,
+  ExternalLink,
 } from "lucide-react";
+import { lookupNetworkPublication } from "@/services/networkService";
 
 interface DashboardStats {
   totalAgents: number;
@@ -40,6 +47,16 @@ interface DashboardStats {
   uptime: string;
   eventsPerMinute: number;
   totalGroups: number;
+}
+
+interface TransportInfo {
+  type: string;
+  port: number;
+  enabled: boolean;
+  host?: string;
+  mcp_enabled?: boolean;
+  studio_enabled?: boolean;
+  [key: string]: any;
 }
 
 const AdminDashboard: React.FC = () => {
@@ -65,6 +82,13 @@ const AdminDashboard: React.FC = () => {
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [sendingBroadcast, setSendingBroadcast] = useState(false);
   const [showTour, setShowTour] = useState(false);
+  const [transports, setTransports] = useState<TransportInfo[]>([]);
+  const [networkPublication, setNetworkPublication] = useState<{
+    published: boolean;
+    networkId?: string;
+    networkName?: string;
+    loading: boolean;
+  }>({ published: false, loading: true });
 
   // Check if user has seen the tour
   useEffect(() => {
@@ -168,6 +192,20 @@ const AdminDashboard: React.FC = () => {
         eventsPerMinute,
         totalGroups,
       });
+
+      // Extract transport information
+      const transportData = healthData?.transports || [];
+      const transportList: TransportInfo[] = transportData.map((t: any) => ({
+        type: t.type || 'unknown',
+        port: t.config?.port || t.port || 0,
+        enabled: t.enabled !== false,
+        host: t.config?.host || t.host || '0.0.0.0',
+        // Check for both naming conventions: serve_mcp/serve_studio (http.py) and mcp_enabled/studio_enabled
+        mcp_enabled: t.config?.serve_mcp || t.config?.mcp_enabled || t.serve_mcp || t.mcp_enabled,
+        studio_enabled: t.config?.serve_studio || t.config?.studio_enabled || t.serve_studio || t.studio_enabled,
+        ...t.config,
+      }));
+      setTransports(transportList);
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
       toast.error("Failed to load dashboard data");
@@ -183,6 +221,27 @@ const AdminDashboard: React.FC = () => {
     const interval = setInterval(fetchDashboardData, 30000);
     return () => clearInterval(interval);
   }, [fetchDashboardData]);
+
+  // Check network publication status
+  useEffect(() => {
+    const checkPublication = async () => {
+      if (!selectedNetwork) {
+        setNetworkPublication({ published: false, loading: false });
+        return;
+      }
+
+      setNetworkPublication(prev => ({ ...prev, loading: true }));
+      const result = await lookupNetworkPublication(selectedNetwork.host, selectedNetwork.port);
+      setNetworkPublication({
+        published: result.published,
+        networkId: result.networkId,
+        networkName: result.networkName,
+        loading: false,
+      });
+    };
+
+    checkPublication();
+  }, [selectedNetwork]);
 
   const handleRestartNetwork = async () => {
       const confirmed = await confirm(
@@ -337,12 +396,94 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Network Info */}
+        {/* Network Status Panel - Compact inline design */}
         {selectedNetwork && (
-          <Card className="mb-3 border-gray-200 dark:border-gray-700">
-            <CardContent className="p-2">
-              <div className="text-xs font-semibold text-blue-900 dark:text-blue-100">
-                {t('dashboard.networkInfo')}: {selectedNetwork.host}:{selectedNetwork.port}
+          <Card className="mb-4 border-gray-200 dark:border-gray-700">
+            <CardContent className="p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Connection Status */}
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {selectedNetwork.host}:{selectedNetwork.port}
+                  </span>
+                </div>
+
+                <div className="h-4 w-px bg-gray-300 dark:bg-gray-600" />
+
+                {/* Transports - Inline */}
+                {transports.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {transports.map((transport, index) => (
+                      <div
+                        key={index}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${
+                          transport.enabled
+                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                            : 'bg-gray-50 dark:bg-gray-900 text-gray-400'
+                        }`}
+                      >
+                        {transport.type === 'grpc' && (
+                          <Radio className="w-3 h-3" />
+                        )}
+                        {transport.type === 'http' && (
+                          <Globe className="w-3 h-3" />
+                        )}
+                        {transport.type === 'websocket' && (
+                          <Wifi className="w-3 h-3" />
+                        )}
+                        {!['grpc', 'http', 'websocket'].includes(transport.type) && (
+                          <ArrowLeftRight className="w-3 h-3" />
+                        )}
+                        <span className="uppercase">{transport.type}</span>
+                        <span className="text-gray-400 dark:text-gray-500">:{transport.port}</span>
+
+                        {/* HTTP features shown as small badges */}
+                        {transport.type === 'http' && (transport.mcp_enabled || transport.studio_enabled) && (
+                          <span className="flex items-center gap-1 ml-1 pl-1.5 border-l border-gray-300 dark:border-gray-600">
+                            {transport.mcp_enabled && (
+                              <span className="px-1 py-0.5 text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded">
+                                MCP
+                              </span>
+                            )}
+                            {transport.studio_enabled && (
+                              <span className="px-1 py-0.5 text-[10px] bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded">
+                                Studio
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    No transports configured
+                  </span>
+                )}
+
+                <div className="h-4 w-px bg-gray-300 dark:bg-gray-600" />
+
+                {/* Publication Status */}
+                {networkPublication.loading ? (
+                  <span className="text-xs text-gray-400">Checking...</span>
+                ) : networkPublication.published ? (
+                  <a
+                    href={`https://network.openagents.org/${networkPublication.networkId}/`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+                  >
+                    <Globe className="w-3 h-3" />
+                    Published
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                    <Lock className="w-3 h-3" />
+                    Private
+                  </span>
+                )}
               </div>
             </CardContent>
           </Card>

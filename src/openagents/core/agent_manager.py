@@ -564,6 +564,70 @@ class AgentManager:
         """Get the path to the environment variables file for an agent."""
         return self.env_vars_dir / f"{agent_id}.json"
 
+    def _get_global_env_vars_file(self) -> Path:
+        """Get the path to the global environment variables file."""
+        return self.env_vars_dir / "_global.json"
+
+    def get_global_env_vars(self) -> Dict[str, str]:
+        """Get global environment variables shared by all agents.
+
+        Returns:
+            dict: Global environment variables
+        """
+        env_file = self._get_global_env_vars_file()
+
+        if not env_file.exists():
+            return {}
+
+        try:
+            with open(env_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data.get("env_vars", {})
+
+        except Exception as e:
+            logger.error(f"Error reading global env vars: {e}")
+            return {}
+
+    def set_global_env_vars(self, env_vars: Dict[str, str]) -> Dict[str, Any]:
+        """Set global environment variables shared by all agents.
+
+        Args:
+            env_vars: Dictionary of environment variable name -> value
+
+        Returns:
+            dict: Result with 'success' and 'message'
+        """
+        env_file = self._get_global_env_vars_file()
+
+        try:
+            # Load existing data or create new
+            data = {}
+            if env_file.exists():
+                try:
+                    with open(env_file, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                except:
+                    pass
+
+            # Update env vars
+            data["env_vars"] = env_vars
+            data["updated_at"] = datetime.now().isoformat()
+
+            # Write to file
+            with open(env_file, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+
+            logger.info(f"Saved {len(env_vars)} global environment variables")
+
+            return {
+                "success": True,
+                "message": "Global environment variables saved successfully"
+            }
+
+        except Exception as e:
+            logger.error(f"Error saving global env vars: {e}")
+            return {"success": False, "message": f"Failed to save: {e}"}
+
     def get_agent_env_vars(self, agent_id: str) -> Optional[Dict[str, str]]:
         """Get environment variables for an agent.
 
@@ -662,7 +726,8 @@ class AgentManager:
     def _build_agent_env(self, agent_id: str) -> Dict[str, str]:
         """Build the environment dictionary for starting an agent process.
 
-        Combines system environment with agent-specific variables.
+        Combines system environment with global and agent-specific variables.
+        Priority: system env < global env < agent-specific env
 
         Args:
             agent_id: ID of the agent
@@ -673,7 +738,12 @@ class AgentManager:
         # Start with current environment
         env = os.environ.copy()
 
-        # Add agent-specific variables
+        # Add global environment variables (lower priority than agent-specific)
+        global_env = self.get_global_env_vars()
+        if global_env:
+            env.update(global_env)
+
+        # Add agent-specific variables (highest priority)
         agent_env = self.get_agent_env_vars(agent_id)
         if agent_env:
             env.update(agent_env)

@@ -56,7 +56,7 @@ import { clearAllOpenAgentsDataForLogout } from "@/utils/cookies";
 import { useI18n } from "@/hooks/useI18n";
 import { SUPPORTED_LANGUAGES, SupportedLanguage } from "@/i18n/config";
 import { useConfirm } from "@/context/ConfirmContext";
-import logo from "@/assets/images/open-agents-logo.png";
+import logo from "@/assets/images/openagents_logo_trans_black.png";
 
 export function SidebarPrimary() {
   const { theme, toggleTheme } = useThemeStore();
@@ -194,12 +194,12 @@ export function SidebarPrimary() {
         index: currentIndex++,
       });
 
-      // Add Connection Guide quick access
+      // Add Connected Agents quick access
       items.push({
         icon: Users,
-        label: t("navigation.connectionGuide") || "Connection Guide",
-        href: "/admin/connect",
-        active: isRouteActive("/admin/connect"),
+        label: t("navigation.connectedAgents") || "Connected Agents",
+        href: "/admin/agents",
+        active: isRouteActive("/admin/agents"),
         className:
           "border-white bg-teal-500 hover:bg-teal-600 text-white hover:text-white",
         index: currentIndex++,
@@ -326,9 +326,14 @@ export function SidebarPrimary() {
   return (
     <div className="flex flex-col items-center justify-between shrink-0 py-2.5 gap-5 w-[70px] lg:w-(--sidebar-collapsed-width)">
       {/* Logo/Brand Icon */}
-      <div className="mb-2">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg">
-          <img src={logo} alt="OA" className="w-10 h-10" />
+      <div className="mb-2 mt-2">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center">
+          <img
+            src={logo}
+            alt="OA"
+            className="w-10 h-10 dark:invert"
+            style={{ filter: 'invert(29%) sepia(92%) saturate(3526%) hue-rotate(256deg) brightness(87%) contrast(91%)' }}
+          />
         </div>
       </div>
 

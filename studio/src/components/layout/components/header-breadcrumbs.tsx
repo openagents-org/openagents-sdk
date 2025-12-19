@@ -101,8 +101,11 @@ export function HeaderBreadcrumbs() {
       return pathname.startsWith(route);
     };
 
-    // Add home/dashboard as first item (only if not on root path)
-    if (pathname !== "/") {
+    // Check if this is an admin route
+    const isAdminRoute = pathname.startsWith("/admin");
+
+    // Add home/dashboard as first item (only if not on root path and not admin route)
+    if (pathname !== "/" && !isAdminRoute) {
       items.push({
         label: "Home",
         href: "/",
@@ -150,8 +153,13 @@ export function HeaderBreadcrumbs() {
       const segments = pathname.split("/").filter(Boolean);
       segments.forEach((segment, index) => {
         const segmentPath = "/" + segments.slice(0, index + 1).join("/");
+        // Capitalize first letter for admin routes
+        const decodedSegment = decodeURIComponent(segment);
+        const label = isAdminRoute
+          ? decodedSegment.charAt(0).toUpperCase() + decodedSegment.slice(1)
+          : decodedSegment;
         items.push({
-          label: decodeURIComponent(segment),
+          label,
           href: segmentPath,
           isActive: index === segments.length - 1,
         });

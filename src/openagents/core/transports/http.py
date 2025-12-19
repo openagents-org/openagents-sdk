@@ -119,6 +119,13 @@ class HttpTransport(Transport):
         self.app.router.add_put("/api/agents/service/{agent_id}/source", self.save_service_agent_source)
         self.app.router.add_get("/api/agents/service/{agent_id}/env", self.get_service_agent_env)
         self.app.router.add_put("/api/agents/service/{agent_id}/env", self.save_service_agent_env)
+        # Global environment variables for all service agents
+        self.app.router.add_get("/api/agents/service/env/global", self.get_global_env)
+        self.app.router.add_put("/api/agents/service/env/global", self.save_global_env)
+
+        # Assets upload endpoint
+        self.app.router.add_post("/api/assets/upload", self.upload_asset)
+        self.app.router.add_get("/assets/{filename:.*}", self.serve_asset)
 
         # Event Explorer API endpoints
         self.app.router.add_get("/api/events/sync", self.sync_events)
@@ -1677,6 +1684,189 @@ class HttpTransport(Transport):
                 {"success": False, "error": str(e)},
                 status=500,
             )
+
+    async def get_global_env(self, request):
+        """Get global environment variables for all service agents."""
+        try:
+            if not self.network_instance or not hasattr(self.network_instance, "agent_manager"):
+                return web.json_response(
+                    {"success": False, "error": "Agent manager not available"},
+                    status=503,
+                )
+
+            agent_manager = self.network_instance.agent_manager
+            env_vars = agent_manager.get_global_env_vars()
+
+            return web.json_response({
+                "success": True,
+                "env_vars": env_vars
+            })
+
+        except Exception as e:
+            logger.error(f"Error getting global env vars: {e}")
+            return web.json_response(
+                {"success": False, "error": str(e)},
+                status=500,
+            )
+
+    async def save_global_env(self, request):
+        """Save global environment variables for all service agents."""
+        try:
+            if not self.network_instance or not hasattr(self.network_instance, "agent_manager"):
+                return web.json_response(
+                    {"success": False, "error": "Agent manager not available"},
+                    status=503,
+                )
+
+            # Parse request body
+            try:
+                data = await request.json()
+            except Exception:
+                return web.json_response(
+                    {"success": False, "error": "Invalid JSON body"},
+                    status=400,
+                )
+
+            env_vars = data.get("env_vars")
+            if env_vars is None:
+                return web.json_response(
+                    {"success": False, "error": "env_vars field required"},
+                    status=400,
+                )
+
+            if not isinstance(env_vars, dict):
+                return web.json_response(
+                    {"success": False, "error": "env_vars must be an object"},
+                    status=400,
+                )
+
+            agent_manager = self.network_instance.agent_manager
+            result = agent_manager.set_global_env_vars(env_vars)
+
+            if result["success"]:
+                return web.json_response(result)
+            else:
+                return web.json_response(result, status=400)
+
+        except Exception as e:
+            logger.error(f"Error saving global env vars: {e}")
+            return web.json_response(
+                {"success": False, "error": str(e)},
+                status=500,
+            )
+
+    async def upload_asset(self, request):
+        """Upload an asset file (icon, image, etc.) to the workspace assets folder."""
+        try:
+            if not self.workspace_path:
+                return web.json_response(
+                    {"success": False, "error": "Workspace not configured"},
+                    status=503,
+                )
+
+            # Parse multipart form data
+            reader = await request.multipart()
+
+            file_data = None
+            file_name = None
+            asset_type = "general"  # default type
+
+            async for field in reader:
+                if field.name == "file":
+                    file_name = field.filename
+                    file_data = await field.read()
+                elif field.name == "type":
+                    asset_type = (await field.read()).decode("utf-8")
+
+            if not file_data or not file_name:
+                return web.json_response(
+                    {"success": False, "error": "No file provided"},
+                    status=400,
+                )
+
+            # Validate file size (max 5MB for assets)
+            if len(file_data) > 5 * 1024 * 1024:
+                return web.json_response(
+                    {"success": False, "error": "File too large (max 5MB)"},
+                    status=400,
+                )
+
+            # Sanitize filename
+            safe_filename = os.path.basename(file_name)
+
+            # Generate unique filename to avoid conflicts
+            file_ext = os.path.splitext(safe_filename)[1]
+            unique_id = str(uuid.uuid4())[:8]
+            final_filename = f"{asset_type}_{unique_id}{file_ext}"
+
+            # Create assets directory if it doesn't exist
+            assets_dir = Path(self.workspace_path) / "assets"
+            assets_dir.mkdir(parents=True, exist_ok=True)
+
+            # Save the file
+            file_path = assets_dir / final_filename
+            with open(file_path, "wb") as f:
+                f.write(file_data)
+
+            # Generate URL for the asset
+            # The asset will be served at /assets/{filename}
+            asset_url = f"/assets/{final_filename}"
+
+            logger.info(f"Uploaded asset: {final_filename} ({len(file_data)} bytes)")
+
+            return web.json_response({
+                "success": True,
+                "url": asset_url,
+                "filename": final_filename,
+                "size": len(file_data)
+            })
+
+        except Exception as e:
+            logger.error(f"Error uploading asset: {e}")
+            return web.json_response(
+                {"success": False, "error": str(e)},
+                status=500,
+            )
+
+    async def serve_asset(self, request):
+        """Serve an asset file from the workspace assets folder."""
+        try:
+            if not self.workspace_path:
+                return web.Response(status=503, text="Workspace not configured")
+
+            filename = request.match_info.get("filename", "")
+
+            # Sanitize to prevent path traversal
+            safe_filename = os.path.basename(filename)
+            if safe_filename != filename:
+                return web.Response(status=400, text="Invalid filename")
+
+            assets_dir = Path(self.workspace_path) / "assets"
+            file_path = assets_dir / safe_filename
+
+            if not file_path.exists() or not file_path.is_file():
+                return web.Response(status=404, text="Asset not found")
+
+            # Determine content type
+            content_type, _ = mimetypes.guess_type(str(file_path))
+            if not content_type:
+                content_type = "application/octet-stream"
+
+            # Read and return file
+            with open(file_path, "rb") as f:
+                content = f.read()
+
+            return web.Response(
+                body=content,
+                content_type=content_type,
+                headers={
+                    "Cache-Control": "public, max-age=86400"  # Cache for 24 hours
+                }
+            )
+
+        except Exception as e:
+            logger.error(f"Error serving asset: {e}")
+            return web.Response(status=500, text=str(e))
 
     async def sync_events(self, request):
         """Handle event index sync from GitHub."""

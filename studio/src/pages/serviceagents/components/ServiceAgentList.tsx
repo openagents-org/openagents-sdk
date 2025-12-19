@@ -7,11 +7,14 @@ import {
   startServiceAgent,
   stopServiceAgent,
   restartServiceAgent,
+  getGlobalEnvVars,
+  saveGlobalEnvVars,
   type ServiceAgent,
+  type AgentEnvVars,
 } from "@/services/serviceAgentsApi";
 import { Button } from "@/components/layout/ui/button";
 import { Badge } from "@/components/layout/ui/badge";
-import { AlertCircle, RefreshCw, FileText, Eye, Play, Square, Loader2 } from "lucide-react";
+import { AlertCircle, RefreshCw, FileText, Eye, Play, Square, Loader2, Settings, Plus, Trash2, Save, ChevronDown, ChevronUp } from "lucide-react";
 
 /**
  * Service Agent List Component
@@ -24,6 +27,16 @@ const ServiceAgentList: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const navigate = useNavigate();
+
+  // Global environment variables state
+  const [globalEnvExpanded, setGlobalEnvExpanded] = useState(false);
+  const [globalEnvVars, setGlobalEnvVars] = useState<AgentEnvVars>({});
+  const [originalGlobalEnvVars, setOriginalGlobalEnvVars] = useState<AgentEnvVars>({});
+  const [loadingGlobalEnv, setLoadingGlobalEnv] = useState(false);
+  const [savingGlobalEnv, setSavingGlobalEnv] = useState(false);
+  const [globalEnvFetched, setGlobalEnvFetched] = useState(false);
+  const [newGlobalEnvName, setNewGlobalEnvName] = useState("");
+  const [newGlobalEnvValue, setNewGlobalEnvValue] = useState("");
 
   // Fetch agents
   const fetchAgents = useCallback(async () => {
@@ -48,6 +61,74 @@ const ServiceAgentList: React.FC = () => {
     const interval = setInterval(fetchAgents, 5000);
     return () => clearInterval(interval);
   }, [fetchAgents]);
+
+  // Fetch global environment variables when expanded
+  const fetchGlobalEnvVars = useCallback(async () => {
+    try {
+      setLoadingGlobalEnv(true);
+      const envVars = await getGlobalEnvVars();
+      setGlobalEnvVars(envVars);
+      setOriginalGlobalEnvVars(envVars);
+    } catch (err) {
+      console.error("Failed to fetch global env vars:", err);
+      toast.error("Failed to fetch global environment variables");
+    } finally {
+      setLoadingGlobalEnv(false);
+      setGlobalEnvFetched(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (globalEnvExpanded && !globalEnvFetched && !loadingGlobalEnv) {
+      fetchGlobalEnvVars();
+    }
+  }, [globalEnvExpanded, globalEnvFetched, loadingGlobalEnv, fetchGlobalEnvVars]);
+
+  // Handle adding new global env var
+  const handleAddGlobalEnvVar = () => {
+    const name = newGlobalEnvName.trim();
+    if (!name) {
+      toast.error("Variable name is required");
+      return;
+    }
+    if (globalEnvVars[name] !== undefined) {
+      toast.error("Variable already exists");
+      return;
+    }
+    setGlobalEnvVars({ ...globalEnvVars, [name]: newGlobalEnvValue });
+    setNewGlobalEnvName("");
+    setNewGlobalEnvValue("");
+  };
+
+  // Handle deleting global env var
+  const handleDeleteGlobalEnvVar = (name: string) => {
+    const newEnvVars = { ...globalEnvVars };
+    delete newEnvVars[name];
+    setGlobalEnvVars(newEnvVars);
+  };
+
+  // Handle updating global env var value
+  const handleUpdateGlobalEnvVar = (name: string, value: string) => {
+    setGlobalEnvVars({ ...globalEnvVars, [name]: value });
+  };
+
+  // Handle saving global env vars
+  const handleSaveGlobalEnvVars = async () => {
+    try {
+      setSavingGlobalEnv(true);
+      await saveGlobalEnvVars(globalEnvVars);
+      setOriginalGlobalEnvVars(globalEnvVars);
+      toast.success("Global environment variables saved successfully");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to save global environment variables";
+      toast.error(errorMessage);
+    } finally {
+      setSavingGlobalEnv(false);
+    }
+  };
+
+  // Check if global env vars have changed
+  const hasGlobalEnvChanges = JSON.stringify(globalEnvVars) !== JSON.stringify(originalGlobalEnvVars);
 
   // Handle agent action (start/stop/restart)
   const handleAction = async (
@@ -194,6 +275,138 @@ const ServiceAgentList: React.FC = () => {
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
           {loading ? t('list.refreshing') : t('list.refresh')}
         </Button>
+      </div>
+
+      {/* Global Environment Variables */}
+      <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+        <button
+          type="button"
+          onClick={() => setGlobalEnvExpanded(!globalEnvExpanded)}
+          className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+        >
+          <div className="flex items-center space-x-3">
+            <Settings className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            <div>
+              <h3 className="font-medium text-gray-900 dark:text-gray-100">
+                Global Environment Variables
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Shared environment variables for all service agents
+              </p>
+            </div>
+          </div>
+          {globalEnvExpanded ? (
+            <ChevronUp className="w-5 h-5 text-gray-400" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-gray-400" />
+          )}
+        </button>
+
+        {globalEnvExpanded && (
+          <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+            {loadingGlobalEnv ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                <span className="ml-2 text-gray-600 dark:text-gray-400">Loading...</span>
+              </div>
+            ) : (
+              <>
+                {/* Add new variable */}
+                <div className="flex items-center space-x-2 mb-4">
+                  <input
+                    type="text"
+                    placeholder="Variable name"
+                    value={newGlobalEnvName}
+                    onChange={(e) => setNewGlobalEnvName(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Value"
+                    value={newGlobalEnvValue}
+                    onChange={(e) => setNewGlobalEnvValue(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddGlobalEnvVar}
+                    className="px-3 py-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                {/* Variable list */}
+                <div className="space-y-2">
+                  {Object.keys(globalEnvVars).length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                      No global environment variables defined
+                    </p>
+                  ) : (
+                    Object.entries(globalEnvVars).map(([name, value]) => (
+                      <div key={name} className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          value={name}
+                          disabled
+                          className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm"
+                        />
+                        <input
+                          type="text"
+                          value={value}
+                          onChange={(e) => handleUpdateGlobalEnvVar(name, e.target.value)}
+                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteGlobalEnvVar(name)}
+                          className="px-2 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Save button */}
+                {hasGlobalEnvChanges && (
+                  <div className="mt-4 flex justify-end">
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      onClick={handleSaveGlobalEnvVars}
+                      disabled={savingGlobalEnv}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+                    >
+                      {savingGlobalEnv ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Note about restart */}
+                <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                  Note: Changes to global environment variables will apply to all service agents after restart.
+                </p>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Agents List */}

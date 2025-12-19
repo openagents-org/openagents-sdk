@@ -54,13 +54,16 @@ const TransportConfigPage: React.FC = () => {
     try {
       setRefreshing(true);
       const healthData = await connector.getNetworkHealth();
-      const transportsData = healthData?.data?.transports || [];
+      const transportsData = healthData?.transports || [];
 
       // Convert to TransportInfo format
       const transportsList: TransportInfo[] = transportsData.map((t: any) => {
-        const host = t.host || selectedNetwork?.host || "0.0.0.0";
-        const port = t.port || t.config?.port || 8700;
-        const protocol = t.tls?.enabled ? "https" : "http";
+        // Extract config values - backend returns { type, config: { port, host, serve_mcp, ... } }
+        const config = t.config || {};
+        const host = t.host || config.host || selectedNetwork?.host || "0.0.0.0";
+        const port = t.port || config.port || 8700;
+        const tls = t.tls || config.tls;
+        const protocol = tls?.enabled ? "https" : "http";
         let url = "";
 
         if (t.type === "http") {
@@ -68,25 +71,25 @@ const TransportConfigPage: React.FC = () => {
         } else if (t.type === "grpc") {
           url = `${host === "0.0.0.0" ? "localhost" : host}:${port}`;
         } else if (t.type === "websocket") {
-          const wsProtocol = t.tls?.enabled ? "wss" : "ws";
+          const wsProtocol = tls?.enabled ? "wss" : "ws";
           url = `${wsProtocol}://${host === "0.0.0.0" ? "localhost" : host}:${port}`;
         }
 
         return {
           type: t.type || "http",
-          enabled: t.enabled !== false,
+          enabled: t.enabled !== false && config.enabled !== false,
           port,
           host,
           url,
-          tls: t.tls,
-          corsOrigins: t.cors_origins || t.corsOrigins,
-          maxBodySize: t.max_body_size || t.maxBodySize,
-          serveMcp: t.serve_mcp || t.serveMcp,
-          serveStudio: t.serve_studio || t.serveStudio,
-          maxMessageSize: t.max_message_size || t.maxMessageSize,
-          keepAliveInterval: t.keepalive_interval || t.keepAliveInterval,
-          pingInterval: t.ping_interval || t.pingInterval,
-          maxConnections: t.max_connections || t.maxConnections,
+          tls,
+          corsOrigins: t.cors_origins || t.corsOrigins || config.cors_origins || config.corsOrigins,
+          maxBodySize: t.max_body_size || t.maxBodySize || config.max_body_size || config.maxBodySize,
+          serveMcp: t.serve_mcp || t.serveMcp || config.serve_mcp || config.serveMcp,
+          serveStudio: t.serve_studio || t.serveStudio || config.serve_studio || config.serveStudio,
+          maxMessageSize: t.max_message_size || t.maxMessageSize || config.max_message_size || config.maxMessageSize,
+          keepAliveInterval: t.keepalive_interval || t.keepAliveInterval || config.keepalive_interval || config.keepAliveInterval,
+          pingInterval: t.ping_interval || t.pingInterval || config.ping_interval || config.pingInterval,
+          maxConnections: t.max_connections || t.maxConnections || config.max_connections || config.maxConnections,
         };
       });
 
