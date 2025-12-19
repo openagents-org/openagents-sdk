@@ -1,4 +1,4 @@
-import React, { ReactNode, useContext, useState } from "react";
+import React, { ReactNode, useContext, useState, useEffect } from "react";
 import ModSidebar from "./ModSidebar";
 import Sidebar from "./Sidebar";
 import ConnectionLoadingOverlay from "./ConnectionLoadingOverlay";
@@ -7,7 +7,7 @@ import {
   OpenAgentsContext,
 } from "@/context/OpenAgentsProvider";
 import { useAuthStore } from "@/stores/authStore";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { LayoutProvider, useLayout } from "./components/context";
 import { HeaderBreadcrumbs } from "./components/header-breadcrumbs";
@@ -15,6 +15,8 @@ import { SidebarSecondary } from "./components/sidebar-secondary";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { Button } from "./ui/button";
 import { Menu } from "lucide-react";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { toast } from "sonner";
 
 interface RootLayoutProps {
   children: ReactNode;
@@ -116,14 +118,28 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
   const context = useContext(OpenAgentsContext);
   const isConnected = context?.isConnected || false;
   const location = useLocation();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { isAdmin, isLoading: isAdminLoading } = useIsAdmin();
+
+  // Check if current route is an admin route
+  const isAdminRoute = location.pathname.startsWith("/admin");
 
   // Determine if current route should hide the sidebar
   const shouldHideSidebar = location.pathname.startsWith("/agentworld");
 
   // Hide ModSidebar (left navigation) on admin routes
-  const shouldHideModSidebar = location.pathname.startsWith("/admin");
+  const shouldHideModSidebar = isAdminRoute;
+
+  // Admin route restriction: admin users can ONLY access /admin/* routes
+  useEffect(() => {
+    if (!isAdminLoading && isConnected && isAdmin && !isAdminRoute) {
+      console.log("🛡️ Admin user attempted to access non-admin route, redirecting to /admin/dashboard...");
+      toast.info("Admin users can only access the admin dashboard");
+      navigate("/admin/dashboard", { replace: true });
+    }
+  }, [isAdmin, isAdminLoading, isConnected, isAdminRoute, navigate]);
 
   // Close drawer when route changes on mobile
   React.useEffect(() => {

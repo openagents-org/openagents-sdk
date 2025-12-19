@@ -18,8 +18,6 @@ const AdminLoginPage: React.FC = () => {
   const {
     selectedNetwork,
     setAgentName,
-    clearAgentName,
-    clearNetwork,
     setPasswordHash,
     setAgentGroup,
   } = useAuthStore();

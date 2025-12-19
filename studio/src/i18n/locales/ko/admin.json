@@ -112,6 +112,60 @@
       "llmLogs": "LLM 로그",
       "eventDebugger": "이벤트 디버거"
     }
+  },
+  "publish": {
+    "title": "네트워크 게시",
+    "subtitle": "네트워크를 OpenAgents 디렉토리에 게시하여 다른 사람들이 찾을 수 있게 합니다.",
+    "form": {
+      "networkId": "네트워크 ID",
+      "networkIdPlaceholder": "예: my-awesome-network",
+      "networkIdHelp": "네트워크의 고유 식별자 (최소 7자)",
+      "networkName": "네트워크 이름",
+      "networkNamePlaceholder": "예: 내 멋진 네트워크",
+      "networkNameHelp": "네트워크의 표시 이름 (선택 사항, 헬스 엔드포인트에서 자동 감지)",
+      "organization": "조직",
+      "organizationPlaceholder": "예: openagents",
+      "organizationHelp": "OpenAgents에서의 조직 식별자",
+      "host": "호스트",
+      "hostPlaceholder": "예: mynetwork.example.com",
+      "port": "포트"
+    },
+    "buttons": {
+      "validate": "구성 검증",
+      "validating": "검증 중...",
+      "publish": "네트워크 게시",
+      "publishing": "게시 중..."
+    },
+    "validation": {
+      "success": "네트워크 구성이 유효합니다!",
+      "successToast": "검증 성공!",
+      "detectedName": "감지된 이름:",
+      "onlineAgents": "온라인 에이전트:",
+      "enabledMods": "활성화된 모듈:"
+    },
+    "errors": {
+      "networkIdRequired": "네트워크 ID가 필요합니다",
+      "hostRequired": "호스트가 필요합니다",
+      "portRequired": "포트가 필요합니다",
+      "invalidPort": "포트는 1에서 65535 사이여야 합니다",
+      "networkIdTooShort": "네트워크 ID는 최소 7자 이상이어야 합니다",
+      "organizationRequired": "조직이 필요합니다",
+      "healthCheckFailed": "헬스 체크 실패",
+      "networkUnreachable": "네트워크에 연결할 수 없습니다. 실행 중이고 접근 가능한지 확인하세요.",
+      "validationFailed": "검증 실패",
+      "validationError": "검증 중 오류가 발생했습니다",
+      "validateFirst": "먼저 구성을 검증하세요",
+      "publishFailed": "네트워크 게시 실패",
+      "publishError": "게시 중 오류가 발생했습니다"
+    },
+    "success": "네트워크가 성공적으로 게시되었습니다!",
+    "info": {
+      "title": "게시 정보",
+      "point1": "네트워크는 지정된 호스트와 포트에서 공개적으로 접근 가능해야 합니다.",
+      "point2": "검증을 위해 헬스 엔드포인트 (/api/health)에 접근 가능해야 합니다.",
+      "point3": "게시된 네트워크는 OpenAgents 디렉토리에 표시됩니다.",
+      "point4": "게시하려면 OpenAgents에 조직으로 등록되어 있어야 합니다."
+    }
   }
 }
 

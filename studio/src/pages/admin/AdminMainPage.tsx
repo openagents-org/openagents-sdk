@@ -12,6 +12,7 @@ import EventDebugger from "@/pages/profile/EventDebugger";
 import ModManagementPage from "@/pages/mod-management/ModManagementPage";
 import TransportConfig from "./TransportConfig";
 import ConnectionGuide from "./ConnectionGuide";
+import NetworkPublishPage from "./NetworkPublish";
 
 // Admin-only pages
 import LLMLogsMainPage from "@/pages/llmlogs/LLMLogsMainPage";
@@ -35,6 +36,7 @@ const AdminMainPage: React.FC = () => {
         {/* Network Management */}
         <Route path="network" element={<NetworkProfile />} />
         <Route path="transports" element={<TransportConfig />} />
+        <Route path="publish" element={<NetworkPublishPage />} />
         <Route path="import-export" element={<ImportExportPlaceholder />} />
         
         {/* Agent Management */}
@@ -51,6 +53,7 @@ const AdminMainPage: React.FC = () => {
         <Route path="event-explorer/*" element={<EventsMainPage />} />
         <Route path="llm-logs/*" element={<LLMLogsMainPage />} />
         <Route path="debugger" element={<EventDebugger />} />
+        <Route path="event-explorer/*" element={<EventsMainPage />} />
       </Routes>
     </AdminRouteGuard>
   );

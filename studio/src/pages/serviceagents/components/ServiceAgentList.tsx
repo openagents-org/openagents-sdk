@@ -255,8 +255,8 @@ const ServiceAgentList: React.FC = () => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate(`/studio/agents/service/${agent.agent_id}`)}
-                         className="
+                        onClick={() => navigate(`/admin/service-agents/${agent.agent_id}`)}
+                        className="
                           inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600
                           rounded-md text-sm font-medium text-gray-700 dark:text-gray-300
                           bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700

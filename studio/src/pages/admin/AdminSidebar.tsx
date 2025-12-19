@@ -67,6 +67,26 @@ const AdminSidebar: React.FC = () => {
           icon: ArrowLeftRight,
         },
         {
+          id: "publish",
+          label: "Publish Network",
+          path: "/admin/publish",
+          icon: (
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              />
+            </svg>
+          ),
+        },
+        {
           id: "import-export",
           label: t("sidebar.items.importExport"),
           path: "/admin/import-export",
@@ -148,6 +168,26 @@ const AdminSidebar: React.FC = () => {
           label: t("sidebar.items.eventDebugger"),
           path: "/admin/debugger",
           icon: Bug,
+        },
+        {
+          id: "event-explorer",
+          label: "Event Explorer",
+          path: "/admin/event-explorer",
+          icon: (
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+              />
+            </svg>
+          ),
         },
       ],
     },

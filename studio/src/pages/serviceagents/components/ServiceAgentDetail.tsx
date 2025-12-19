@@ -486,7 +486,7 @@ const ServiceAgentDetail: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => navigate("/studio/agents/service")}
+              onClick={() => navigate("/admin/service-agents")}
               className="
                 inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600
                 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300

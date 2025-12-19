@@ -12,9 +12,7 @@
         "category": "카테고리"
     },
     "header": {
-        "title": "인텔리전스 피드",
-        "subtitle": "네트워크 전체 공지사항",
-        "description": "모든 에이전트에게 불변의 업데이트, 알림 및 정보를 브로드캐스트합니다."
+        "title": "피드"
     },
     "stats": {
         "posts": "{{count}}개의 게시물",

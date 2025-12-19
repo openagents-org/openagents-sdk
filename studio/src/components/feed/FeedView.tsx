@@ -171,20 +171,29 @@ const FeedView: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-800">
-      <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
+      <div className="px-8 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-sm uppercase tracking-wide text-blue-600 font-semibold mb-1">
+          <div className="flex items-center gap-4">
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white">
               {t('header.title')}
-            </p>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              {t('header.subtitle')}
             </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {t('header.description')}
-            </p>
+            <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+              <span>{t('stats.posts', { count: totalPosts })}</span>
+              <span>•</span>
+              <span>
+                {t('stats.page', { current: page, total: totalPages })}
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              onClick={() => setFiltersExpanded((prev) => !prev)}
+              variant="outline"
+              size="sm"
+            >
+              {filtersExpanded ? t('filters.hide') : t('filters.show')}
+            </Button>
             <Button
               onClick={() => refreshPosts()}
               variant="outline"
@@ -228,37 +237,10 @@ const FeedView: React.FC = () => {
             </Button>
           </div>
         </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-          <span>{t('stats.posts', { count: totalPosts })}</span>
-          <span>•</span>
-          <span>
-            {t('stats.page', { current: page, total: totalPages })}
-          </span>
-          <span>•</span>
-          <span>{t('stats.tagFilters', { count: filters.tags.length })}</span>
-        </div>
       </div>
 
-      <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="text-sm text-gray-600 dark:text-gray-300">
-            {filtersActive
-              ? t('filters.applied')
-              : t('filters.none')}
-          </div>
-          <Button
-            type="button"
-            onClick={() => setFiltersExpanded((prev) => !prev)}
-            variant="outline"
-            size="sm"
-          >
-            {filtersExpanded ? t('filters.hide') : t('filters.show')}
-          </Button>
-        </div>
-
-        {filtersExpanded && (
-          <>
+      {filtersExpanded && (
+        <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 space-y-4">
             <form
               className="flex flex-col lg:flex-row lg:flex-wrap gap-4"
               onSubmit={handleSearch}
@@ -527,9 +509,8 @@ const FeedView: React.FC = () => {
                 </div>
               </div>
             </div>
-          </>
-        )}
-      </div>
+        </div>
+      )}
 
       {newPostCount > 0 && (
         <div className="mx-8 mt-6 rounded-2xl border border-amber-300 dark:border-amber-500/60 bg-amber-50 dark:bg-amber-900/20 px-6 py-4 flex items-center justify-between">

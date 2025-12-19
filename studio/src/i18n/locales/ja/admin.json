@@ -112,6 +112,60 @@
       "llmLogs": "LLM ログ",
       "eventDebugger": "イベントデバッガー"
     }
+  },
+  "publish": {
+    "title": "ネットワークを公開",
+    "subtitle": "ネットワークをOpenAgentsディレクトリに公開して、他のユーザーが見つけられるようにします。",
+    "form": {
+      "networkId": "ネットワークID",
+      "networkIdPlaceholder": "例: my-awesome-network",
+      "networkIdHelp": "ネットワークの一意識別子（最小7文字）",
+      "networkName": "ネットワーク名",
+      "networkNamePlaceholder": "例: 私の素晴らしいネットワーク",
+      "networkNameHelp": "ネットワークの表示名（オプション、ヘルスエンドポイントから自動検出）",
+      "organization": "組織",
+      "organizationPlaceholder": "例: openagents",
+      "organizationHelp": "OpenAgentsでの組織識別子",
+      "host": "ホスト",
+      "hostPlaceholder": "例: mynetwork.example.com",
+      "port": "ポート"
+    },
+    "buttons": {
+      "validate": "設定を検証",
+      "validating": "検証中...",
+      "publish": "ネットワークを公開",
+      "publishing": "公開中..."
+    },
+    "validation": {
+      "success": "ネットワーク設定は有効です！",
+      "successToast": "検証成功！",
+      "detectedName": "検出された名前:",
+      "onlineAgents": "オンラインエージェント:",
+      "enabledMods": "有効なモジュール:"
+    },
+    "errors": {
+      "networkIdRequired": "ネットワークIDは必須です",
+      "hostRequired": "ホストは必須です",
+      "portRequired": "ポートは必須です",
+      "invalidPort": "ポートは1から65535の間である必要があります",
+      "networkIdTooShort": "ネットワークIDは最低7文字必要です",
+      "organizationRequired": "組織は必須です",
+      "healthCheckFailed": "ヘルスチェック失敗",
+      "networkUnreachable": "ネットワークに接続できません。実行中でアクセス可能か確認してください。",
+      "validationFailed": "検証失敗",
+      "validationError": "検証中にエラーが発生しました",
+      "validateFirst": "先に設定を検証してください",
+      "publishFailed": "ネットワークの公開に失敗しました",
+      "publishError": "公開中にエラーが発生しました"
+    },
+    "success": "ネットワークが正常に公開されました！",
+    "info": {
+      "title": "公開について",
+      "point1": "ネットワークは指定されたホストとポートで公開アクセス可能である必要があります。",
+      "point2": "検証のためにヘルスエンドポイント（/api/health）にアクセス可能である必要があります。",
+      "point3": "公開されたネットワークはOpenAgentsディレクトリに表示されます。",
+      "point4": "公開するにはOpenAgentsに組織として登録されている必要があります。"
+    }
   }
 }
 

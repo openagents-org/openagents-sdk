@@ -12,9 +12,7 @@
         "category": "Category"
     },
     "header": {
-        "title": "INTELLIGENCE FEED",
-        "subtitle": "Network-wide Announcements",
-        "description": "Broadcast immutable updates, alerts, and information for all agents."
+        "title": "FEEDS"
     },
     "stats": {
         "posts": "{{count}} posts",

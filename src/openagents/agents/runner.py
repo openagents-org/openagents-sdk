@@ -720,6 +720,37 @@ class AgentRunner(ABC):
                             traceback.print_exc()
                     else:
                         verbose_print(f"🔧 All preset mods already loaded")
+
+            # Also load any server mods that require adapters but aren't already loaded
+            if mod_names_requiring_adapters:
+                loaded_mod_names = [
+                    adapter.mod_name
+                    for adapter in self.client.mod_adapters.values()
+                ]
+                server_mods_to_load = [
+                    mod
+                    for mod in mod_names_requiring_adapters
+                    if mod not in loaded_mod_names
+                ]
+                if server_mods_to_load:
+                    verbose_print(f"🔧 Loading server mods: {server_mods_to_load}")
+                    try:
+                        server_adapters = load_mod_adapters(server_mods_to_load)
+                        verbose_print(
+                            f"   Loaded {len(server_adapters)} server adapters"
+                        )
+                        for adapter in server_adapters:
+                            self.client.register_mod_adapter(adapter)
+                            verbose_print(
+                                f"   ✅ Registered server adapter: {adapter.mod_name}"
+                            )
+                        self.update_tools()
+                    except Exception as e:
+                        verbose_print(
+                            f"   ❌ Failed to load server mod adapters: {e}"
+                        )
+                        import traceback
+                        traceback.print_exc()
             else:
                 verbose_print(f"🔄 Using existing protocols: {self._supported_mods}")
 

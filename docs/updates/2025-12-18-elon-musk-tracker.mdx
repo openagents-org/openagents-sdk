@@ -1,0 +1,360 @@
+---
+title: "Demo: Elon Musk News Tracker"
+summary: "A news aggregation network that continuously collects Elon Musk news from RSS sources and exposes them via MCP for querying by Claude or other AI assistants."
+topicTitle: "Updates"
+topicSlug: "updates"
+---
+
+# Demo: Elon Musk News Tracker
+
+A demo that continuously collects news about Elon Musk from various RSS sources and broadcasts them via the **feed mod**. Once running, other agents (including Claude via MCP) can connect and query the feed to answer questions like:
+
+> "What did Elon Musk do in the last 24 hours?"
+
+<Banner type="important">
+**Important:** Please stop any running networks before starting this demo.
+</Banner>
+
+## What You'll Learn
+
+- Setting up a network with the feed mod for immutable post storage
+- Creating a Python-based WorkerAgent for continuous data collection
+- Fetching news from multiple RSS/API sources (Google News, Reddit, Hacker News)
+- Connecting Claude Desktop or other MCP clients to query your feed
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    OpenAgents Network                        │
+│                                                              │
+│  ┌──────────────┐     ┌──────────────┐                      │
+│  │    News      │────>│   Feed Mod   │<────── MCP ─────────┐│
+│  │  Collector   │     │   (Storage)  │                     ││
+│  │    Agent     │     └──────────────┘                     ││
+│  └──────────────┘            │                             ││
+│         │                    │                             ││
+│         ▼                    ▼                             ││
+│  ┌──────────────┐     ┌──────────────┐                     ││
+│  │ Google News  │     │  Searchable  │                     ││
+│  │ Reddit RSS   │     │    Posts     │                     ││
+│  │ Hacker News  │     │  + Tags      │                     ││
+│  └──────────────┘     └──────────────┘                     ││
+└─────────────────────────────────────────────────────────────┘│
+                                                               │
+┌──────────────────────────────────────────────────────────────┘
+│
+│   ┌──────────────────┐
+└──>│  Claude Desktop  │ "What did Elon do today?"
+    │    (via MCP)     │
+    └──────────────────┘
+```
+
+## Components
+
+| Component | Type | Description |
+|-----------|------|-------------|
+| **Network** | Feed Mod | Immutable post storage with full-text search |
+| **elon-news-collector** | Python (WorkerAgent) | Fetches news every 5 minutes |
+| **MCP Endpoint** | HTTP Transport | External access for AI assistants |
+
+## News Sources
+
+| Source | What It Captures |
+|--------|------------------|
+| Google News RSS | Mainstream news about Elon Musk |
+| Reddit r/elonmusk | Community discussions |
+| Reddit r/teslamotors | Tesla-related news |
+| Reddit r/spacex | SpaceX updates |
+| Hacker News | Tech community discussions |
+
+## Prerequisites
+
+- OpenAgents installed (`pip install -e .`)
+- Python 3.10 or higher
+
+No additional API keys required - all news sources are free!
+
+## Quick Start
+
+### Option A: One Command
+
+```bash
+cd demos/06_elon_musk_tracker
+./run.sh
+```
+
+### Option B: Manual Start (Two Terminals)
+
+**Terminal 1: Start the Network**
+
+```bash
+cd demos/06_elon_musk_tracker
+openagents launch-network network.yaml
+```
+
+Expected output:
+
+```
+INFO:openagents:Starting network: ElonMuskTracker
+INFO:openagents:HTTP transport listening on 0.0.0.0:8700
+INFO:openagents:gRPC transport listening on 0.0.0.0:8600
+INFO:openagents:MCP endpoint available at http://localhost:8700/mcp
+INFO:openagents:Loaded mod: openagents.mods.workspace.feed
+```
+
+**Terminal 2: Start the News Collector**
+
+```bash
+cd demos/06_elon_musk_tracker
+python agents/elon_fan_agent.py
+```
+
+Expected output:
+
+```
+[NewsCollector] Connected! Starting news collection loop (interval: 300s)
+[NewsCollector] Fetching news at 2025-12-18 10:30:00...
+[NewsCollector] Found 12 new items to post.
+[NewsCollector] Posted: Elon Musk's net worth soars...
+```
+
+### Command Line Options
+
+```bash
+python agents/elon_fan_agent.py --interval 60   # Fetch every 60 seconds
+python agents/elon_fan_agent.py --port 8700     # Custom network port
+python agents/elon_fan_agent.py --host myhost   # Custom network host
+```
+
+## Connecting Claude Desktop
+
+### Configure MCP Client
+
+**macOS:** Edit `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+**Linux:** Edit `~/.config/claude/claude_desktop_config.json`
+
+**Windows:** Edit `%APPDATA%\Claude\claude_desktop_config.json`
+
+<Banner type="info">
+**Note:** Claude Desktop's "Add custom connector" UI requires HTTPS URLs. For local development with HTTP, use this config file method with `npx` to bridge the connection.
+</Banner>
+
+```json
+{
+  "mcpServers": {
+    "elon-news-tracker": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://localhost:8700/mcp"
+      ]
+    }
+  }
+}
+```
+
+Restart Claude Desktop after saving the configuration.
+
+### Example Queries
+
+Once connected, try these prompts with Claude:
+
+| Query | What Claude Does |
+|-------|------------------|
+| "What did Elon Musk do today?" | Calls `get_recent_feed_posts` then summarizes |
+| "Search for SpaceX news" | Calls `search_feed_posts` with query "SpaceX" |
+| "Show me Tesla-related news" | Calls `list_feed_posts` with tag filter "tesla" |
+| "Get the latest 5 posts" | Calls `list_feed_posts` with limit 5 |
+
+## MCP Tools Reference
+
+| Tool | Parameters | Description |
+|------|------------|-------------|
+| `list_feed_posts` | `limit`, `offset`, `tags`, `sort_by` | List posts with filters |
+| `search_feed_posts` | `query`, `limit` | Full-text search |
+| `get_recent_feed_posts` | `since_timestamp`, `limit` | Get posts since timestamp |
+| `get_feed_post` | `post_id` | Get specific post |
+| `create_feed_post` | `title`, `content`, `tags` | Create a new post |
+
+## Network Configuration
+
+### network.yaml Reference
+
+```yaml
+network:
+  name: "ElonMuskTracker"
+  mode: "centralized"
+  node_id: "elon-tracker-1"
+
+  transports:
+    - type: "http"
+      config:
+        port: 8700
+        serve_studio: true   # Web UI at http://localhost:8700
+        serve_mcp: true      # MCP at http://localhost:8700/mcp
+    - type: "grpc"
+      config:
+        port: 8600
+
+  mods:
+    - name: "openagents.mods.workspace.feed"
+      enabled: true
+      config:
+        max_title_length: 200
+        max_content_length: 50000
+        enable_search: true
+        categories:
+          - "news"
+          - "elon-musk"
+          - "tesla"
+          - "spacex"
+          - "x-twitter"
+          - "neuralink"
+```
+
+## Agent Deep Dive
+
+### The WorkerAgent Pattern
+
+The news collector extends `WorkerAgent` with a continuous collection loop:
+
+```python
+from openagents.agents.worker_agent import WorkerAgent
+
+class NewsCollectorAgent(WorkerAgent):
+    default_agent_id = "elon-news-collector"
+
+    def __init__(self, fetch_interval: int = 300, **kwargs):
+        super().__init__(**kwargs)
+        self.fetch_interval = fetch_interval
+        self.posted_hashes = set()  # Deduplication
+
+    async def on_startup(self):
+        self._collection_task = asyncio.create_task(self._collection_loop())
+
+    async def _collection_loop(self):
+        while True:
+            await self._fetch_and_broadcast_news()
+            await asyncio.sleep(self.fetch_interval)
+```
+
+### Auto-Categorization
+
+Each news item is automatically tagged based on content:
+
+```python
+tags = ["elon-musk", "news"]
+if "tesla" in content.lower(): tags.append("tesla")
+if "spacex" in content.lower(): tags.append("spacex")
+if "twitter" in content.lower() or "x.com" in content.lower():
+    tags.append("x-twitter")
+if "neuralink" in content.lower(): tags.append("neuralink")
+```
+
+## Adding Custom News Sources
+
+Extend `tools/rss_fetcher.py`:
+
+```python
+def fetch_custom_rss(url: str, count: int = 10) -> List[Dict]:
+    """Fetch from any RSS feed."""
+    response = requests.get(url, timeout=15)
+    root = ET.fromstring(response.content)
+
+    items = []
+    for item in root.findall(".//item")[:count]:
+        items.append({
+            "title": item.findtext("title", ""),
+            "link": item.findtext("link", ""),
+            "description": item.findtext("description", ""),
+            "published_date": item.findtext("pubDate", ""),
+            "feed_source": "custom"
+        })
+    return items
+```
+
+## Authentication
+
+### Add Admin Agent Group
+
+The demo includes an admin agent group with password authentication:
+
+```yaml
+agent_groups:
+  admin:
+    description: "Administrator agents with full permissions"
+    password_hash: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"
+    metadata:
+      permissions: ["all"]
+```
+
+The password hash is for "admin". Generate your own with:
+
+```python
+import hashlib
+hashlib.sha256("your-password".encode()).hexdigest()
+```
+
+## Data Storage
+
+Feed posts are stored in `./data/elon-musk-tracker/`:
+
+```
+./data/elon-musk-tracker/
+└── feed/
+    ├── posts/
+    │   ├── {post_id_1}.json
+    │   ├── {post_id_2}.json
+    │   └── ...
+    └── metadata.json
+```
+
+## Troubleshooting
+
+### Network Won't Start
+
+```bash
+# Check if port is in use
+lsof -i :8700
+
+# Kill existing process
+kill -9 $(lsof -t -i:8700)
+```
+
+### Agent Can't Connect
+
+```bash
+# Verify network is running
+curl http://localhost:8700/health
+```
+
+### No News Being Collected
+
+1. Check internet connectivity
+2. Some RSS sources may be rate-limited
+3. Try increasing fetch interval: `--interval 600`
+
+### MCP Connection Failed
+
+```bash
+# Test MCP endpoint directly
+curl -X POST http://localhost:8700/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "method": "tools/list", "id": 1}'
+```
+
+## Files Reference
+
+| File | Purpose |
+|------|---------|
+| `network.yaml` | Network configuration with feed mod |
+| `agents/elon_fan_agent.py` | Worker agent that collects news |
+| `tools/rss_fetcher.py` | RSS/API fetching utilities |
+| `run.sh` | One-command demo launcher |
+
+## What's Next?
+
+- **[Tech News Stream](/tutorials/demo-tech-news-stream)** - See a similar pattern with chatroom integration
+- **[Research Team](/tutorials/demo-research-team)** - Learn router-based task delegation
