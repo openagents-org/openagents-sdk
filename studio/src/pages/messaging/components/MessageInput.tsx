@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/layout/ui/button";
 
 interface AgentInfo {
   agent_id: string;
@@ -903,13 +904,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
               ↪️ {t('input.replyingTo', { user: replyingTo.author })}
             </div>
             {onCancelReply && (
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 className={`cancel-reply ${currentTheme === "dark" ? "dark" : ""}`}
                 onClick={onCancelReply}
                 aria-label={t('input.cancel')}
               >
                 ✕
-              </button>
+              </Button>
             )}
           </div>
           <div className={`reply-text ${currentTheme}`}>
@@ -927,13 +930,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
               📝 {t('input.quotingFrom', { user: quotingMessage.author })}
             </div>
             {onCancelQuote && (
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 className={`cancel-quote ${currentTheme === "dark" ? "dark" : ""}`}
                 onClick={onCancelQuote}
                 aria-label={t('input.cancel')}
               >
                 ✕
-              </button>
+              </Button>
             )}
           </div>
           <div className={`reply-text ${currentTheme}`}>
@@ -952,14 +957,16 @@ const MessageInput: React.FC<MessageInputProps> = ({
             <span className="attachment-name">
               {pendingAttachment.filename}
             </span>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => setPendingAttachment(null)}
               className={`remove-attachment ${currentTheme}`}
               title="Remove attachment"
             >
               ✕
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -1005,37 +1012,43 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
           <div className="input-actions">
             {!disableFileUpload && (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 className={`action-button ${currentTheme}`}
                 onClick={handleFileUpload}
                 disabled={disabled}
                 title="Upload file"
               >
                 📎
-              </button>
+              </Button>
             )}
 
             {!disableEmoji && (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 className={`action-button ${currentTheme}`}
                 disabled={disabled}
                 title="Add emoji"
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
               >
                 😊
-              </button>
+              </Button>
             )}
 
-            <button
+            <Button
               type="submit"
+              variant="primary"
+              size="icon"
               className="send-button"
               disabled={!message.trim() || disabled}
               title="Send message"
             >
               ↗
-            </button>
+            </Button>
           </div>
 
           {/* Emoji Picker */}
@@ -1048,15 +1061,16 @@ const MessageInput: React.FC<MessageInputProps> = ({
                   </div>
                   <div className="emoji-grid">
                     {emojis.map((emoji, index) => (
-                      <button
+                      <Button
                         key={`${category}-${index}`}
                         type="button"
+                        variant="ghost"
                         className={`emoji-item ${currentTheme}`}
                         onClick={() => handleEmojiSelect(emoji)}
                         title={emoji}
                       >
                         {emoji}
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 </div>

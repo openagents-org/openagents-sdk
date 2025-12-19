@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useFeedStore } from "@/stores/feedStore";
+import { Button } from "@/components/layout/ui/button";
 
 const FeedSidebar: React.FC = () => {
   const { t } = useTranslation('feed');
@@ -136,9 +137,10 @@ const FeedSidebar: React.FC = () => {
           <div className="flex flex-wrap gap-2">
             {topTags.length > 0 ? (
               topTags.map(([tag, count]) => (
-                <button
+                <Button
                   key={tag}
-                  className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-200"
+                  variant="secondary"
+                  size="sm"
                   onClick={() => {
                     applyFilters({ tags: [tag] });
                     navigate("/feed");
@@ -148,7 +150,7 @@ const FeedSidebar: React.FC = () => {
                   <span className="ml-1 text-gray-500 dark:text-gray-400">
                     {count}
                   </span>
-                </button>
+                </Button>
               ))
             ) : (
               <p className="text-xs text-gray-500 dark:text-gray-400">

@@ -7,6 +7,7 @@ import {
 } from "@/types/feed";
 import { useHealthGroups } from "@/hooks/useHealthGroups";
 import type { HttpEventConnector } from "@/services/eventConnector";
+import { Button } from "@/components/layout/ui/button";
 
 interface FeedCreateModalProps {
   isOpen: boolean;
@@ -152,12 +153,14 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
               {t('createModal.subtitle')}
             </p>
           </div>
-          <button
+          <Button
             onClick={() => {
               resetForm();
               onClose();
             }}
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
             aria-label="Close feed modal"
           >
             <svg
@@ -173,7 +176,7 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
                 d="M6 18L18 6M6 6l12 12"
               />
             </svg>
-          </button>
+          </Button>
         </div>
 
         <form
@@ -203,13 +206,15 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {t('createModal.content')}
               </label>
-              <button
+              <Button
                 type="button"
                 onClick={() => setShowPreview((prev) => !prev)}
-                className="text-xs font-medium text-blue-600 hover:text-blue-500"
+                variant="ghost"
+                size="sm"
+                className="text-xs"
               >
                 {showPreview ? "Hide preview" : t('createModal.previewMarkdown')}
-              </button>
+              </Button>
             </div>
             <textarea
               value={content}
@@ -243,13 +248,14 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
                 className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                 placeholder={t('createModal.tagsPlaceholder')}
               />
-              <button
+              <Button
                 type="button"
                 onClick={handleAddTag}
-                className="px-3 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-500"
+                variant="primary"
+                size="sm"
               >
                 {t('createModal.addTag')}
-              </button>
+              </Button>
             </div>
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -259,13 +265,15 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
                     className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200"
                   >
                     #{tag}
-                    <button
+                    <Button
                       type="button"
                       onClick={() => handleRemoveTag(tag)}
-                      className="ml-2 text-blue-500 hover:text-blue-700"
+                      variant="ghost"
+                      size="icon"
+                      className="ml-2 h-auto w-auto p-0"
                     >
                       ×
-                    </button>
+                    </Button>
                   </span>
                 ))}
               </div>
@@ -359,13 +367,15 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
                         {(attachment.size / 1024).toFixed(1)} KB
                       </p>
                     </div>
-                    <button
+                    <Button
                       type="button"
                       onClick={() => handleRemoveAttachment(attachment.file_id)}
-                      className="text-sm text-red-600 hover:text-red-500"
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 hover:text-red-500"
                     >
                       Remove
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -384,27 +394,26 @@ const FeedCreateModal: React.FC<FeedCreateModalProps> = ({
             {t('createModal.immutableWarning')}
           </div>
           <div className="flex items-center space-x-3">
-            <button
+            <Button
               type="button"
               onClick={() => {
                 resetForm();
                 onClose();
               }}
-              className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+              variant="outline"
+              size="sm"
             >
               {t('createModal.cancel')}
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               form="feed-create-form"
               disabled={!canSubmit || isSubmitting}
-              className={`px-4 py-2 rounded-lg text-white ${canSubmit
-                ? "bg-blue-600 hover:bg-blue-500"
-                : "bg-blue-300 cursor-not-allowed"
-                }`}
+              variant="primary"
+              size="sm"
             >
               {isSubmitting ? t('createModal.creating') : t('createModal.create')}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

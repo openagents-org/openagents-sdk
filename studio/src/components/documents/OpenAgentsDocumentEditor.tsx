@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { DocumentContent, DocumentComment, AgentPresence } from '../../types';
+import { Button } from '@/components/layout/ui/button';
 // TODO: Implement with HTTP event system
 
 interface OpenAgentsDocumentEditorProps {
@@ -569,13 +570,15 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
             </button>
             
             {/* Manual save button */}
-            <button
+            <Button
               onClick={() => {
                 console.log('🔧 Manual save triggered for content:', textContent);
                 saveContent(textContent);
               }}
               disabled={isSaving || !hasUnsavedChanges}
-              className={`p-1 rounded transition-colors ${
+              variant="ghost"
+              size="icon"
+              className={`p-1 ${
                 hasUnsavedChanges && !isSaving
                   ? currentTheme === 'dark' 
                     ? 'hover:bg-green-700 text-green-400 hover:text-green-200' 
@@ -585,7 +588,7 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
               title={hasUnsavedChanges ? 'Save changes' : 'No changes to save'}
             >
               💾
-            </button>
+            </Button>
             
             {/* Live collaboration indicator */}
             {liveUpdateIndicator && (

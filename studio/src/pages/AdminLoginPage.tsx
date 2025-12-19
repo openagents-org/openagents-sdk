@@ -241,7 +241,7 @@ const AdminLoginPage: React.FC = () => {
                   onClick={() => setPageAgentName(savedAgentName)}
                   className="px-3 py-2 rounded-md text-sm cursor-pointer transition-all duration-150 bg-blue-500 text-white border-none hover:bg-blue-600"
                 >
-                  ↶ Use Previous: {savedAgentName}
+                  ↶ Use Previous
                 </button>
               )}
             </div>

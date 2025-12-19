@@ -4,6 +4,10 @@ import { useSearchParams } from 'react-router-dom';
 import { useOpenAgents } from '@/context/OpenAgentsProvider';
 import { useAuthStore } from '@/stores/authStore';
 import { useConfirm } from '@/context/ConfirmContext';
+import { Button } from '@/components/layout/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/layout/ui/dialog';
+import { Badge } from '@/components/layout/ui/badge';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface AgentGroupInfo {
   name: string;
@@ -455,9 +459,7 @@ const AgentGroupsManagement: React.FC = () => {
       {error && (
         <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
           <div className="flex items-center">
-            <svg className="h-5 w-5 text-red-400 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-            </svg>
+            <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
             <span className="text-sm text-red-800 dark:text-red-200">{error}</span>
           </div>
         </div>
@@ -466,9 +468,7 @@ const AgentGroupsManagement: React.FC = () => {
       {success && (
         <div className="mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
           <div className="flex items-center">
-            <svg className="h-5 w-5 text-green-400 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
+            <CheckCircle2 className="h-5 w-5 text-green-400 mr-2" />
             <span className="text-sm text-green-800 dark:text-green-200">{success}</span>
           </div>
         </div>
@@ -538,12 +538,12 @@ const AgentGroupsManagement: React.FC = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {t('groups.agentGroups')}
           </h2>
-          <button
+          <Button
             onClick={openCreateModal}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+            variant="primary"
           >
             + {t('groups.create')}
-          </button>
+          </Button>
         </div>
 
         {groups.length === 0 ? (
@@ -594,36 +594,40 @@ const AgentGroupsManagement: React.FC = () => {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-end gap-2">
-                        <button
+                        <Button
                           onClick={(e) => {
                             e.stopPropagation();
                             openEditModal(group);
                           }}
-                          className="px-3 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                          variant="primary"
+                          size="sm"
                         >
                           {t('groups.edit')}
-                        </button>
+                        </Button>
                         {group.has_password && (
-                          <button
+                          <Button
                             onClick={(e) => {
                               e.stopPropagation();
                               openChangePasswordModal(group.name);
                             }}
-                            className="px-3 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors whitespace-nowrap"
+                            variant="primary"
+                            size="sm"
+                            className="whitespace-nowrap"
                           >
                             {t('groups.changePassword.button')}
-                          </button>
+                          </Button>
                         )}
                         {!group.is_default && (
-                          <button
+                          <Button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteGroup(group.name);
                             }}
-                            className="px-3 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
+                            variant="destructive"
+                            size="sm"
                           >
                             {t('groups.delete')}
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </td>
@@ -642,19 +646,21 @@ const AgentGroupsManagement: React.FC = () => {
                 {t('groups.table.group')}: {selectedGroup}
               </h3>
               <div className="flex gap-2">
-                <button
+                <Button
                   onClick={() => openEditModal(groupsData.agent_groups[selectedGroup])}
-                  className="px-3 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                  variant="primary"
+                  size="sm"
                 >
                   Edit
-                </button>
+                </Button>
                 {!groupsData.agent_groups[selectedGroup].is_default && (
-                  <button
+                  <Button
                     onClick={() => handleDeleteGroup(selectedGroup)}
-                    className="px-3 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
+                    variant="destructive"
+                    size="sm"
                   >
                     {t('groups.delete')}
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -676,12 +682,14 @@ const AgentGroupsManagement: React.FC = () => {
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Permissions: </span>
                   <div className="flex flex-wrap gap-2 mt-2">
                     {groupsData.agent_groups[selectedGroup].permissions.map((perm, idx) => (
-                      <span
+                      <Badge
                         key={idx}
-                        className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded"
+                        variant="info"
+                        appearance="light"
+                        size="sm"
                       >
                         {perm}
-                      </span>
+                      </Badge>
                     ))}
                   </div>
                 </div>

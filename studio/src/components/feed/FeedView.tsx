@@ -6,6 +6,8 @@ import { useFeedStore } from "@/stores/feedStore";
 import FeedCreateModal from "./FeedCreateModal";
 import FeedPostCard from "./components/FeedPostCard";
 import { FEED_SORT_FIELDS } from "@/types/feed";
+import { Badge } from "@/components/layout/ui/badge";
+import { Button } from "@/components/layout/ui/button";
 
 const INITIAL_FILTER_RESET = {
   author: undefined,
@@ -183,9 +185,10 @@ const FeedView: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button
+            <Button
               onClick={() => refreshPosts()}
-              className="inline-flex items-center px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+              variant="outline"
+              size="sm"
               disabled={postsLoading}
             >
               <svg
@@ -202,10 +205,11 @@ const FeedView: React.FC = () => {
                 />
               </svg>
               {t('actions.refresh')}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setIsCreateOpen(true)}
-              className="inline-flex items-center px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-500"
+              variant="primary"
+              size="sm"
             >
               <svg
                 className="w-4 h-4 mr-2"
@@ -221,7 +225,7 @@ const FeedView: React.FC = () => {
                 />
               </svg>
               {t('actions.newPost')}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -243,13 +247,14 @@ const FeedView: React.FC = () => {
               ? t('filters.applied')
               : t('filters.none')}
           </div>
-          <button
+          <Button
             type="button"
             onClick={() => setFiltersExpanded((prev) => !prev)}
-            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+            variant="outline"
+            size="sm"
           >
             {filtersExpanded ? t('filters.hide') : t('filters.show')}
-          </button>
+          </Button>
         </div>
 
         {filtersExpanded && (
@@ -274,19 +279,23 @@ const FeedView: React.FC = () => {
                 {searchTags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {searchTags.map((tag) => (
-                      <span
+                      <Badge
                         key={tag}
-                        className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-200 px-3 py-1 text-xs font-medium"
+                        variant="info"
+                        appearance="light"
+                        size="sm"
                       >
                         #{tag}
-                        <button
+                        <Button
                           type="button"
-                          className="ml-2 hover:text-indigo-900 dark:hover:text-indigo-100"
+                          variant="ghost"
+                          size="icon"
+                          className="ml-2 h-auto w-auto p-0 hover:text-indigo-900 dark:hover:text-indigo-100"
                           onClick={() => handleRemoveSearchTag(tag)}
                         >
                           ×
-                        </button>
-                      </span>
+                        </Button>
+                      </Badge>
                     ))}
                   </div>
                 )}
@@ -304,13 +313,14 @@ const FeedView: React.FC = () => {
                     className={flexInputClass}
                     placeholder={t('filters.tagFilterPlaceholder')}
                   />
-                  <button
+                  <Button
                     type="button"
                     onClick={handleAddSearchTag}
-                    className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    variant="outline"
+                    size="sm"
                   >
                     {t('filters.add')}
-                  </button>
+                  </Button>
                 </div>
               </div>
               <div className="w-full lg:w-auto flex flex-col justify-end min-w-[360px]">
@@ -318,20 +328,22 @@ const FeedView: React.FC = () => {
                   {t('filters.actions')}
                 </span>
                 <div className="flex gap-2">
-                  <button
+                  <Button
                     type="submit"
-                    className="flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-500"
+                    variant="primary"
+                    className="flex-1"
                     disabled={searchLoading}
                   >
                     {t('filters.search')}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     onClick={clearSearch}
-                    className="flex-1 h-[42px] flex items-center justify-center px-4 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-blue-700 dark:text-blue-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    variant="outline"
+                    className="flex-1"
                   >
                     {t('filters.clearSearch')}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </form>
@@ -423,30 +435,35 @@ const FeedView: React.FC = () => {
                       className={flexInputClass}
                       placeholder="Press Enter to add"
                     />
-                    <button
+                    <Button
                       type="button"
                       onClick={handleAddFilterTag}
-                      className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      variant="outline"
+                      size="sm"
                     >
                       Add
-                    </button>
+                    </Button>
                   </div>
                   {filters.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {filters.tags.map((tag) => (
-                        <span
+                        <Badge
                           key={tag}
-                          className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-200"
+                          variant="secondary"
+                          appearance="light"
+                          size="sm"
                         >
                           #{tag}
-                          <button
+                          <Button
                             type="button"
-                            className="ml-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                            variant="ghost"
+                            size="icon"
+                            className="ml-2 h-auto w-auto p-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                             onClick={() => handleRemoveFilterTag(tag)}
                           >
                             ×
-                          </button>
-                        </span>
+                          </Button>
+                        </Badge>
                       ))}
                     </div>
                   )}
@@ -490,21 +507,23 @@ const FeedView: React.FC = () => {
                   {filtersActive ? t('filters.appliedShort') : t('filters.none')}
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
+                  <Button
                     type="button"
                     onClick={() => fetchRecentPosts()}
-                    className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    variant="outline"
+                    size="sm"
                     disabled={recentLoading}
                   >
                     {recentLoading ? t('filters.checking') : t('filters.checkNewPosts')}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     onClick={resetFilters}
-                    className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    variant="outline"
+                    size="sm"
                   >
                     {t('filters.resetFilters')}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -522,12 +541,14 @@ const FeedView: React.FC = () => {
               Insert them into the feed to keep your list fresh.
             </p>
           </div>
-          <button
+          <Button
             onClick={consumeIncomingPosts}
-            className="px-4 py-2 text-sm font-medium rounded-lg bg-amber-500 text-white hover:bg-amber-400 dark:hover:bg-amber-400/90"
+            variant="primary"
+            size="sm"
+            className="bg-amber-500 hover:bg-amber-400 dark:hover:bg-amber-400/90"
           >
             Show latest posts
-          </button>
+          </Button>
         </div>
       )}
 
@@ -543,12 +564,14 @@ const FeedView: React.FC = () => {
               </p>
             </div>
             <div className="flex gap-2">
-              <button
+              <Button
                 onClick={markPostsChecked}
-                className="px-3 py-1.5 text-xs rounded-lg border border-emerald-300 dark:border-emerald-500/60 text-emerald-800 dark:text-emerald-100"
+                variant="outline"
+                size="sm"
+                className="border-emerald-300 dark:border-emerald-500/60 text-emerald-800 dark:text-emerald-100"
               >
                 Mark as reviewed
-              </button>
+              </Button>
             </div>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
@@ -617,20 +640,22 @@ const FeedView: React.FC = () => {
               Page {page} / {totalPages}
             </div>
             <div className="flex items-center gap-3">
-              <button
-                className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-200 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800"
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
               >
                 Previous
-              </button>
-              <button
-                className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-200 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800"
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
               >
                 Next
-              </button>
+              </Button>
               <select
                 value={pageSize}
                 onChange={(e) => setPageSize(Number(e.target.value))}

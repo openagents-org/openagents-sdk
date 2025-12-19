@@ -5,6 +5,9 @@ import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/pris
 import { useLLMLogStore } from "@/stores/llmLogStore";
 import { useThemeStore } from "@/stores/themeStore";
 import type { LLMLogEntry } from "@/types/llmLogs";
+import { Button } from "@/components/layout/ui/button";
+import { Input } from "@/components/layout/ui/input";
+import { RefreshCw, ChevronRight } from "lucide-react";
 
 const baseInputClasses =
   "rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none transition-colors";
@@ -132,38 +135,35 @@ const LLMLogsView: React.FC = () => {
               </svg>
               Load Test Data
             </button> */}
-            <button
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={() => refreshLogs()}
               className="inline-flex items-center px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
               disabled={logsLoading}
             >
-              <svg
-                className="w-4 h-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v6h6M20 20v-6h-6M5 19A9 9 0 0119 5"
-                />
-              </svg>
+              <RefreshCw className={`w-4 h-4 mr-2 ${logsLoading ? "animate-spin" : ""}`} />
               {t('actions.refresh')}
-            </button>
-            <button
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={expandAll}
               className="inline-flex items-center px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               {t('actions.expandAll')}
-            </button>
-            <button
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={collapseAll}
               className="inline-flex items-center px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               {t('actions.collapseAll')}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -222,13 +222,14 @@ const LLMLogsView: React.FC = () => {
           <div className="text-sm text-gray-600 dark:text-gray-300">
             {filtersExpanded ? t('filters.expanded') : t('filters.expandHint')}
           </div>
-          <button
+          <Button
             type="button"
             onClick={() => setFiltersExpanded((prev) => !prev)}
-            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+            variant="outline"
+            size="sm"
           >
             {filtersExpanded ? t('filters.hide') : t('filters.show')}
-          </button>
+          </Button>
         </div>
 
         {filtersExpanded && (
@@ -310,20 +311,22 @@ const LLMLogsView: React.FC = () => {
                   : t('filters.notApplied')}
               </div>
               <div className="flex items-center gap-2">
-                <button
+                <Button
                   type="button"
                   onClick={handleApplyFilters}
-                  className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-500"
+                  variant="primary"
+                  size="sm"
                 >
                   {t('actions.applyFilters')}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={handleResetFilters}
-                  className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  variant="outline"
+                  size="sm"
                 >
                   {t('actions.resetFilters')}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -448,19 +451,9 @@ const LogCard: React.FC<LogCardProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <svg
+              <ChevronRight
                 className={`w-5 h-5 transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
+              />
               <span className="text-sm font-mono text-gray-500 dark:text-gray-400">
                 {log.id.substring(0, 8)}
               </span>

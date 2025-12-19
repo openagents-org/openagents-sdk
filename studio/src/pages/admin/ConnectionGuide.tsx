@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
 import { useAuthStore } from "@/stores/authStore";
 import { toast } from "sonner";
+import { Button } from "@/components/layout/ui/button";
 
 interface TransportInfo {
   type: string;
@@ -313,54 +314,44 @@ messages = response.json()`;
                 <code>{getCurrentCode()}</code>
               </pre>
             </div>
-            <button
+            <Button
               onClick={() => handleCopyCode(getCurrentCode())}
-              className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              variant="primary"
+              size="sm"
+              className="ml-4"
             >
               Copy Code
-            </button>
+            </Button>
           </div>
           <div className="flex space-x-2 mt-4">
-            <button
+            <Button
               onClick={() => setSelectedExample("python")}
-              className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                selectedExample === "python"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              }`}
+              variant={selectedExample === "python" ? "primary" : "secondary"}
+              size="sm"
             >
               Python
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setSelectedExample("langchain")}
-              className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                selectedExample === "langchain"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              }`}
+              variant={selectedExample === "langchain" ? "primary" : "secondary"}
+              size="sm"
             >
               LangChain
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setSelectedExample("mcp")}
-              className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                selectedExample === "mcp"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              }`}
+              variant={selectedExample === "mcp" ? "primary" : "secondary"}
+              size="sm"
             >
               MCP Client
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setSelectedExample("http")}
-              className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                selectedExample === "http"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              }`}
+              variant={selectedExample === "http" ? "primary" : "secondary"}
+              size="sm"
             >
               HTTP API
-            </button>
+            </Button>
           </div>
         </div>
       </section>
@@ -394,18 +385,20 @@ messages = response.json()`;
                   <code className="flex-1 text-sm text-gray-700 dark:text-gray-300 truncate">
                     {transport.url}
                   </code>
-                  <button
+                  <Button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleCopyUrl(transport.url!);
                     }}
-                    className="px-2 py-1 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
                     title="Copy URL"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Disabled</p>

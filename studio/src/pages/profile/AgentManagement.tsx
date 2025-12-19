@@ -4,6 +4,7 @@ import { useOpenAgents } from "@/context/OpenAgentsProvider";
 import { useConfirm } from "@/context/ConfirmContext";
 import { useAuthStore } from "@/stores/authStore";
 import { toast } from "sonner";
+import { Button } from "@/components/layout/ui/button";
 
 interface AgentInfo {
   agent_id: string;
@@ -157,10 +158,11 @@ const AgentManagement: React.FC = () => {
           </p>
         </div>
 
-        <button
+        <Button
           onClick={fetchAgents}
           disabled={loading}
-          className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          variant="outline"
+          size="sm"
         >
           <svg
             className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
@@ -176,7 +178,7 @@ const AgentManagement: React.FC = () => {
             />
           </svg>
           {t('agents.refresh')}
-        </button>
+        </Button>
       </div>
 
       {/* Error Message */}
@@ -300,7 +302,7 @@ const AgentManagement: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
+                    <Button
                       onClick={() => handleKickAgent(agent.agent_id)}
                       disabled={
                         kickingAgentId === agent.agent_id ||
@@ -308,7 +310,8 @@ const AgentManagement: React.FC = () => {
                         agent.status === "offline" ||
                         agent.isKicked
                       }
-                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      variant="destructive"
+                      size="sm"
                     >
                       {kickingAgentId === agent.agent_id ? (
                         <>
@@ -351,7 +354,7 @@ const AgentManagement: React.FC = () => {
                           {t('agents.kick')}
                         </>
                       )}
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import useAuth from '../../hooks/useAuth';
+import { Button } from '@/components/layout/ui/button';
 
 interface ProfileViewProps {
   onBackClick: () => void;
@@ -104,7 +105,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onBackClick }) => {
     return (
       <div className="profile-container">
         <p>Please sign in to view your profile.</p>
-        <button onClick={onBackClick}>Back</button>
+        <Button onClick={onBackClick} variant="outline">Back</Button>
       </div>
     );
   }
@@ -190,29 +191,29 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onBackClick }) => {
         </div>
         
         <div className="profile-actions">
-          <button 
+          <Button 
             type="submit" 
-            className="profile-submit-button"
+            variant="primary"
             disabled={isLoading}
           >
             {isLoading ? 'Saving...' : 'Save Profile'}
-          </button>
+          </Button>
           
-          <button 
+          <Button 
             type="button" 
-            className="profile-back-button"
+            variant="outline"
             onClick={onBackClick}
           >
             Back
-          </button>
+          </Button>
           
-          <button 
+          <Button 
             type="button" 
-            className="profile-signout-button"
+            variant="outline"
             onClick={handleSignOut}
           >
             Sign Out
-          </button>
+          </Button>
         </div>
       </form>
     </div>

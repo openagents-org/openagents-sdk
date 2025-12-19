@@ -28,6 +28,7 @@ import {
   getReactionEmoji,
 } from "@/constants/chatConstants";
 import MarkdownContent from "./MarkdownContent";
+import { Button } from "@/components/layout/ui/button";
 import AttachmentDisplay from "./AttachmentDisplay";
 
 // Supported message types
@@ -312,28 +313,34 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
           >
             {/* Reply button - not shown in DM chat */}
             {!isDMChat && onReply && (
-              <button
-                className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-8 h-8 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
                 onClick={() => onReply(messageId, messageProps.content, messageProps.senderId)}
                 title="Reply"
               >
                 ↩️
-              </button>
+              </Button>
             )}
-            <button
-              className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-8 h-8 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
               onClick={(event) => handleReactionPickerToggle(messageId, event)}
               title="Add reaction"
             >
               😊
-            </button>
-            <button
-              className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-8 h-8 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
               onClick={() => onQuote(messageId, messageProps.content, messageProps.senderId)}
               title="Quote message"
             >
               💬
-            </button>
+            </Button>
           </div>
 
           {/* Reaction picker */}
@@ -358,12 +365,14 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
 
           {/* Thread control button */}
           {hasChildren && (
-            <button
-              className="bg-transparent border-none cursor-pointer text-xs px-1 py-0.5 rounded mt-1 transition-colors text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-600"
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs px-1 py-0.5 h-auto mt-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-600"
               onClick={() => toggleThread(messageId)}
             >
               {isCollapsed ? `▶ Show ${item.children.length} replies` : `▼ Hide replies`}
-            </button>
+            </Button>
           )}
 
           {hasChildren && !isCollapsed && (
@@ -458,33 +467,39 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
           >
             {/* Reply button - not shown in DM chat */}
             {!isDMChat && onReply && (
-              <button
-                className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-8 h-8 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
                 onClick={() => onReply(message.id, message.content, message.senderId)}
                 title="Reply"
               >
                 ↩️
-              </button>
+              </Button>
             )}
             {/* Reaction button - disabled in project channel */}
             {!disableReactions && (
-              <button
-                className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-8 h-8 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
                 onClick={(event) => handleReactionPickerToggle(message.id, event)}
                 title="Add reaction"
               >
                 😊
-              </button>
+              </Button>
             )}
             {/* Quote button - disabled in project channel */}
             {!disableQuotes && (
-              <button
-                className="flex items-center justify-center w-8 h-8 rounded-md text-base cursor-pointer transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-8 h-8 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
                 onClick={() => onQuote(message.id, message.content, message.senderId)}
                 title="Quote message"
               >
                 💬
-              </button>
+              </Button>
             )}
           </div>
 
@@ -510,12 +525,14 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
 
           {/* Thread control button */}
           {hasChildren && shouldShowThreadCollapseButton({ message, children: children || [], level }) && (
-            <button
-              className="bg-transparent border-none cursor-pointer text-xs px-1 py-0.5 rounded mt-1 transition-colors text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-600"
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs px-1 py-0.5 h-auto mt-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-600"
               onClick={() => toggleThread(message.id)}
             >
               {isCollapsed ? `▶ Show ${children?.length} replies` : `▼ Hide replies`}
-            </button>
+            </Button>
           )}
 
           {hasChildren && !isCollapsed && (

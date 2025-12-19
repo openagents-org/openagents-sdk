@@ -4,6 +4,11 @@ import { useProfileData } from '@/pages/profile/hooks/useProfileData';
 import { useAuthStore } from '@/stores/authStore';
 import { useOpenAgents } from '@/context/OpenAgentsProvider';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { Button } from '@/components/layout/ui/button';
+import { Input } from '@/components/layout/ui/input';
+import { Textarea } from '@/components/layout/ui/textarea';
+import { Badge } from '@/components/layout/ui/badge';
+import { Lock, Settings, Trash2 } from 'lucide-react';
 
 interface DynamicModInfo {
   mod_id: string;
@@ -155,19 +160,7 @@ const ModManagementPage: React.FC = () => {
       <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center max-w-md mx-auto px-6">
           <div className="mb-6">
-            <svg
-              className="w-24 h-24 mx-auto text-gray-400 dark:text-gray-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
-            </svg>
+            <Lock className="w-24 h-24 mx-auto text-gray-400 dark:text-gray-500" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
             Access Denied
@@ -175,12 +168,13 @@ const ModManagementPage: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-400 mb-6">
             You do not have administrator permissions to access this page. Only network administrators can manage dynamic Mods.
           </p>
-          <button
+          <Button
+            variant="primary"
             onClick={() => window.history.back()}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
           >
             Go Back
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -211,8 +205,9 @@ const ModManagementPage: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Mod Path <span className="text-red-500">*</span>
                 </label>
-                <input
+                <Input
                   type="text"
+                  variant="lg"
                   value={modPath}
                   onChange={(e) => setModPath(e.target.value)}
                   placeholder="e.g., openagents.mods.workspace.shared_artifact"
@@ -224,7 +219,8 @@ const ModManagementPage: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Config (JSON, optional)
                 </label>
-                <textarea
+                <Textarea
+                  variant="lg"
                   value={modConfig}
                   onChange={(e) => setModConfig(e.target.value)}
                   placeholder='{"key": "value"}'
@@ -233,13 +229,16 @@ const ModManagementPage: React.FC = () => {
                   disabled={loading}
                 />
               </div>
-              <button
+              <Button
+                type="button"
+                variant="primary"
+                size="lg"
                 onClick={handleLoadMod}
                 disabled={loading || !modPath.trim()}
                 className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Loading...' : 'Load Mod'}
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -253,13 +252,16 @@ const ModManagementPage: React.FC = () => {
                 <span className="text-sm text-gray-500 dark:text-gray-400">
                   Total: {dynamicMods?.count || 0}
                 </span>
-                <button
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={refresh}
                   disabled={loading}
                   className="px-3 py-1 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 disabled:opacity-50"
                 >
                   Refresh
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -275,9 +277,9 @@ const ModManagementPage: React.FC = () => {
                         <span className="font-semibold text-gray-900 dark:text-gray-100">
                           {mod.mod_id}
                         </span>
-                        <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-full">
+                        <Badge variant="success" appearance="light" size="sm">
                           Loaded
-                        </span>
+                        </Badge>
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400 font-mono">
                         {mod.mod_path}
@@ -286,31 +288,23 @@ const ModManagementPage: React.FC = () => {
                         Loaded at: {formatTimestamp(mod.loaded_at)}
                       </div>
                     </div>
-                    <button
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
                       onClick={() => handleUnloadMod(mod.mod_path)}
                       disabled={loading}
                       className="ml-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
+                      <Trash2 className="w-4 h-4 mr-2" />
                       Unload
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="text-center py-12">
-                <svg
-                  className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-500 mb-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M19.11 4.89l-1.72 1.72a8 8 0 010 11.32l1.72-1.72a6 6 0 000-8.48l-1.72-1.72zM8.29 6.29l-1.72 1.72a6 6 0 000 8.48l1.72 1.72a8 8 0 010-11.32L8.29 6.29zM7 12a5 5 0 011.46-3.54l7.08 7.08A5 5 0 0117 12a5 5 0 01-1.46-3.54L8.46 15.54A5 5 0 017 12z"
-                  />
-                </svg>
+                <Settings className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
                 <p className="text-gray-500 dark:text-gray-400">
                   No dynamic Mods loaded yet
                 </p>

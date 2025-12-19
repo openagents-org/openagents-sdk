@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/layout/ui/button';
 
 interface TourStep {
   target: string; // CSS selector or data attribute
@@ -198,9 +199,10 @@ const DashboardTour: React.FC<DashboardTourProps> = ({
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {step.title}
             </h3>
-            <button
+            <Button
               onClick={handleSkip}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              variant="ghost"
+              size="icon"
             >
               <svg
                 className="w-5 h-5"
@@ -215,7 +217,7 @@ const DashboardTour: React.FC<DashboardTourProps> = ({
                   d="M6 18L18 6M6 6l12 12"
                 />
               </svg>
-            </button>
+            </Button>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {step.content}
@@ -228,19 +230,21 @@ const DashboardTour: React.FC<DashboardTourProps> = ({
           </div>
           <div className="flex gap-2">
             {currentStep > 0 && (
-              <button
+              <Button
                 onClick={() => setCurrentStep(currentStep - 1)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                variant="secondary"
+                size="sm"
               >
                 {t('tour.previous')}
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               onClick={handleNext}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+              variant="primary"
+              size="sm"
             >
               {currentStep === steps.length - 1 ? t('tour.complete') : t('tour.next')}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

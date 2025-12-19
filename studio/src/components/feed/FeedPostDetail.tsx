@@ -5,6 +5,7 @@ import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 import AttachmentDisplay from "@/pages/messaging/components/AttachmentDisplay";
 import { useFeedStore } from "@/stores/feedStore";
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
+import { Badge } from "@/components/layout/ui/badge";
 
 const toMilliseconds = (timestamp: number) =>
   timestamp < 1_000_000_000_000 ? timestamp * 1000 : timestamp;
@@ -93,12 +94,14 @@ const FeedPostDetail: React.FC = () => {
             {post.tags && post.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {post.tags.map((tag) => (
-                  <span
+                  <Badge
                     key={tag}
-                    className="inline-flex items-center rounded-full bg-gray-200 dark:bg-gray-800 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300"
+                    variant="secondary"
+                    appearance="light"
+                    size="sm"
                   >
                     #{tag}
-                  </span>
+                  </Badge>
                 ))}
               </div>
             )}

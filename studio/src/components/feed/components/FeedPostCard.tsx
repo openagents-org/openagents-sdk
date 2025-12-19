@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { FeedPost } from "@/types/feed";
+import { Badge } from "@/components/layout/ui/badge";
 
 interface FeedPostCardProps {
   post: FeedPost;
@@ -58,9 +59,9 @@ const FeedPostCard: React.FC<FeedPostCardProps> = ({
             </div>
           </div>
           {isRecent && (
-            <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+            <Badge variant="warning" appearance="light" size="sm">
               NEW
-            </span>
+            </Badge>
           )}
         </div>
 
@@ -70,15 +71,17 @@ const FeedPostCard: React.FC<FeedPostCardProps> = ({
 
         <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
           {post.tags?.map((tag) => (
-            <span
+            <Badge
               key={tag}
-              className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-gray-600 dark:text-gray-300"
+              variant="secondary"
+              appearance="light"
+              size="sm"
             >
               #{tag}
-            </span>
+            </Badge>
           ))}
           {attachmentsCount > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-1">
+            <Badge variant="secondary" appearance="light" size="sm">
               <svg
                 className="w-3.5 h-3.5"
                 fill="none"
@@ -93,7 +96,7 @@ const FeedPostCard: React.FC<FeedPostCardProps> = ({
                 />
               </svg>
               {attachmentsCount} attachment{attachmentsCount > 1 ? "s" : ""}
-            </span>
+            </Badge>
           )}
         </div>
       </div>

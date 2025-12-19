@@ -3,6 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { useOpenAgents } from '@/context/OpenAgentsProvider';
 import { profileSelectors } from '@/stores/profileStore';
 import { useAuthStore } from '@/stores/authStore';
+import { Button } from '@/components/layout/ui/button';
+import { Input } from '@/components/layout/ui/input';
+import { Textarea } from '@/components/layout/ui/textarea';
+import { Switch, SwitchWrapper } from '@/components/layout/ui/switch';
+import { Badge } from '@/components/layout/ui/badge';
+import { AlertCircle, CheckCircle2, X } from 'lucide-react';
 
 interface NetworkProfileData {
   discoverable: boolean;
@@ -262,21 +268,23 @@ const NetworkProfile: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
-          <button
+          <Button
             type="button"
             onClick={() => window.history.back()}
-            className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+            variant="outline"
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             {t('profile.cancel')}
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             form="network-profile-form"
             disabled={isSaving || !formData.name || !formData.description}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            variant="primary"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isSaving ? t('profile.saving') : t('profile.save')}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -284,9 +292,7 @@ const NetworkProfile: React.FC = () => {
       {error && (
         <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
           <div className="flex items-center">
-            <svg className="h-5 w-5 text-red-400 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-            </svg>
+            <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
             <span className="text-sm text-red-800 dark:text-red-200">{error}</span>
           </div>
         </div>
@@ -295,9 +301,7 @@ const NetworkProfile: React.FC = () => {
       {success && (
         <div className="mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
           <div className="flex items-center">
-            <svg className="h-5 w-5 text-green-400 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
+            <CheckCircle2 className="h-5 w-5 text-green-400 mr-2" />
             <span className="text-sm text-green-800 dark:text-green-200">{success}</span>
           </div>
         </div>
@@ -305,41 +309,42 @@ const NetworkProfile: React.FC = () => {
 
       {/* Form */}
       <form id="network-profile-form" onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
           {/* Basic Information Section */}
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
             {t('profile.basicInfo')}
           </h2>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Discoverable */}
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="flex items-center justify-between py-2">
+              <div className="flex-1">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
                   {t('profile.discoverable')}
                 </label>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
                   {t('profile.discoverableDesc')}
                 </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.discoverable}
-                  onChange={(e) => handleInputChange('discoverable', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-              </label>
+              <div className="ml-4">
+                <SwitchWrapper>
+                  <Switch
+                    checked={formData.discoverable}
+                    onCheckedChange={(checked) => handleInputChange('discoverable', checked)}
+                    size="lg"
+                  />
+                </SwitchWrapper>
+              </div>
             </div>
 
             {/* Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('profile.name')} <span className="text-red-500">*</span>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {t('profile.name')} <span className="text-red-500 font-medium">*</span>
               </label>
-              <input
+              <Input
                 type="text"
+                variant="lg"
                 value={formData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
                 className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -349,11 +354,12 @@ const NetworkProfile: React.FC = () => {
             </div>
 
             {/* Description */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('profile.description')} <span className="text-red-500">*</span>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {t('profile.description')} <span className="text-red-500 font-medium">*</span>
               </label>
-              <textarea
+              <Textarea
+                variant="lg"
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 rows={4}
@@ -364,23 +370,24 @@ const NetworkProfile: React.FC = () => {
             </div>
 
             {/* Icon */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {t('profile.icon')}
               </label>
-              <input
+              <Input
                 type="url"
+                variant="lg"
                 value={formData.icon}
                 onChange={(e) => handleInputChange('icon', e.target.value)}
                 className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="https://openagents.org/icons/work-test.png"
               />
               {formData.icon && (
-                <div className="mt-2">
+                <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 inline-block">
                   <img
                     src={formData.icon}
                     alt="Network icon"
-                    className="h-16 w-16 rounded object-cover"
+                    className="h-20 w-20 rounded-lg object-cover shadow-sm"
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
@@ -390,12 +397,13 @@ const NetworkProfile: React.FC = () => {
             </div>
 
             {/* Website */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {t('profile.website')}
               </label>
-              <input
+              <Input
                 type="url"
+                variant="lg"
                 value={formData.website}
                 onChange={(e) => handleInputChange('website', e.target.value)}
                 className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -404,12 +412,13 @@ const NetworkProfile: React.FC = () => {
             </div>
 
             {/* Country */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {t('profile.country')}
               </label>
-              <input
+              <Input
                 type="text"
+                variant="lg"
                 value={formData.country}
                 onChange={(e) => handleInputChange('country', e.target.value)}
                 className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -420,16 +429,17 @@ const NetworkProfile: React.FC = () => {
         </div>
 
         {/* Tags Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
             {t('profile.tags.title')}
           </h2>
 
           <div className="space-y-4">
             {/* Tag Input */}
-            <div className="flex gap-2">
-              <input
+            <div className="flex gap-3">
+              <Input
                 type="text"
+                variant="lg"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyPress={(e) => {
@@ -441,32 +451,39 @@ const NetworkProfile: React.FC = () => {
                 className="flex-1 p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder={t('profile.tags.placeholder')}
               />
-              <button
+              <Button
                 type="button"
                 onClick={handleAddTag}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                variant="primary"
+                size="lg"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Add
-              </button>
+              </Button>
             </div>
 
             {/* Tags List */}
             {formData.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {formData.tags.map((tag, index) => (
-                  <span
+                  <Badge
                     key={index}
-                    className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+                    variant="primary"
+                    appearance="light"
+                    size="md"
+                    className="inline-flex items-center gap-1"
                   >
                     {tag}
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => handleRemoveTag(tag)}
-                      className="ml-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                      className="ml-2 h-auto w-auto p-0 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
                     >
-                      ×
-                    </button>
-                  </span>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
                 ))}
               </div>
             )}
@@ -474,16 +491,17 @@ const NetworkProfile: React.FC = () => {
         </div>
 
         {/* Categories Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
             {t('profile.categories.title')}
           </h2>
 
           <div className="space-y-4">
             {/* Category Input */}
-            <div className="flex gap-2">
-              <input
+            <div className="flex gap-3">
+              <Input
                 type="text"
+                variant="lg"
                 value={categoryInput}
                 onChange={(e) => setCategoryInput(e.target.value)}
                 onKeyPress={(e) => {
@@ -495,32 +513,39 @@ const NetworkProfile: React.FC = () => {
                 className="flex-1 p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder={t('profile.categories.placeholder')}
               />
-              <button
+              <Button
                 type="button"
                 onClick={handleAddCategory}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                variant="primary"
+                size="lg"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Add
-              </button>
+              </Button>
             </div>
 
             {/* Categories List */}
             {formData.categories.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {formData.categories.map((category, index) => (
-                  <span
+                  <Badge
                     key={index}
-                    className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200"
+                    variant="info"
+                    appearance="light"
+                    size="md"
+                    className="inline-flex items-center gap-1"
                   >
                     {category}
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => handleRemoveCategory(category)}
-                      className="ml-2 text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200"
+                      className="ml-2 h-auto w-auto p-0 text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200"
                     >
-                      ×
-                    </button>
-                  </span>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
                 ))}
               </div>
             )}
@@ -528,19 +553,20 @@ const NetworkProfile: React.FC = () => {
         </div>
 
         {/* Technical Settings Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
             {t('profile.technical')}
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Required OpenAgents Version */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {t('profile.version')}
               </label>
-              <input
+              <Input
                 type="text"
+                variant="lg"
                 value={formData.required_openagents_version}
                 onChange={(e) => handleInputChange('required_openagents_version', e.target.value)}
                 className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -549,12 +575,13 @@ const NetworkProfile: React.FC = () => {
             </div>
 
             {/* Capacity */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {t('profile.capacity')}
               </label>
-              <input
+              <Input
                 type="number"
+                variant="lg"
                 value={formData.capacity}
                 onChange={(e) => handleInputChange('capacity', parseInt(e.target.value) || 0)}
                 min="1"
@@ -564,12 +591,13 @@ const NetworkProfile: React.FC = () => {
             </div>
 
             {/* Host */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {t('profile.host')}
               </label>
-              <input
+              <Input
                 type="text"
+                variant="lg"
                 value={formData.host}
                 onChange={(e) => handleInputChange('host', e.target.value)}
                 className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -578,12 +606,13 @@ const NetworkProfile: React.FC = () => {
             </div>
 
             {/* Port */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {t('profile.port')}
               </label>
-              <input
+              <Input
                 type="number"
+                variant="lg"
                 value={formData.port}
                 onChange={(e) => handleInputChange('port', parseInt(e.target.value) || 0)}
                 min="1"

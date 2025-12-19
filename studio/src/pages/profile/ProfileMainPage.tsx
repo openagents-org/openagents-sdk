@@ -2,6 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { Routes, Route } from "react-router-dom";
 import { useProfileData } from "./hooks/useProfileData";
+import { Button } from "@/components/layout/ui/button";
 
 // Components (to be created)
 import NetworkInfoCard from "./components/NetworkInfoCard";
@@ -122,12 +123,14 @@ const ProfileDashboard: React.FC = () => {
               <p className="mt-1 text-sm text-red-700 dark:text-red-300">
                 {error}
               </p>
-              <button
+              <Button
                 onClick={refresh}
-                className="mt-2 text-sm bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 px-3 py-1 rounded hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
+                variant="destructive"
+                size="sm"
+                className="mt-2"
               >
                 Try Again
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -161,17 +164,11 @@ const ProfileDashboard: React.FC = () => {
           </div>
 
           {/* Refresh Button */}
-          <button
+          <Button
             onClick={refresh}
             disabled={loading}
-            className={`
-              inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600
-              rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300
-              bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700
-              focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
-              disabled:opacity-50 disabled:cursor-not-allowed
-              transition-colors
-            `}
+            variant="outline"
+            size="sm"
           >
             <svg
               className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
@@ -187,7 +184,7 @@ const ProfileDashboard: React.FC = () => {
               />
             </svg>
             {loading ? t('profile.refreshing') : t('profile.refresh')}
-          </button>
+          </Button>
         </div>
       </div>
 

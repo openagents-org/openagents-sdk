@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/layout/ui/button";
 import {
   saveManualConnection,
   getSavedManualConnection,
@@ -327,13 +328,14 @@ export default function ManualNetwork() {
               </p>
             </div>
             <div className="flex flex-col gap-2">
-              <button
+              <Button
                 onClick={handleClearSaved}
-                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 px-3 py-2 rounded-lg font-medium transition-colors"
+                variant="ghost"
+                mode="link"
                 title="Clear saved connection"
               >
                 {t('manualNetwork.clearSaved')}
-              </button>
+              </Button>
             </div>
           </div>
         ) : activeTab === "host-port" ? (

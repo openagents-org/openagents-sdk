@@ -1,7 +1,6 @@
 import React, { ReactNode, useContext, useState } from "react";
 import ModSidebar from "./ModSidebar";
 import Sidebar from "./Sidebar";
-import MobileDrawer from "./MobileDrawer";
 import ConnectionLoadingOverlay from "./ConnectionLoadingOverlay";
 import {
   OpenAgentsProvider,
@@ -13,6 +12,9 @@ import { useIsMobile } from "@/hooks/useMediaQuery";
 import { LayoutProvider, useLayout } from "./components/context";
 import { HeaderBreadcrumbs } from "./components/header-breadcrumbs";
 import { SidebarSecondary } from "./components/sidebar-secondary";
+import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
+import { Button } from "./ui/button";
+import { Menu } from "lucide-react";
 
 interface RootLayoutProps {
   children: ReactNode;
@@ -137,15 +139,6 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
 
       {context && isConnected && (
         <LayoutProvider>
-          {/* Mobile Drawer - only shown on mobile */}
-          {/* Use both conditional rendering and ensure it's hidden on larger screens */}
-          <div className="md:hidden">
-            <MobileDrawer
-              isOpen={isDrawerOpen}
-              onClose={() => setIsDrawerOpen(false)}
-            />
-          </div>
-
           {/* Left module navigation bar - hidden on mobile and admin routes */}
           {/* Use Tailwind responsive classes: hidden by default, show on md (768px) and up */}
           {/* {!shouldHideModSidebar && (
@@ -167,34 +160,35 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
             {/* Mobile menu button - only shown on mobile */}
             {/* Use Tailwind responsive classes: show by default, hide on md (768px) and up */}
             {!shouldHideSidebar && (
-              <button
-                onClick={() => setIsDrawerOpen(true)}
-                className="
-                    fixed top-4 left-4 z-30
-                    p-3 rounded-lg
-                    bg-white dark:bg-gray-800
-                    hover:bg-gray-100 dark:hover:bg-gray-700
-                    transition-colors duration-200
-                    shadow-lg
-                    border border-gray-200 dark:border-gray-700
-                    md:hidden
-                  "
-                aria-label="Open menu"
-              >
-                <svg
-                  className="w-6 h-6 text-gray-600 dark:text-gray-300"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
-              </button>
+              <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="
+                      fixed top-4 left-4 z-30
+                      md:hidden
+                    "
+                    aria-label="Open menu"
+                  >
+                    <Menu className="w-6 h-6" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[85%] max-w-[400px] p-0">
+                  <LayoutProvider>
+                    <div className="flex h-full">
+                      {/* Primary Sidebar */}
+                      <div className="flex-shrink-0">
+                        <Sidebar />
+                      </div>
+                      {/* Secondary Sidebar */}
+                      <div className="flex-1 flex flex-col overflow-hidden">
+                        <SidebarSecondary />
+                      </div>
+                    </div>
+                  </LayoutProvider>
+                </SheetContent>
+              </Sheet>
             )}
 
             {/* Main content area - uses internal component to access LayoutProvider context */}

@@ -9,6 +9,9 @@ import {
   restartServiceAgent,
   type ServiceAgent,
 } from "@/services/serviceAgentsApi";
+import { Button } from "@/components/layout/ui/button";
+import { Badge } from "@/components/layout/ui/badge";
+import { AlertCircle, RefreshCw, FileText, Eye, Play, Square, Loader2 } from "lucide-react";
 
 /**
  * Service Agent List Component
@@ -79,20 +82,20 @@ const ServiceAgentList: React.FC = () => {
     }
   };
 
-  // Get status badge color
-  const getStatusColor = (status: string) => {
+  // Get status badge variant
+  const getStatusVariant = (status: string): "success" | "destructive" | "warning" | "secondary" => {
     switch (status) {
       case "running":
-        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
+        return "success";
       case "stopped":
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+        return "secondary";
       case "error":
-        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
+        return "destructive";
       case "starting":
       case "stopping":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300";
+        return "warning";
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+        return "secondary";
     }
   };
 
@@ -135,17 +138,7 @@ const ServiceAgentList: React.FC = () => {
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-red-400"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
+              <AlertCircle className="h-5 w-5 text-red-400" />
             </div>
             <div className="ml-3 flex-1">
               <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
@@ -154,12 +147,15 @@ const ServiceAgentList: React.FC = () => {
               <p className="mt-1 text-sm text-red-700 dark:text-red-300">
                 {error}
               </p>
-              <button
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
                 onClick={fetchAgents}
                 className="mt-2 text-sm bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 px-3 py-1 rounded hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
               >
                 {t('list.retry')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -180,7 +176,10 @@ const ServiceAgentList: React.FC = () => {
           </p>
         </div>
 
-        <button
+        <Button
+          type="button"
+          variant="outline"
+          size="md"
           onClick={fetchAgents}
           disabled={loading}
           className={`
@@ -192,39 +191,15 @@ const ServiceAgentList: React.FC = () => {
             transition-colors
           `}
         >
-          <svg
-            className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
+          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
           {loading ? t('list.refreshing') : t('list.refresh')}
-        </button>
+        </Button>
       </div>
 
       {/* Agents List */}
       {agents.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
-          <svg
-            className="mx-auto h-12 w-12 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
+          <FileText className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
             {t('list.noAgents')}
           </h3>
@@ -251,21 +226,13 @@ const ServiceAgentList: React.FC = () => {
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                           {agent.agent_id}
                         </h3>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                            agent.status
-                          )}`}
+                        <Badge
+                          variant={getStatusVariant(agent.status)}
+                          appearance="light"
+                          size="sm"
                         >
-                          <span
-                            className={`w-1.5 h-1.5 mr-1.5 rounded-full ${agent.status === "running"
-                                ? "bg-green-500"
-                                : agent.status === "error"
-                                  ? "bg-red-500"
-                                  : "bg-gray-400"
-                              }`}
-                          />
                           {getStatusText(agent.status)}
-                        </span>
+                        </Badge>
                       </div>
                       <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-500">
                         {agent.file_type && (
@@ -284,9 +251,12 @@ const ServiceAgentList: React.FC = () => {
 
                     {/* Actions */}
                     <div className="flex items-center space-x-2 ml-4">
-                      <button
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={() => navigate(`/studio/agents/service/${agent.agent_id}`)}
-                        className="
+                         className="
                           inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600
                           rounded-md text-sm font-medium text-gray-700 dark:text-gray-300
                           bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700
@@ -294,30 +264,15 @@ const ServiceAgentList: React.FC = () => {
                           transition-colors
                         "
                       >
-                        <svg
-                          className="w-4 h-4 mr-1.5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                          />
-                        </svg>
+                        <Eye className="w-4 h-4 mr-1.5" />
                         {t('list.viewDetails')}
-                      </button>
+                      </Button>
 
                       {!isRunning && (
-                        <button
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="sm"
                           onClick={() => handleAction(agent.agent_id, "start")}
                           disabled={isLoading}
                           className="
@@ -331,39 +286,24 @@ const ServiceAgentList: React.FC = () => {
                         >
                           {isLoading ? (
                             <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1.5"></div>
+                              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
                               {t('list.starting')}
                             </>
                           ) : (
                             <>
-                              <svg
-                                className="w-4 h-4 mr-1.5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                                />
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                              </svg>
+                              <Play className="w-4 h-4 mr-1.5" />
                               {t('list.start')}
                             </>
                           )}
-                        </button>
+                        </Button>
                       )}
 
                       {isRunning && (
                         <>
-                          <button
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
                             onClick={() => handleAction(agent.agent_id, "stop")}
                             disabled={isLoading}
                             className="
@@ -377,35 +317,20 @@ const ServiceAgentList: React.FC = () => {
                           >
                             {isLoading ? (
                               <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1.5"></div>
+                                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
                                 {t('list.stopping')}
                               </>
                             ) : (
                               <>
-                                <svg
-                                  className="w-4 h-4 mr-1.5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                  />
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M9 10h6v4H9v-4z"
-                                  />
-                                </svg>
+                                <Square className="w-4 h-4 mr-1.5" />
                                 {t('list.stop')}
                               </>
                             )}
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
                             onClick={() => handleAction(agent.agent_id, "restart")}
                             disabled={isLoading}
                             className="
@@ -419,28 +344,16 @@ const ServiceAgentList: React.FC = () => {
                           >
                             {isLoading ? (
                               <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-1.5"></div>
+                                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
                                 {t('list.restarting')}
                               </>
                             ) : (
                               <>
-                                <svg
-                                  className="w-4 h-4 mr-1.5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                  />
-                                </svg>
+                                <RefreshCw className="w-4 h-4 mr-1.5" />
                                 {t('list.restart')}
                               </>
                             )}
-                          </button>
+                          </Button>
                         </>
                       )}
                     </div>
