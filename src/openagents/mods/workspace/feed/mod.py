@@ -106,6 +106,9 @@ class FeedNetworkMod(BaseMod):
     - Quick retrieval of recent posts since timestamp
     """
 
+    # This mod requires an agent adapter for clients to use feed tools
+    requires_adapter = True
+
     def __init__(self, mod_name: str = "feed"):
         """Initialize the feed mod for a network."""
         super().__init__(mod_name=mod_name)
