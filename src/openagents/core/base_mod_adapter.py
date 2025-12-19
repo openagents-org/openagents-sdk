@@ -24,6 +24,7 @@ class BaseModAdapter(ABC):
         self._agent_id = None
         self._connector = None
         self._agent_client = None
+        self._config: Dict[str, Any] = {}
 
     def bind_agent(self, agent_id: str) -> None:
         """Bind this mod adapter to an agent.
@@ -84,6 +85,24 @@ class BaseModAdapter(ABC):
             Optional[str]: The agent ID of the mod adapter
         """
         return self._agent_id
+
+    @property
+    def config(self) -> Dict[str, Any]:
+        """Get the configuration for the mod adapter.
+
+        Returns:
+            Dict[str, Any]: The configuration dictionary
+        """
+        return self._config
+
+    @config.setter
+    def config(self, value: Dict[str, Any]) -> None:
+        """Set the configuration for the mod adapter.
+
+        Args:
+            value: The configuration dictionary
+        """
+        self._config = value or {}
 
     def on_connect(self) -> None:
         """Called when the mod adapter is connected to the network."""
