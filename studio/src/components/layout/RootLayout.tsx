@@ -126,8 +126,12 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
   // Check if current route is an admin route
   const isAdminRoute = location.pathname.startsWith("/admin");
 
-  // Determine if current route should hide the sidebar
-  const shouldHideSidebar = location.pathname.startsWith("/agentworld");
+  // Determine if current route should hide the secondary sidebar (content sidebar)
+  const shouldHideSecondarySidebar = location.pathname.startsWith("/agentworld");
+
+  // Determine if current route should hide the primary sidebar (left navigation icons)
+  // AgentWorld should still show the primary sidebar for navigation
+  const shouldHidePrimarySidebar = false;
 
   // Hide ModSidebar (left navigation) on admin routes
   const shouldHideModSidebar = isAdminRoute;
@@ -165,9 +169,9 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
 
           {/* Middle content area: sidebar + main content */}
           <div className="flex-1 flex overflow-hidden relative">
-            {/* Feature sidebar - hidden on mobile, shown in drawer instead */}
+            {/* Primary sidebar (left navigation icons) - hidden on mobile, shown in drawer instead */}
             {/* Use Tailwind responsive classes: hidden by default, show on md (768px) and up */}
-            {!shouldHideSidebar && (
+            {!shouldHidePrimarySidebar && (
               <div className="hidden md:block">
                 <Sidebar />
               </div>
@@ -175,7 +179,7 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
 
             {/* Mobile menu button - only shown on mobile */}
             {/* Use Tailwind responsive classes: show by default, hide on md (768px) and up */}
-            {!shouldHideSidebar && (
+            {!shouldHideSecondarySidebar && (
               <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
                 <SheetTrigger asChild>
                   <Button
@@ -208,7 +212,7 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
             )}
 
             {/* Main content area - uses internal component to access LayoutProvider context */}
-            <MainContentArea shouldHideSidebar={shouldHideSidebar}>
+            <MainContentArea shouldHideSidebar={shouldHideSecondarySidebar}>
               {children}
             </MainContentArea>
           </div>

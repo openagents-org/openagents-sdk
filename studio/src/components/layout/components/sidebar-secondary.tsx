@@ -12,8 +12,8 @@ export function SidebarSecondary() {
   return (
     <div className="lg:rounded-s-xl bg-white dark:bg-gray-800 overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col w-full h-full">
       <SidebarHeader />
-      <ScrollArea className="shrink-0 flex-1 mt-0 mb-2.5 h-full">        
-        <div className="px-2.5 h-full">
+      <ScrollArea className="shrink-0 flex-1 mt-0 mb-2.5 h-full">
+        <div className="h-full">
           {/* Dynamic content based on route */}
           <SidebarContent />
         </div>

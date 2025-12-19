@@ -115,7 +115,7 @@ const FeedPostDetail: React.FC = () => {
                 {createdAt} • {t('detail.postedBy', { author: post.author_id })}
               </span>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50 break-words">
               {post.title}
             </h1>
             {post.tags && post.tags.length > 0 && (
@@ -144,7 +144,7 @@ const FeedPostDetail: React.FC = () => {
       <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 bg-white dark:bg-gray-800">
         {post ? (
           <>
-            <div className="prose prose-slate max-w-none dark:prose-invert">
+            <div className="prose prose-slate max-w-none dark:prose-invert break-words [&_a]:break-all [&_p]:break-words">
               <MarkdownRenderer content={cleanedContent} />
             </div>
             {imageUrls.length > 0 && (

@@ -36,6 +36,7 @@ import {
   XCircle,
   Radio,
   ExternalLink,
+  Copy,
 } from "lucide-react";
 import { lookupNetworkPublication } from "@/services/networkService";
 
@@ -399,7 +400,7 @@ const AdminDashboard: React.FC = () => {
         {/* Network Status Panel - Compact inline design */}
         {selectedNetwork && (
           <Card className="mb-4 border-gray-200 dark:border-gray-700">
-            <CardContent className="p-4">
+            <CardContent className="p-4 space-y-3">
               <div className="flex flex-wrap items-center gap-3">
                 {/* Connection Status */}
                 <div className="flex items-center gap-2">
@@ -436,7 +437,9 @@ const AdminDashboard: React.FC = () => {
                           <ArrowLeftRight className="w-3 h-3" />
                         )}
                         <span className="uppercase">{transport.type}</span>
-                        <span className="text-gray-400 dark:text-gray-500">:{transport.port}</span>
+                        {transport.port > 0 && (
+                          <span className="text-gray-400 dark:text-gray-500">:{transport.port}</span>
+                        )}
 
                         {/* HTTP features shown as small badges */}
                         {transport.type === 'http' && (transport.mcp_enabled || transport.studio_enabled) && (
@@ -485,6 +488,64 @@ const AdminDashboard: React.FC = () => {
                   </span>
                 )}
               </div>
+
+              {/* Network ID and MCP Connector - shown when published */}
+              {networkPublication.published && (
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                  {/* Network ID */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Network ID:</span>
+                    <a
+                      href={`https://network.openagents.org/${networkPublication.networkId}/`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                    >
+                      <code className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30">
+                        openagents://{networkPublication.networkId}
+                      </code>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+
+                  {/* MCP Connector - only if MCP is enabled */}
+                  {transports.some(t => t.type === 'http' && t.mcp_enabled) && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">MCP Connector:</span>
+                      <code className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs rounded">
+                        https://network.openagents.org/{networkPublication.networkId}/mcp
+                      </code>
+                      <button
+                        onClick={async () => {
+                          const url = `https://network.openagents.org/${networkPublication.networkId}/mcp`;
+                          try {
+                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                              await navigator.clipboard.writeText(url);
+                            } else {
+                              // Fallback for non-secure contexts (HTTP)
+                              const textArea = document.createElement('textarea');
+                              textArea.value = url;
+                              textArea.style.position = 'fixed';
+                              textArea.style.left = '-9999px';
+                              document.body.appendChild(textArea);
+                              textArea.select();
+                              document.execCommand('copy');
+                              document.body.removeChild(textArea);
+                            }
+                            toast.success("MCP connector URL copied to clipboard");
+                          } catch (err) {
+                            toast.error("Failed to copy URL");
+                          }
+                        }}
+                        className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                        title="Copy to clipboard"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
