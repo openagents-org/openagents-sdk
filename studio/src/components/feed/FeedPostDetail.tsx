@@ -14,7 +14,7 @@ const extractImageUrls = (content: string): string[] => {
   const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?[^)\s]*)?$/i;
   const urlPattern = /https?:\/\/[^\s<>"')\]]+/g;
   const urls = content.match(urlPattern) || [];
-  return [...new Set(urls.filter((url) => imageExtensions.test(url)))];
+  return Array.from(new Set(urls.filter((url) => imageExtensions.test(url))));
 };
 
 // Remove image URLs from content for cleaner display
