@@ -12,17 +12,91 @@ interface ValidationResult {
   mods?: string[];
 }
 
+interface PublishedNetwork {
+  id: string;
+  profile: {
+    name: string;
+    host: string;
+    port: number;
+  };
+  status: string;
+  stats: {
+    online_agents: number;
+    views: number;
+    likes: number;
+  };
+  org: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ApiKeyValidationResult {
+  isValid: boolean;
+  organizationName?: string;
+  organizationId?: string;
+  publishedNetworks?: PublishedNetwork[];
+  error?: string;
+}
+
 const OPENAGENTS_API_BASE = "https://endpoint.openagents.org/v1";
+
+// List of invalid/private hosts that cannot be used for publishing
+const INVALID_HOSTS = [
+  "localhost",
+  "127.0.0.1",
+  "0.0.0.0",
+  "::1",
+  "local",
+];
+
+// Check if a host is valid for public access
+const isValidPublicHost = (host: string): { valid: boolean; reason?: string } => {
+  const trimmedHost = host.trim().toLowerCase();
+
+  // Check against invalid hosts
+  if (INVALID_HOSTS.includes(trimmedHost)) {
+    return { valid: false, reason: "localhost_not_allowed" };
+  }
+
+  // Check for private IP ranges
+  if (/^10\./.test(trimmedHost) ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(trimmedHost) ||
+      /^192\.168\./.test(trimmedHost)) {
+    return { valid: false, reason: "private_ip_not_allowed" };
+  }
+
+  // Check for .local domains
+  if (trimmedHost.endsWith(".local")) {
+    return { valid: false, reason: "local_domain_not_allowed" };
+  }
+
+  // Check that the host has a valid format (domain or IP)
+  // Must have at least one dot for domain names, or be a valid IP
+  const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+  const domainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
+
+  if (!ipRegex.test(trimmedHost) && !domainRegex.test(trimmedHost)) {
+    return { valid: false, reason: "invalid_host_format" };
+  }
+
+  return { valid: true };
+};
 
 const NetworkPublishPage: React.FC = () => {
   const { t } = useTranslation("admin");
   useOpenAgents(); // Ensure OpenAgents context is available
   const { selectedNetwork, moduleState } = useAuthStore();
 
+  // API Key state
+  const [apiKey, setApiKey] = useState("");
+  const [isValidatingApiKey, setIsValidatingApiKey] = useState(false);
+  const [apiKeyValidation, setApiKeyValidation] = useState<ApiKeyValidationResult | null>(null);
+
   // Form state
   const [networkId, setNetworkId] = useState("");
   const [networkName, setNetworkName] = useState("");
   const [organization, setOrganization] = useState("");
+  const [organizationId, setOrganizationId] = useState("");
   const [networkHost, setNetworkHost] = useState("");
   const [networkPort, setNetworkPort] = useState("");
 
@@ -31,6 +105,26 @@ const NetworkPublishPage: React.FC = () => {
   const [isPublishing, setIsPublishing] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [isValidated, setIsValidated] = useState(false);
+  const [unpublishingNetworkId, setUnpublishingNetworkId] = useState<string | null>(null);
+
+  // Check if current host:port is already published
+  const existingNetwork = React.useMemo(() => {
+    if (!apiKeyValidation?.publishedNetworks || !networkHost || !networkPort) {
+      return null;
+    }
+    const port = parseInt(networkPort, 10);
+    return apiKeyValidation.publishedNetworks.find(
+      (n) => n.profile.host === networkHost && n.profile.port === port
+    ) || null;
+  }, [apiKeyValidation?.publishedNetworks, networkHost, networkPort]);
+
+  // Host validation status
+  const hostValidation = React.useMemo(() => {
+    if (!networkHost.trim()) {
+      return null;
+    }
+    return isValidPublicHost(networkHost);
+  }, [networkHost]);
 
   // Pre-fill form with current network info
   useEffect(() => {
@@ -51,6 +145,91 @@ const NetworkPublishPage: React.FC = () => {
     setIsValidated(false);
     setValidationResult(null);
   }, [networkId, networkHost, networkPort, organization]);
+
+  // Reset API key validation when API key text changes (debounced reset)
+  const prevApiKeyRef = React.useRef(apiKey);
+  useEffect(() => {
+    // Only reset if the key text has actually changed from a previously validated key
+    if (prevApiKeyRef.current !== apiKey && apiKeyValidation?.isValid) {
+      setApiKeyValidation(null);
+      setOrganization("");
+      setOrganizationId("");
+    }
+    prevApiKeyRef.current = apiKey;
+  }, [apiKey, apiKeyValidation?.isValid]);
+
+  // Validate API key and fetch organization info
+  const handleValidateApiKey = useCallback(async () => {
+    if (!apiKey.trim()) {
+      toast.error(t("publish.errors.apiKeyRequired", "API key is required"));
+      return;
+    }
+
+    if (!apiKey.startsWith("oa-")) {
+      toast.error(t("publish.errors.invalidApiKeyFormat", "API key must start with 'oa-'"));
+      return;
+    }
+
+    setIsValidatingApiKey(true);
+    setApiKeyValidation(null);
+
+    try {
+      // Call the networks/private endpoint to validate API key and get org info
+      const response = await fetch(`${OPENAGENTS_API_BASE}/networks/private`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(15000),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.code === 200) {
+        // New response format: { networks: [...], org_id: "...", org_name: "..." }
+        const responseData = result.data || {};
+        const networks = responseData.networks || [];
+        const orgName = responseData.org_name || (networks.length > 0 ? networks[0].org : "");
+        const orgId = responseData.org_id || (networks.length > 0 ? networks[0].org_id : "");
+
+        setApiKeyValidation({
+          isValid: true,
+          organizationName: orgName,
+          organizationId: orgId,
+          publishedNetworks: networks,
+        });
+
+        // Auto-fill organization name and ID
+        if (orgName) {
+          setOrganization(orgName);
+        }
+        if (orgId) {
+          setOrganizationId(orgId);
+        }
+
+        toast.success(t("publish.apiKey.validated", "API key validated successfully!"));
+      } else if (response.status === 401) {
+        setApiKeyValidation({
+          isValid: false,
+          error: t("publish.errors.invalidApiKey", "Invalid or expired API key"),
+        });
+      } else {
+        setApiKeyValidation({
+          isValid: false,
+          error: result.message || t("publish.errors.apiKeyValidationFailed", "Failed to validate API key"),
+        });
+      }
+    } catch (error: any) {
+      console.error("API key validation error:", error);
+      setApiKeyValidation({
+        isValid: false,
+        error: error.message || t("publish.errors.apiKeyValidationError", "An error occurred while validating API key"),
+      });
+    } finally {
+      setIsValidatingApiKey(false);
+    }
+  }, [apiKey, t]);
 
   // Validate network configuration
   const handleValidate = useCallback(async () => {
@@ -79,6 +258,19 @@ const NetworkPublishPage: React.FC = () => {
       return;
     }
 
+    // Check if host is valid for public access
+    const hostCheck = isValidPublicHost(networkHost);
+    if (!hostCheck.valid) {
+      toast.error(t("publish.errors.hostNotPublic", "The host must be publicly accessible (no localhost, private IPs, or .local domains)"));
+      return;
+    }
+
+    // Check if host:port is already published
+    if (existingNetwork) {
+      toast.error(t("publish.errors.hostPortAlreadyPublished", `This host:port is already published as "${existingNetwork.profile.name}". Unpublish it first.`));
+      return;
+    }
+
     if (!organization.trim()) {
       toast.error(t("publish.errors.organizationRequired", "Organization is required"));
       return;
@@ -88,7 +280,7 @@ const NetworkPublishPage: React.FC = () => {
     setValidationResult(null);
 
     try {
-      // First, check if the network health endpoint is reachable
+      // Step 1: Quick browser-based health check for immediate feedback
       const protocol = selectedNetwork?.useHttps ? "https" : "http";
       const healthUrl = `${protocol}://${networkHost}:${port}/api/health`;
 
@@ -119,38 +311,85 @@ const NetworkPublishPage: React.FC = () => {
         return;
       }
 
-      // Call the OpenAgents API to validate
-      const response = await fetch(`${OPENAGENTS_API_BASE}/networks/validate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          network_id: networkId,
-          network_host: networkHost,
-          network_port: port.toString(),
-          org: organization,
-        }),
-        signal: AbortSignal.timeout(15000),
-      });
-
-      const result = await response.json();
-
-      if (response.ok && result.code === 200) {
-        setValidationResult({
-          success: true,
-          message: t("publish.validation.success", "Network configuration is valid!"),
-          networkName: healthData?.data?.network_name || networkName,
-          onlineAgents: healthData?.data?.agent_count || 0,
-          mods: healthData?.data?.mods?.filter((m: any) => m.enabled).map((m: any) => m.name) || [],
+      // Step 2: Server-side validation to verify PUBLIC accessibility
+      // This is critical - the browser can reach local networks that the public internet cannot
+      if (apiKeyValidation?.isValid && organizationId) {
+        // Call the validate-public endpoint with API key to verify public accessibility from server
+        const validateResponse = await fetch(`${OPENAGENTS_API_BASE}/networks/validate-public`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: new URLSearchParams({
+            network_id: networkId,
+            network_host: networkHost,
+            network_port: port.toString(),
+            org: organizationId,
+          }),
+          signal: AbortSignal.timeout(25000),
         });
-        setIsValidated(true);
-        toast.success(t("publish.validation.successToast", "Validation successful!"));
+
+        const validateResult = await validateResponse.json();
+
+        if (validateResponse.ok && validateResult.code === 200) {
+          // Server-side validation passed - network is publicly accessible
+          setValidationResult({
+            success: true,
+            message: t("publish.validation.successPublic", "Network is publicly accessible and configuration is valid!"),
+            networkName: healthData?.data?.network_name || networkName,
+            onlineAgents: healthData?.data?.agent_count || 0,
+            mods: healthData?.data?.mods?.filter((m: any) => m.enabled).map((m: any) => m.name) || [],
+          });
+          setIsValidated(true);
+          toast.success(t("publish.validation.successToast", "Validation successful! Network is publicly accessible."));
+        } else if (validateResponse.status === 401 || validateResponse.status === 403) {
+          // Auth error - something wrong with the API key
+          setValidationResult({
+            success: false,
+            message: validateResult.message || t("publish.errors.authFailed", "Authentication failed. Please check your API key."),
+          });
+        } else {
+          // Server-side validation failed - network is likely not publicly accessible
+          setValidationResult({
+            success: false,
+            message: validateResult.message || t("publish.errors.notPubliclyAccessible", `Network at ${networkHost}:${port} is not publicly accessible. Make sure your network is exposed to the internet and not behind a firewall.`),
+          });
+        }
       } else {
-        setValidationResult({
-          success: false,
-          message: result.message || t("publish.errors.validationFailed", "Validation failed"),
+        // No API key - try the Firebase-authenticated endpoint (legacy path)
+        const response = await fetch(`${OPENAGENTS_API_BASE}/networks/validate`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            network_id: networkId,
+            network_host: networkHost,
+            network_port: port.toString(),
+            org: organization,
+          }),
+          signal: AbortSignal.timeout(15000),
         });
+
+        const result = await response.json();
+
+        if (response.ok && result.code === 200) {
+          setValidationResult({
+            success: true,
+            message: t("publish.validation.success", "Network configuration is valid!"),
+            networkName: healthData?.data?.network_name || networkName,
+            onlineAgents: healthData?.data?.agent_count || 0,
+            mods: healthData?.data?.mods?.filter((m: any) => m.enabled).map((m: any) => m.name) || [],
+          });
+          setIsValidated(true);
+          toast.success(t("publish.validation.successToast", "Validation successful!"));
+        } else {
+          setValidationResult({
+            success: false,
+            message: result.message || t("publish.errors.validationFailed", "Validation failed"),
+          });
+        }
       }
     } catch (error: any) {
       console.error("Validation error:", error);
@@ -161,7 +400,7 @@ const NetworkPublishPage: React.FC = () => {
     } finally {
       setIsValidating(false);
     }
-  }, [networkId, networkHost, networkPort, organization, networkName, selectedNetwork, t]);
+  }, [networkId, networkHost, networkPort, organization, organizationId, networkName, selectedNetwork, apiKeyValidation, apiKey, existingNetwork, t]);
 
   // Publish network
   const handlePublish = useCallback(async () => {
@@ -170,32 +409,53 @@ const NetworkPublishPage: React.FC = () => {
       return;
     }
 
+    if (!apiKeyValidation?.isValid) {
+      toast.error(t("publish.errors.apiKeyNotValidated", "Please validate your API key first"));
+      return;
+    }
+
     setIsPublishing(true);
 
     try {
       const port = parseInt(networkPort, 10);
+      const finalNetworkName = networkName || validationResult?.networkName || networkId;
 
-      const response = await fetch(`${OPENAGENTS_API_BASE}/networks/publish`, {
+      // Use the POST /v1/networks/ endpoint with API key authentication
+      const networkData = {
+        id: networkId,
+        profile: {
+          name: finalNetworkName,
+          description: `Network at ${networkHost}:${port}`,
+          host: networkHost,
+          port: port,
+          mods: validationResult?.mods || [],
+          discoverable: true,
+          tags: ["network"],
+          categories: [],
+          country: "",
+          capacity: 100,
+          authentication: { type: "none" },
+        },
+      };
+
+      const response = await fetch(`${OPENAGENTS_API_BASE}/networks/`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
         },
-        body: new URLSearchParams({
-          network_id: networkId,
-          network_name: networkName || validationResult?.networkName || networkId,
-          network_host: networkHost,
-          network_port: port.toString(),
-          org: organization,
-        }),
+        body: JSON.stringify(networkData),
         signal: AbortSignal.timeout(30000),
       });
 
       const result = await response.json();
 
-      if (response.ok && result.code === 200) {
+      if (response.ok && (result.code === 200 || result.code === 201)) {
         toast.success(t("publish.success", "Network published successfully!"));
         setIsValidated(false);
         setValidationResult(null);
+        // Refresh the published networks list
+        handleValidateApiKey();
       } else {
         toast.error(result.message || t("publish.errors.publishFailed", "Failed to publish network"));
       }
@@ -205,7 +465,42 @@ const NetworkPublishPage: React.FC = () => {
     } finally {
       setIsPublishing(false);
     }
-  }, [isValidated, networkId, networkName, networkHost, networkPort, organization, validationResult, t]);
+  }, [isValidated, apiKeyValidation, apiKey, networkId, networkName, networkHost, networkPort, validationResult, handleValidateApiKey, t]);
+
+  // Unpublish network
+  const handleUnpublish = useCallback(async (networkIdToUnpublish: string) => {
+    if (!apiKeyValidation?.isValid) {
+      toast.error(t("publish.errors.apiKeyNotValidated", "Please validate your API key first"));
+      return;
+    }
+
+    setUnpublishingNetworkId(networkIdToUnpublish);
+
+    try {
+      const response = await fetch(`${OPENAGENTS_API_BASE}/networks/${networkIdToUnpublish}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+        signal: AbortSignal.timeout(30000),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && (result.code === 200 || result.code === 204)) {
+        toast.success(t("publish.unpublish.success", "Network unpublished successfully!"));
+        // Refresh the published networks list
+        handleValidateApiKey();
+      } else {
+        toast.error(result.message || t("publish.unpublish.failed", "Failed to unpublish network"));
+      }
+    } catch (error: any) {
+      console.error("Unpublish error:", error);
+      toast.error(error.message || t("publish.unpublish.error", "An error occurred while unpublishing"));
+    } finally {
+      setUnpublishingNetworkId(null);
+    }
+  }, [apiKeyValidation, apiKey, handleValidateApiKey, t]);
 
   return (
     <div className="p-6 h-full overflow-y-auto dark:bg-gray-900">
@@ -221,7 +516,251 @@ const NetworkPublishPage: React.FC = () => {
 
       {/* Form */}
       <div className="max-w-2xl">
+        {/* API Key Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            {t("publish.apiKey.title", "Authentication")}
+          </h2>
+          <div className="space-y-4">
+            {/* API Key Input */}
+            <div>
+              <label
+                htmlFor="apiKey"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                {t("publish.apiKey.label", "API Key")} *
+              </label>
+              <div className="mt-1 flex gap-2">
+                <input
+                  type="password"
+                  id="apiKey"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder={t("publish.apiKey.placeholder", "oa-xxxxxxxxxxxxxxxx")}
+                  disabled={apiKeyValidation?.isValid}
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                {apiKeyValidation?.isValid ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setApiKey("");
+                      setApiKeyValidation(null);
+                      setOrganization("");
+                      setOrganizationId("");
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded-md transition-colors"
+                  >
+                    {t("publish.apiKey.change", "Change")}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleValidateApiKey}
+                    disabled={isValidatingApiKey || !apiKey.trim()}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isValidatingApiKey ? (
+                      <span className="flex items-center">
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          />
+                        </svg>
+                        {t("publish.apiKey.validating", "Validating...")}
+                      </span>
+                    ) : (
+                      t("publish.apiKey.validate", "Validate")
+                    )}
+                  </button>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {t("publish.apiKey.help", "Enter your OpenAgents API key to authenticate. Get one from openagents.org")}
+              </p>
+            </div>
+
+            {/* API Key Validation Result */}
+            {apiKeyValidation && (
+              <div
+                className={`p-4 rounded-lg ${
+                  apiKeyValidation.isValid
+                    ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
+                    : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                }`}
+              >
+                <div className="flex items-start">
+                  {apiKeyValidation.isValid ? (
+                    <svg
+                      className="w-5 h-5 text-green-500 mt-0.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-5 h-5 text-red-500 mt-0.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  )}
+                  <div className="ml-3 flex-1">
+                    {apiKeyValidation.isValid ? (
+                      <>
+                        <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                          {t("publish.apiKey.validSuccess", "API key validated successfully")}
+                        </p>
+                        {apiKeyValidation.organizationName && (
+                          <p className="mt-1 text-sm text-green-700 dark:text-green-300">
+                            <span className="font-medium">{t("publish.apiKey.organization", "Organization:")}</span>{" "}
+                            {apiKeyValidation.organizationName}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                        {apiKeyValidation.error}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Published Networks List */}
+            {apiKeyValidation?.isValid && apiKeyValidation.publishedNetworks && apiKeyValidation.publishedNetworks.length > 0 && (
+              <div className="mt-4">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t("publish.publishedNetworks.title", "Published Networks")}
+                </h3>
+                <div className="space-y-2">
+                  {apiKeyValidation.publishedNetworks.map((network) => (
+                    <div
+                      key={network.id}
+                      className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                            {network.profile.name}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {network.id} • {network.profile.host}:{network.profile.port}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 ml-2">
+                          <span
+                            className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${
+                              network.status === "online"
+                                ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                                : "bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300"
+                            }`}
+                          >
+                            {network.status}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                            {network.stats.online_agents} {t("publish.publishedNetworks.agents", "agents")}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleUnpublish(network.id)}
+                            disabled={unpublishingNetworkId === network.id}
+                            className="px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {unpublishingNetworkId === network.id ? (
+                              <span className="flex items-center">
+                                <svg
+                                  className="animate-spin h-3 w-3 mr-1"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <circle
+                                    className="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                  />
+                                  <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                  />
+                                </svg>
+                              </span>
+                            ) : (
+                              t("publish.unpublish.button", "Unpublish")
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* No published networks message */}
+            {apiKeyValidation?.isValid && (!apiKeyValidation.publishedNetworks || apiKeyValidation.publishedNetworks.length === 0) && (
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex items-start">
+                  <svg
+                    className="w-5 h-5 text-blue-500 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p className="ml-3 text-sm text-blue-700 dark:text-blue-300">
+                    {t("publish.publishedNetworks.noNetworks", "No networks published yet. Fill in the form below to publish your first network.")}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Network Configuration Form */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            {t("publish.form.title", "Network Configuration")}
+          </h2>
           <div className="space-y-6">
             {/* Network ID */}
             <div>
@@ -279,10 +818,15 @@ const NetworkPublishPage: React.FC = () => {
                 value={organization}
                 onChange={(e) => setOrganization(e.target.value)}
                 placeholder={t("publish.form.organizationPlaceholder", "e.g., openagents")}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={apiKeyValidation?.isValid}
+                className={`mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  apiKeyValidation?.isValid ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {t("publish.form.organizationHelp", "Your organization identifier on OpenAgents")}
+                {apiKeyValidation?.isValid
+                  ? t("publish.form.organizationFromApiKey", "Organization is determined by your API key")
+                  : t("publish.form.organizationHelp", "Your organization identifier on OpenAgents")}
               </p>
             </div>
 
@@ -301,8 +845,24 @@ const NetworkPublishPage: React.FC = () => {
                   value={networkHost}
                   onChange={(e) => setNetworkHost(e.target.value)}
                   placeholder={t("publish.form.hostPlaceholder", "e.g., mynetwork.example.com")}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    hostValidation && !hostValidation.valid
+                      ? "border-red-300 dark:border-red-600"
+                      : "border-gray-300 dark:border-gray-600"
+                  }`}
                 />
+                {hostValidation && !hostValidation.valid && (
+                  <p className="mt-1 text-xs text-red-500 dark:text-red-400">
+                    {hostValidation.reason === "localhost_not_allowed" &&
+                      t("publish.errors.localhostNotAllowed", "localhost and local addresses are not allowed. Use a public domain or IP.")}
+                    {hostValidation.reason === "private_ip_not_allowed" &&
+                      t("publish.errors.privateIpNotAllowed", "Private IP addresses (10.x.x.x, 172.16-31.x.x, 192.168.x.x) are not allowed.")}
+                    {hostValidation.reason === "local_domain_not_allowed" &&
+                      t("publish.errors.localDomainNotAllowed", ".local domains are not allowed. Use a public domain.")}
+                    {hostValidation.reason === "invalid_host_format" &&
+                      t("publish.errors.invalidHostFormat", "Invalid host format. Use a valid domain name (e.g., example.com) or public IP address.")}
+                  </p>
+                )}
               </div>
               <div>
                 <label
@@ -323,6 +883,40 @@ const NetworkPublishPage: React.FC = () => {
                 />
               </div>
             </div>
+
+            {/* Already Published Warning */}
+            {existingNetwork && (
+              <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <div className="flex items-start">
+                  <svg
+                    className="w-5 h-5 text-amber-500 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                      {t("publish.errors.alreadyPublished", "This host:port is already published")}
+                    </p>
+                    <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                      {t("publish.errors.alreadyPublishedDetail", "Network \"{{name}}\" ({{id}}) is already published at {{host}}:{{port}}. You can unpublish it first from the Published Networks list above.", {
+                        name: existingNetwork.profile.name,
+                        id: existingNetwork.id,
+                        host: existingNetwork.profile.host,
+                        port: existingNetwork.profile.port,
+                      })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Validation Result */}
             {validationResult && (
@@ -400,12 +994,36 @@ const NetworkPublishPage: React.FC = () => {
               </div>
             )}
 
+            {/* Missing API Key Warning */}
+            {!apiKeyValidation?.isValid && (
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <div className="flex items-start">
+                  <svg
+                    className="w-5 h-5 text-yellow-500 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  <p className="ml-3 text-sm text-yellow-700 dark:text-yellow-300">
+                    {t("publish.errors.apiKeyRequired", "Please validate your API key in the Authentication section above before publishing.")}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
                 type="button"
                 onClick={handleValidate}
-                disabled={isValidating || isPublishing}
+                disabled={isValidating || isPublishing || !apiKeyValidation?.isValid || (hostValidation && !hostValidation.valid) || !!existingNetwork}
                 className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 dark:bg-gray-500 dark:hover:bg-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isValidating ? (
@@ -439,7 +1057,7 @@ const NetworkPublishPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handlePublish}
-                disabled={!isValidated || isPublishing || isValidating}
+                disabled={!isValidated || isPublishing || isValidating || !apiKeyValidation?.isValid || (hostValidation && !hostValidation.valid) || !!existingNetwork}
                 className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isPublishing ? (
@@ -494,10 +1112,10 @@ const NetworkPublishPage: React.FC = () => {
                 {t("publish.info.title", "About Publishing")}
               </h3>
               <div className="mt-2 text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                <p>{t("publish.info.point0", "You need an API key from your organization on openagents.org to publish.")}</p>
                 <p>{t("publish.info.point1", "Your network must be publicly accessible at the specified host and port.")}</p>
                 <p>{t("publish.info.point2", "The health endpoint (/api/health) must be reachable for validation.")}</p>
                 <p>{t("publish.info.point3", "Published networks will appear in the OpenAgents directory.")}</p>
-                <p>{t("publish.info.point4", "You need to be registered with an organization on OpenAgents to publish.")}</p>
               </div>
             </div>
           </div>
