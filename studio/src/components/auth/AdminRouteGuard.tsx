@@ -1,6 +1,7 @@
-import React, { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React from "react";
+import { Navigate } from "react-router-dom";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useDynamicRoutes } from "@/hooks/useDynamicRoutes";
 import { toast } from "sonner";
 
 interface AdminRouteGuardProps {
@@ -9,19 +10,11 @@ interface AdminRouteGuardProps {
 
 /**
  * AdminRouteGuard - Protects admin routes and redirects non-admin users
+ * Non-admin users will be immediately redirected to their default route
  */
 const AdminRouteGuard: React.FC<AdminRouteGuardProps> = ({ children }) => {
   const { isAdmin, isLoading } = useIsAdmin();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!isLoading && !isAdmin) {
-      // Redirect to profile page if not admin
-      console.log("🛡️ Non-admin user attempted to access admin route, redirecting...");
-      navigate("/profile", { replace: true });
-      toast.error("You do not have admin privileges");
-    }
-  }, [isAdmin, isLoading, navigate]);
+  const { defaultRoute } = useDynamicRoutes();
 
   if (isLoading) {
     return (
@@ -35,7 +28,10 @@ const AdminRouteGuard: React.FC<AdminRouteGuardProps> = ({ children }) => {
   }
 
   if (!isAdmin) {
-    return null; // Will redirect via useEffect
+    // Immediately redirect non-admin users to their default route
+    console.log("🛡️ Non-admin user attempted to access admin route, redirecting to default route...");
+    toast.error("You do not have admin privileges");
+    return <Navigate to={defaultRoute || "/messaging"} replace />;
   }
 
   return <>{children}</>;
