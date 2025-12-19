@@ -1,98 +1,110 @@
-import React, { useState, useCallback, useEffect } from "react";
-import { useOpenAgents } from "@/context/OpenAgentsProvider";
-import { useAuthStore } from "@/stores/authStore";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+import React, { useState, useCallback, useEffect } from "react"
+import { useOpenAgents } from "@/context/OpenAgentsProvider"
+import { useAuthStore } from "@/stores/authStore"
+import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
 
 interface ValidationResult {
-  success: boolean;
-  message?: string;
-  networkName?: string;
-  onlineAgents?: number;
-  mods?: string[];
+  success: boolean
+  message?: string
+  networkName?: string
+  onlineAgents?: number
+  mods?: string[]
 }
 
-const OPENAGENTS_API_BASE = "https://endpoint.openagents.org/v1";
+const OPENAGENTS_API_BASE = "https://endpoint.openagents.org/v1"
 
 const NetworkPublishPage: React.FC = () => {
-  const { t } = useTranslation("admin");
-  useOpenAgents(); // Ensure OpenAgents context is available
-  const { selectedNetwork, moduleState } = useAuthStore();
+  const { t } = useTranslation("admin")
+  useOpenAgents() // Ensure OpenAgents context is available
+  const { selectedNetwork, moduleState } = useAuthStore()
 
   // Form state
-  const [networkId, setNetworkId] = useState("");
-  const [networkName, setNetworkName] = useState("");
-  const [organization, setOrganization] = useState("");
-  const [networkHost, setNetworkHost] = useState("");
-  const [networkPort, setNetworkPort] = useState("");
+  const [networkId, setNetworkId] = useState("")
+  const [networkName, setNetworkName] = useState("")
+  const [organization, setOrganization] = useState("")
+  const [networkHost, setNetworkHost] = useState("")
+  const [networkPort, setNetworkPort] = useState("")
 
   // UI state
-  const [isValidating, setIsValidating] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
-  const [isValidated, setIsValidated] = useState(false);
+  const [isValidating, setIsValidating] = useState(false)
+  const [isPublishing, setIsPublishing] = useState(false)
+  const [validationResult, setValidationResult] =
+    useState<ValidationResult | null>(null)
+  const [isValidated, setIsValidated] = useState(false)
 
   // Pre-fill form with current network info
   useEffect(() => {
     if (selectedNetwork) {
-      setNetworkHost(selectedNetwork.host || "");
-      setNetworkPort(selectedNetwork.port?.toString() || "8700");
+      setNetworkHost(selectedNetwork.host || "")
+      setNetworkPort(selectedNetwork.port?.toString() || "8700")
     }
     if (moduleState.networkId) {
-      setNetworkId(moduleState.networkId);
+      setNetworkId(moduleState.networkId)
     }
     if (moduleState.networkName) {
-      setNetworkName(moduleState.networkName);
+      setNetworkName(moduleState.networkName)
     }
-  }, [selectedNetwork, moduleState]);
+  }, [selectedNetwork, moduleState])
 
   // Reset validation when form changes
   useEffect(() => {
-    setIsValidated(false);
-    setValidationResult(null);
-  }, [networkId, networkHost, networkPort, organization]);
+    setIsValidated(false)
+    setValidationResult(null)
+  }, [networkId, networkHost, networkPort, organization])
 
   // Validate network configuration
   const handleValidate = useCallback(async () => {
     // Basic validation
     if (!networkId.trim()) {
-      toast.error(t("publish.errors.networkIdRequired", "Network ID is required"));
-      return;
+      toast.error(
+        t("publish.errors.networkIdRequired", "Network ID is required")
+      )
+      return
     }
     if (!networkHost.trim()) {
-      toast.error(t("publish.errors.hostRequired", "Host is required"));
-      return;
+      toast.error(t("publish.errors.hostRequired", "Host is required"))
+      return
     }
     if (!networkPort.trim()) {
-      toast.error(t("publish.errors.portRequired", "Port is required"));
-      return;
+      toast.error(t("publish.errors.portRequired", "Port is required"))
+      return
     }
 
-    const port = parseInt(networkPort, 10);
+    const port = parseInt(networkPort, 10)
     if (isNaN(port) || port < 1 || port > 65535) {
-      toast.error(t("publish.errors.invalidPort", "Port must be between 1 and 65535"));
-      return;
+      toast.error(
+        t("publish.errors.invalidPort", "Port must be between 1 and 65535")
+      )
+      return
     }
 
     if (networkId.length < 7) {
-      toast.error(t("publish.errors.networkIdTooShort", "Network ID must be at least 7 characters"));
-      return;
+      toast.error(
+        t(
+          "publish.errors.networkIdTooShort",
+          "Network ID must be at least 7 characters"
+        )
+      )
+      return
     }
 
     if (!organization.trim()) {
-      toast.error(t("publish.errors.organizationRequired", "Organization is required"));
-      return;
+      toast.error(
+        t("publish.errors.organizationRequired", "Organization is required")
+      )
+      return
     }
 
-    setIsValidating(true);
-    setValidationResult(null);
+    setIsValidating(true)
+    setValidationResult(null)
 
     try {
       // First, check if the network health endpoint is reachable
-      const protocol = selectedNetwork?.useHttps ? "https" : "http";
-      const healthUrl = `${protocol}://${networkHost}:${port}/api/health`;
+      const protocol = selectedNetwork?.useHttps ? "https" : "http"
+      const healthUrl = `${protocol}://${networkHost}:${port}/api/health`
 
-      let healthData: any = null;
+      let healthData: any = null
       try {
         const healthResponse = await fetch(healthUrl, {
           method: "GET",
@@ -100,23 +112,29 @@ const NetworkPublishPage: React.FC = () => {
             Accept: "application/json",
           },
           signal: AbortSignal.timeout(10000),
-        });
+        })
 
         if (!healthResponse.ok) {
           setValidationResult({
             success: false,
-            message: t("publish.errors.healthCheckFailed", `Health check failed with status ${healthResponse.status}`),
-          });
-          return;
+            message: t(
+              "publish.errors.healthCheckFailed",
+              `Health check failed with status ${healthResponse.status}`
+            ),
+          })
+          return
         }
 
-        healthData = await healthResponse.json();
+        healthData = await healthResponse.json()
       } catch (error: any) {
         setValidationResult({
           success: false,
-          message: t("publish.errors.networkUnreachable", `Cannot reach network at ${networkHost}:${port}. Make sure it's running and accessible.`),
-        });
-        return;
+          message: t(
+            "publish.errors.networkUnreachable",
+            `Cannot reach network at ${networkHost}:${port}. Make sure it's running and accessible.`
+          ),
+        })
+        return
       }
 
       // Call the OpenAgents API to validate
@@ -132,48 +150,76 @@ const NetworkPublishPage: React.FC = () => {
           org: organization,
         }),
         signal: AbortSignal.timeout(15000),
-      });
+      })
 
-      const result = await response.json();
+      const result = await response.json()
 
       if (response.ok && result.code === 200) {
         setValidationResult({
           success: true,
-          message: t("publish.validation.success", "Network configuration is valid!"),
+          message: t(
+            "publish.validation.success",
+            "Network configuration is valid!"
+          ),
           networkName: healthData?.data?.network_name || networkName,
           onlineAgents: healthData?.data?.agent_count || 0,
-          mods: healthData?.data?.mods?.filter((m: any) => m.enabled).map((m: any) => m.name) || [],
-        });
-        setIsValidated(true);
-        toast.success(t("publish.validation.successToast", "Validation successful!"));
+          mods:
+            healthData?.data?.mods
+              ?.filter((m: any) => m.enabled)
+              .map((m: any) => m.name) || [],
+        })
+        setIsValidated(true)
+        toast.success(
+          t("publish.validation.successToast", "Validation successful!")
+        )
       } else {
         setValidationResult({
           success: false,
-          message: result.message || t("publish.errors.validationFailed", "Validation failed"),
-        });
+          message:
+            result.message ||
+            t("publish.errors.validationFailed", "Validation failed"),
+        })
       }
     } catch (error: any) {
-      console.error("Validation error:", error);
+      console.error("Validation error:", error)
       setValidationResult({
         success: false,
-        message: error.message || t("publish.errors.validationError", "An error occurred during validation"),
-      });
+        message:
+          error.message ||
+          t(
+            "publish.errors.validationError",
+            "An error occurred during validation"
+          ),
+      })
     } finally {
-      setIsValidating(false);
+      setIsValidating(false)
     }
-  }, [networkId, networkHost, networkPort, organization, networkName, selectedNetwork, t]);
+  }, [
+    networkId,
+    networkHost,
+    networkPort,
+    organization,
+    networkName,
+    selectedNetwork,
+    t,
+  ])
 
   // Publish network
   const handlePublish = useCallback(async () => {
     if (!isValidated) {
-      toast.error(t("publish.errors.validateFirst", "Please validate the configuration first"));
-      return;
+      toast.error(
+        t(
+          "publish.errors.validateFirst",
+          "Please validate the configuration first"
+        )
+      )
+      return
     }
 
-    setIsPublishing(true);
+    setIsPublishing(true)
 
     try {
-      const port = parseInt(networkPort, 10);
+      const port = parseInt(networkPort, 10)
 
       const response = await fetch(`${OPENAGENTS_API_BASE}/networks/publish`, {
         method: "POST",
@@ -182,30 +228,46 @@ const NetworkPublishPage: React.FC = () => {
         },
         body: new URLSearchParams({
           network_id: networkId,
-          network_name: networkName || validationResult?.networkName || networkId,
+          network_name:
+            networkName || validationResult?.networkName || networkId,
           network_host: networkHost,
           network_port: port.toString(),
           org: organization,
         }),
         signal: AbortSignal.timeout(30000),
-      });
+      })
 
-      const result = await response.json();
+      const result = await response.json()
 
       if (response.ok && result.code === 200) {
-        toast.success(t("publish.success", "Network published successfully!"));
-        setIsValidated(false);
-        setValidationResult(null);
+        toast.success(t("publish.success", "Network published successfully!"))
+        setIsValidated(false)
+        setValidationResult(null)
       } else {
-        toast.error(result.message || t("publish.errors.publishFailed", "Failed to publish network"));
+        toast.error(
+          result.message ||
+            t("publish.errors.publishFailed", "Failed to publish network")
+        )
       }
     } catch (error: any) {
-      console.error("Publish error:", error);
-      toast.error(error.message || t("publish.errors.publishError", "An error occurred while publishing"));
+      console.error("Publish error:", error)
+      toast.error(
+        error.message ||
+          t("publish.errors.publishError", "An error occurred while publishing")
+      )
     } finally {
-      setIsPublishing(false);
+      setIsPublishing(false)
     }
-  }, [isValidated, networkId, networkName, networkHost, networkPort, organization, validationResult, t]);
+  }, [
+    isValidated,
+    networkId,
+    networkName,
+    networkHost,
+    networkPort,
+    organization,
+    validationResult,
+    t,
+  ])
 
   return (
     <div className="p-6 h-full overflow-y-auto dark:bg-gray-900">
@@ -215,12 +277,15 @@ const NetworkPublishPage: React.FC = () => {
           {t("publish.title", "Publish Network")}
         </h1>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          {t("publish.subtitle", "Publish your network to the OpenAgents directory to make it discoverable by others.")}
+          {t(
+            "publish.subtitle",
+            "Publish your network to the OpenAgents directory to make it discoverable by others."
+          )}
         </p>
       </div>
 
       {/* Form */}
-      <div className="max-w-2xl">
+      <div className="max-w-2xl mx-auto">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="space-y-6">
             {/* Network ID */}
@@ -236,11 +301,17 @@ const NetworkPublishPage: React.FC = () => {
                 id="networkId"
                 value={networkId}
                 onChange={(e) => setNetworkId(e.target.value)}
-                placeholder={t("publish.form.networkIdPlaceholder", "e.g., my-awesome-network")}
+                placeholder={t(
+                  "publish.form.networkIdPlaceholder",
+                  "e.g., my-awesome-network"
+                )}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {t("publish.form.networkIdHelp", "Unique identifier for your network (min 7 characters)")}
+                {t(
+                  "publish.form.networkIdHelp",
+                  "Unique identifier for your network (min 7 characters)"
+                )}
               </p>
             </div>
 
@@ -257,11 +328,17 @@ const NetworkPublishPage: React.FC = () => {
                 id="networkName"
                 value={networkName}
                 onChange={(e) => setNetworkName(e.target.value)}
-                placeholder={t("publish.form.networkNamePlaceholder", "e.g., My Awesome Network")}
+                placeholder={t(
+                  "publish.form.networkNamePlaceholder",
+                  "e.g., My Awesome Network"
+                )}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {t("publish.form.networkNameHelp", "Display name for your network (optional, auto-detected from health endpoint)")}
+                {t(
+                  "publish.form.networkNameHelp",
+                  "Display name for your network (optional, auto-detected from health endpoint)"
+                )}
               </p>
             </div>
 
@@ -278,11 +355,17 @@ const NetworkPublishPage: React.FC = () => {
                 id="organization"
                 value={organization}
                 onChange={(e) => setOrganization(e.target.value)}
-                placeholder={t("publish.form.organizationPlaceholder", "e.g., openagents")}
+                placeholder={t(
+                  "publish.form.organizationPlaceholder",
+                  "e.g., openagents"
+                )}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {t("publish.form.organizationHelp", "Your organization identifier on OpenAgents")}
+                {t(
+                  "publish.form.organizationHelp",
+                  "Your organization identifier on OpenAgents"
+                )}
               </p>
             </div>
 
@@ -300,7 +383,10 @@ const NetworkPublishPage: React.FC = () => {
                   id="networkHost"
                   value={networkHost}
                   onChange={(e) => setNetworkHost(e.target.value)}
-                  placeholder={t("publish.form.hostPlaceholder", "e.g., mynetwork.example.com")}
+                  placeholder={t(
+                    "publish.form.hostPlaceholder",
+                    "e.g., mynetwork.example.com"
+                  )}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -377,22 +463,38 @@ const NetworkPublishPage: React.FC = () => {
                       <div className="mt-2 text-sm text-green-700 dark:text-green-300">
                         {validationResult.networkName && (
                           <p>
-                            <span className="font-medium">{t("publish.validation.detectedName", "Detected Name:")}</span>{" "}
+                            <span className="font-medium">
+                              {t(
+                                "publish.validation.detectedName",
+                                "Detected Name:"
+                              )}
+                            </span>{" "}
                             {validationResult.networkName}
                           </p>
                         )}
                         {validationResult.onlineAgents !== undefined && (
                           <p>
-                            <span className="font-medium">{t("publish.validation.onlineAgents", "Online Agents:")}</span>{" "}
+                            <span className="font-medium">
+                              {t(
+                                "publish.validation.onlineAgents",
+                                "Online Agents:"
+                              )}
+                            </span>{" "}
                             {validationResult.onlineAgents}
                           </p>
                         )}
-                        {validationResult.mods && validationResult.mods.length > 0 && (
-                          <p>
-                            <span className="font-medium">{t("publish.validation.enabledMods", "Enabled Mods:")}</span>{" "}
-                            {validationResult.mods.join(", ")}
-                          </p>
-                        )}
+                        {validationResult.mods &&
+                          validationResult.mods.length > 0 && (
+                            <p>
+                              <span className="font-medium">
+                                {t(
+                                  "publish.validation.enabledMods",
+                                  "Enabled Mods:"
+                                )}
+                              </span>{" "}
+                              {validationResult.mods.join(", ")}
+                            </p>
+                          )}
                       </div>
                     )}
                   </div>
@@ -494,17 +596,37 @@ const NetworkPublishPage: React.FC = () => {
                 {t("publish.info.title", "About Publishing")}
               </h3>
               <div className="mt-2 text-sm text-blue-700 dark:text-blue-300 space-y-1">
-                <p>{t("publish.info.point1", "Your network must be publicly accessible at the specified host and port.")}</p>
-                <p>{t("publish.info.point2", "The health endpoint (/api/health) must be reachable for validation.")}</p>
-                <p>{t("publish.info.point3", "Published networks will appear in the OpenAgents directory.")}</p>
-                <p>{t("publish.info.point4", "You need to be registered with an organization on OpenAgents to publish.")}</p>
+                <p>
+                  {t(
+                    "publish.info.point1",
+                    "Your network must be publicly accessible at the specified host and port."
+                  )}
+                </p>
+                <p>
+                  {t(
+                    "publish.info.point2",
+                    "The health endpoint (/api/health) must be reachable for validation."
+                  )}
+                </p>
+                <p>
+                  {t(
+                    "publish.info.point3",
+                    "Published networks will appear in the OpenAgents directory."
+                  )}
+                </p>
+                <p>
+                  {t(
+                    "publish.info.point4",
+                    "You need to be registered with an organization on OpenAgents to publish."
+                  )}
+                </p>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default NetworkPublishPage;
+export default NetworkPublishPage
