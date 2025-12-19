@@ -1,5 +1,4 @@
 import React, { ReactNode, useContext, useState, useEffect } from "react";
-import ModSidebar from "./ModSidebar";
 import Sidebar from "./Sidebar";
 import ConnectionLoadingOverlay from "./ConnectionLoadingOverlay";
 import {
@@ -133,9 +132,6 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
   // AgentWorld should still show the primary sidebar for navigation
   const shouldHidePrimarySidebar = false;
 
-  // Hide ModSidebar (left navigation) on admin routes
-  const shouldHideModSidebar = isAdminRoute;
-
   // Admin route restriction: admin users can ONLY access /admin/* routes
   useEffect(() => {
     if (!isAdminLoading && isConnected && isAdmin && !isAdminRoute) {
@@ -159,14 +155,6 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
 
       {context && isConnected && (
         <LayoutProvider>
-          {/* Left module navigation bar - hidden on mobile and admin routes */}
-          {/* Use Tailwind responsive classes: hidden by default, show on md (768px) and up */}
-          {/* {!shouldHideModSidebar && (
-            <div className="hidden md:block">
-              <ModSidebar />
-            </div>
-          )} */}
-
           {/* Middle content area: sidebar + main content */}
           <div className="flex-1 flex overflow-hidden relative">
             {/* Primary sidebar (left navigation icons) - hidden on mobile, shown in drawer instead */}

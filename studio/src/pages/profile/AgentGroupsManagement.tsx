@@ -5,7 +5,6 @@ import { useOpenAgents } from '@/context/OpenAgentsProvider';
 import { useAuthStore } from '@/stores/authStore';
 import { useConfirm } from '@/context/ConfirmContext';
 import { Button } from '@/components/layout/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/layout/ui/dialog';
 import { Badge } from '@/components/layout/ui/badge';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 

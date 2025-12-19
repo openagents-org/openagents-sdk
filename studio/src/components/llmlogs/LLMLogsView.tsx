@@ -6,7 +6,6 @@ import { useLLMLogStore } from "@/stores/llmLogStore";
 import { useThemeStore } from "@/stores/themeStore";
 import type { LLMLogEntry } from "@/types/llmLogs";
 import { Button } from "@/components/layout/ui/button";
-import { Input } from "@/components/layout/ui/input";
 import { RefreshCw, ChevronRight } from "lucide-react";
 
 const baseInputClasses =

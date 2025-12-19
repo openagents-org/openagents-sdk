@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { useLayout } from "./context";
 import { Button } from "@/components/ui/button";
-import { PanelRight, PanelLeft } from "lucide-react";
+import { PanelLeft } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getNavigationRoutesByGroup } from "@/config/routeConfig";

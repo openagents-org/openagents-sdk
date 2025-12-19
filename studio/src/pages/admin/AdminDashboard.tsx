@@ -31,9 +31,6 @@ import {
   Monitor,
   Bug,
   Wifi,
-  Network,
-  CheckCircle,
-  XCircle,
   Radio,
   ExternalLink,
   Copy,
@@ -244,7 +241,8 @@ const AdminDashboard: React.FC = () => {
     checkPublication();
   }, [selectedNetwork]);
 
-  const handleRestartNetwork = async () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _handleRestartNetwork = async () => {
       const confirmed = await confirm(
       t('dashboard.restart.title'),
       t('dashboard.restart.confirm'),
@@ -278,7 +276,8 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleBroadcastMessage = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _handleBroadcastMessage = () => {
     setShowBroadcastModal(true);
   };
 

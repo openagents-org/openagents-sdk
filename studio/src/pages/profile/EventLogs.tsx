@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { eventLogService, EventLogEntry, HttpRequestLogEntry } from "@/services/eventLogService";
 import { Button } from "@/components/layout/ui/button";
 import { Input } from "@/components/layout/ui/input";
-import { Badge } from "@/components/layout/ui/badge";
 import { X, FileText, ArrowLeftRight, ChevronDown, Send, Circle } from "lucide-react";
 
 type LogEntry = EventLogEntry | HttpRequestLogEntry;

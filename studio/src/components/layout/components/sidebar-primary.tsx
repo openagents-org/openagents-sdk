@@ -1,18 +1,8 @@
 import React from "react";
 import { toAbsoluteUrl } from "@/lib/helpers";
 import {
-  Mails,
-  NotepadText,
-  Settings,
   User,
-  Clock,
-  Shield,
-  Building2,
   LogOut,
-  Download,
-  ExternalLink,
-  Zap,
-  Target,
   Sun,
   Moon,
   Users,
@@ -37,7 +27,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useThemeStore } from "@/stores/themeStore";
 import { useMemo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";

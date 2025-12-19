@@ -387,8 +387,9 @@ const ServiceAgentDetail: React.FC = () => {
     }
   };
 
-  // Format timestamp
-  const formatTimestamp = (timestamp?: string) => {
+  // Format timestamp (used for future timestamp display features)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _formatTimestamp = (timestamp?: string) => {
     if (!timestamp) return "";
     try {
       // Try parsing as ISO string first

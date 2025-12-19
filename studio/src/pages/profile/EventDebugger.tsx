@@ -5,8 +5,7 @@ import { Event, EventResponse } from "@/types/events";
 import { Button } from "@/components/layout/ui/button";
 import { Input } from "@/components/layout/ui/input";
 import { Textarea } from "@/components/layout/ui/textarea";
-import { Badge } from "@/components/layout/ui/badge";
-import { Send, CheckCircle2, XCircle, AlertCircle, X } from "lucide-react";
+import { Send, AlertCircle, X } from "lucide-react";
 
 const EventDebugger: React.FC = () => {
   const { connector, isConnected } = useOpenAgents();

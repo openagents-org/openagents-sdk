@@ -131,6 +131,7 @@ function CardToolbar({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
 
 function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
+    // eslint-disable-next-line jsx-a11y/heading-has-content
     <h3
       data-slot="card-title"
       className={cn('text-base font-semibold leading-none tracking-tight', className)}

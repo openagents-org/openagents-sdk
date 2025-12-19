@@ -22,7 +22,6 @@ const WikiPageList: React.FC = () => {
   const {
     pages,
     proposals,
-    pagesLoading,
     pagesError,
     setConnection,
     loadPages,
