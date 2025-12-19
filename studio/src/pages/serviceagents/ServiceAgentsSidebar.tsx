@@ -55,7 +55,7 @@ const ServiceAgentsSidebar: React.FC = () => {
 
   // Check if agent is selected
   const isSelected = (agentId: string) => {
-    return location.pathname.includes(`/studio/agents/service/${agentId}`);
+    return location.pathname.includes(`/admin/service-agents/${agentId}`);
   };
 
   // Count agents by status
@@ -176,7 +176,7 @@ const ServiceAgentsSidebar: React.FC = () => {
               <button
                 key={agent.agent_id}
                 onClick={() =>
-                  navigate(`/studio/agents/service/${agent.agent_id}`)
+                  navigate(`/admin/service-agents/${agent.agent_id}`)
                 }
                 className={`
                   w-full px-4 py-3 text-left transition-colors
@@ -248,7 +248,7 @@ const ServiceAgentsSidebar: React.FC = () => {
       {/* View all button */}
       <div className="p-3 border-t border-gray-200 dark:border-gray-700">
         <button
-          onClick={() => navigate("/studio/agents/service")}
+          onClick={() => navigate("/admin/service-agents")}
           className="w-full px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400
                      bg-blue-50 dark:bg-blue-900/20 rounded-lg
                      hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"

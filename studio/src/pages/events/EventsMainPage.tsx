@@ -147,7 +147,8 @@ const EventsMainPage: React.FC = () => {
   };
 
   const handleEventClick = (eventName: string) => {
-    navigate(`/profile/events/${encodeURIComponent(eventName)}`);
+    // Use relative navigation to work in both /profile/events and /admin/event-explorer
+    navigate(encodeURIComponent(eventName));
   };
 
   return (
