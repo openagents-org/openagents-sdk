@@ -1,71 +1,76 @@
 ---
-title: "Demo: Elon Musk News Tracker"
-summary: "A news aggregation network that continuously collects Elon Musk news from RSS sources and exposes them via MCP for querying by Claude or other AI assistants."
+title: "Walkthrough - Creating an Information Hub Agent Network"
+summary: "Learn how to build an information hub network that collects data from multiple sources and exposes it via MCP for querying by Claude or other AI assistants."
 topicTitle: "Updates"
 topicSlug: "updates"
 ---
 
-# Demo: Elon Musk News Tracker
+# Walkthrough: Creating an Information Hub Agent Network
 
-A demo that continuously collects news about Elon Musk from various RSS sources and broadcasts them via the **feed mod**. Once running, other agents (including Claude via MCP) can connect and query the feed to answer questions like:
+This walkthrough teaches you how to build an **information hub** - a network that continuously collects data from external sources and makes it queryable by AI assistants via MCP. We'll use a news tracker as our example, but the same pattern applies to any data aggregation use case.
 
-> "What did Elon Musk do in the last 24 hours?"
+By the end, you'll understand how to:
+- Create networks that serve as persistent data stores
+- Build agents that continuously collect and organize information
+- Expose your data hub to AI assistants like Claude via MCP
 
 <Banner type="important">
-**Important:** Please stop any running networks before starting this demo.
+**Important:** Please stop any running networks before starting this walkthrough.
 </Banner>
 
 ## What You'll Learn
 
-- Setting up a network with the feed mod for immutable post storage
-- Creating a Python-based WorkerAgent for continuous data collection
-- Fetching news from multiple RSS/API sources (Google News, Reddit, Hacker News)
-- Connecting Claude Desktop or other MCP clients to query your feed
+- Setting up a network with the **feed mod** for immutable post storage
+- Creating a Python-based **WorkerAgent** for continuous data collection
+- Fetching data from multiple RSS/API sources
+- Connecting Claude Desktop or other MCP clients to query your information hub
 
-## Architecture
+## Architecture Overview
+
+The information hub pattern consists of three key components:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    OpenAgents Network                        │
 │                                                              │
 │  ┌──────────────┐     ┌──────────────┐                      │
-│  │    News      │────>│   Feed Mod   │<────── MCP ─────────┐│
+│  │    Data      │────>│   Feed Mod   │<────── MCP ─────────┐│
 │  │  Collector   │     │   (Storage)  │                     ││
 │  │    Agent     │     └──────────────┘                     ││
 │  └──────────────┘            │                             ││
 │         │                    │                             ││
 │         ▼                    ▼                             ││
 │  ┌──────────────┐     ┌──────────────┐                     ││
-│  │ Google News  │     │  Searchable  │                     ││
-│  │ Reddit RSS   │     │    Posts     │                     ││
-│  │ Hacker News  │     │  + Tags      │                     ││
+│  │ External     │     │  Searchable  │                     ││
+│  │ Data Sources │     │    Posts     │                     ││
+│  │ (RSS, APIs)  │     │  + Tags      │                     ││
 │  └──────────────┘     └──────────────┘                     ││
 └─────────────────────────────────────────────────────────────┘│
                                                                │
 ┌──────────────────────────────────────────────────────────────┘
 │
 │   ┌──────────────────┐
-└──>│  Claude Desktop  │ "What did Elon do today?"
+└──>│  Claude Desktop  │ "What's the latest news?"
     │    (via MCP)     │
     └──────────────────┘
 ```
 
-## Components
+## Core Components
 
 | Component | Type | Description |
 |-----------|------|-------------|
 | **Network** | Feed Mod | Immutable post storage with full-text search |
-| **elon-news-collector** | Python (WorkerAgent) | Fetches news every 5 minutes |
+| **Collector Agent** | Python (WorkerAgent) | Fetches data on a schedule |
 | **MCP Endpoint** | HTTP Transport | External access for AI assistants |
 
-## News Sources
+## Example: News Tracker Data Sources
+
+In our example, we collect news from multiple free sources:
 
 | Source | What It Captures |
 |--------|------------------|
-| Google News RSS | Mainstream news about Elon Musk |
-| Reddit r/elonmusk | Community discussions |
-| Reddit r/teslamotors | Tesla-related news |
-| Reddit r/spacex | SpaceX updates |
+| Google News RSS | Mainstream news articles |
+| Reddit RSS | Community discussions from relevant subreddits |
 | Hacker News | Tech community discussions |
 
 ## Prerequisites
@@ -73,24 +78,26 @@ A demo that continuously collects news about Elon Musk from various RSS sources 
 - OpenAgents installed (`pip install -e .`)
 - Python 3.10 or higher
 
-No additional API keys required - all news sources are free!
+No additional API keys required - all data sources in this example are free!
 
-## Quick Start
+## Step 1: Run the Example
 
-### Option A: One Command
+Let's start by running the complete example, then we'll break down how each part works.
+
+### Quick Start (One Command)
 
 ```bash
 cd demos/06_elon_musk_tracker
 ./run.sh
 ```
 
-### Option B: Manual Start (Two Terminals)
+### Manual Start (Two Terminals)
 
 **Terminal 1: Start the Network**
 
 ```bash
 cd demos/06_elon_musk_tracker
-openagents launch-network network.yaml
+openagents network start network.yaml
 ```
 
 Expected output:
@@ -103,7 +110,7 @@ INFO:openagents:MCP endpoint available at http://localhost:8700/mcp
 INFO:openagents:Loaded mod: openagents.mods.workspace.feed
 ```
 
-**Terminal 2: Start the News Collector**
+**Terminal 2: Start the Collector Agent**
 
 ```bash
 cd demos/06_elon_musk_tracker
@@ -116,7 +123,7 @@ Expected output:
 [NewsCollector] Connected! Starting news collection loop (interval: 300s)
 [NewsCollector] Fetching news at 2025-12-18 10:30:00...
 [NewsCollector] Found 12 new items to post.
-[NewsCollector] Posted: Elon Musk's net worth soars...
+[NewsCollector] Posted: Latest news headline...
 ```
 
 ### Command Line Options
@@ -127,9 +134,11 @@ python agents/elon_fan_agent.py --port 8700     # Custom network port
 python agents/elon_fan_agent.py --host myhost   # Custom network host
 ```
 
-## Connecting Claude Desktop
+## Step 2: Connect AI Assistants via MCP
 
-### Configure MCP Client
+Once your information hub is running, you can connect AI assistants to query it via MCP.
+
+### Configure Claude Desktop
 
 **macOS:** Edit `~/Library/Application Support/Claude/claude_desktop_config.json`
 
@@ -144,7 +153,7 @@ python agents/elon_fan_agent.py --host myhost   # Custom network host
 ```json
 {
   "mcpServers": {
-    "elon-news-tracker": {
+    "my-info-hub": {
       "command": "npx",
       "args": [
         "mcp-remote",
@@ -157,18 +166,20 @@ python agents/elon_fan_agent.py --host myhost   # Custom network host
 
 Restart Claude Desktop after saving the configuration.
 
-### Example Queries
+### Query Your Information Hub
 
-Once connected, try these prompts with Claude:
+Once connected, Claude can query your data using natural language:
 
 | Query | What Claude Does |
 |-------|------------------|
-| "What did Elon Musk do today?" | Calls `get_recent_feed_posts` then summarizes |
-| "Search for SpaceX news" | Calls `search_feed_posts` with query "SpaceX" |
-| "Show me Tesla-related news" | Calls `list_feed_posts` with tag filter "tesla" |
+| "What's the latest news?" | Calls `get_recent_feed_posts` then summarizes |
+| "Search for technology news" | Calls `search_feed_posts` with query |
+| "Show me posts tagged 'important'" | Calls `list_feed_posts` with tag filter |
 | "Get the latest 5 posts" | Calls `list_feed_posts` with limit 5 |
 
 ## MCP Tools Reference
+
+The feed mod exposes these tools via MCP:
 
 | Tool | Parameters | Description |
 |------|------------|-------------|
@@ -178,15 +189,17 @@ Once connected, try these prompts with Claude:
 | `get_feed_post` | `post_id` | Get specific post |
 | `create_feed_post` | `title`, `content`, `tags` | Create a new post |
 
-## Network Configuration
+## Step 3: Understanding the Network Configuration
 
-### network.yaml Reference
+The network configuration defines how your information hub operates.
+
+### network.yaml Explained
 
 ```yaml
 network:
-  name: "ElonMuskTracker"
+  name: "MyInfoHub"
   mode: "centralized"
-  node_id: "elon-tracker-1"
+  node_id: "info-hub-1"
 
   transports:
     - type: "http"
@@ -205,26 +218,28 @@ network:
         max_title_length: 200
         max_content_length: 50000
         enable_search: true
-        categories:
+        categories:          # Define your own categories
           - "news"
-          - "elon-musk"
-          - "tesla"
-          - "spacex"
-          - "x-twitter"
-          - "neuralink"
+          - "important"
+          - "updates"
 ```
 
-## Agent Deep Dive
+**Key configuration points:**
+- `serve_mcp: true` - Enables the MCP endpoint for AI assistant access
+- `enable_search: true` - Enables full-text search on posts
+- `categories` - Define tags that can be used to organize posts
+
+## Step 4: Building the Collector Agent
+
+The collector agent is the heart of your information hub. It continuously fetches data and posts it to the feed.
 
 ### The WorkerAgent Pattern
-
-The news collector extends `WorkerAgent` with a continuous collection loop:
 
 ```python
 from openagents.agents.worker_agent import WorkerAgent
 
-class NewsCollectorAgent(WorkerAgent):
-    default_agent_id = "elon-news-collector"
+class DataCollectorAgent(WorkerAgent):
+    default_agent_id = "my-collector"
 
     def __init__(self, fetch_interval: int = 300, **kwargs):
         super().__init__(**kwargs)
@@ -236,29 +251,39 @@ class NewsCollectorAgent(WorkerAgent):
 
     async def _collection_loop(self):
         while True:
-            await self._fetch_and_broadcast_news()
+            await self._fetch_and_post_data()
             await asyncio.sleep(self.fetch_interval)
 ```
 
-### Auto-Categorization
+**Key patterns:**
+- Extend `WorkerAgent` for background processing
+- Use `on_startup()` to begin the collection loop
+- Track posted items to avoid duplicates
 
-Each news item is automatically tagged based on content:
+### Auto-Tagging Content
+
+Automatically categorize posts based on content:
 
 ```python
-tags = ["elon-musk", "news"]
-if "tesla" in content.lower(): tags.append("tesla")
-if "spacex" in content.lower(): tags.append("spacex")
-if "twitter" in content.lower() or "x.com" in content.lower():
-    tags.append("x-twitter")
-if "neuralink" in content.lower(): tags.append("neuralink")
+def get_tags(content: str) -> List[str]:
+    tags = ["news"]
+    content_lower = content.lower()
+
+    if "technology" in content_lower: tags.append("tech")
+    if "finance" in content_lower: tags.append("finance")
+    if "breaking" in content_lower: tags.append("important")
+
+    return tags
 ```
 
-## Adding Custom News Sources
+## Step 5: Adding Custom Data Sources
 
-Extend `tools/rss_fetcher.py`:
+You can extend the collector to fetch from any data source.
+
+### RSS Feed Example
 
 ```python
-def fetch_custom_rss(url: str, count: int = 10) -> List[Dict]:
+def fetch_rss(url: str, count: int = 10) -> List[Dict]:
     """Fetch from any RSS feed."""
     response = requests.get(url, timeout=15)
     root = ET.fromstring(response.content)
@@ -275,11 +300,23 @@ def fetch_custom_rss(url: str, count: int = 10) -> List[Dict]:
     return items
 ```
 
-## Authentication
+### API Integration Example
 
-### Add Admin Agent Group
+```python
+async def fetch_api_data(api_url: str) -> List[Dict]:
+    """Fetch from a REST API."""
+    async with aiohttp.ClientSession() as session:
+        async with session.get(api_url) as response:
+            data = await response.json()
+            return [
+                {"title": item["name"], "content": item["description"]}
+                for item in data["results"]
+            ]
+```
 
-The demo includes an admin agent group with password authentication:
+## Optional: Adding Authentication
+
+You can add authentication to protect your information hub:
 
 ```yaml
 agent_groups:
@@ -290,7 +327,7 @@ agent_groups:
       permissions: ["all"]
 ```
 
-The password hash is for "admin". Generate your own with:
+Generate a password hash with:
 
 ```python
 import hashlib
@@ -299,10 +336,10 @@ hashlib.sha256("your-password".encode()).hexdigest()
 
 ## Data Storage
 
-Feed posts are stored in `./data/elon-musk-tracker/`:
+Feed posts are stored locally:
 
 ```
-./data/elon-musk-tracker/
+./data/your-hub-name/
 └── feed/
     ├── posts/
     │   ├── {post_id_1}.json
@@ -330,10 +367,10 @@ kill -9 $(lsof -t -i:8700)
 curl http://localhost:8700/health
 ```
 
-### No News Being Collected
+### No Data Being Collected
 
 1. Check internet connectivity
-2. Some RSS sources may be rate-limited
+2. Some data sources may be rate-limited
 3. Try increasing fetch interval: `--interval 600`
 
 ### MCP Connection Failed
@@ -345,7 +382,9 @@ curl -X POST http://localhost:8700/mcp \
   -d '{"jsonrpc": "2.0", "method": "tools/list", "id": 1}'
 ```
 
-## Files Reference
+## Example Files Reference
+
+The demo in `demos/06_elon_musk_tracker/` provides a complete working example:
 
 | File | Purpose |
 |------|---------|
@@ -354,7 +393,19 @@ curl -X POST http://localhost:8700/mcp \
 | `tools/rss_fetcher.py` | RSS/API fetching utilities |
 | `run.sh` | One-command demo launcher |
 
-## What's Next?
+## Use Cases for Information Hubs
 
-- **[Tech News Stream](/tutorials/demo-tech-news-stream)** - See a similar pattern with chatroom integration
-- **[Research Team](/tutorials/demo-research-team)** - Learn router-based task delegation
+The information hub pattern applies to many scenarios:
+
+| Use Case | Data Sources | Example Queries |
+|----------|--------------|-----------------|
+| News Aggregator | RSS feeds, APIs | "What happened today?" |
+| Research Hub | Academic APIs, arXiv | "Find papers on transformers" |
+| Social Monitor | Twitter API, Reddit | "What's trending?" |
+| Price Tracker | E-commerce APIs | "Best laptop deals this week" |
+| Job Board | Job APIs, Career sites | "Remote Python jobs" |
+
+## Related Documentation
+
+- **[Tech News Stream](/tutorials/demo-tech-news-stream)** - Similar pattern with chatroom integration
+- **[Research Team](/tutorials/demo-research-team)** - Router-based task delegation

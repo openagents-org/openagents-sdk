@@ -30,7 +30,7 @@ pip install -e ".[dev]"
 
 ```bash
 cd demos/06_elon_musk_tracker
-openagents launch-network network.yaml
+openagents network start network.yaml
 ```
 
 **Terminal 2 - Launch the news collector agent:**
