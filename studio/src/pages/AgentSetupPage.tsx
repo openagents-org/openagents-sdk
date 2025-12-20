@@ -99,6 +99,7 @@ const AgentNamePicker: React.FC = () => {
               Accept: "application/json",
             },
             useHttps: selectedNetwork.useHttps,
+            networkId: selectedNetwork.networkId,
           }
         );
 
@@ -247,6 +248,7 @@ const AgentNamePicker: React.FC = () => {
             agent_group: targetGroup || undefined,
           }),
           useHttps: selectedNetwork.useHttps,
+          networkId: selectedNetwork.networkId,
         }
       );
 
@@ -296,6 +298,7 @@ const AgentNamePicker: React.FC = () => {
               secret: verifyData.secret,
             }),
             useHttps: selectedNetwork.useHttps,
+            networkId: selectedNetwork.networkId,
           }
         );
       } catch (unregError) {

@@ -320,8 +320,13 @@ export const fetchNetworkById = async (
     const result = await response.json();
 
     if (result.code === 200 && result.data) {
-      // Check if network is offline
-      if (result.data.status === 'offline') {
+      // Check if network is offline - but skip this check for relay networks
+      // Relay networks are reachable through the relay even if status shows "offline"
+      // Note: relay_url is nested inside profile
+      const relayUrl = result.data.profile?.relay_url;
+      const hasRelayUrl = relayUrl && relayUrl !== '';
+
+      if (result.data.status === 'offline' && !hasRelayUrl) {
         const networkName = result.data.profile?.name || networkId;
         return {
           success: false,

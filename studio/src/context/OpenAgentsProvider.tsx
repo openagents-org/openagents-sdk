@@ -414,6 +414,7 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
     });
 
     // HTTPS 功能：创建连接器时传递 useHttps 参数
+    // Network ID: Pass networkId for routing through network.openagents.org
     const newConnector = new HttpEventConnector({
       agentId: agentName,
       host: selectedNetwork.host,
@@ -421,6 +422,7 @@ export const OpenAgentsProvider: React.FC<OpenAgentsProviderProps> = ({
       useHttps: useHttps, // HTTPS 功能：传递 useHttps 参数
       passwordHash: passwordHash,
       agentGroup: agentGroup,
+      networkId: selectedNetwork.networkId, // Network ID for routing
     });
 
     // Set up connection status listeners

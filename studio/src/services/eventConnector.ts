@@ -24,6 +24,7 @@ export interface ConnectionOptions {
   passwordHash?: string | null;
   agentGroup?: string | null;
   useHttps?: boolean; // HTTPS Feature: Add useHttps option for HTTPS connections
+  networkId?: string; // Network ID for routing through network.openagents.org
 }
 
 export interface EventHandler {
@@ -37,6 +38,7 @@ export class HttpEventConnector {
   private host: string;
   private port: number;
   private useHttps: boolean; // HTTPS Feature: Store whether to use HTTPS
+  private networkId?: string; // Network ID for routing through network.openagents.org
   private connected = false;
   private isConnecting = false;
   private connectionAborted = false;
@@ -56,6 +58,7 @@ export class HttpEventConnector {
     this.passwordHash = options.passwordHash || null;
     this.agentGroup = options.agentGroup || null;
     this.useHttps = options.useHttps || false; // HTTPS Feature: Get useHttps option from connection options
+    this.networkId = options.networkId; // Network ID for routing through network.openagents.org
 
     // HTTPS Feature: Construct baseUrl based on useHttps option
     const protocol = this.useHttps ? 'https' : 'http';
@@ -624,10 +627,12 @@ export class HttpEventConnector {
     }
 
     // HTTPS Feature: Pass useHttps parameter to networkFetch
-    const options: RequestInit & { timeout?: number; useHttps?: boolean } = {
+    // Network ID: Pass networkId for routing through network.openagents.org
+    const options: RequestInit & { timeout?: number; useHttps?: boolean; networkId?: string } = {
       method,
       timeout: this.timeout,
       useHttps: this.useHttps, // HTTPS Feature: Use instance's useHttps property
+      networkId: this.networkId, // Network ID for routing through network.openagents.org
     };
 
     if (data && method === "POST") {
