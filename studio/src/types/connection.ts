@@ -23,6 +23,7 @@ export interface NetworkConnection {
   status: ConnectionStatusEnum;
   latency?: number;
   useHttps?: boolean; // HTTPS Feature: Record whether HTTPS is used for the connection
+  networkId?: string; // Published network ID for network.openagents.org routing
   networkInfo?: {
     name?: string;
     workspace_path?: string;

@@ -213,6 +213,73 @@ export const ManualNetworkConnection = async (
   }
 };
 
+/**
+ * Connect to a network using its published network ID
+ * Routes through network.openagents.org/{networkId} which handles
+ * both direct connections and relay-based tunneling.
+ */
+export const connectViaNetworkId = async (
+  networkId: string
+): Promise<NetworkConnection> => {
+  const startTime = Date.now();
+
+  try {
+    console.log(`Connecting to network via ID: ${networkId}`);
+
+    // Use network bridge URL for the health check
+    const response = await networkFetch(
+      "network.openagents.org", // placeholder - networkId routing handles the actual URL
+      443,
+      "/api/health",
+      {
+        method: "GET",
+        timeout: 10000, // 10 second timeout (relay might take longer)
+        headers: {
+          Accept: "application/json",
+        },
+        networkId, // This triggers network bridge routing
+      }
+    );
+
+    const latency = Date.now() - startTime;
+
+    if (response.ok) {
+      const healthData = await response.json();
+      console.log(`Successfully connected to network ${networkId}`);
+
+      return {
+        host: "network.openagents.org",
+        port: 443,
+        status: ConnectionStatusEnum.CONNECTED,
+        latency,
+        useHttps: true,
+        networkId,
+        networkInfo: {
+          name: healthData.data?.network_name || networkId,
+        },
+      };
+    } else {
+      console.error(`HTTP error ${response.status} when connecting to network ${networkId}`);
+      return {
+        host: "network.openagents.org",
+        port: 443,
+        status: ConnectionStatusEnum.ERROR,
+        latency,
+        networkId,
+      };
+    }
+  } catch (error: any) {
+    console.error(`Connection failed for network ${networkId}:`, error);
+    return {
+      host: "network.openagents.org",
+      port: 443,
+      status: ConnectionStatusEnum.ERROR,
+      latency: Date.now() - startTime,
+      networkId,
+    };
+  }
+};
+
 // Fetch network details by network ID from OpenAgents directory
 export const fetchNetworkById = async (
   networkId: string
@@ -405,7 +472,10 @@ export const fetchNetworkHealth = async (
   error?: string;
 }> => {
   try {
-    console.log(`Fetching health information from ${connection.host}:${connection.port}`);
+    const logTarget = connection.networkId
+      ? `network ID: ${connection.networkId}`
+      : `${connection.host}:${connection.port}`;
+    console.log(`Fetching health information from ${logTarget}`);
 
     const response = await networkFetch(
       connection.host,
@@ -418,6 +488,7 @@ export const fetchNetworkHealth = async (
           Accept: "application/json",
         },
         useHttps: connection.useHttps,
+        networkId: connection.networkId, // Use network bridge routing if available
       }
     );
 
@@ -438,7 +509,7 @@ export const fetchNetworkHealth = async (
       };
     }
 
-    console.log(`Health check successful for ${connection.host}:${connection.port}`, {
+    console.log(`Health check successful for ${logTarget}`, {
       networkId: healthData.data.network_id,
       moduleCount: healthData.data.mods?.length || 0,
     });
