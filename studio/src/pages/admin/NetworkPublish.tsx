@@ -4,20 +4,30 @@ import { useAuthStore } from "@/stores/authStore"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
+// Relay connection info from Python backend
+interface RelayConnection {
+  connected: boolean;
+  relay_url: string | null;
+  tunnel_id: string | null;
+}
+
 interface ValidationResult {
   success: boolean
   message?: string
   networkName?: string
   onlineAgents?: number
   mods?: string[]
+  networkUuid?: string
 }
 
 interface PublishedNetwork {
   id: string;
+  network_uuid?: string;
   profile: {
     name: string;
     host: string;
     port: number;
+    relay_url?: string;
   };
   status: string;
   stats: {
@@ -30,6 +40,12 @@ interface PublishedNetwork {
   updatedAt: string;
 }
 
+interface PublishingStatus {
+  isPublished: boolean;
+  network?: PublishedNetwork;
+  loading: boolean;
+}
+
 interface ApiKeyValidationResult {
   isValid: boolean;
   organizationName?: string;
@@ -39,6 +55,7 @@ interface ApiKeyValidationResult {
 }
 
 const OPENAGENTS_API_BASE = "https://endpoint.openagents.org/v1";
+const RELAY_URL = "wss://relay.openagents.org";
 
 // List of invalid/private hosts that cannot be used for publishing
 const INVALID_HOSTS = [
@@ -107,6 +124,15 @@ const NetworkPublishPage: React.FC = () => {
   const [isValidated, setIsValidated] = useState(false);
   const [unpublishingNetworkId, setUnpublishingNetworkId] = useState<string | null>(null);
 
+  // Relay state (controlled by Python backend)
+  const [relayConnection, setRelayConnection] = useState<RelayConnection | null>(null);
+  const [isConnectingRelay, setIsConnectingRelay] = useState(false);
+  const [useRelay, setUseRelay] = useState(false);
+
+  // Publishing status by network_uuid lookup
+  const [publishingStatus, setPublishingStatus] = useState<PublishingStatus>({ isPublished: false, loading: false });
+  const [currentNetworkUuid, setCurrentNetworkUuid] = useState<string | null>(null);
+
   // Check if current host:port is already published
   const existingNetwork = React.useMemo(() => {
     if (!apiKeyValidation?.publishedNetworks || !networkHost || !networkPort) {
@@ -123,7 +149,24 @@ const NetworkPublishPage: React.FC = () => {
     if (!networkHost.trim()) {
       return null;
     }
+    // If using relay, the host validation is bypassed
+    if (useRelay && relayConnection?.connected) {
+      return { valid: true };
+    }
     return isValidPublicHost(networkHost);
+  }, [networkHost, useRelay, relayConnection]);
+
+  // Check if current host is localhost/private (needs relay)
+  const isLocalhostNetwork = React.useMemo(() => {
+    const host = networkHost.trim().toLowerCase();
+    if (!host) return false;
+
+    // Check if it's localhost or private
+    if (INVALID_HOSTS.includes(host)) return true;
+    if (/^10\./.test(host) || /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host) || /^192\.168\./.test(host)) return true;
+    if (host.endsWith('.local')) return true;
+
+    return false;
   }, [networkHost]);
 
   // Pre-fill form with current network info
@@ -144,7 +187,49 @@ const NetworkPublishPage: React.FC = () => {
   useEffect(() => {
     setIsValidated(false)
     setValidationResult(null)
+    setPublishingStatus({ isPublished: false, loading: false });
+    setCurrentNetworkUuid(null);
   }, [networkId, networkHost, networkPort, organization])
+
+  // Lookup publishing status by network_uuid
+  const lookupPublishingStatus = useCallback(async (networkUuid: string) => {
+    setPublishingStatus({ isPublished: false, loading: true });
+    try {
+      const response = await fetch(
+        `${OPENAGENTS_API_BASE}/networks/lookup?network_uuid=${encodeURIComponent(networkUuid)}`,
+        { signal: AbortSignal.timeout(10000) }
+      );
+      if (response.ok) {
+        const result = await response.json();
+        if (result.code === 200 && result.data) {
+          setPublishingStatus({
+            isPublished: true,
+            network: {
+              id: result.data.id,
+              network_uuid: result.data.network_uuid,
+              profile: {
+                name: result.data.name,
+                host: result.data.host,
+                port: result.data.port,
+                relay_url: result.data.relay_url,
+              },
+              status: result.data.status,
+              stats: { online_agents: 0, views: 0, likes: 0 },
+              org: result.data.org,
+              createdAt: '',
+              updatedAt: '',
+            },
+            loading: false,
+          });
+          return;
+        }
+      }
+      setPublishingStatus({ isPublished: false, loading: false });
+    } catch (error) {
+      console.log("Publishing status lookup failed:", error);
+      setPublishingStatus({ isPublished: false, loading: false });
+    }
+  }, [])
 
   // Reset API key validation when API key text changes (debounced reset)
   const prevApiKeyRef = React.useRef(apiKey);
@@ -157,6 +242,110 @@ const NetworkPublishPage: React.FC = () => {
     }
     prevApiKeyRef.current = apiKey;
   }, [apiKey, apiKeyValidation?.isValid]);
+
+  // Check relay status from Python backend on mount and when network changes
+  const checkRelayStatus = useCallback(async () => {
+    if (!selectedNetwork) return;
+
+    try {
+      const protocol = selectedNetwork.useHttps ? "https" : "http";
+      const response = await fetch(
+        `${protocol}://${selectedNetwork.host}:${selectedNetwork.port}/api/relay/status`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setRelayConnection({
+            connected: result.connected,
+            relay_url: result.relay_url,
+            tunnel_id: result.tunnel_id,
+          });
+          setUseRelay(result.connected);
+        }
+      }
+    } catch (error) {
+      // Network might not be running, ignore
+    }
+  }, [selectedNetwork]);
+
+  // Check relay status on mount and when network changes
+  useEffect(() => {
+    checkRelayStatus();
+  }, [checkRelayStatus]);
+
+  // Connect to relay via Python backend
+  const handleConnectRelay = useCallback(async () => {
+    if (!selectedNetwork) {
+      toast.error(t("publish.errors.networkRequired", "No network selected"));
+      return;
+    }
+
+    setIsConnectingRelay(true);
+
+    try {
+      const protocol = selectedNetwork.useHttps ? "https" : "http";
+      const response = await fetch(
+        `${protocol}://${selectedNetwork.host}:${selectedNetwork.port}/api/relay/connect`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ relay_url: RELAY_URL }),
+          signal: AbortSignal.timeout(30000),
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success && result.connected) {
+        setRelayConnection({
+          connected: true,
+          relay_url: result.relay_url,
+          tunnel_id: result.tunnel_id,
+        });
+        setUseRelay(true);
+        toast.success(t("publish.relay.connected", "Connected to relay! Your network is now publicly accessible."));
+      } else {
+        toast.error(result.error || t("publish.relay.connectionFailed", "Failed to connect to relay"));
+        setUseRelay(false);
+      }
+    } catch (error: any) {
+      console.error("Relay connection error:", error);
+      toast.error(error.message || t("publish.relay.connectionFailed", "Failed to connect to relay"));
+      setUseRelay(false);
+    } finally {
+      setIsConnectingRelay(false);
+    }
+  }, [selectedNetwork, t]);
+
+  // Disconnect from relay via Python backend
+  const handleDisconnectRelay = useCallback(async () => {
+    if (!selectedNetwork) return;
+
+    try {
+      const protocol = selectedNetwork.useHttps ? "https" : "http";
+      const response = await fetch(
+        `${protocol}://${selectedNetwork.host}:${selectedNetwork.port}/api/relay/disconnect`,
+        {
+          method: "POST",
+          signal: AbortSignal.timeout(10000),
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        setRelayConnection(null);
+        setUseRelay(false);
+        toast.info(t("publish.relay.disconnected", "Disconnected from relay"));
+      } else {
+        toast.error(result.error || t("publish.relay.disconnectFailed", "Failed to disconnect from relay"));
+      }
+    } catch (error: any) {
+      console.error("Relay disconnect error:", error);
+      toast.error(error.message || t("publish.relay.disconnectFailed", "Failed to disconnect from relay"));
+    }
+  }, [selectedNetwork, t]);
 
   // Validate API key and fetch organization info
   const handleValidateApiKey = useCallback(async () => {
@@ -267,11 +456,13 @@ const NetworkPublishPage: React.FC = () => {
       return
     }
 
-    // Check if host is valid for public access
-    const hostCheck = isValidPublicHost(networkHost);
-    if (!hostCheck.valid) {
-      toast.error(t("publish.errors.hostNotPublic", "The host must be publicly accessible (no localhost, private IPs, or .local domains)"));
-      return;
+    // Check if host is valid for public access (skip if using relay)
+    if (!useRelay || !relayConnection?.relay_url) {
+      const hostCheck = isValidPublicHost(networkHost);
+      if (!hostCheck.valid) {
+        toast.error(t("publish.errors.hostNotPublic", "The host must be publicly accessible (no localhost, private IPs, or .local domains)"));
+        return;
+      }
     }
 
     // Check if host:port is already published
@@ -291,9 +482,25 @@ const NetworkPublishPage: React.FC = () => {
     setValidationResult(null)
 
     try {
-      // Step 1: Quick browser-based health check for immediate feedback
-      const protocol = selectedNetwork?.useHttps ? "https" : "http";
-      const healthUrl = `${protocol}://${networkHost}:${port}/api/health`;
+      // Determine the validation URL - use relay if connected
+      const isUsingRelay = useRelay && relayConnection?.relay_url;
+      let healthUrl: string;
+      let validationHost: string;
+      let validationPort: number;
+
+      if (isUsingRelay) {
+        // Use the relay public URL for health check
+        healthUrl = `${relayConnection.relay_url}/api/health`;
+        // Parse the relay URL to get host and port for publishing
+        const relayUrl = new URL(relayConnection.relay_url);
+        validationHost = relayUrl.host;
+        validationPort = relayUrl.port ? parseInt(relayUrl.port, 10) : (relayUrl.protocol === 'https:' ? 443 : 80);
+      } else {
+        const protocol = selectedNetwork?.useHttps ? "https" : "http";
+        healthUrl = `${protocol}://${networkHost}:${port}/api/health`;
+        validationHost = networkHost;
+        validationPort = port;
+      }
 
       let healthData: any = null
       try {
@@ -317,19 +524,28 @@ const NetworkPublishPage: React.FC = () => {
         }
 
         healthData = await healthResponse.json()
+
+        // Capture network_uuid from health response and lookup publishing status
+        const networkUuid = healthData?.data?.network_uuid;
+        if (networkUuid) {
+          setCurrentNetworkUuid(networkUuid);
+          // Lookup publishing status in background (don't await)
+          lookupPublishingStatus(networkUuid);
+        }
       } catch (error: any) {
+        const targetDesc = isUsingRelay ? "relay" : `${networkHost}:${port}`;
         setValidationResult({
           success: false,
           message: t(
             "publish.errors.networkUnreachable",
-            `Cannot reach network at ${networkHost}:${port}. Make sure it's running and accessible.`
+            `Cannot reach network at ${targetDesc}. Make sure it's running and accessible.`
           ),
         })
         return
       }
 
       // Step 2: Server-side validation to verify PUBLIC accessibility
-      // This is critical - the browser can reach local networks that the public internet cannot
+      // When using relay, the relay URL is already public, so we validate against that
       if (apiKeyValidation?.isValid && organizationId) {
         // Call the validate-public endpoint with API key to verify public accessibility from server
         const validateResponse = await fetch(`${OPENAGENTS_API_BASE}/networks/validate-public`, {
@@ -340,9 +556,10 @@ const NetworkPublishPage: React.FC = () => {
           },
           body: new URLSearchParams({
             network_id: networkId,
-            network_host: networkHost,
-            network_port: port.toString(),
+            network_host: validationHost,
+            network_port: validationPort.toString(),
             org: organizationId,
+            ...(isUsingRelay ? { relay_url: relayConnection!.relay_url! } : {}),
           }),
           signal: AbortSignal.timeout(25000),
         });
@@ -351,15 +568,19 @@ const NetworkPublishPage: React.FC = () => {
 
         if (validateResponse.ok && validateResult.code === 200) {
           // Server-side validation passed - network is publicly accessible
+          const successMessage = isUsingRelay
+            ? t("publish.validation.successRelay", "Network is accessible via relay and configuration is valid!")
+            : t("publish.validation.successPublic", "Network is publicly accessible and configuration is valid!");
           setValidationResult({
             success: true,
-            message: t("publish.validation.successPublic", "Network is publicly accessible and configuration is valid!"),
+            message: successMessage,
             networkName: healthData?.data?.network_name || networkName,
             onlineAgents: healthData?.data?.agent_count || 0,
             mods: healthData?.data?.mods?.filter((m: any) => m.enabled).map((m: any) => m.name) || [],
+            networkUuid: healthData?.data?.network_uuid,
           });
           setIsValidated(true);
-          toast.success(t("publish.validation.successToast", "Validation successful! Network is publicly accessible."));
+          toast.success(t("publish.validation.successToast", "Validation successful!"));
         } else if (validateResponse.status === 401 || validateResponse.status === 403) {
           // Auth error - something wrong with the API key
           setValidationResult({
@@ -370,7 +591,7 @@ const NetworkPublishPage: React.FC = () => {
           // Server-side validation failed - network is likely not publicly accessible
           setValidationResult({
             success: false,
-            message: validateResult.message || t("publish.errors.notPubliclyAccessible", `Network at ${networkHost}:${port} is not publicly accessible. Make sure your network is exposed to the internet and not behind a firewall.`),
+            message: validateResult.message || t("publish.errors.notPubliclyAccessible", `Network at ${validationHost}:${validationPort} is not publicly accessible. Make sure your network is exposed to the internet and not behind a firewall.`),
           });
         }
       } else {
@@ -398,6 +619,7 @@ const NetworkPublishPage: React.FC = () => {
             networkName: healthData?.data?.network_name || networkName,
             onlineAgents: healthData?.data?.agent_count || 0,
             mods: healthData?.data?.mods?.filter((m: any) => m.enabled).map((m: any) => m.name) || [],
+            networkUuid: healthData?.data?.network_uuid,
           });
           setIsValidated(true);
           toast.success(t("publish.validation.successToast", "Validation successful!"));
@@ -422,7 +644,7 @@ const NetworkPublishPage: React.FC = () => {
     } finally {
       setIsValidating(false)
     }
-  }, [networkId, networkHost, networkPort, organization, organizationId, networkName, selectedNetwork, apiKeyValidation, apiKey, existingNetwork, t]);
+  }, [networkId, networkHost, networkPort, organization, organizationId, networkName, selectedNetwork, apiKeyValidation, apiKey, existingNetwork, useRelay, relayConnection, lookupPublishingStatus, t]);
 
   // Publish network
   const handlePublish = useCallback(async () => {
@@ -447,21 +669,40 @@ const NetworkPublishPage: React.FC = () => {
       const port = parseInt(networkPort, 10);
       const finalNetworkName = networkName || validationResult?.networkName || networkId;
 
+      // Determine host/port for publishing - use relay if connected
+      const isUsingRelay = useRelay && relayConnection?.relay_url;
+      let publishHost: string;
+      let publishPort: number;
+      let description: string;
+
+      if (isUsingRelay) {
+        const relayUrl = new URL(relayConnection.relay_url);
+        publishHost = relayUrl.hostname;
+        publishPort = relayUrl.port ? parseInt(relayUrl.port, 10) : (relayUrl.protocol === 'https:' ? 443 : 80);
+        description = `Network via relay (original: ${networkHost}:${port})`;
+      } else {
+        publishHost = networkHost;
+        publishPort = port;
+        description = `Network at ${networkHost}:${port}`;
+      }
+
       // Use the POST /v1/networks/ endpoint with API key authentication
       const networkData = {
         id: networkId,
         profile: {
           name: finalNetworkName,
-          description: `Network at ${networkHost}:${port}`,
-          host: networkHost,
-          port: port,
+          description,
+          host: publishHost,
+          port: publishPort,
           mods: validationResult?.mods || [],
           discoverable: true,
-          tags: ["network"],
+          tags: isUsingRelay ? ["network", "relay"] : ["network"],
           categories: [],
           country: "",
           capacity: 100,
           authentication: { type: "none" },
+          // Store relay info for reference
+          ...(isUsingRelay ? { relay_url: relayConnection.relay_url } : {}),
         },
       };
 
@@ -498,7 +739,7 @@ const NetworkPublishPage: React.FC = () => {
     } finally {
       setIsPublishing(false)
     }
-  }, [isValidated, apiKeyValidation, apiKey, networkId, networkName, networkHost, networkPort, validationResult, handleValidateApiKey, t]);
+  }, [isValidated, apiKeyValidation, apiKey, networkId, networkName, networkHost, networkPort, validationResult, handleValidateApiKey, useRelay, relayConnection, t]);
 
   // Unpublish network
   const handleUnpublish = useCallback(async (networkIdToUnpublish: string) => {
@@ -932,6 +1173,115 @@ const NetworkPublishPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Relay Connection Section - shown when network is on localhost */}
+            {isLocalhostNetwork && (
+              <div className={`p-4 rounded-lg border ${
+                relayConnection?.connected
+                  ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                  : "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800"
+              }`}>
+                <div className="flex items-start">
+                  <svg
+                    className={`w-5 h-5 mt-0.5 ${
+                      relayConnection?.connected ? "text-green-500" : "text-purple-500"
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                  <div className="ml-3 flex-1">
+                    <p className={`text-sm font-medium ${
+                      relayConnection?.connected
+                        ? "text-green-800 dark:text-green-200"
+                        : "text-purple-800 dark:text-purple-200"
+                    }`}>
+                      {relayConnection?.connected
+                        ? t("publish.relay.connectedTitle", "Connected via Relay")
+                        : t("publish.relay.title", "Localhost Network Detected")}
+                    </p>
+
+                    {relayConnection?.connected ? (
+                      <>
+                        <p className="mt-1 text-sm text-green-700 dark:text-green-300">
+                          {t("publish.relay.publicUrl", "Public URL:")} <code className="px-1 py-0.5 bg-green-100 dark:bg-green-800 rounded text-xs">{relayConnection.relay_url}</code>
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleDisconnectRelay}
+                          className="mt-2 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                        >
+                          {t("publish.relay.disconnect", "Disconnect")}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="mt-1 text-sm text-purple-700 dark:text-purple-300">
+                          {t("publish.relay.description", "Your network is running on localhost and cannot be directly accessed from the internet. Connect via our relay service to make it publicly accessible.")}
+                        </p>
+                        <div className="mt-3 flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={handleConnectRelay}
+                            disabled={isConnectingRelay || !networkId.trim() || !networkPort.trim()}
+                            className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                          >
+                            {isConnectingRelay ? (
+                              <>
+                                <svg
+                                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <circle
+                                    className="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                  />
+                                  <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                  />
+                                </svg>
+                                {t("publish.relay.connecting", "Connecting...")}
+                              </>
+                            ) : (
+                              <>
+                                <svg
+                                  className="w-4 h-4 mr-2"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                                  />
+                                </svg>
+                                {t("publish.relay.connect", "Connect via Relay")}
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Already Published Warning */}
             {existingNetwork && (
               <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
@@ -1058,6 +1408,70 @@ const NetworkPublishPage: React.FC = () => {
               </div>
             )}
 
+            {/* Publishing Status by Network UUID */}
+            {currentNetworkUuid && (
+              <div className={`p-4 rounded-lg ${
+                publishingStatus.loading
+                  ? "bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-800"
+                  : publishingStatus.isPublished
+                    ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
+                    : "bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-800"
+              }`}>
+                <div className="flex items-start">
+                  {publishingStatus.loading ? (
+                    <svg className="w-5 h-5 text-gray-400 mt-0.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : publishingStatus.isPublished ? (
+                    <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 text-gray-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  <div className="ml-3">
+                    <p className={`text-sm font-medium ${
+                      publishingStatus.isPublished
+                        ? "text-blue-800 dark:text-blue-200"
+                        : "text-gray-600 dark:text-gray-400"
+                    }`}>
+                      {publishingStatus.loading
+                        ? t("publish.status.checking", "Checking publishing status...")
+                        : publishingStatus.isPublished
+                          ? t("publish.status.published", "This network is currently published")
+                          : t("publish.status.notPublished", "This network is not published")}
+                    </p>
+                    {publishingStatus.isPublished && publishingStatus.network && (
+                      <div className="mt-1 text-sm text-blue-700 dark:text-blue-300">
+                        <p>
+                          <span className="font-medium">{t("publish.status.publishedAs", "Published as:")}</span>{" "}
+                          {publishingStatus.network.profile.name} ({publishingStatus.network.id})
+                        </p>
+                        <p>
+                          <span className="font-medium">{t("publish.status.org", "Organization:")}</span>{" "}
+                          {publishingStatus.network.org}
+                        </p>
+                        <p>
+                          <span className="font-medium">{t("publish.status.status", "Status:")}</span>{" "}
+                          <span className={publishingStatus.network.status === "online" ? "text-green-600 dark:text-green-400" : "text-yellow-600 dark:text-yellow-400"}>
+                            {publishingStatus.network.status}
+                          </span>
+                        </p>
+                      </div>
+                    )}
+                    {!publishingStatus.loading && (
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {t("publish.status.uuidNote", "Network UUID:")} {currentNetworkUuid}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Missing API Key Warning */}
             {!apiKeyValidation?.isValid && (
               <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
@@ -1087,7 +1501,14 @@ const NetworkPublishPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleValidate}
-                disabled={isValidating || isPublishing || !apiKeyValidation?.isValid || (hostValidation && !hostValidation.valid) || !!existingNetwork}
+                disabled={
+                  isValidating ||
+                  isPublishing ||
+                  !apiKeyValidation?.isValid ||
+                  (hostValidation && !hostValidation.valid) ||
+                  !!existingNetwork ||
+                  (isLocalhostNetwork && !useRelay)
+                }
                 className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 dark:bg-gray-500 dark:hover:bg-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isValidating ? (
@@ -1121,7 +1542,15 @@ const NetworkPublishPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handlePublish}
-                disabled={!isValidated || isPublishing || isValidating || !apiKeyValidation?.isValid || (hostValidation && !hostValidation.valid) || !!existingNetwork}
+                disabled={
+                  !isValidated ||
+                  isPublishing ||
+                  isValidating ||
+                  !apiKeyValidation?.isValid ||
+                  (hostValidation && !hostValidation.valid) ||
+                  !!existingNetwork ||
+                  (isLocalhostNetwork && !useRelay)
+                }
                 className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isPublishing ? (
