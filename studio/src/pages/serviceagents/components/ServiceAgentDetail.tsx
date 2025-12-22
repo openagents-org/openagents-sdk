@@ -60,6 +60,7 @@ const ServiceAgentDetail: React.FC = () => {
   const [loadingEnvVars, setLoadingEnvVars] = useState(false);
   const [savingEnvVars, setSavingEnvVars] = useState(false);
   const [hasUnsavedEnvChanges, setHasUnsavedEnvChanges] = useState(false);
+  const [envVarsFetched, setEnvVarsFetched] = useState(false);
   const [newEnvKey, setNewEnvKey] = useState("");
   const [newEnvValue, setNewEnvValue] = useState("");
 
@@ -142,8 +143,8 @@ const ServiceAgentDetail: React.FC = () => {
     try {
       setLoadingEnvVars(true);
       const vars = await getAgentEnvVars(agentId);
-      setEnvVars(vars);
-      setOriginalEnvVars(vars);
+      setEnvVars(vars || {});
+      setOriginalEnvVars(vars || {});
       setHasUnsavedEnvChanges(false);
     } catch (err) {
       const errorMessage =
@@ -151,15 +152,16 @@ const ServiceAgentDetail: React.FC = () => {
       toast.error(errorMessage);
     } finally {
       setLoadingEnvVars(false);
+      setEnvVarsFetched(true);
     }
   }, [agentId]);
 
   // Load env vars when switching to env tab
   useEffect(() => {
-    if (activeTab === "env" && Object.keys(originalEnvVars).length === 0 && !loadingEnvVars) {
+    if (activeTab === "env" && !envVarsFetched && !loadingEnvVars) {
       fetchEnvVars();
     }
-  }, [activeTab, originalEnvVars, loadingEnvVars, fetchEnvVars]);
+  }, [activeTab, envVarsFetched, loadingEnvVars, fetchEnvVars]);
 
   // Track unsaved env changes
   useEffect(() => {
@@ -362,6 +364,13 @@ const ServiceAgentDetail: React.FC = () => {
     return log.level === logLevelFilter;
   });
 
+  // Strip ANSI escape codes from log messages
+  const stripAnsiCodes = (text: string): string => {
+    // Remove ANSI escape sequences (color codes, cursor movements, etc.)
+    // eslint-disable-next-line no-control-regex
+    return text.replace(/\x1B\[[0-9;]*[A-Za-z]|\x1B\].*?\x07|\[([0-9;]*)m/g, '');
+  };
+
   // Get log level color
   const getLogLevelColor = (level: string) => {
     switch (level) {
@@ -378,8 +387,9 @@ const ServiceAgentDetail: React.FC = () => {
     }
   };
 
-  // Format timestamp
-  const formatTimestamp = (timestamp?: string) => {
+  // Format timestamp (used for future timestamp display features)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _formatTimestamp = (timestamp?: string) => {
     if (!timestamp) return "";
     try {
       // Try parsing as ISO string first
@@ -486,7 +496,7 @@ const ServiceAgentDetail: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => navigate("/studio/agents/service")}
+              onClick={() => navigate("/admin/service-agents")}
               className="
                 inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600
                 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300
@@ -831,24 +841,19 @@ const ServiceAgentDetail: React.FC = () => {
                     {t('detail.logs.noLogs')}
                   </div>
                 ) : (
-                  <div className="space-y-1">
+                  <div className="space-y-0 max-w-full overflow-hidden">
                     {filteredLogs.map((log, index) => (
                       <div
                         key={index}
-                        className="flex items-start space-x-3 hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-1 rounded"
+                        className="flex items-start space-x-2 hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-0.5 rounded max-w-full"
                       >
-                        {log.timestamp && (
-                          <span className="text-gray-500 dark:text-gray-500 text-xs flex-shrink-0 w-36">
-                            {formatTimestamp(log.timestamp)}
-                          </span>
-                        )}
                         {log.level && (
-                          <span className={`font-semibold flex-shrink-0 w-14 ${getLogLevelColor(log.level)}`}>
+                          <span className={`font-semibold flex-shrink-0 w-12 ${getLogLevelColor(log.level)}`}>
                             {log.level}
                           </span>
                         )}
-                        <span className="text-gray-900 dark:text-gray-100 flex-1 break-words">
-                          {log.message}
+                        <span className="text-gray-900 dark:text-gray-100 flex-1 break-all overflow-hidden min-w-0">
+                          {stripAnsiCodes(log.message)}
                         </span>
                       </div>
                     ))}

@@ -8,23 +8,25 @@ import ProjectChatRoom from "./components/ProjectChatRoom";
 const MessagingMainPage: React.FC = () => {
 
   return (
-    <Routes>
-      {/* Project private chat room independent route */}
-      <Route
-        path="project/:projectId"
-        element={<ProjectChatRoom />}
-      />
+    <div className="h-full dark:bg-gray-800">
+      <Routes>
+        {/* Project private chat room independent route */}
+        <Route
+          path="project/:projectId"
+          element={<ProjectChatRoom />}
+        />
 
-      {/* Default chat view */}
-      <Route
-        index
-        element={
-          <MessagingView />
-        }
-      />
+        {/* Default chat view */}
+        <Route
+          index
+          element={
+            <MessagingView />
+          }
+        />
 
-      {/* Other chat-related sub-routes can be added here */}
-    </Routes>
+        {/* Other chat-related sub-routes can be added here */}
+      </Routes>
+    </div>
   );
 };
 

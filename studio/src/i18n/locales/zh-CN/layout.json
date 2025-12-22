@@ -14,8 +14,13 @@
         },
         "theme": {
             "switchToDark": "切换到深色模式",
-            "switchToLight": "切换到浅色模式"
-        }
+            "switchToLight": "切换到浅色模式",
+            "darkMode": "深色模式",
+            "lightMode": "浅色模式"
+        },
+        "language": "语言",
+        "signOut": "退出登录",
+        "dashboard": "仪表板"
     },
     "navigation": {
         "messages": "消息",
@@ -30,7 +35,9 @@
         "readme": "README",
         "modManagement": "模块管理",
         "serviceAgents": "智能体服务",
-        "llmLogs": "LLM 日志"
+        "llmLogs": "LLM 日志",
+        "connectionGuide": "连接代理",
+        "admin": "管理"
     },
     "defaultSidebar": {
         "navigation": "导航内容将显示在这里",

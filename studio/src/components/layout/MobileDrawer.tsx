@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
-import ModSidebar from "./ModSidebar";
 import Sidebar from "./Sidebar";
+import { SidebarSecondary } from "./components/sidebar-secondary";
+import { LayoutProvider } from "./components/context";
 
 interface MobileDrawerProps {
   isOpen: boolean;
@@ -8,7 +9,7 @@ interface MobileDrawerProps {
 }
 
 /**
- * Mobile drawer component that contains ModSidebar and Sidebar
+ * Mobile drawer component that contains Sidebar (primary) and SidebarSecondary
  * Used for mobile responsive layout
  */
 const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) => {
@@ -42,19 +43,22 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) => {
         className="
           fixed top-0 left-0 h-full z-50
           flex transition-transform duration-300 ease-in-out
-          bg-slate-100 dark:bg-gray-900
-          w-[85%] max-w-sm
+          bg-white dark:bg-gray-800
+          w-[85%] max-w-[400px]
+          shadow-xl
         "
       >
-        {/* ModSidebar */}
-        <div className="flex-shrink-0">
-          <ModSidebar />
-        </div>
+        <LayoutProvider>
+          {/* Primary Sidebar */}
+          <div className="flex-shrink-0">
+            <Sidebar />
+          </div>
 
-        {/* Sidebar */}
-        <div className="flex-shrink-0">
-          <Sidebar />
-        </div>
+          {/* Secondary Sidebar */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <SidebarSecondary />
+          </div>
+        </LayoutProvider>
 
         {/* Close button */}
         <button
@@ -66,11 +70,12 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) => {
             transition-colors duration-200
             shadow-lg
             z-10
+            border border-gray-200 dark:border-gray-700
           "
           aria-label="Close drawer"
         >
           <svg
-            className="w-6 h-6 text-gray-600 dark:text-gray-300"
+            className="w-5 h-5 text-gray-600 dark:text-gray-300"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

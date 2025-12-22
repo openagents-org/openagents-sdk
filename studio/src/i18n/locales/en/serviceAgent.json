@@ -15,11 +15,11 @@
     "main": {
         "checkingPermissions": "Checking permissions...",
         "accessDenied": "Access Denied",
-        "adminOnly": "Service Agents Management is only available to administrators.",
+        "adminOnly": "Service Agents is only available to administrators.",
         "contactAdmin": "Please contact your network administrator if you need access."
     },
     "list": {
-        "title": "Service Agents Management",
+        "title": "Service Agents",
         "subtitle": "Manage and monitor all service agents",
         "loading": "Loading service agents list...",
         "loadFailed": "Load failed",

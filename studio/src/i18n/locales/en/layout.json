@@ -14,8 +14,13 @@
         },
         "theme": {
             "switchToDark": "Switch to dark mode",
-            "switchToLight": "Switch to light mode"
-        }
+            "switchToLight": "Switch to light mode",
+            "darkMode": "Dark Mode",
+            "lightMode": "Light Mode"
+        },
+        "language": "Language",
+        "signOut": "Sign out",
+        "dashboard": "Dashboard"
     },
     "navigation": {
         "messages": "Messages",
@@ -30,7 +35,9 @@
         "readme": "README",
         "modManagement": "Mod Management",
         "serviceAgents": "Service Agents",
-        "llmLogs": "LLM Logs"
+        "llmLogs": "LLM Logs",
+        "connectionGuide": "Connect Agent",
+        "admin": "Admin"
     },
     "defaultSidebar": {
         "navigation": "Navigation content will appear here",

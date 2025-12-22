@@ -1,13 +1,31 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 import AttachmentDisplay from "@/pages/messaging/components/AttachmentDisplay";
 import { useFeedStore } from "@/stores/feedStore";
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
+import { Badge } from "@/components/layout/ui/badge";
 
 const toMilliseconds = (timestamp: number) =>
   timestamp < 1_000_000_000_000 ? timestamp * 1000 : timestamp;
+
+// Extract image URLs from content
+const extractImageUrls = (content: string): string[] => {
+  const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?[^)\s]*)?$/i;
+  const urlPattern = /https?:\/\/[^\s<>"')\]]+/g;
+  const urls = content.match(urlPattern) || [];
+  return Array.from(new Set(urls.filter((url) => imageExtensions.test(url))));
+};
+
+// Remove image URLs from content for cleaner display
+const removeImageUrls = (content: string): string => {
+  const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?[^)\s]*)?$/i;
+  const urlPattern = /https?:\/\/[^\s<>"')\]]+/g;
+  return content.replace(urlPattern, (url) =>
+    imageExtensions.test(url) ? '' : url
+  ).trim();
+};
 
 const FeedPostDetail: React.FC = () => {
   const { t } = useTranslation('feed');
@@ -38,13 +56,23 @@ const FeedPostDetail: React.FC = () => {
     size: attachment.size,
   }));
 
+  const imageUrls = useMemo(() => {
+    if (!post?.content) return [];
+    return extractImageUrls(post.content);
+  }, [post?.content]);
+
+  const cleanedContent = useMemo(() => {
+    if (!post?.content) return '';
+    return removeImageUrls(post.content);
+  }, [post?.content]);
+
   const createdAt = post
     ? new Date(toMilliseconds(post.created_at)).toLocaleString()
     : "";
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-gray-950">
-      <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+    <div className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-gray-800">
+      <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
         <div className="flex items-center justify-between">
           <button
             onClick={() => navigate(-1)}
@@ -87,18 +115,20 @@ const FeedPostDetail: React.FC = () => {
                 {createdAt} • {t('detail.postedBy', { author: post.author_id })}
               </span>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50 break-words">
               {post.title}
             </h1>
             {post.tags && post.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {post.tags.map((tag) => (
-                  <span
+                  <Badge
                     key={tag}
-                    className="inline-flex items-center rounded-full bg-gray-200 dark:bg-gray-800 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300"
+                    variant="secondary"
+                    appearance="light"
+                    size="sm"
                   >
                     #{tag}
-                  </span>
+                  </Badge>
                 ))}
               </div>
             )}
@@ -111,12 +141,35 @@ const FeedPostDetail: React.FC = () => {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 bg-white dark:bg-gray-950">
+      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 bg-white dark:bg-gray-800">
         {post ? (
           <>
-            <div className="prose prose-slate max-w-none dark:prose-invert">
-              <MarkdownRenderer content={post.content} />
+            <div className="prose prose-slate max-w-none dark:prose-invert break-words [&_a]:break-all [&_p]:break-words">
+              <MarkdownRenderer content={cleanedContent} />
             </div>
+            {imageUrls.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {imageUrls.map((url, index) => (
+                  <a
+                    key={index}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 transition-colors"
+                  >
+                    <img
+                      src={url}
+                      alt={`Attachment ${index + 1}`}
+                      className="w-full h-auto object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </a>
+                ))}
+              </div>
+            )}
             {attachments && attachments.length > 0 && (
               <div>
                 <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">

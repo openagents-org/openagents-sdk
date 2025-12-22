@@ -55,7 +55,7 @@ const EventDetailPage: React.FC = () => {
           {error || t('messages.notFound')}
         </div>
         <button
-          onClick={() => navigate("/profile/events")}
+          onClick={() => navigate("..")}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           {t('actions.back')}
@@ -75,7 +75,7 @@ const EventDetailPage: React.FC = () => {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
         <button
-          onClick={() => navigate("/profile/events")}
+          onClick={() => navigate("..")}
           className="mb-4 text-blue-600 dark:text-blue-400 hover:underline"
         >
           ← {t('actions.back')}

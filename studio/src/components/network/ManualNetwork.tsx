@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/layout/ui/button";
 import {
   saveManualConnection,
   getSavedManualConnection,
@@ -10,6 +11,7 @@ import { useAuthStore } from "@/stores/authStore";
 import {
   ManualNetworkConnection,
   fetchNetworkById,
+  connectViaNetworkId,
 } from "@/services/networkService";
 import { ConnectionStatusEnum } from "@/types/connection";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -176,6 +178,7 @@ export default function ManualNetwork() {
     try {
       console.log(`🔍 Fetching network information for ID: ${networkId}`);
 
+      // First verify the network exists and is accessible
       const networkResult = await fetchNetworkById(networkId);
 
       if (!networkResult.success) {
@@ -186,67 +189,20 @@ export default function ManualNetwork() {
       const network = networkResult.network;
       console.log(`✅ Network found:`, network);
 
-      // Extract connection information
-      let host = network.profile?.host;
-      let port = network.profile?.port;
-      // HTTPS Feature: Add detection for HTTPS protocol in connection endpoint
-      let shouldUseHttps = false;
+      // Use connectViaNetworkId which routes through network.openagents.org/{networkId}
+      // This handles both direct connections and relay-based tunneling
+      console.log(`🔗 Connecting via network ID: ${networkId}`);
+      const connection = await connectViaNetworkId(networkId);
 
-      // If no direct host/port, try to extract from connection endpoint
-      if (!host || !port) {
-        if (network.profile?.connection?.endpoint) {
-          const endpoint = network.profile.connection.endpoint;
-          console.log(`🔗 Parsing connection endpoint: ${endpoint}`);
-
-          // HTTPS Feature: Detect HTTPS protocol in connection endpoint
-          if (endpoint.startsWith("https://")) {
-            shouldUseHttps = true;
-          }
-
-          // Parse different endpoint formats
-          if (endpoint.startsWith("modbus://")) {
-            // Parse modbus://renewable.energyai.ma:502
-            const url = new URL(endpoint);
-            host = url.hostname;
-            port = parseInt(url.port);
-          } else if (
-            endpoint.startsWith("http://") ||
-            endpoint.startsWith("https://")
-          ) {
-            // Parse HTTP endpoints
-            const url = new URL(endpoint);
-            host = url.hostname;
-            port =
-              parseInt(url.port) ||
-              (endpoint.startsWith("https://") ? 443 : 80);
-          } else {
-            // Try to parse host:port format
-            const parts = endpoint.split(":");
-            if (parts.length >= 2) {
-              host = parts[0];
-              port = parseInt(parts[1]);
-            }
-          }
-        }
-      }
-
-      if (!port) {
-        port = 8700;
-      }
-
-      if (!host) {
+      if (connection.status === ConnectionStatusEnum.CONNECTED) {
+        // Save the network ID for future reference
+        handleNetworkSelected(connection);
+        navigate("/agent-setup");
+      } else {
         toast.error(
-          `Network configuration incomplete: No host information found for '${networkId}'`
+          "Failed to connect to the network. The network may be offline or unreachable."
         );
-        return;
       }
-
-      // HTTPS Feature: Use detected protocol type for connection
-      handleConnect(false, {
-        host,
-        port: port.toString(),
-        useHttps: shouldUseHttps,
-      });
     } catch (error: any) {
       toast.error(`Error connecting with network ID: ${error.message || error}`);
     } finally {
@@ -327,13 +283,14 @@ export default function ManualNetwork() {
               </p>
             </div>
             <div className="flex flex-col gap-2">
-              <button
+              <Button
                 onClick={handleClearSaved}
-                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 px-3 py-2 rounded-lg font-medium transition-colors"
+                variant="ghost"
+                mode="link"
                 title="Clear saved connection"
               >
                 {t('manualNetwork.clearSaved')}
-              </button>
+              </Button>
             </div>
           </div>
         ) : activeTab === "host-port" ? (

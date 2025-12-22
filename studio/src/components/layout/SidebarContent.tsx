@@ -136,7 +136,7 @@ const SidebarContent: React.FC = () => {
     return <DefaultSidebar />
   }
 
-  return <div className="h-full overflow-y-auto">{renderContent()}</div>
+  return <div className="h-full flex flex-col">{renderContent()}</div>
 }
 
 export default React.memo(SidebarContent)

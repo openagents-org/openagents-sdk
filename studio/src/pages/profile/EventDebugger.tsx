@@ -2,6 +2,10 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
 import { useAuthStore } from "@/stores/authStore";
 import { Event, EventResponse } from "@/types/events";
+import { Button } from "@/components/layout/ui/button";
+import { Input } from "@/components/layout/ui/input";
+import { Textarea } from "@/components/layout/ui/textarea";
+import { Send, AlertCircle, X } from "lucide-react";
 
 const EventDebugger: React.FC = () => {
   const { connector, isConnected } = useOpenAgents();
@@ -210,30 +214,42 @@ const EventDebugger: React.FC = () => {
 
       {/* Example Events */}
       <div className="mb-4 flex flex-wrap gap-2">
-        <button
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
           onClick={() => loadExample("directMessage")}
           className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
           Example: Direct Message
-        </button>
-        <button
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
           onClick={() => loadExample("channelMessage")}
           className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
           Example: Channel Message
-        </button>
-        <button
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
           onClick={() => loadExample("projectList")}
           className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
           Example: Project List
-        </button>
-        <button
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
           onClick={() => loadExample("channelsList")}
           className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
           Example: Channels List
-        </button>
+        </Button>
       </div>
 
       {/* Form */}
@@ -244,8 +260,9 @@ const EventDebugger: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Event Name <span className="text-red-500">*</span>
             </label>
-            <input
+            <Input
               type="text"
+              variant="lg"
               value={eventName}
               onChange={(e) => {
                 setEventName(e.target.value);
@@ -269,8 +286,9 @@ const EventDebugger: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Destination ID
             </label>
-            <input
+            <Input
               type="text"
+              variant="lg"
               value={destinationId}
               onChange={(e) => setDestinationId(e.target.value)}
               placeholder="e.g., agent:target_agent_id or channel:general (optional)"
@@ -286,7 +304,8 @@ const EventDebugger: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Payload (JSON)
             </label>
-            <textarea
+            <Textarea
+              variant="lg"
               value={payload}
               onChange={(e) => {
                 setPayload(e.target.value);
@@ -315,39 +334,20 @@ const EventDebugger: React.FC = () => {
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <svg
-                    className="h-5 w-5 text-red-400 mr-2 flex-shrink-0"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+                  <AlertCircle className="h-5 w-5 text-red-400 mr-2 flex-shrink-0" />
                   <span className="text-sm text-red-800 dark:text-red-200">
                     {error}
                   </span>
                 </div>
-                <button
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={clearResponse}
                   className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 ml-2"
                 >
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           )}
@@ -357,13 +357,17 @@ const EventDebugger: React.FC = () => {
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Tip: Press <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded">Ctrl+Enter</kbd> or <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded">Cmd+Enter</kbd> to send quickly
             </p>
-            <button
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
               onClick={handleSend}
               disabled={isSending || !eventName.trim() || !connector || !isConnected}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
+              <Send className="w-4 h-4 mr-2" />
               {isSending ? "Sending..." : "Send Event"}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -375,25 +379,16 @@ const EventDebugger: React.FC = () => {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               Sent Event
             </h2>
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
               onClick={clearResponse}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
               title="Clear"
             >
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
+              <X className="h-5 w-5" />
+            </Button>
           </div>
           <div className="space-y-2 text-sm">
             <div>
@@ -429,25 +424,16 @@ const EventDebugger: React.FC = () => {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               Event Response
             </h2>
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
               onClick={clearResponse}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
               title="Clear"
             >
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
+              <X className="h-5 w-5" />
+            </Button>
           </div>
           <div className="mb-4">
             <span

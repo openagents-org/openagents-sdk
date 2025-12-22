@@ -8,19 +8,21 @@ import ArtifactTopicDetail from "@/components/artifact/ArtifactTopicDetail";
  */
 const ArtifactMainPage: React.FC = () => {
   return (
-    <Routes>
-      {/* Artifact列表页 */}
-      <Route
-        index
-        element={<ArtifactTopicList />}
-      />
+    <div className="h-full dark:bg-gray-800">
+      <Routes>
+        {/* Artifact列表页 */}
+        <Route
+          index
+          element={<ArtifactTopicList />}
+        />
 
-      {/* Artifact详情页 */}
-      <Route
-        path=":artifactId"
-        element={<ArtifactTopicDetail />}
-      />
-    </Routes>
+        {/* Artifact详情页 */}
+        <Route
+          path=":artifactId"
+          element={<ArtifactTopicDetail />}
+        />
+      </Routes>
+    </div>
   );
 };
 

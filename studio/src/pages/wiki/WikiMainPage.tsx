@@ -9,16 +9,18 @@ import WikiProposals from "@/components/wiki/WikiProposals";
  */
 const WikiMainPage: React.FC = () => {
   return (
-    <Routes>
-      {/* Default Wiki list view */}
-      <Route index element={<WikiPageList />} />
+    <div className="h-full dark:bg-gray-800">
+      <Routes>
+        {/* Default Wiki list view */}
+        <Route index element={<WikiPageList />} />
 
-      {/* Wiki page detail */}
-      <Route path="detail/:pagePath" element={<WikiPageDetail />} />
+        {/* Wiki page detail */}
+        <Route path="detail/:pagePath" element={<WikiPageDetail />} />
 
-      {/* Wiki proposals management */}
-      <Route path="proposals" element={<WikiProposals />} />
-    </Routes>
+        {/* Wiki proposals management */}
+        <Route path="proposals" element={<WikiProposals />} />
+      </Routes>
+    </div>
   );
 };
 

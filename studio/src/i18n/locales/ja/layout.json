@@ -14,8 +14,13 @@
         },
         "theme": {
             "switchToDark": "ダークモードに切り替え",
-            "switchToLight": "ライトモードに切り替え"
-        }
+            "switchToLight": "ライトモードに切り替え",
+            "darkMode": "ダークモード",
+            "lightMode": "ライトモード"
+        },
+        "language": "言語",
+        "signOut": "ログアウト",
+        "dashboard": "ダッシュボード"
     },
     "navigation": {
         "messages": "メッセージ",

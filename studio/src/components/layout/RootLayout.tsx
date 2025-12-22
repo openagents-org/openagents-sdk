@@ -1,15 +1,21 @@
-import React, { ReactNode, useContext, useState } from "react";
-import ModSidebar from "./ModSidebar";
+import React, { ReactNode, useContext, useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
-import MobileDrawer from "./MobileDrawer";
 import ConnectionLoadingOverlay from "./ConnectionLoadingOverlay";
 import {
   OpenAgentsProvider,
   OpenAgentsContext,
 } from "@/context/OpenAgentsProvider";
 import { useAuthStore } from "@/stores/authStore";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/useMediaQuery";
+import { LayoutProvider, useLayout } from "./components/context";
+import { HeaderBreadcrumbs } from "./components/header-breadcrumbs";
+import { SidebarSecondary } from "./components/sidebar-secondary";
+import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
+import { Button } from "./ui/button";
+import { Menu } from "lucide-react";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { toast } from "sonner";
 
 interface RootLayoutProps {
   children: ReactNode;
@@ -51,19 +57,89 @@ const RootLayout: React.FC<RootLayoutProps> = ({ children }) => {
   );
 };
 
+// Internal component that can access LayoutProvider context
+const MainContentArea: React.FC<{
+  children: ReactNode;
+  shouldHideSidebar: boolean;
+}> = ({ children, shouldHideSidebar }) => {
+  const isMobile = useIsMobile();
+  const { isSidebarOpen } = useLayout();
+
+  return (
+    <main
+      className={`
+      flex-1 flex flex-col overflow-hidden relative
+      ${
+        isMobile
+          ? "m-0 rounded-none border-0"
+          : "m-2 rounded-xl shadow-md border border-gray-200 dark:border-gray-700"
+      }
+      bg-white
+      dark:bg-gray-800
+    `}
+    >
+      {/* Content area with secondary sidebar */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Secondary Sidebar */}
+        {!shouldHideSidebar && isSidebarOpen && (
+          <div
+            className="hidden md:block flex-shrink-0"
+            style={{
+              width:
+                "calc(var(--sidebar-width) - var(--sidebar-collapsed-width))",
+            }}
+          >
+            <SidebarSecondary />
+          </div>
+        )}
+
+        {/* Page Content Area */}
+        <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-gray-800">
+          {/* Breadcrumb Navigation - fixed at top, doesn't scroll */}
+          {!shouldHideSidebar && (
+            <div className="flex-shrink-0">
+              <HeaderBreadcrumbs />
+            </div>
+          )}
+          
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-auto bg-white dark:bg-gray-800">
+            {children}
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+};
+
 // Actual layout content component
 const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
   const context = useContext(OpenAgentsContext);
   const isConnected = context?.isConnected || false;
   const location = useLocation();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { isAdmin, isLoading: isAdminLoading } = useIsAdmin();
 
-  // Determine if current route should hide the sidebar
-  const shouldHideSidebar = location.pathname.startsWith("/agentworld");
-  
-  // Hide ModSidebar (left navigation) on admin routes
-  const shouldHideModSidebar = location.pathname.startsWith("/admin");
+  // Check if current route is an admin route
+  const isAdminRoute = location.pathname.startsWith("/admin");
+
+  // Determine if current route should hide the secondary sidebar (content sidebar)
+  const shouldHideSecondarySidebar = location.pathname.startsWith("/agentworld");
+
+  // Determine if current route should hide the primary sidebar (left navigation icons)
+  // AgentWorld should still show the primary sidebar for navigation
+  const shouldHidePrimarySidebar = false;
+
+  // Admin route restriction: admin users can ONLY access /admin/* routes
+  useEffect(() => {
+    if (!isAdminLoading && isConnected && isAdmin && !isAdminRoute) {
+      console.log("🛡️ Admin user attempted to access non-admin route, redirecting to /admin/dashboard...");
+      toast.info("Admin users can only access the admin dashboard");
+      navigate("/admin/dashboard", { replace: true });
+    }
+  }, [isAdmin, isAdminLoading, isConnected, isAdminRoute, navigate]);
 
   // Close drawer when route changes on mobile
   React.useEffect(() => {
@@ -73,84 +149,62 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
   }, [location.pathname, isMobile]);
 
   return (
-    <div className="h-screen w-screen flex overflow-hidden bg-slate-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div className="h-screen w-screen flex overflow-hidden bg-[#F4F4F5] dark:bg-gray-800 text-gray-900 dark:text-gray-100">
       {/* Connection status overlay - only shown when OpenAgentsProvider exists but not connected */}
       {context && !isConnected && <ConnectionLoadingOverlay />}
 
       {context && isConnected && (
-        <>
-          {/* Mobile Drawer - only shown on mobile */}
-          {/* Use both conditional rendering and ensure it's hidden on larger screens */}
-          <div className="md:hidden">
-            <MobileDrawer
-              isOpen={isDrawerOpen}
-              onClose={() => setIsDrawerOpen(false)}
-            />
-          </div>
-
-          {/* Left module navigation bar - hidden on mobile and admin routes */}
-          {/* Use Tailwind responsive classes: hidden by default, show on md (768px) and up */}
-          {!shouldHideModSidebar && (
-            <div className="hidden md:block">
-              <ModSidebar />
-            </div>
-          )}
-
+        <LayoutProvider>
           {/* Middle content area: sidebar + main content */}
-          <div className="flex-1 flex overflow-hidden">
-            {/* Feature sidebar - hidden on mobile, shown in drawer instead */}
+          <div className="flex-1 flex overflow-hidden relative">
+            {/* Primary sidebar (left navigation icons) - hidden on mobile, shown in drawer instead */}
             {/* Use Tailwind responsive classes: hidden by default, show on md (768px) and up */}
-            {!shouldHideSidebar && (
+            {!shouldHidePrimarySidebar && (
               <div className="hidden md:block">
                 <Sidebar />
               </div>
             )}
 
-            {/* Main content area */}
-            <main className={`
-              flex-1 flex flex-col overflow-hidden
-              ${isMobile 
-                ? 'm-0 rounded-none border-0' 
-                : 'm-1 rounded-xl shadow-md border border-gray-200 dark:border-gray-700'
-              }
-              bg-gradient-to-br from-white via-blue-50 to-purple-50 dark:bg-gray-800
-            `}>
-              {/* Mobile menu button - only shown on mobile */}
-              {/* Use Tailwind responsive classes: show by default, hide on md (768px) and up */}
-              {!shouldHideSidebar && (
-                <button
-                  onClick={() => setIsDrawerOpen(true)}
-                  className="
-                    fixed top-4 left-4 z-30
-                    p-3 rounded-lg
-                    bg-white dark:bg-gray-800
-                    hover:bg-gray-100 dark:hover:bg-gray-700
-                    transition-colors duration-200
-                    shadow-lg
-                    border border-gray-200 dark:border-gray-700
-                    md:hidden
-                  "
-                  aria-label="Open menu"
-                >
-                  <svg
-                    className="w-6 h-6 text-gray-600 dark:text-gray-300"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+            {/* Mobile menu button - only shown on mobile */}
+            {/* Use Tailwind responsive classes: show by default, hide on md (768px) and up */}
+            {!shouldHideSecondarySidebar && (
+              <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="
+                      fixed top-4 left-4 z-30
+                      md:hidden
+                    "
+                    aria-label="Open menu"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 6h16M4 12h16M4 18h16"
-                    />
-                  </svg>
-                </button>
-              )}
+                    <Menu className="w-6 h-6" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[85%] max-w-[400px] p-0">
+                  <LayoutProvider>
+                    <div className="flex h-full">
+                      {/* Primary Sidebar */}
+                      <div className="flex-shrink-0">
+                        <Sidebar />
+                      </div>
+                      {/* Secondary Sidebar */}
+                      <div className="flex-1 flex flex-col overflow-hidden">
+                        <SidebarSecondary />
+                      </div>
+                    </div>
+                  </LayoutProvider>
+                </SheetContent>
+              </Sheet>
+            )}
+
+            {/* Main content area - uses internal component to access LayoutProvider context */}
+            <MainContentArea shouldHideSidebar={shouldHideSecondarySidebar}>
               {children}
-            </main>
+            </MainContentArea>
           </div>
-        </>
+        </LayoutProvider>
       )}
     </div>
   );

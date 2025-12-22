@@ -7,11 +7,15 @@ project management system including templates, lifecycle, state, and artifacts.
 
 import logging
 import asyncio
-from typing import Dict, Any, List, Optional
+from typing import TYPE_CHECKING, Dict, Any, List, Optional
 from openagents.core.base_mod_adapter import BaseModAdapter
 from openagents.models.tool import AgentTool
 from openagents.models.event import Event
 from openagents.workspace.project_messages import *
+from .template_tools import generate_template_tools
+
+if TYPE_CHECKING:
+    from .mod import DefaultProjectNetworkMod
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +26,15 @@ class DefaultProjectAgentAdapter(BaseModAdapter):
     def __init__(self, mod_name: str = "project.default"):
         """Initialize the project agent adapter."""
         super().__init__(mod_name=mod_name)
+        self._mod: Optional["DefaultProjectNetworkMod"] = None
+
+    def bind_mod(self, mod: "DefaultProjectNetworkMod") -> None:
+        """Bind this adapter to the network mod for template access.
+
+        Args:
+            mod: The DefaultProjectNetworkMod instance
+        """
+        self._mod = mod
 
     def get_tools(self) -> List[AgentTool]:
         """Get the tools provided by this adapter."""
@@ -427,6 +440,17 @@ class DefaultProjectAgentAdapter(BaseModAdapter):
             )
         ]
 
+        # Add template-specific tools if mod is bound and has templates
+        if self._mod and hasattr(self._mod, 'templates') and self._mod.templates:
+            template_tools = generate_template_tools(
+                templates=self._mod.templates,
+                start_project_handler=self._start_project_from_template
+            )
+            tools.extend(template_tools)
+            logger.debug(f"Added {len(template_tools)} template tools")
+
+        return tools
+
     # Template Management
 
     async def list_project_templates(self) -> Dict[str, Any]:
@@ -452,6 +476,44 @@ class DefaultProjectAgentAdapter(BaseModAdapter):
             collaborators=collaborators
         )
         return await self._send_and_wait_for_response(message)
+
+    async def _start_project_from_template(
+        self,
+        template_id: str,
+        goal: str,
+        name: Optional[str] = None,
+        collaborators: Optional[List[str]] = None,
+        custom_params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Start a project from a template with custom parameters.
+
+        This is called by template-specific tools to start projects
+        with additional custom parameters defined in the template's input schema.
+
+        Args:
+            template_id: The template to use
+            goal: The project goal
+            name: Optional project name
+            collaborators: Optional list of collaborator agent IDs
+            custom_params: Additional custom parameters from the template tool
+
+        Returns:
+            The project creation response
+        """
+        # Enhance goal with custom params if provided
+        enhanced_goal = goal
+        if custom_params:
+            param_lines = [f"- {k}: {v}" for k, v in custom_params.items()]
+            param_str = "\n".join(param_lines)
+            enhanced_goal = f"{goal}\n\nAdditional Parameters:\n{param_str}"
+
+        # Use the standard start_project method
+        return await self.start_project(
+            template_id=template_id,
+            goal=enhanced_goal,
+            name=name,
+            collaborators=collaborators
+        )
 
     async def stop_project(self, project_id: str, reason: Optional[str] = None) -> Dict[str, Any]:
         """Stop a project."""

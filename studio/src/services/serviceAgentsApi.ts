@@ -455,3 +455,65 @@ export const saveAgentEnvVars = async (
   return data;
 };
 
+/**
+ * Get global environment variables for all service agents
+ */
+export const getGlobalEnvVars = async (): Promise<AgentEnvVars> => {
+  const { selectedNetwork } = useAuthStore.getState();
+  if (!selectedNetwork) {
+    throw new Error("No network selected");
+  }
+
+  const { host, port, useHttps } = selectedNetwork;
+  const response = await networkFetch(
+    host,
+    port,
+    "/api/agents/service/env/global",
+    {
+      method: "GET",
+      useHttps,
+    }
+  );
+
+  const data = await response.json();
+  if (!data.success) {
+    throw new Error(data.error || "Failed to fetch global environment variables");
+  }
+
+  return data.env_vars || {};
+};
+
+/**
+ * Save global environment variables for all service agents
+ */
+export const saveGlobalEnvVars = async (
+  envVars: AgentEnvVars
+): Promise<SaveEnvVarsResult> => {
+  const { selectedNetwork } = useAuthStore.getState();
+  if (!selectedNetwork) {
+    throw new Error("No network selected");
+  }
+
+  const { host, port, useHttps } = selectedNetwork;
+  const response = await networkFetch(
+    host,
+    port,
+    "/api/agents/service/env/global",
+    {
+      method: "PUT",
+      useHttps,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ env_vars: envVars }),
+    }
+  );
+
+  const data = await response.json();
+  if (!data.success) {
+    throw new Error(data.error || data.message || "Failed to save global environment variables");
+  }
+
+  return data;
+};
+

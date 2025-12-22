@@ -63,27 +63,29 @@ const DocumentsMainPage: React.FC = () => {
   );
 
   return (
-    <Routes>
-      {/* Default document view */}
-      <Route
-        index
-        element={
-          <DocumentsView
-            onBackClick={() => navigate("/chat")}
-            documents={documents}
-            selectedDocumentId={selectedDocumentId}
-            onDocumentSelect={handleDocumentSelect}
-            onDocumentsChange={setDocuments}
-          />
-        }
-      />
+    <div className="h-full dark:bg-gray-800">
+      <Routes>
+        {/* Default document view */}
+        <Route
+          index
+          element={
+            <DocumentsView
+              onBackClick={() => navigate("/chat")}
+              documents={documents}
+              selectedDocumentId={selectedDocumentId}
+              onDocumentSelect={handleDocumentSelect}
+              onDocumentsChange={setDocuments}
+            />
+          }
+        />
 
-      {/* Document editor page */}
-      <Route
-        path=":documentId"
-        element={<DocumentEditor />}
-      />
-    </Routes>
+        {/* Document editor page */}
+        <Route
+          path=":documentId"
+          element={<DocumentEditor />}
+        />
+      </Routes>
+    </div>
   );
 };
 

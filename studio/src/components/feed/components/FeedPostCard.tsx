@@ -1,5 +1,6 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { FeedPost } from "@/types/feed";
+import { Badge } from "@/components/layout/ui/badge";
 
 interface FeedPostCardProps {
   post: FeedPost;
@@ -14,6 +15,23 @@ const formatTimestamp = (timestamp: number) => {
   return date.toLocaleString();
 };
 
+// Extract the first image URL from content for preview
+const extractFirstImageUrl = (content: string): string | null => {
+  const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?[^)\s]*)?$/i;
+  const urlPattern = /https?:\/\/[^\s<>"')\]]+/g;
+  const urls = content.match(urlPattern) || [];
+  return urls.find((url) => imageExtensions.test(url)) || null;
+};
+
+// Remove image URLs from content for cleaner display
+const removeImageUrls = (content: string): string => {
+  const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?[^)\s]*)?$/i;
+  const urlPattern = /https?:\/\/[^\s<>"')\]]+/g;
+  return content.replace(urlPattern, (url) =>
+    imageExtensions.test(url) ? '' : url
+  ).replace(/\s+/g, ' ').trim();
+};
+
 const FeedPostCard: React.FC<FeedPostCardProps> = ({
   post,
   onOpen,
@@ -21,16 +39,22 @@ const FeedPostCard: React.FC<FeedPostCardProps> = ({
   showScore,
 }) => {
   const attachmentsCount = post.attachments?.length || 0;
+  const [imageError, setImageError] = useState(false);
+
+  const previewImageUrl = useMemo(() => {
+    return extractFirstImageUrl(post.content);
+  }, [post.content]);
 
   const snippet = useMemo(() => {
-    const text = post.content.replace(/[#*_`>\-[\]()*~]/g, "");
+    const textWithoutImages = removeImageUrls(post.content);
+    const text = textWithoutImages.replace(/[#*_`>\-[\]()*~]/g, "");
     if (text.length <= 200) return text;
     return `${text.slice(0, 200)}...`;
   }, [post.content]);
 
   return (
     <article
-      className={`rounded-2xl border transition-all duration-200 cursor-pointer bg-white dark:bg-gray-900 ${
+      className={`rounded-2xl border transition-all duration-200 cursor-pointer bg-white dark:bg-gray-800 ${
         isRecent
           ? "border-amber-400 shadow-lg shadow-amber-100/40"
           : "border-gray-200 dark:border-gray-800 hover:shadow-lg"
@@ -58,9 +82,9 @@ const FeedPostCard: React.FC<FeedPostCardProps> = ({
             </div>
           </div>
           {isRecent && (
-            <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+            <Badge variant="warning" appearance="light" size="sm">
               NEW
-            </span>
+            </Badge>
           )}
         </div>
 
@@ -68,17 +92,29 @@ const FeedPostCard: React.FC<FeedPostCardProps> = ({
           {snippet || "No content available."}
         </p>
 
+        {previewImageUrl && !imageError && (
+          <img
+            src={previewImageUrl}
+            alt="Preview"
+            className="max-h-64 rounded-lg"
+            loading="lazy"
+            onError={() => setImageError(true)}
+          />
+        )}
+
         <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
           {post.tags?.map((tag) => (
-            <span
+            <Badge
               key={tag}
-              className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-gray-600 dark:text-gray-300"
+              variant="secondary"
+              appearance="light"
+              size="sm"
             >
               #{tag}
-            </span>
+            </Badge>
           ))}
           {attachmentsCount > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-1">
+            <Badge variant="secondary" appearance="light" size="sm">
               <svg
                 className="w-3.5 h-3.5"
                 fill="none"
@@ -93,7 +129,7 @@ const FeedPostCard: React.FC<FeedPostCardProps> = ({
                 />
               </svg>
               {attachmentsCount} attachment{attachmentsCount > 1 ? "s" : ""}
-            </span>
+            </Badge>
           )}
         </div>
       </div>

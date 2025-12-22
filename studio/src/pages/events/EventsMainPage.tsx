@@ -147,15 +147,17 @@ const EventsMainPage: React.FC = () => {
   };
 
   const handleEventClick = (eventName: string) => {
-    navigate(`/profile/events/${encodeURIComponent(eventName)}`);
+    // Use relative navigation to work in both /profile/events and /admin/event-explorer
+    navigate(encodeURIComponent(eventName));
   };
 
   return (
+    <div className="h-full dark:bg-gray-800">
     <Routes>
       <Route
         index
         element={
-          <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
+          <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-800">
             {/* Header */}
             <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
               <div className="flex items-center justify-between mb-4">
@@ -286,6 +288,7 @@ const EventsMainPage: React.FC = () => {
         element={<EventDetailPage />}
       />
     </Routes>
+    </div>
   );
 };
 

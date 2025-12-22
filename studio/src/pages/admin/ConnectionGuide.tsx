@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
 import { useAuthStore } from "@/stores/authStore";
 import { toast } from "sonner";
+import { Button } from "@/components/layout/ui/button";
+import { lookupNetworkPublication } from "@/services/networkService";
+import { Globe, Server, Copy } from "lucide-react";
 
 interface TransportInfo {
   type: string;
@@ -19,6 +22,9 @@ interface ConnectionGuideData {
   recommendedTransport?: string;
 }
 
+type IntegrationType = "python" | "yaml" | "langchain" | "mcp";
+type ConnectionMode = "direct" | "network_id";
+
 const ConnectionGuide: React.FC = () => {
   const { connector } = useOpenAgents();
   const { selectedNetwork } = useAuthStore();
@@ -30,8 +36,14 @@ const ConnectionGuide: React.FC = () => {
     defaultGroup: "default",
   });
   const [loading, setLoading] = useState(true);
-  const [selectedExample, setSelectedExample] = useState<"python" | "langchain" | "mcp" | "http">("python");
-  const [selectedTransport, setSelectedTransport] = useState<string>("");
+  const [selectedTab, setSelectedTab] = useState<IntegrationType>("python");
+  const [connectionMode, setConnectionMode] = useState<ConnectionMode>("direct");
+  const [networkPublication, setNetworkPublication] = useState<{
+    published: boolean;
+    networkId?: string;
+    loading: boolean;
+  }>({ published: false, loading: true });
+  const [networkUuid, setNetworkUuid] = useState<string | null>(null);
 
   // Load connection guide data
   const fetchGuideData = useCallback(async () => {
@@ -69,8 +81,8 @@ const ConnectionGuide: React.FC = () => {
             port,
             host,
             url,
-        };
-      });
+          };
+        });
 
       // If no transport information, add default HTTP transport
       if (transportsList.length === 0 && selectedNetwork) {
@@ -95,9 +107,10 @@ const ConnectionGuide: React.FC = () => {
       const defaultGroup = healthData?.data?.default_agent_group || "default";
       const recommendedTransport = healthData?.data?.recommended_transport || transportsList[0]?.type || "http";
 
-      // Set default selected transport (only on first load)
-      if (transportsList.length > 0 && !selectedTransport) {
-        setSelectedTransport(recommendedTransport || transportsList[0].type);
+      // Capture network_uuid for publishing status lookup
+      const uuid = healthData?.data?.network_uuid || healthData?.network_uuid;
+      if (uuid) {
+        setNetworkUuid(uuid);
       }
 
       setData({
@@ -113,163 +126,316 @@ const ConnectionGuide: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [connector, selectedNetwork, selectedTransport]);
+  }, [connector, selectedNetwork]);
+
+  // Check network publication status
+  useEffect(() => {
+    const checkPublication = async () => {
+      if (!networkUuid) {
+        setNetworkPublication({ published: false, loading: false });
+        return;
+      }
+
+      setNetworkPublication(prev => ({ ...prev, loading: true }));
+      const result = await lookupNetworkPublication({ networkUuid });
+      setNetworkPublication({
+        published: result.published,
+        networkId: result.networkId,
+        loading: false,
+      });
+
+      // If published, default to network_id mode
+      if (result.published) {
+        setConnectionMode("network_id");
+      }
+    };
+
+    checkPublication();
+  }, [networkUuid]);
 
   useEffect(() => {
     fetchGuideData();
   }, [fetchGuideData]);
 
   // Get currently selected transport
-  const currentTransport = data.transports.find((t) => t.type === selectedTransport) || data.transports[0];
+  const currentTransport = data.transports[0];
+
+  // Copy to clipboard with fallback for HTTP
+  const copyToClipboard = async (text: string, successMessage: string) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback for non-secure contexts (HTTP)
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      toast.success(successMessage);
+    } catch (err) {
+      toast.error("Failed to copy to clipboard");
+    }
+  };
 
   // Copy code to clipboard
   const handleCopyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    toast.success("Code copied to clipboard");
+    copyToClipboard(code, "Code copied to clipboard");
   };
 
-  // Copy URL to clipboard
-  const handleCopyUrl = (url: string) => {
-    navigator.clipboard.writeText(url);
-    toast.success("URL copied to clipboard");
+  // Get connection parameters based on mode
+  const getConnectionParams = () => {
+    if (connectionMode === "network_id" && networkPublication.published && networkPublication.networkId) {
+      return {
+        useNetworkId: true,
+        networkId: networkPublication.networkId,
+        host: "",
+        port: 0,
+      };
+    }
+    const host = currentTransport?.host === "0.0.0.0" ? "localhost" : (currentTransport?.host || selectedNetwork?.host || "localhost");
+    const port = currentTransport?.port || selectedNetwork?.port || 8700;
+    return {
+      useNetworkId: false,
+      networkId: "",
+      host,
+      port,
+    };
   };
 
   // Generate Python code example
   const generatePythonCode = (): string => {
-    if (!currentTransport) return "";
+    const params = getConnectionParams();
 
-    const host = currentTransport.host === "0.0.0.0" ? "localhost" : currentTransport.host;
-    const port = currentTransport.port;
+    const connectionCode = params.useNetworkId
+      ? `            network_id="${params.networkId}",`
+      : `            network_host="${params.host}",
+            network_port=${params.port},`;
 
-    if (currentTransport.type === "http") {
-      return `from openagents import AgentRunner
+    return `import asyncio
+from openagents.agents.worker_agent import WorkerAgent
+from openagents.models.event_context import EventContext
 
-runner = AgentRunner(agent_id="my-agent")
-await runner.async_start(host="${host}", port=${port})`;
-    } else if (currentTransport.type === "grpc") {
-      return `from openagents import AgentRunner
+class MyAgent(WorkerAgent):
+    """Custom agent that responds to messages."""
 
-runner = AgentRunner(agent_id="my-agent")
-await runner.async_start(host="${host}", port=${port})`;
-    } else {
-      return `from openagents import AgentRunner
+    default_agent_id = "my-agent"
 
-runner = AgentRunner(agent_id="my-agent")
-await runner.async_start(host="${host}", port=${port})`;
-    }
+    async def on_startup(self):
+        print("Agent is running! Press Ctrl+C to stop.")
+
+    async def react(self, context: EventContext):
+        event = context.incoming_event
+        content = event.payload.get("content") or event.payload.get("text") or ""
+        if not content:
+            return
+
+        # Get the messaging adapter and respond
+        messaging = self.client.mod_adapters.get("openagents.mods.workspace.messaging")
+        if messaging:
+            channel = event.payload.get("channel") or "general"
+            await messaging.send_channel_message(
+                channel=channel,
+                text=f"Response: {content}"
+            )
+
+async def main():
+    agent = MyAgent()
+    try:
+        await agent.async_start(
+${connectionCode}
+        )
+        while True:
+            await asyncio.sleep(1)
+    except KeyboardInterrupt:
+        print("\\nShutting down...")
+    finally:
+        await agent.async_stop()
+
+if __name__ == "__main__":
+    asyncio.run(main())`;
   };
 
-  // Generate Python code example with authentication
-  const generatePythonCodeWithAuth = (): string => {
-    if (!currentTransport) return "";
+  // Generate YAML agent configuration
+  const generateYAMLCode = (): string => {
+    const params = getConnectionParams();
 
-    const host = currentTransport.host === "0.0.0.0" ? "localhost" : currentTransport.host;
-    const port = currentTransport.port;
-    const group = data.groups.length > 0 ? data.groups[0] : "default";
+    const connectionSection = params.useNetworkId
+      ? `connection:
+  network_id: "${params.networkId}"`
+      : `connection:
+  host: "${params.host}"
+  port: ${params.port}
+  transport: "grpc"`;
 
-    return `from openagents import AgentRunner
-from openagents.utils.password_utils import hash_password
+    return `# my_agent.yaml - Agent configuration file
+type: "openagents.agents.collaborator_agent.CollaboratorAgent"
+agent_id: "my-agent"
 
-runner = AgentRunner(
-    agent_id="my-agent",
-    agent_group="${group}",
-    password="your_password_here"
-)
-await runner.async_start(host="${host}", port=${port})`;
+config:
+  model_name: "gpt-4o-mini"
+  provider: "openai"  # openai, anthropic, azure, bedrock, etc.
+
+  instruction: |
+    You are a helpful AI assistant in an OpenAgents network.
+    Respond to messages in a friendly and helpful manner.
+
+  react_to_all_messages: true
+  max_iterations: 10
+
+mods:
+  - name: "openagents.mods.workspace.messaging"
+    enabled: true
+  - name: "openagents.mods.discovery.agent_discovery"
+    enabled: true
+
+${connectionSection}
+
+# Launch with: openagents agent start ./my_agent.yaml`;
   };
 
   // Generate LangChain integration code
   const generateLangChainCode = (): string => {
-    if (!currentTransport) return "";
+    const params = getConnectionParams();
 
-    const host = currentTransport.host === "0.0.0.0" ? "localhost" : currentTransport.host;
-    const port = currentTransport.port;
+    const connectionCode = params.useNetworkId
+      ? `            network_id="${params.networkId}",`
+      : `            network_host="${params.host}",
+            network_port=${params.port},`;
 
-    return `from langchain.agents import initialize_agent
-from openagents.langchain import OpenAgentsTool
+    return `from langchain_openai import ChatOpenAI
+from langchain.agents import create_tool_calling_agent, AgentExecutor
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.tools import tool
+from openagents.agents import LangChainAgentRunner
 
-# Create OpenAgents tool
-openagents_tool = OpenAgentsTool(
-    host="${host}",
-    port=${port},
-    agent_id="my-agent"
-)
+# Define custom tools for your agent
+@tool
+def get_weather(location: str) -> str:
+    """Get the current weather for a location."""
+    return f"Weather in {location}: Sunny, 72°F"
 
-# Initialize agent with tool
-agent = initialize_agent(
-    tools=[openagents_tool],
-    llm=llm,
-    agent="zero-shot-react-description"
-)`;
+@tool
+def calculate(expression: str) -> str:
+    """Evaluate a mathematical expression."""
+    try:
+        result = eval(expression, {"__builtins__": {}}, {})
+        return f"Result: {result}"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+def create_langchain_agent():
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    tools = [get_weather, calculate]
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a helpful assistant in the OpenAgents network."),
+        ("human", "{input}"),
+        MessagesPlaceholder(variable_name="agent_scratchpad"),
+    ])
+
+    agent = create_tool_calling_agent(llm, tools, prompt)
+    return AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+def main():
+    langchain_agent = create_langchain_agent()
+
+    # Wrap with OpenAgents runner
+    runner = LangChainAgentRunner(
+        langchain_agent=langchain_agent,
+        agent_id="langchain-assistant",
+        include_network_tools=True,  # Auto-inject OpenAgents tools
+    )
+
+    try:
+        runner.start(
+${connectionCode}
+        )
+        print("Agent is listening for messages...")
+        runner.wait_for_stop()
+    except KeyboardInterrupt:
+        runner.stop()
+
+if __name__ == "__main__":
+    main()`;
   };
 
-  // Generate MCP Client code
+  // Generate MCP Client code (for Claude Desktop / MCP clients)
   const generateMCPCode = (): string => {
-    if (!currentTransport || currentTransport.type !== "http") return "";
+    const params = getConnectionParams();
 
-    const url = currentTransport.url || `http://${currentTransport.host === "0.0.0.0" ? "localhost" : currentTransport.host}:${currentTransport.port}`;
+    // Determine the MCP URL and network name
+    let mcpUrl: string;
+    let networkName: string;
 
-    return `import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+    if (params.useNetworkId && params.networkId) {
+      mcpUrl = `https://network.openagents.org/${params.networkId}/mcp`;
+      networkName = params.networkId;
+    } else {
+      mcpUrl = `http://${params.host}:${params.port}/mcp`;
+      // Create a safe network name from host (replace dots and colons)
+      networkName = params.host.replace(/\./g, '_').replace(/:/g, '_');
+    }
 
-// Connect to OpenAgents network via MCP
-const transport = new StdioClientTransport({
-  command: "npx",
-  args: ["-y", "@openagents/mcp-server", "--url", "${url}/mcp"]
-});
+    const config = {
+      mcpServers: {
+        [networkName]: {
+          command: "npx",
+          args: [
+            "-y",
+            "@anthropic-ai/mcp-remote",
+            mcpUrl
+          ]
+        }
+      }
+    };
 
-const client = new Client({
-  name: "my-mcp-client",
-  version: "1.0.0"
-}, {
-  capabilities: {}
-});
-
-await client.connect(transport);`;
-  };
-
-  // Generate HTTP API code
-  const generateHTTPCode = (): string => {
-    if (!currentTransport) return "";
-
-    const url = currentTransport.url || `http://${currentTransport.host === "0.0.0.0" ? "localhost" : currentTransport.host}:${currentTransport.port}`;
-
-    return `import requests
-
-# Register agent
-response = requests.post("${url}/api/register", json={
-    "agent_id": "my-agent",
-    "metadata": {},
-    "password_hash": "your_password_hash_here"  # Optional
-})
-
-# Send event
-response = requests.post("${url}/api/send_event", json={
-    "event_name": "mod:example.event",
-    "source_id": "my-agent",
-    "payload": {"message": "Hello, network!"}
-})
-
-# Poll for messages
-response = requests.get("${url}/api/poll?agent_id=my-agent")
-messages = response.json()`;
+    return JSON.stringify(config, null, 2);
   };
 
   // Get current code example
   const getCurrentCode = (): string => {
-    switch (selectedExample) {
+    switch (selectedTab) {
       case "python":
-        return data.requiresPassword ? generatePythonCodeWithAuth() : generatePythonCode();
+        return generatePythonCode();
+      case "yaml":
+        return generateYAMLCode();
       case "langchain":
         return generateLangChainCode();
       case "mcp":
         return generateMCPCode();
-      case "http":
-        return generateHTTPCode();
       default:
         return generatePythonCode();
     }
   };
+
+  // Tab configuration
+  const tabs: { id: IntegrationType; label: string; description: string }[] = [
+    {
+      id: "python",
+      label: "Python SDK",
+      description: "Build custom agents with full control using WorkerAgent or CollaboratorAgent base classes.",
+    },
+    {
+      id: "yaml",
+      label: "YAML Config",
+      description: "Launch agents declaratively without writing code. Use: openagents agent start ./config.yaml",
+    },
+    {
+      id: "langchain",
+      label: "LangChain",
+      description: "Wrap existing LangChain agents with LangChainAgentRunner to connect to the network.",
+    },
+    {
+      id: "mcp",
+      label: "MCP Integration",
+      description: "Configure Claude Desktop to connect to this network as an MCP server.",
+    },
+  ];
 
   if (loading) {
     return (
@@ -283,242 +449,148 @@ messages = response.json()`;
   }
 
   return (
-    <div className="p-6 h-full overflow-y-auto dark:bg-gray-900">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-          Connect to Network
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Step-by-step guide for connecting agents to this network
-        </p>
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Tab Navigation - Fixed at top */}
+      <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <div className="flex">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setSelectedTab(tab.id)}
+              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+                selectedTab === tab.id
+                  ? "border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20"
+                  : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Network Info */}
-      {selectedNetwork && (
-        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-          <div className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-            Network: {selectedNetwork.host}:{selectedNetwork.port}
-          </div>
+      {/* Content Area - Scrollable */}
+      <div className="flex-1 overflow-y-auto p-6 dark:bg-gray-800">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+            Connect to Network
+          </h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {tabs.find(t => t.id === selectedTab)?.description}
+          </p>
         </div>
-      )}
 
-      {/* Quick Start */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Quick Start</h2>
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex-1">
-              <pre className="text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre-wrap overflow-x-auto">
-                <code>{getCurrentCode()}</code>
-              </pre>
-            </div>
-            <button
-              onClick={() => handleCopyCode(getCurrentCode())}
-              className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-            >
-              Copy Code
-            </button>
-          </div>
-          <div className="flex space-x-2 mt-4">
-            <button
-              onClick={() => setSelectedExample("python")}
-              className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                selectedExample === "python"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              }`}
-            >
-              Python
-            </button>
-            <button
-              onClick={() => setSelectedExample("langchain")}
-              className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                selectedExample === "langchain"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              }`}
-            >
-              LangChain
-            </button>
-            <button
-              onClick={() => setSelectedExample("mcp")}
-              className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                selectedExample === "mcp"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              }`}
-            >
-              MCP Client
-            </button>
-            <button
-              onClick={() => setSelectedExample("http")}
-              className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                selectedExample === "http"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              }`}
-            >
-              HTTP API
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Available Transports */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Available Transports</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {data.transports.map((transport) => (
-            <div
-              key={transport.type}
-              className={`p-4 rounded-lg border-2 transition-colors cursor-pointer ${
-                selectedTransport === transport.type
-                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                  : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600"
-              }`}
-              onClick={() => setSelectedTransport(transport.type)}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {transport.type.toUpperCase()}
-                </h3>
-                {transport.type === data.recommendedTransport && (
-                  <span className="px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded">
+        {/* Connection Mode Selector - Only show if network is published */}
+        {networkPublication.published && networkPublication.networkId && (
+          <div className="mb-6">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">
+              Connection Method
+            </label>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConnectionMode("network_id")}
+                className={`flex-1 flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+                  connectionMode === "network_id"
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  connectionMode === "network_id"
+                    ? "bg-blue-100 dark:bg-blue-900/50"
+                    : "bg-gray-100 dark:bg-gray-700"
+                }`}>
+                  <Globe className={`w-5 h-5 ${
+                    connectionMode === "network_id"
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-gray-500 dark:text-gray-400"
+                  }`} />
+                </div>
+                <div className="text-left">
+                  <div className={`font-medium ${
+                    connectionMode === "network_id"
+                      ? "text-blue-900 dark:text-blue-100"
+                      : "text-gray-900 dark:text-gray-100"
+                  }`}>
+                    Network ID
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+                      {networkPublication.networkId}
+                    </code>
+                  </div>
+                </div>
+                {connectionMode === "network_id" && (
+                  <span className="ml-auto text-xs font-medium text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded">
                     Recommended
                   </span>
                 )}
-              </div>
-              {transport.url ? (
-                <div className="flex items-center space-x-2 mt-2">
-                  <code className="flex-1 text-sm text-gray-700 dark:text-gray-300 truncate">
-                    {transport.url}
-                  </code>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCopyUrl(transport.url!);
-                    }}
-                    className="px-2 py-1 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
-                    title="Copy URL"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </button>
+              </button>
+
+              <button
+                onClick={() => setConnectionMode("direct")}
+                className={`flex-1 flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+                  connectionMode === "direct"
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  connectionMode === "direct"
+                    ? "bg-blue-100 dark:bg-blue-900/50"
+                    : "bg-gray-100 dark:bg-gray-700"
+                }`}>
+                  <Server className={`w-5 h-5 ${
+                    connectionMode === "direct"
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-gray-500 dark:text-gray-400"
+                  }`} />
                 </div>
-              ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Disabled</p>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Authentication */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Authentication</h2>
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <div className="space-y-4">
-            <div>
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Password Required: </span>
-              <span className={`text-sm font-semibold ${data.requiresPassword ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
-                {data.requiresPassword ? "Yes" : "No"}
-              </span>
-            </div>
-            {data.groups.length > 0 && (
-              <div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Available Groups: </span>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {data.groups.map((group) => (
-                    <span
-                      key={group}
-                      className={`px-3 py-1 rounded-full text-sm ${
-                        group === data.defaultGroup
-                          ? "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
-                          : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                      }`}
-                    >
-                      {group} {group === data.defaultGroup && "(default)"}
-                    </span>
-                  ))}
+                <div className="text-left">
+                  <div className={`font-medium ${
+                    connectionMode === "direct"
+                      ? "text-blue-900 dark:text-blue-100"
+                      : "text-gray-900 dark:text-gray-100"
+                  }`}>
+                    Direct Connection
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+                      {selectedNetwork?.host}:{selectedNetwork?.port}
+                    </code>
+                  </div>
                 </div>
-              </div>
-            )}
-            {data.requiresPassword && (
-              <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                <p className="text-sm text-amber-800 dark:text-amber-200">
-                  <strong>Note:</strong> All agents must provide a valid password hash during registration.
-                  Use <code className="px-1 py-0.5 bg-amber-100 dark:bg-amber-900 rounded">hash_password()</code> to generate the hash.
-                </p>
-              </div>
-            )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Code Example */}
+        <div className="bg-gray-900 rounded-lg overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
+            <span className="text-sm text-gray-400">
+              {selectedTab === "yaml" ? "YAML" : selectedTab === "mcp" ? "JSON" : "Python"}
+            </span>
+            <Button
+              onClick={() => handleCopyCode(getCurrentCode())}
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-white hover:bg-gray-700"
+            >
+              <Copy className="w-4 h-4 mr-2" />
+              Copy
+            </Button>
+          </div>
+          <div className="p-4 overflow-x-auto">
+            <pre className="text-sm text-gray-100 font-mono whitespace-pre">
+              <code>{getCurrentCode()}</code>
+            </pre>
           </div>
         </div>
-      </section>
-
-      {/* Troubleshooting */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Troubleshooting</h2>
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Common Connection Errors</h3>
-            <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-              <li className="flex items-start">
-                <span className="text-red-500 mr-2">•</span>
-                <span><strong>Connection refused:</strong> Verify the network is running and the host/port are correct.</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-red-500 mr-2">•</span>
-                <span><strong>Timeout:</strong> Check network connectivity and firewall settings.</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-red-500 mr-2">•</span>
-                <span><strong>Agent ID already exists:</strong> Use a unique agent ID or disconnect the existing agent first.</span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Firewall / Port Issues</h3>
-            <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-              <li className="flex items-start">
-                <span className="text-blue-500 mr-2">•</span>
-                <span>Ensure the network ports are open in your firewall: {data.transports.map((t) => t.port).join(", ")}</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-blue-500 mr-2">•</span>
-                <span>For localhost connections, verify the network is binding to <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">0.0.0.0</code> or <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">127.0.0.1</code></span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-blue-500 mr-2">•</span>
-                <span>Check if other services are using the same ports: <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">netstat -an | grep {currentTransport?.port || 8700}</code></span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Authentication Failures</h3>
-            <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-              <li className="flex items-start">
-                <span className="text-yellow-500 mr-2">•</span>
-                <span><strong>Invalid password:</strong> Verify you're using the correct password for the agent group.</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-yellow-500 mr-2">•</span>
-                <span><strong>Group not found:</strong> Check available groups and ensure the group name is correct.</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-yellow-500 mr-2">•</span>
-                <span><strong>Password required:</strong> If the network requires passwords, ensure you provide a <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">password_hash</code> during registration.</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </section>
+      </div>
     </div>
   );
 };
 
 export default ConnectionGuide;
-

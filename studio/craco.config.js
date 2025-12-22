@@ -42,6 +42,7 @@ module.exports = {
   webpack: {
     alias: {
       "@": path.resolve(__dirname, "src"),
+      "radix-ui": path.resolve(__dirname, "src/lib/radix-ui"),
     },
     configure: (webpackConfig) => {
       // Ignore Monaco Editor source map warnings

@@ -5,9 +5,11 @@ import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/pris
 import { useLLMLogStore } from "@/stores/llmLogStore";
 import { useThemeStore } from "@/stores/themeStore";
 import type { LLMLogEntry } from "@/types/llmLogs";
+import { Button } from "@/components/layout/ui/button";
+import { RefreshCw, ChevronRight } from "lucide-react";
 
 const baseInputClasses =
-  "rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none transition-colors";
+  "rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none transition-colors";
 const fullInputClass = `w-full ${baseInputClasses}`;
 
 const LLMLogsView: React.FC = () => {
@@ -96,9 +98,9 @@ const LLMLogsView: React.FC = () => {
   const totalPages = Math.max(1, Math.ceil(totalLogs / pageSize));
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-950">
+    <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-800">
       {/* Header */}
-      <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+      <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-sm uppercase tracking-wide text-blue-600 font-semibold mb-1">
@@ -132,38 +134,35 @@ const LLMLogsView: React.FC = () => {
               </svg>
               Load Test Data
             </button> */}
-            <button
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={() => refreshLogs()}
               className="inline-flex items-center px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
               disabled={logsLoading}
             >
-              <svg
-                className="w-4 h-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v6h6M20 20v-6h-6M5 19A9 9 0 0119 5"
-                />
-              </svg>
+              <RefreshCw className={`w-4 h-4 mr-2 ${logsLoading ? "animate-spin" : ""}`} />
               {t('actions.refresh')}
-            </button>
-            <button
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={expandAll}
               className="inline-flex items-center px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               {t('actions.expandAll')}
-            </button>
-            <button
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={collapseAll}
               className="inline-flex items-center px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               {t('actions.collapseAll')}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -217,18 +216,19 @@ const LLMLogsView: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 space-y-4">
+      <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-sm text-gray-600 dark:text-gray-300">
             {filtersExpanded ? t('filters.expanded') : t('filters.expandHint')}
           </div>
-          <button
+          <Button
             type="button"
             onClick={() => setFiltersExpanded((prev) => !prev)}
-            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+            variant="outline"
+            size="sm"
           >
             {filtersExpanded ? t('filters.hide') : t('filters.show')}
-          </button>
+          </Button>
         </div>
 
         {filtersExpanded && (
@@ -310,20 +310,22 @@ const LLMLogsView: React.FC = () => {
                   : t('filters.notApplied')}
               </div>
               <div className="flex items-center gap-2">
-                <button
+                <Button
                   type="button"
                   onClick={handleApplyFilters}
-                  className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-500"
+                  variant="primary"
+                  size="sm"
                 >
                   {t('actions.applyFilters')}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={handleResetFilters}
-                  className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  variant="outline"
+                  size="sm"
                 >
                   {t('actions.resetFilters')}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -331,7 +333,7 @@ const LLMLogsView: React.FC = () => {
       </div>
 
       {/* Logs List */}
-      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4 bg-white dark:bg-gray-950">
+      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4 bg-white dark:bg-gray-800">
         {logsError && (
           <div className="rounded-lg border border-red-200 dark:border-red-500/60 bg-red-50 dark:bg-red-950/40 px-4 py-2 text-sm text-red-700 dark:text-red-200">
             {logsError}
@@ -341,7 +343,7 @@ const LLMLogsView: React.FC = () => {
         {logsLoading ? (
           <div className="text-center text-gray-500 dark:text-gray-400 py-12">{t('list.loading')}</div>
         ) : logs.length === 0 ? (
-          <div className="text-center py-16 border border-dashed border-gray-300 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-gray-900/50">
+          <div className="text-center py-16 border border-dashed border-gray-300 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-gray-800/50">
             <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-100">
               {t('list.noLogs')}
             </h3>
@@ -371,7 +373,7 @@ const LLMLogsView: React.FC = () => {
       {/* Pagination */}
       {logs.length > 0 && (
         <div className="px-8 pb-8">
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 px-5 py-4">
             <div className="text-sm text-gray-600 dark:text-gray-300">
               {t('pagination.info', { page, total: totalPages, count: totalLogs })}
             </div>
@@ -393,7 +395,7 @@ const LLMLogsView: React.FC = () => {
               <select
                 value={pageSize}
                 onChange={(e) => setPageSize(Number(e.target.value))}
-                className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-800 dark:text-gray-100 px-2 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-100 px-2 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
               >
                 {[10, 20, 30, 50, 100, 200].map((size) => (
                   <option key={size} value={size}>
@@ -437,7 +439,7 @@ const LogCard: React.FC<LogCardProps> = ({
     <div
       className={`rounded-lg border ${hasError
           ? "border-red-300 dark:border-red-500/60 bg-red-50 dark:bg-red-950/20"
-          : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+          : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800"
         } shadow-sm`}
     >
       {/* Header */}
@@ -448,19 +450,9 @@ const LogCard: React.FC<LogCardProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <svg
+              <ChevronRight
                 className={`w-5 h-5 transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
+              />
               <span className="text-sm font-mono text-gray-500 dark:text-gray-400">
                 {log.id.substring(0, 8)}
               </span>

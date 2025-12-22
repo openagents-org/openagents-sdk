@@ -4,6 +4,7 @@ import { useOpenAgents } from "@/context/OpenAgentsProvider";
 import { useConfirm } from "@/context/ConfirmContext";
 import { useAuthStore } from "@/stores/authStore";
 import { toast } from "sonner";
+import { Button } from "@/components/layout/ui/button";
 
 interface AgentInfo {
   agent_id: string;
@@ -14,6 +15,7 @@ interface AgentInfo {
 const AgentManagement: React.FC = () => {
   const { t } = useTranslation('network');
   const [agents, setAgents] = useState<AgentInfo[]>([]);
+  const [groups, setGroups] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [kickingAgentId, setKickingAgentId] = useState<string | null>(null);
@@ -46,6 +48,11 @@ const AgentManagement: React.FC = () => {
         );
 
         setAgents(agentsList);
+
+        // Store groups data
+        if (healthData.groups) {
+          setGroups(healthData.groups);
+        }
       } else {
         setAgents([]);
       }
@@ -61,6 +68,17 @@ const AgentManagement: React.FC = () => {
   useEffect(() => {
     fetchAgents();
   }, [fetchAgents]);
+
+  // Get group names for an agent
+  const getAgentGroups = useCallback((agentId: string): string[] => {
+    const agentGroups: string[] = [];
+    for (const [groupName, members] of Object.entries(groups)) {
+      if (Array.isArray(members) && members.includes(agentId)) {
+        agentGroups.push(groupName);
+      }
+    }
+    return agentGroups;
+  }, [groups]);
 
   // Handle kick agent
   const handleKickAgent = async (targetAgentId: string) => {
@@ -150,17 +168,18 @@ const AgentManagement: React.FC = () => {
       <div className="flex items-center justify-between mb-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {t('agents.title')}
+            Connected Agents
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             {t('agents.subtitle')}
           </p>
         </div>
 
-        <button
+        <Button
           onClick={fetchAgents}
           disabled={loading}
-          className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          variant="outline"
+          size="sm"
         >
           <svg
             className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
@@ -176,7 +195,7 @@ const AgentManagement: React.FC = () => {
             />
           </svg>
           {t('agents.refresh')}
-        </button>
+        </Button>
       </div>
 
       {/* Error Message */}
@@ -234,6 +253,9 @@ const AgentManagement: React.FC = () => {
                 {t('agents.table.id')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Group
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 {t('agents.table.status')}
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -245,7 +267,7 @@ const AgentManagement: React.FC = () => {
             {agents.length === 0 ? (
               <tr>
                 <td
-                  colSpan={3}
+                  colSpan={4}
                   className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
                 >
                   <svg
@@ -288,6 +310,26 @@ const AgentManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex flex-wrap gap-1">
+                      {getAgentGroups(agent.agent_id).length > 0 ? (
+                        getAgentGroups(agent.agent_id).map((group) => (
+                          <span
+                            key={group}
+                            className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                              group === 'admin'
+                                ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                                : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                            }`}
+                          >
+                            {group}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-gray-400 dark:text-gray-500 text-xs">-</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${agent.status === "offline" || agent.isKicked
                         ? "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400"
@@ -300,7 +342,7 @@ const AgentManagement: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
+                    <Button
                       onClick={() => handleKickAgent(agent.agent_id)}
                       disabled={
                         kickingAgentId === agent.agent_id ||
@@ -308,7 +350,8 @@ const AgentManagement: React.FC = () => {
                         agent.status === "offline" ||
                         agent.isKicked
                       }
-                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      variant="destructive"
+                      size="sm"
                     >
                       {kickingAgentId === agent.agent_id ? (
                         <>
@@ -351,7 +394,7 @@ const AgentManagement: React.FC = () => {
                           {t('agents.kick')}
                         </>
                       )}
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))

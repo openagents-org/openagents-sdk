@@ -3,6 +3,7 @@ import { useOpenAgents } from "@/context/OpenAgentsProvider";
 import { useAuthStore } from "@/stores/authStore";
 import { useConfirm } from "@/context/ConfirmContext";
 import { toast } from "sonner";
+import { Button } from "@/components/layout/ui/button";
 
 interface TransportConfig {
   type: "http" | "grpc" | "websocket" | "mcp";
@@ -53,13 +54,16 @@ const TransportConfigPage: React.FC = () => {
     try {
       setRefreshing(true);
       const healthData = await connector.getNetworkHealth();
-      const transportsData = healthData?.data?.transports || [];
+      const transportsData = healthData?.transports || [];
 
       // Convert to TransportInfo format
       const transportsList: TransportInfo[] = transportsData.map((t: any) => {
-        const host = t.host || selectedNetwork?.host || "0.0.0.0";
-        const port = t.port || t.config?.port || 8700;
-        const protocol = t.tls?.enabled ? "https" : "http";
+        // Extract config values - backend returns { type, config: { port, host, serve_mcp, ... } }
+        const config = t.config || {};
+        const host = t.host || config.host || selectedNetwork?.host || "0.0.0.0";
+        const port = t.port || config.port || 8700;
+        const tls = t.tls || config.tls;
+        const protocol = tls?.enabled ? "https" : "http";
         let url = "";
 
         if (t.type === "http") {
@@ -67,25 +71,25 @@ const TransportConfigPage: React.FC = () => {
         } else if (t.type === "grpc") {
           url = `${host === "0.0.0.0" ? "localhost" : host}:${port}`;
         } else if (t.type === "websocket") {
-          const wsProtocol = t.tls?.enabled ? "wss" : "ws";
+          const wsProtocol = tls?.enabled ? "wss" : "ws";
           url = `${wsProtocol}://${host === "0.0.0.0" ? "localhost" : host}:${port}`;
         }
 
         return {
           type: t.type || "http",
-          enabled: t.enabled !== false,
+          enabled: t.enabled !== false && config.enabled !== false,
           port,
           host,
           url,
-          tls: t.tls,
-          corsOrigins: t.cors_origins || t.corsOrigins,
-          maxBodySize: t.max_body_size || t.maxBodySize,
-          serveMcp: t.serve_mcp || t.serveMcp,
-          serveStudio: t.serve_studio || t.serveStudio,
-          maxMessageSize: t.max_message_size || t.maxMessageSize,
-          keepAliveInterval: t.keepalive_interval || t.keepAliveInterval,
-          pingInterval: t.ping_interval || t.pingInterval,
-          maxConnections: t.max_connections || t.maxConnections,
+          tls,
+          corsOrigins: t.cors_origins || t.corsOrigins || config.cors_origins || config.corsOrigins,
+          maxBodySize: t.max_body_size || t.maxBodySize || config.max_body_size || config.maxBodySize,
+          serveMcp: t.serve_mcp || t.serveMcp || config.serve_mcp || config.serveMcp,
+          serveStudio: t.serve_studio || t.serveStudio || config.serve_studio || config.serveStudio,
+          maxMessageSize: t.max_message_size || t.maxMessageSize || config.max_message_size || config.maxMessageSize,
+          keepAliveInterval: t.keepalive_interval || t.keepAliveInterval || config.keepalive_interval || config.keepAliveInterval,
+          pingInterval: t.ping_interval || t.pingInterval || config.ping_interval || config.pingInterval,
+          maxConnections: t.max_connections || t.maxConnections || config.max_connections || config.maxConnections,
         };
       });
 
@@ -211,7 +215,7 @@ const TransportConfigPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6 h-full overflow-y-auto dark:bg-gray-900">
+    <div className="p-6 h-full overflow-y-auto dark:bg-gray-800">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -224,17 +228,11 @@ const TransportConfigPage: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-3">
-          <button
+          <Button
             onClick={fetchTransports}
             disabled={refreshing}
-            className={`
-              inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600
-              rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300
-              bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700
-              focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
-              disabled:opacity-50 disabled:cursor-not-allowed
-              transition-colors
-            `}
+            variant="outline"
+            size="sm"
           >
             <svg
               className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
@@ -250,17 +248,12 @@ const TransportConfigPage: React.FC = () => {
               />
             </svg>
             {refreshing ? "Refreshing..." : "Refresh"}
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={() => setShowAddModal(true)}
-            className="
-              inline-flex items-center px-4 py-2 border border-transparent
-              rounded-md shadow-sm text-sm font-medium text-white
-              bg-blue-600 hover:bg-blue-700
-              focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
-              transition-colors
-            "
+            variant="primary"
+            size="sm"
           >
             <svg
               className="w-4 h-4 mr-2"
@@ -276,7 +269,7 @@ const TransportConfigPage: React.FC = () => {
               />
             </svg>
             Add New Transport
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -456,15 +449,17 @@ const TransportCard: React.FC<TransportCardProps> = ({
                 <code className="flex-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-900 dark:text-gray-100 truncate">
                   {transport.url}
                 </code>
-                <button
+                <Button
                   onClick={() => onCopyUrl(transport.url!)}
-                  className="px-2 py-1 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
                   title="Copy URL"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -496,18 +491,22 @@ const TransportCard: React.FC<TransportCardProps> = ({
 
         {/* Actions */}
         <div className="flex items-center space-x-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-          <button
+          <Button
             onClick={() => onEdit(transport)}
-            className="px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+            variant="ghost"
+            size="sm"
+            className="text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
           >
             Edit Configuration
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => onDelete(transport)}
-            className="px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+            variant="ghost"
+            size="sm"
+            className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
           >
             Remove
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -666,19 +665,19 @@ const TransportEditModal: React.FC<TransportEditModalProps> = ({
 
           {/* Actions */}
           <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
+            <Button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              variant="outline"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              variant="primary"
             >
               Save Changes
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -795,20 +794,20 @@ const TransportAddModal: React.FC<TransportAddModalProps> = ({
           </div>
 
           <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
+            <Button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              variant="outline"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={existingTypes.includes(selectedType)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              variant="primary"
             >
               Add Transport
-            </button>
+            </Button>
           </div>
         </form>
       </div>

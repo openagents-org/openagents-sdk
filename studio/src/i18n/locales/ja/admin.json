@@ -1,0 +1,171 @@
+{
+  "dashboard": {
+    "title": "管理ダッシュボード",
+    "subtitle": "ネットワーク概要と管理",
+    "loading": "ダッシュボードを読み込み中...",
+    "refresh": "更新",
+    "refreshing": "更新中...",
+    "networkInfo": "ネットワーク",
+    "stats": {
+      "agents": "エージェント",
+      "online": "オンライン",
+      "channels": "チャネル",
+      "active": "アクティブ",
+      "uptime": "稼働時間",
+      "networkStatus": "ネットワークステータス",
+      "eventsPerMin": "イベント/分",
+      "activityRate": "アクティビティ率"
+    },
+    "quickActions": {
+      "title": "クイックアクション",
+      "networkProfile": "ネットワークプロファイル",
+      "networkProfileDesc": "ネットワーク設定を構成",
+      "transports": "トランスポート",
+      "transportsDesc": "トランスポートプロトコルを管理",
+      "importExport": "インポート / エクスポート",
+      "importExportDesc": "設定をバックアップまたは復元",
+      "connectedAgents": "接続済みエージェント",
+      "connectedAgentsDesc": "すべての接続済みエージェントを表示",
+      "agentGroups": "エージェントグループ",
+      "agentGroupsDesc": "エージェントグループを管理",
+      "connectionGuide": "接続ガイド",
+      "connectionGuideDesc": "接続手順を設定",
+      "modManagement": "モジュール管理",
+      "modManagementDesc": "モジュールを有効化または無効化",
+      "eventLogs": "イベントログ",
+      "eventLogsDesc": "システムイベントログを表示",
+      "eventDebugger": "イベントデバッガー",
+      "eventDebuggerDesc": "イベントをデバッグおよびテスト",
+      "restartNetwork": "ネットワークを再起動",
+      "restartNetworkDesc": "ネットワークサーバーを再起動",
+      "broadcastMessage": "ブロードキャストメッセージ",
+      "broadcastMessageDesc": "すべてのエージェントにメッセージを送信",
+      "updateAdminPassword": "管理者パスワードを更新",
+      "updateAdminPasswordDesc": "管理者グループのパスワードを変更",
+      "startTour": "ツアーを開始"
+    },
+    "recentActivity": {
+      "title": "最近のアクティビティ",
+      "noActivity": "最近のアクティビティはありません"
+    },
+    "broadcast": {
+      "title": "ブロードキャストメッセージ",
+      "subtitle": "すべての接続済みエージェントにメッセージを送信",
+      "placeholder": "メッセージを入力...",
+      "cancel": "キャンセル",
+      "send": "ブロードキャストを送信",
+      "sending": "送信中...",
+      "enterMessage": "メッセージを入力してください",
+      "success": "ブロードキャストメッセージが正常に送信されました",
+      "failed": "ブロードキャストメッセージの送信に失敗しました"
+    },
+    "restart": {
+      "title": "ネットワークを再起動",
+      "confirm": "ネットワークを再起動してもよろしいですか？これによりすべてのエージェントの接続が切断されます。",
+      "restart": "再起動",
+      "cancel": "キャンセル",
+      "requested": "ネットワーク再起動が要求されました。この機能にはバックエンドサポートが必要です。",
+      "failed": "ネットワークの再起動に失敗しました"
+    }
+  },
+  "tour": {
+    "step1": {
+      "title": "ダッシュボード概要",
+      "content": "オンラインエージェント、チャネル、稼働時間、イベント頻度などの主要なネットワーク統計情報を確認できます。カードをクリックすると、関連ページにすばやくアクセスできます。"
+    },
+    "step2": {
+      "title": "クイックアクション",
+      "content": "クイックアクション領域では、ネットワーク設定、エージェント管理、モジュール管理などの一般的に使用される機能にすばやくアクセスできます。"
+    },
+    "step3": {
+      "title": "エージェントグループ管理",
+      "content": "エージェントグループ管理では、さまざまなエージェントグループを作成および管理し、権限とパスワード保護を設定できます。これはネットワークアクセス制御を管理するための重要なツールです。"
+    },
+    "step4": {
+      "title": "管理者パスワードを更新",
+      "content": "セキュリティのため、管理者グループのデフォルトパスワードをすぐに変更することをお勧めします。このボタンをクリックすると、パスワード変更ページにすばやく移動できます。"
+    },
+    "previous": "前へ",
+    "next": "次へ",
+    "complete": "完了"
+  },
+  "sidebar": {
+    "title": "管理ダッシュボード",
+    "sections": {
+      "overview": "概要",
+      "network": "ネットワーク",
+      "agents": "エージェント",
+      "modules": "モジュール",
+      "monitoring": "モニタリング"
+    },
+    "items": {
+      "dashboard": "ダッシュボード",
+      "networkProfile": "ネットワークプロファイル",
+      "transports": "トランスポート",
+      "importExport": "インポート / エクスポート",
+      "connectedAgents": "接続済みエージェント",
+      "agentGroups": "エージェントグループ",
+      "serviceAgents": "サービスエージェント",
+      "connectionGuide": "接続ガイド",
+      "modManagement": "モジュール管理",
+      "eventLogs": "イベントログ",
+      "llmLogs": "LLM ログ",
+      "eventDebugger": "イベントデバッガー"
+    }
+  },
+  "publish": {
+    "title": "ネットワークを公開",
+    "subtitle": "ネットワークをOpenAgentsディレクトリに公開して、他のユーザーが見つけられるようにします。",
+    "form": {
+      "networkId": "ネットワークID",
+      "networkIdPlaceholder": "例: my-awesome-network",
+      "networkIdHelp": "ネットワークの一意識別子（最小7文字）",
+      "networkName": "ネットワーク名",
+      "networkNamePlaceholder": "例: 私の素晴らしいネットワーク",
+      "networkNameHelp": "ネットワークの表示名（オプション、ヘルスエンドポイントから自動検出）",
+      "organization": "組織",
+      "organizationPlaceholder": "例: openagents",
+      "organizationHelp": "OpenAgentsでの組織識別子",
+      "host": "ホスト",
+      "hostPlaceholder": "例: mynetwork.example.com",
+      "port": "ポート"
+    },
+    "buttons": {
+      "validate": "設定を検証",
+      "validating": "検証中...",
+      "publish": "ネットワークを公開",
+      "publishing": "公開中..."
+    },
+    "validation": {
+      "success": "ネットワーク設定は有効です！",
+      "successToast": "検証成功！",
+      "detectedName": "検出された名前:",
+      "onlineAgents": "オンラインエージェント:",
+      "enabledMods": "有効なモジュール:"
+    },
+    "errors": {
+      "networkIdRequired": "ネットワークIDは必須です",
+      "hostRequired": "ホストは必須です",
+      "portRequired": "ポートは必須です",
+      "invalidPort": "ポートは1から65535の間である必要があります",
+      "networkIdTooShort": "ネットワークIDは最低7文字必要です",
+      "organizationRequired": "組織は必須です",
+      "healthCheckFailed": "ヘルスチェック失敗",
+      "networkUnreachable": "ネットワークに接続できません。実行中でアクセス可能か確認してください。",
+      "validationFailed": "検証失敗",
+      "validationError": "検証中にエラーが発生しました",
+      "validateFirst": "先に設定を検証してください",
+      "publishFailed": "ネットワークの公開に失敗しました",
+      "publishError": "公開中にエラーが発生しました"
+    },
+    "success": "ネットワークが正常に公開されました！",
+    "info": {
+      "title": "公開について",
+      "point1": "ネットワークは指定されたホストとポートで公開アクセス可能である必要があります。",
+      "point2": "検証のためにヘルスエンドポイント（/api/health）にアクセス可能である必要があります。",
+      "point3": "公開されたネットワークはOpenAgentsディレクトリに表示されます。",
+      "point4": "公開するにはOpenAgentsに組織として登録されている必要があります。"
+    }
+  }
+}
+

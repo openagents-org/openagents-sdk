@@ -121,7 +121,7 @@ const ArtifactTopicDetail: React.FC = () => {
   // 显示连接等待状态
   if (!openAgentsService || !isConnected) {
     return (
-      <div className="flex-1 flex items-center justify-center dark:bg-gray-900">
+      <div className="flex-1 flex items-center justify-center dark:bg-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">
@@ -137,7 +137,7 @@ const ArtifactTopicDetail: React.FC = () => {
   // 显示加载状态
   if (artifactLoading && !selectedArtifact) {
     return (
-      <div className="flex-1 flex items-center justify-center dark:bg-gray-900">
+      <div className="flex-1 flex items-center justify-center dark:bg-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">{t('detail.loading')}</p>
@@ -309,10 +309,10 @@ const ArtifactTopicDetail: React.FC = () => {
       </div>
 
       {/* 主要内容 */}
-      <div className="flex-1 flex flex-col overflow-hidden dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+      <div className="flex-1 flex flex-col overflow-hidden dark:bg-gray-800 border-gray-200 dark:border-gray-700">
         <div className="flex-1 flex flex-col overflow-y-auto">
           {/* Artifact内容 */}
-          <div className="p-6 border-b bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+          <div className="p-6 border-b bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
             {/* Artifact名称 */}
             <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
               {selectedArtifact.name}

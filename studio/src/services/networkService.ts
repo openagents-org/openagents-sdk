@@ -213,6 +213,73 @@ export const ManualNetworkConnection = async (
   }
 };
 
+/**
+ * Connect to a network using its published network ID
+ * Routes through network.openagents.org/{networkId} which handles
+ * both direct connections and relay-based tunneling.
+ */
+export const connectViaNetworkId = async (
+  networkId: string
+): Promise<NetworkConnection> => {
+  const startTime = Date.now();
+
+  try {
+    console.log(`Connecting to network via ID: ${networkId}`);
+
+    // Use network bridge URL for the health check
+    const response = await networkFetch(
+      "network.openagents.org", // placeholder - networkId routing handles the actual URL
+      443,
+      "/api/health",
+      {
+        method: "GET",
+        timeout: 10000, // 10 second timeout (relay might take longer)
+        headers: {
+          Accept: "application/json",
+        },
+        networkId, // This triggers network bridge routing
+      }
+    );
+
+    const latency = Date.now() - startTime;
+
+    if (response.ok) {
+      const healthData = await response.json();
+      console.log(`Successfully connected to network ${networkId}`);
+
+      return {
+        host: "network.openagents.org",
+        port: 443,
+        status: ConnectionStatusEnum.CONNECTED,
+        latency,
+        useHttps: true,
+        networkId,
+        networkInfo: {
+          name: healthData.data?.network_name || networkId,
+        },
+      };
+    } else {
+      console.error(`HTTP error ${response.status} when connecting to network ${networkId}`);
+      return {
+        host: "network.openagents.org",
+        port: 443,
+        status: ConnectionStatusEnum.ERROR,
+        latency,
+        networkId,
+      };
+    }
+  } catch (error: any) {
+    console.error(`Connection failed for network ${networkId}:`, error);
+    return {
+      host: "network.openagents.org",
+      port: 443,
+      status: ConnectionStatusEnum.ERROR,
+      latency: Date.now() - startTime,
+      networkId,
+    };
+  }
+};
+
 // Fetch network details by network ID from OpenAgents directory
 export const fetchNetworkById = async (
   networkId: string
@@ -253,8 +320,13 @@ export const fetchNetworkById = async (
     const result = await response.json();
 
     if (result.code === 200 && result.data) {
-      // Check if network is offline
-      if (result.data.status === 'offline') {
+      // Check if network is offline - but skip this check for relay networks
+      // Relay networks are reachable through the relay even if status shows "offline"
+      // Note: relay_url is nested inside profile
+      const relayUrl = result.data.profile?.relay_url;
+      const hasRelayUrl = relayUrl && relayUrl !== '';
+
+      if (result.data.status === 'offline' && !hasRelayUrl) {
         const networkName = result.data.profile?.name || networkId;
         return {
           success: false,
@@ -405,7 +477,10 @@ export const fetchNetworkHealth = async (
   error?: string;
 }> => {
   try {
-    console.log(`Fetching health information from ${connection.host}:${connection.port}`);
+    const logTarget = connection.networkId
+      ? `network ID: ${connection.networkId}`
+      : `${connection.host}:${connection.port}`;
+    console.log(`Fetching health information from ${logTarget}`);
 
     const response = await networkFetch(
       connection.host,
@@ -418,6 +493,7 @@ export const fetchNetworkHealth = async (
           Accept: "application/json",
         },
         useHttps: connection.useHttps,
+        networkId: connection.networkId, // Use network bridge routing if available
       }
     );
 
@@ -438,7 +514,7 @@ export const fetchNetworkHealth = async (
       };
     }
 
-    console.log(`Health check successful for ${connection.host}:${connection.port}`, {
+    console.log(`Health check successful for ${logTarget}`, {
       networkId: healthData.data.network_id,
       moduleCount: healthData.data.mods?.length || 0,
     });
@@ -478,4 +554,130 @@ export const getCurrentNetworkHealth = async (
   }
 
   return fetchNetworkHealth(selectedNetwork);
+};
+
+/**
+ * Upload network icon to the assets folder
+ * @param connection Network connection information
+ * @param file The image file to upload
+ * @returns Upload result with the asset URL
+ */
+export const uploadNetworkIcon = async (
+  connection: NetworkConnection,
+  file: File
+): Promise<{
+  success: boolean;
+  url?: string;
+  error?: string;
+}> => {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("type", "icon");
+
+    const protocol = connection.useHttps ? 'https' : 'http';
+    const baseUrl = `${protocol}://${connection.host}:${connection.port}`;
+
+    const response = await fetch(`${baseUrl}/api/assets/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return {
+        success: false,
+        error: `Upload failed: ${errorText}`,
+      };
+    }
+
+    const data = await response.json();
+
+    if (data.success && data.url) {
+      return {
+        success: true,
+        url: data.url,
+      };
+    } else {
+      return {
+        success: false,
+        error: data.error || "Upload failed",
+      };
+    }
+  } catch (error: any) {
+    console.error("Failed to upload icon:", error);
+    return {
+      success: false,
+      error: error.message || "Upload failed",
+    };
+  }
+};
+
+/**
+ * Check if a network is published on OpenAgents directory
+ * @param options Lookup options - either networkUuid or host+port
+ * @returns Lookup result with network ID if published
+ */
+export const lookupNetworkPublication = async (
+  options: { networkUuid?: string; host?: string; port?: number }
+): Promise<{
+  published: boolean;
+  networkId?: string;
+  networkName?: string;
+  networkUuid?: string;
+  relayUrl?: string;
+  error?: string;
+}> => {
+  try {
+    // Build query params - prefer networkUuid over host:port
+    let queryParams: string;
+    if (options.networkUuid) {
+      queryParams = `network_uuid=${encodeURIComponent(options.networkUuid)}`;
+    } else if (options.host && options.port) {
+      queryParams = `host=${encodeURIComponent(options.host)}&port=${options.port}`;
+    } else {
+      return { published: false, error: "Either networkUuid or host+port required" };
+    }
+
+    const response = await fetch(
+      `https://endpoint.openagents.org/v1/networks/lookup?${queryParams}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(10000),
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return { published: false };
+      }
+      return {
+        published: false,
+        error: `HTTP ${response.status}: ${response.statusText}`,
+      };
+    }
+
+    const result = await response.json();
+
+    if (result.code === 200 && result.data) {
+      return {
+        published: true,
+        networkId: result.data.id,
+        networkName: result.data.name,
+        networkUuid: result.data.network_uuid,
+        relayUrl: result.data.relay_url,
+      };
+    }
+
+    return { published: false };
+  } catch (error: any) {
+    console.error("Failed to lookup network publication:", error);
+    return {
+      published: false,
+      error: error.message || "Lookup failed",
+    };
+  }
 };

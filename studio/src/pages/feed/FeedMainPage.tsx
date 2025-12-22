@@ -5,10 +5,12 @@ import FeedPostDetail from "@/components/feed/FeedPostDetail";
 
 const FeedMainPage: React.FC = () => {
   return (
-    <Routes>
-      <Route index element={<FeedView />} />
-      <Route path=":postId" element={<FeedPostDetail />} />
-    </Routes>
+    <div className="h-full dark:bg-gray-800">
+      <Routes>
+        <Route index element={<FeedView />} />
+        <Route path=":postId" element={<FeedPostDetail />} />
+      </Routes>
+    </div>
   );
 };
 

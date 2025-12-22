@@ -6,6 +6,11 @@ import { useFeedStore } from "@/stores/feedStore";
 import FeedCreateModal from "./FeedCreateModal";
 import FeedPostCard from "./components/FeedPostCard";
 import { FEED_SORT_FIELDS } from "@/types/feed";
+import { Badge } from "@/components/layout/ui/badge";
+import { Button } from "@/components/layout/ui/button";
+import { Card, CardContent } from "@/components/layout/ui/card";
+import { ScrollArea } from "@/components/layout/ui/scroll-area";
+import { RefreshCw, Plus, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 
 const INITIAL_FILTER_RESET = {
   author: undefined,
@@ -17,7 +22,7 @@ const INITIAL_FILTER_RESET = {
 };
 
 const baseInputClasses =
-  "rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none transition-colors";
+  "rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none transition-colors";
 const fullInputClass = `w-full ${baseInputClasses}`;
 const flexInputClass = `flex-1 ${baseInputClasses}`;
 
@@ -168,92 +173,55 @@ const FeedView: React.FC = () => {
   }, [filters]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-950">
-      <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+    <div className="flex-1 flex flex-col h-full overflow-hidden">
+      {/* Header */}
+      <div className="flex-shrink-0 px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-background">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-sm uppercase tracking-wide text-blue-600 font-semibold mb-1">
+          <div className="flex items-center gap-4">
+            <h1 className="text-lg font-semibold text-foreground">
               {t('header.title')}
-            </p>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              {t('header.subtitle')}
             </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {t('header.description')}
-            </p>
+            <Badge variant="secondary" appearance="light" size="sm">
+              {t('stats.posts', { count: totalPosts })}
+            </Badge>
+            <span className="text-sm text-muted-foreground">
+              {t('stats.page', { current: page, total: totalPages })}
+            </span>
           </div>
-          <div className="flex items-center gap-3">
-            <button
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              onClick={() => setFiltersExpanded((prev) => !prev)}
+              variant={filtersExpanded ? "secondary" : "outline"}
+              size="sm"
+            >
+              <Filter className="w-4 h-4 mr-1.5" />
+              {filtersExpanded ? t('filters.hide') : t('filters.show')}
+            </Button>
+            <Button
               onClick={() => refreshPosts()}
-              className="inline-flex items-center px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+              variant="outline"
+              size="sm"
               disabled={postsLoading}
             >
-              <svg
-                className="w-4 h-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v6h6M20 20v-6h-6M5 19A9 9 0 0119 5"
-                />
-              </svg>
+              <RefreshCw className={`w-4 h-4 mr-1.5 ${postsLoading ? 'animate-spin' : ''}`} />
               {t('actions.refresh')}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setIsCreateOpen(true)}
-              className="inline-flex items-center px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-500"
+              variant="primary"
+              size="sm"
             >
-              <svg
-                className="w-4 h-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
+              <Plus className="w-4 h-4 mr-1.5" />
               {t('actions.newPost')}
-            </button>
+            </Button>
           </div>
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-          <span>{t('stats.posts', { count: totalPosts })}</span>
-          <span>•</span>
-          <span>
-            {t('stats.page', { current: page, total: totalPages })}
-          </span>
-          <span>•</span>
-          <span>{t('stats.tagFilters', { count: filters.tags.length })}</span>
         </div>
       </div>
 
-      <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="text-sm text-gray-600 dark:text-gray-300">
-            {filtersActive
-              ? t('filters.applied')
-              : t('filters.none')}
-          </div>
-          <button
-            type="button"
-            onClick={() => setFiltersExpanded((prev) => !prev)}
-            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
-          >
-            {filtersExpanded ? t('filters.hide') : t('filters.show')}
-          </button>
-        </div>
-
-        {filtersExpanded && (
-          <>
+      {filtersExpanded && (
+        <Card className="mx-6 mt-4 border-gray-200 dark:border-gray-700">
+          <CardContent className="p-4 space-y-4">
             <form
               className="flex flex-col lg:flex-row lg:flex-wrap gap-4"
               onSubmit={handleSearch}
@@ -274,19 +242,23 @@ const FeedView: React.FC = () => {
                 {searchTags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {searchTags.map((tag) => (
-                      <span
+                      <Badge
                         key={tag}
-                        className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-200 px-3 py-1 text-xs font-medium"
+                        variant="info"
+                        appearance="light"
+                        size="sm"
                       >
                         #{tag}
-                        <button
+                        <Button
                           type="button"
-                          className="ml-2 hover:text-indigo-900 dark:hover:text-indigo-100"
+                          variant="ghost"
+                          size="icon"
+                          className="ml-2 h-auto w-auto p-0 hover:text-indigo-900 dark:hover:text-indigo-100"
                           onClick={() => handleRemoveSearchTag(tag)}
                         >
                           ×
-                        </button>
-                      </span>
+                        </Button>
+                      </Badge>
                     ))}
                   </div>
                 )}
@@ -304,13 +276,14 @@ const FeedView: React.FC = () => {
                     className={flexInputClass}
                     placeholder={t('filters.tagFilterPlaceholder')}
                   />
-                  <button
+                  <Button
                     type="button"
                     onClick={handleAddSearchTag}
-                    className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    variant="outline"
+                    size="sm"
                   >
                     {t('filters.add')}
-                  </button>
+                  </Button>
                 </div>
               </div>
               <div className="w-full lg:w-auto flex flex-col justify-end min-w-[360px]">
@@ -318,20 +291,22 @@ const FeedView: React.FC = () => {
                   {t('filters.actions')}
                 </span>
                 <div className="flex gap-2">
-                  <button
+                  <Button
                     type="submit"
-                    className="flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-500"
+                    variant="primary"
+                    className="flex-1"
                     disabled={searchLoading}
                   >
                     {t('filters.search')}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     onClick={clearSearch}
-                    className="flex-1 h-[42px] flex items-center justify-center px-4 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-blue-700 dark:text-blue-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    variant="outline"
+                    className="flex-1"
                   >
                     {t('filters.clearSearch')}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </form>
@@ -423,30 +398,35 @@ const FeedView: React.FC = () => {
                       className={flexInputClass}
                       placeholder="Press Enter to add"
                     />
-                    <button
+                    <Button
                       type="button"
                       onClick={handleAddFilterTag}
-                      className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      variant="outline"
+                      size="sm"
                     >
                       Add
-                    </button>
+                    </Button>
                   </div>
                   {filters.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {filters.tags.map((tag) => (
-                        <span
+                        <Badge
                           key={tag}
-                          className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-200"
+                          variant="secondary"
+                          appearance="light"
+                          size="sm"
                         >
                           #{tag}
-                          <button
+                          <Button
                             type="button"
-                            className="ml-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                            variant="ghost"
+                            size="icon"
+                            className="ml-2 h-auto w-auto p-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                             onClick={() => handleRemoveFilterTag(tag)}
                           >
                             ×
-                          </button>
-                        </span>
+                          </Button>
+                        </Badge>
                       ))}
                     </div>
                   )}
@@ -490,30 +470,33 @@ const FeedView: React.FC = () => {
                   {filtersActive ? t('filters.appliedShort') : t('filters.none')}
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
+                  <Button
                     type="button"
                     onClick={() => fetchRecentPosts()}
-                    className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    variant="outline"
+                    size="sm"
                     disabled={recentLoading}
                   >
                     {recentLoading ? t('filters.checking') : t('filters.checkNewPosts')}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     onClick={resetFilters}
-                    className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    variant="outline"
+                    size="sm"
                   >
                     {t('filters.resetFilters')}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
-          </>
-        )}
-      </div>
+          </CardContent>
+        </Card>
+      )}
 
       {newPostCount > 0 && (
-        <div className="mx-8 mt-6 rounded-2xl border border-amber-300 dark:border-amber-500/60 bg-amber-50 dark:bg-amber-900/20 px-6 py-4 flex items-center justify-between">
+        <Card className="mx-6 mt-4 border-amber-300 dark:border-amber-500/60 bg-amber-50 dark:bg-amber-900/20">
+          <CardContent className="p-4 flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-amber-800 dark:text-amber-100">
               {newPostCount} new post{newPostCount > 1 ? "s" : ""} arrived
@@ -522,17 +505,21 @@ const FeedView: React.FC = () => {
               Insert them into the feed to keep your list fresh.
             </p>
           </div>
-          <button
-            onClick={consumeIncomingPosts}
-            className="px-4 py-2 text-sm font-medium rounded-lg bg-amber-500 text-white hover:bg-amber-400 dark:hover:bg-amber-400/90"
-          >
-            Show latest posts
-          </button>
-        </div>
+            <Button
+              onClick={consumeIncomingPosts}
+              variant="primary"
+              size="sm"
+              className="bg-amber-500 hover:bg-amber-400 dark:hover:bg-amber-400/90"
+            >
+              Show latest posts
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {recentPosts.length > 0 && (
-        <div className="mx-8 mt-6 rounded-2xl border border-emerald-200 dark:border-emerald-500/50 bg-emerald-50 dark:bg-emerald-900/20 px-6 py-4 space-y-3">
+        <Card className="mx-6 mt-4 border-emerald-200 dark:border-emerald-500/50 bg-emerald-50 dark:bg-emerald-900/20">
+          <CardContent className="p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold text-emerald-800 dark:text-emerald-100">
@@ -543,28 +530,31 @@ const FeedView: React.FC = () => {
               </p>
             </div>
             <div className="flex gap-2">
-              <button
+              <Button
                 onClick={markPostsChecked}
-                className="px-3 py-1.5 text-xs rounded-lg border border-emerald-300 dark:border-emerald-500/60 text-emerald-800 dark:text-emerald-100"
+                variant="outline"
+                size="sm"
+                className="border-emerald-300 dark:border-emerald-500/60 text-emerald-800 dark:text-emerald-100"
               >
                 Mark as reviewed
-              </button>
+              </Button>
             </div>
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {recentPosts.slice(0, 4).map((post) => (
-              <FeedPostCard
-                key={post.post_id}
-                post={post}
-                onOpen={(id) => navigate(`/feed/${id}`)}
-                isRecent
-              />
-            ))}
-          </div>
-        </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              {recentPosts.slice(0, 4).map((post) => (
+                <FeedPostCard
+                  key={post.post_id}
+                  post={post}
+                  onOpen={(id) => navigate(`/feed/${id}`)}
+                  isRecent
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4 bg-white dark:bg-gray-950">
+      <ScrollArea className="flex-1 px-6 py-4">
         {searchResults && (
           <div className="text-sm text-gray-600 dark:text-gray-300">
             Showing {searchResults.length} search result
@@ -587,7 +577,7 @@ const FeedView: React.FC = () => {
             Loading feed...
           </div>
         ) : visiblePosts.length === 0 ? (
-          <div className="text-center py-16 border border-dashed border-gray-300 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-gray-900/50">
+          <div className="text-center py-16 border border-dashed border-gray-300 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-gray-800/50">
             <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-100">
               No posts match your filters
             </h3>
@@ -608,33 +598,37 @@ const FeedView: React.FC = () => {
             ))}
           </div>
         )}
-      </div>
+      </ScrollArea>
 
       {!searchResults && visiblePosts.length > 0 && (
-        <div className="px-8 pb-8">
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-5 py-4">
-            <div className="text-sm text-gray-600 dark:text-gray-300">
+        <div className="flex-shrink-0 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="text-sm text-muted-foreground">
               Page {page} / {totalPages}
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-200 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800"
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
               >
+                <ChevronLeft className="w-4 h-4 mr-1" />
                 Previous
-              </button>
-              <button
-                className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-200 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800"
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
               >
                 Next
-              </button>
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
               <select
                 value={pageSize}
                 onChange={(e) => setPageSize(Number(e.target.value))}
-                className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-800 dark:text-gray-100 px-2 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                className="rounded-lg border border-gray-300 dark:border-gray-700 bg-background text-sm text-foreground px-2 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
               >
                 {[10, 20, 30, 50].map((size) => (
                   <option key={size} value={size}>

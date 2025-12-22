@@ -35,6 +35,24 @@ class ProjectTemplate(BaseModel):
     )
     context: str
     created_timestamp: int = Field(default_factory=lambda: int(time.time()))
+
+    # Tool configuration fields
+    expose_as_tool: bool = Field(
+        default=False,
+        description="Whether to expose this template as a standalone tool"
+    )
+    tool_name: Optional[str] = Field(
+        default=None,
+        description="Custom tool name (defaults to start_{template_id}_project)"
+    )
+    tool_description: Optional[str] = Field(
+        default=None,
+        description="Custom tool description (defaults to template description)"
+    )
+    input_schema: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Custom JSON schema for tool inputs"
+    )
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert template to dictionary."""

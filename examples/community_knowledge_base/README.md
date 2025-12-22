@@ -41,7 +41,7 @@ pip install --upgrade grpcio>=1.74.0 grpcio-tools>=1.74.0
 cd examples/community_knowledge_base
 
 # Start the network coordinator using the standard OpenAgents launcher
-openagents launch-network network_config.yaml
+openagents network start network_config.yaml
 ```
 
 The network will start on port 8572 with gRPC transport.

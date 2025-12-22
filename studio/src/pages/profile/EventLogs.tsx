@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { eventLogService, EventLogEntry, HttpRequestLogEntry } from "@/services/eventLogService";
+import { Button } from "@/components/layout/ui/button";
+import { Input } from "@/components/layout/ui/input";
+import { X, FileText, ArrowLeftRight, ChevronDown, Send, Circle } from "lucide-react";
 
 type LogEntry = EventLogEntry | HttpRequestLogEntry;
 
@@ -227,8 +230,9 @@ const EventLogs: React.FC = () => {
         <div className="flex items-center gap-4">
           {/* Search Input */}
           <div className="flex-1">
-            <input
+            <Input
               type="text"
+              variant="lg"
               value={searchKeyword}
               onChange={(e) => {
                 setSearchKeyword(e.target.value);
@@ -245,7 +249,10 @@ const EventLogs: React.FC = () => {
               Filter:
             </label>
             <div className="flex items-center gap-2">
-              <button
+              <Button
+                type="button"
+                variant={filterMode === "include" ? "primary" : "secondary"}
+                size="sm"
                 onClick={() => setFilterMode("include")}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   filterMode === "include"
@@ -254,8 +261,11 @@ const EventLogs: React.FC = () => {
                 }`}
               >
                 Include
-              </button>
-              <button
+              </Button>
+              <Button
+                type="button"
+                variant={filterMode === "exclude" ? "primary" : "secondary"}
+                size="sm"
                 onClick={() => setFilterMode("exclude")}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   filterMode === "exclude"
@@ -264,13 +274,16 @@ const EventLogs: React.FC = () => {
                 }`}
               >
                 Exclude
-              </button>
+              </Button>
             </div>
           </div>
 
           {/* Clear Search Button */}
           {searchKeyword && (
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => {
                 setSearchKeyword("");
                 setCurrentPage(1);
@@ -278,20 +291,8 @@ const EventLogs: React.FC = () => {
               className="px-3 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
               title="Clear search"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
+              <X className="w-5 h-5" />
+            </Button>
           )}
         </div>
 
@@ -329,19 +330,7 @@ const EventLogs: React.FC = () => {
       <div className="space-y-2">
         {paginatedData.logs.length === 0 ? (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-left">
-            <svg
-              className="h-12 w-12 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
+            <FileText className="h-12 w-12 text-gray-400" />
             <p className="mt-4 text-gray-600 dark:text-gray-400">
               No event logs
             </p>
@@ -367,21 +356,11 @@ const EventLogs: React.FC = () => {
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       {/* HTTP Icon */}
-                      <svg
+                      <ArrowLeftRight
                         className={`w-5 h-5 flex-shrink-0 ${
                           isSuccess ? "text-green-500" : httpEntry.error ? "text-red-500" : "text-yellow-500"
                         }`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-                        />
-                      </svg>
+                      />
 
                       {/* HTTP Request Info */}
                       <div className="flex-1 min-w-0 text-left">
@@ -408,21 +387,11 @@ const EventLogs: React.FC = () => {
                     </div>
 
                     {/* Expand Icon */}
-                    <svg
+                    <ChevronDown
                       className={`w-5 h-5 text-gray-400 flex-shrink-0 ml-2 transition-transform ${
                         isExpanded ? "transform rotate-180" : ""
                       }`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
+                    />
                   </button>
 
                   {/* HTTP Request Details */}
@@ -527,33 +496,9 @@ const EventLogs: React.FC = () => {
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     {/* Direction Icon */}
                     {isSent ? (
-                      <svg
-                        className="w-5 h-5 text-green-500 flex-shrink-0"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                        />
-                      </svg>
+                      <Send className="w-5 h-5 text-green-500 flex-shrink-0" />
                     ) : (
-                      <svg
-                        className="w-5 h-5 text-blue-500 flex-shrink-0"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                        />
-                      </svg>
+                      <Circle className="w-5 h-5 text-blue-500 flex-shrink-0" />
                     )}
 
                     {/* Event Name */}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { OpenAgentsService } from '../../services/openAgentsService';
+import { Button } from '@/components/layout/ui/button';
 
 interface WikiPage {
   page_path: string;
@@ -289,7 +290,7 @@ const WikiView: React.FC<WikiViewProps> = ({
 
   if (isLoading || !connection) {
     return (
-      <div className="h-full flex items-center justify-center">
+      <div className="h-full flex items-center justify-center dark:bg-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">
@@ -302,7 +303,7 @@ const WikiView: React.FC<WikiViewProps> = ({
 
   if (error) {
     return (
-      <div className="h-full flex items-center justify-center">
+      <div className="h-full flex items-center justify-center dark:bg-gray-800">
         <div className="text-center">
           <div className="text-red-500 mb-4">
             <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -316,11 +317,9 @@ const WikiView: React.FC<WikiViewProps> = ({
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             {error}
           </p>
-          <button
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
+          <Button variant="primary">
             Back to Chat
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -331,21 +330,22 @@ const WikiView: React.FC<WikiViewProps> = ({
     const isOwner = selectedPage.creator_id === connection?.getAgentId();
 
     return (
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col dark:bg-gray-800">
         {/* Header */}
         <div className="border-b border-gray-200 dark:border-gray-700 dark:bg-gray-800 p-6">
           <div className="flex items-center space-x-3">
-            <button
+            <Button
               onClick={() => {
                 setSelectedPage(null);
                 setCurrentView('list');
               }}
-              className="py-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+              variant="ghost"
+              size="icon"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-            </button>
+            </Button>
             <div className="flex-1">
               <h1 className="text-2xl font-bold line-clamp-1 text-gray-800 dark:text-gray-200">
                 {selectedPage.title || 'Untitled'}
@@ -356,26 +356,27 @@ const WikiView: React.FC<WikiViewProps> = ({
             </div>
             <div className="flex space-x-2">
               {isOwner ? (
-                <button
+                <Button
                   onClick={() => setCurrentView('edit')}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  variant="primary"
                 >
                   Edit
-                </button>
+                </Button>
               ) : (
-                <button
+                <Button
                   onClick={() => setCurrentView('edit')}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  variant="primary"
+                  className="bg-green-600 hover:bg-green-700"
                 >
                   Propose Edit
-                </button>
+                </Button>
               )}
             </div>
           </div>
         </div>
 
         {/* Page content */}
-        <div className="flex-1 overflow-y-auto p-6 dark:bg-gray-900">
+        <div className="flex-1 overflow-y-auto p-6 dark:bg-gray-800">
           <div className="prose max-w-none dark:prose-invert">
             <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
               {selectedPage.wiki_content || 'No content available'}
@@ -391,18 +392,19 @@ const WikiView: React.FC<WikiViewProps> = ({
     const isOwner = selectedPage.creator_id === connection?.getAgentId();
 
     return (
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col dark:bg-gray-800">
         {/* Header */}
         <div className="border-b border-gray-200 dark:border-gray-700 dark:bg-gray-800 p-6">
           <div className="flex items-center space-x-3">
-            <button
+            <Button
               onClick={() => setCurrentView('page')}
-              className="p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+              variant="ghost"
+              size="icon"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-            </button>
+            </Button>
             <h1 className="text-2xl font-bold line-clamp-1 text-gray-800 dark:text-gray-200" title={selectedPage.title}>
               {isOwner ? 'Edit Page' : 'Propose Edit'}: {selectedPage.title}
             </h1>
@@ -410,7 +412,7 @@ const WikiView: React.FC<WikiViewProps> = ({
         </div>
 
         {/* Edit form */}
-        <div className="flex-1 flex flex-col p-6 space-y-4 dark:bg-gray-900">
+        <div className="flex-1 flex flex-col p-6 space-y-4 dark:bg-gray-800">
           <div className="flex-1">
             <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
               Content
@@ -439,13 +441,13 @@ const WikiView: React.FC<WikiViewProps> = ({
           )}
 
           <div className="flex justify-end space-x-3">
-            <button
+            <Button
               onClick={() => setCurrentView('page')}
-              className="px-4 py-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+              variant="outline"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => {
                 if (isOwner) {
                   editPage(selectedPage.page_path, proposalContent || selectedPage.wiki_content);
@@ -454,10 +456,10 @@ const WikiView: React.FC<WikiViewProps> = ({
                 }
               }}
               disabled={!isOwner && !proposalRationale.trim()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              variant="primary"
             >
               {isOwner ? 'Save Changes' : 'Submit Proposal'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -467,18 +469,19 @@ const WikiView: React.FC<WikiViewProps> = ({
   // Proposals view
   if (currentView === 'proposals') {
     return (
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col dark:bg-gray-800">
         {/* Header */}
         <div className="border-b border-gray-200 dark:border-gray-700 dark:bg-gray-800 p-6">
           <div className="flex items-center space-x-3">
-            <button
+            <Button
               onClick={() => setCurrentView('list')}
-              className="p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+              variant="ghost"
+              size="icon"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-            </button>
+            </Button>
             <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
               Edit Proposals
             </h1>
@@ -486,7 +489,7 @@ const WikiView: React.FC<WikiViewProps> = ({
         </div>
 
         {/* Proposals list */}
-        <div className="flex-1 overflow-y-auto p-6 dark:bg-gray-900">
+        <div className="flex-1 overflow-y-auto p-6 dark:bg-gray-800">
           <div className="space-y-4">
             {proposals.filter(p => p.status === 'pending').map((proposal) => (
               <div
@@ -503,18 +506,21 @@ const WikiView: React.FC<WikiViewProps> = ({
                     </p>
                   </div>
                   <div className="flex space-x-2">
-                    <button
+                    <Button
                       onClick={() => resolveProposal(proposal.proposal_id, 'approve')}
-                      className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                      variant="primary"
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700"
                     >
                       Approve
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={() => resolveProposal(proposal.proposal_id, 'reject')}
-                      className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                      variant="destructive"
+                      size="sm"
                     >
                       Reject
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 <div className="text-sm mb-2 text-gray-700 dark:text-gray-300">
@@ -546,7 +552,7 @@ const WikiView: React.FC<WikiViewProps> = ({
 
   // Pages list view (default)
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col dark:bg-gray-800">
       {/* Header */}
       <div className="border-b border-gray-200 dark:border-gray-700 dark:bg-gray-800 p-6">
         <div className="flex items-center justify-between mb-4">
@@ -562,25 +568,26 @@ const WikiView: React.FC<WikiViewProps> = ({
           </div>
           <div className="flex items-center space-x-3">
             {proposals.filter(p => p.status === 'pending').length > 0 && (
-              <button
+              <Button
                 onClick={() => setCurrentView('proposals')}
-                className="flex items-center space-x-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                variant="primary"
+                className="bg-yellow-600 hover:bg-yellow-700"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span>Proposals ({proposals.filter(p => p.status === 'pending').length})</span>
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               onClick={() => setShowCreatePage(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              variant="primary"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               <span>New Page</span>
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -600,7 +607,7 @@ const WikiView: React.FC<WikiViewProps> = ({
       </div>
 
       {/* Pages list */}
-      <div className="flex-1 overflow-y-auto p-6 dark:bg-gray-900">
+      <div className="flex-1 overflow-y-auto p-6 dark:bg-gray-800">
         <div className="space-y-4">
           {pages.map((page) => (
             <div
@@ -672,19 +679,19 @@ const WikiView: React.FC<WikiViewProps> = ({
               />
             </div>
             <div className="flex justify-end space-x-3 mt-6">
-              <button
+              <Button
                 onClick={() => setShowCreatePage(false)}
-                className="px-4 py-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                variant="outline"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={createPage}
                 disabled={!newPagePath.trim() || !newPageTitle.trim() || !newPageContent.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                variant="primary"
               >
                 Create Page
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -108,7 +108,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       
       {/* Dialog */}
       <div 
-        className={`relative bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full m-4 transform transition-all ${
+        className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full m-4 transform transition-all ${
           isLeaving ? 'scale-95' : 'scale-100'
         }`}
         onClick={(e) => e.stopPropagation()}

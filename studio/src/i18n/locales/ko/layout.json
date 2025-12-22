@@ -14,8 +14,13 @@
         },
         "theme": {
             "switchToDark": "다크 모드로 전환",
-            "switchToLight": "라이트 모드로 전환"
-        }
+            "switchToLight": "라이트 모드로 전환",
+            "darkMode": "다크 모드",
+            "lightMode": "라이트 모드"
+        },
+        "language": "언어",
+        "signOut": "로그아웃",
+        "dashboard": "대시보드"
     },
     "navigation": {
         "messages": "메시지",

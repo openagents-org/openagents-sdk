@@ -634,7 +634,7 @@ const ThreadMessagingViewEventBased: React.FC = () => {
   }
 
   return (
-    <div className="thread-messaging-view h-full flex flex-col bg-white dark:bg-gray-900">
+    <div className="thread-messaging-view h-full flex flex-col bg-white dark:bg-gray-800">
       {/* Notification Permission Overlay */}
       <NotificationPermissionOverlay />
 

@@ -11,6 +11,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from '@/components/layout/ui/button';
 
 interface PasswordModalProps {
   isOpen: boolean;
@@ -99,9 +100,11 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close Button */}
-            <button
+            <Button
               onClick={handleClose}
-              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-4"
               aria-label="Close"
             >
               <svg
@@ -117,7 +120,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
                   d="M6 18L18 6M6 6l12 12"
                 />
               </svg>
-            </button>
+            </Button>
 
             {/* Icon */}
             <div className="flex justify-center mb-4">
@@ -178,10 +181,12 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
                   autoFocus
                   autoComplete="off"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
                   tabIndex={-1}
                 >
                   {showPassword ? (
@@ -219,7 +224,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
                       />
                     </svg>
                   )}
-                </button>
+                </Button>
               </div>
               {error && (
                 <motion.p
@@ -250,10 +255,11 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
 
             {/* Buttons */}
             <div className="flex flex-col gap-3">
-              <button
+              <Button
                 onClick={handleConfirm}
                 disabled={isVerifying}
-                className="w-full px-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/30 focus:outline-none focus:ring-3 focus:ring-blue-500/20 flex items-center justify-center"
+                variant="primary"
+                className="w-full"
               >
                 {isVerifying ? (
                   <>
@@ -282,14 +288,15 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
                 ) : (
                   'Confirm & Connect'
                 )}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleGuestConnect}
                 disabled={isVerifying}
-                className="w-full px-6 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 dark:text-gray-300 font-semibold rounded-lg transition-all duration-150 focus:outline-none focus:ring-3 focus:ring-gray-500/20"
+                variant="outline"
+                className="w-full"
               >
                 Connect without Password (Guest)
-              </button>
+              </Button>
             </div>
 
             {/* Help Text */}
