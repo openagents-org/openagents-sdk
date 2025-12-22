@@ -327,14 +327,12 @@ const AgentNamePicker: React.FC = () => {
     const agentNameTrimmed = pageAgentName?.trim();
     if (!agentNameTrimmed || !selectedNetwork) return;
 
-    // Save the agent name for this network (but not for admin - it's a reserved name)
-    if (targetGroup !== "admin") {
-      saveAgentNameForNetwork(
-        selectedNetwork.host,
-        selectedNetwork.port,
-        agentNameTrimmed
-      );
-    }
+    // Save the agent name for this network
+    saveAgentNameForNetwork(
+      selectedNetwork.host,
+      selectedNetwork.port,
+      agentNameTrimmed
+    );
 
     // Store the password hash and group in authStore
     setPasswordHash(hash);
@@ -533,9 +531,7 @@ const AgentNamePicker: React.FC = () => {
                     setAdminPassword(e.target.value);
                     setPasswordError("");
                   }}
-                  className={
-                    passwordError ? "border-red-500 dark:border-red-400" : ""
-                  }
+                  className={passwordError ? "border-red-500 dark:border-red-400" : ""}
                   placeholder={t("agentSetup.adminPasswordPlaceholder")}
                   autoComplete="off"
                   required
@@ -622,9 +618,7 @@ const AgentNamePicker: React.FC = () => {
                       setGroupPassword(e.target.value);
                       setPasswordError("");
                     }}
-                    className={
-                      passwordError ? "border-red-500 dark:border-red-400" : ""
-                    }
+                    className={passwordError ? "border-red-500 dark:border-red-400" : ""}
                     placeholder={t("agentSetup.passwordPlaceholder", {
                       group: selectedGroup,
                     })}
