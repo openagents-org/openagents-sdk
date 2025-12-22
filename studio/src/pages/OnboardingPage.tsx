@@ -36,11 +36,6 @@ const OnboardingPage: React.FC = () => {
     setCurrentStep(2);
   };
 
-  const handleStep1Skip = () => {
-    // Skip onboarding - navigate directly to admin
-    navigate("/admin");
-  };
-
   const handleStep2Next = (template: Template) => {
     setSelectedTemplate(template);
     setCurrentStep(3);
@@ -131,7 +126,7 @@ const OnboardingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {currentStep === 1 && (
-        <OnboardingStep1 onNext={handleStep1Next} onSkip={handleStep1Skip} />
+        <OnboardingStep1 onNext={handleStep1Next} />
       )}
       {currentStep === 2 && (
         <OnboardingStep2

@@ -6,10 +6,9 @@ import "./OnboardingStep1.css";
 
 interface OnboardingStep1Props {
   onNext: () => void;
-  onSkip: () => void;
 }
 
-const OnboardingStep1: React.FC<OnboardingStep1Props> = ({ onNext, onSkip }) => {
+const OnboardingStep1: React.FC<OnboardingStep1Props> = ({ onNext }) => {
   const { t } = useTranslation('onboarding');
   const [isVisible, setIsVisible] = useState(false);
   const [pulseIndex, setPulseIndex] = useState(0);
@@ -191,12 +190,6 @@ const OnboardingStep1: React.FC<OnboardingStep1Props> = ({ onNext, onSkip }) => 
                   →
                 </span>
               </span>
-            </button>
-            <button
-              onClick={onSkip}
-              className="w-full text-gray-300 dark:text-gray-400 hover:text-white dark:hover:text-gray-200 py-2 text-sm transition-all duration-300 hover:scale-105"
-            >
-              {t('step1.skipButton')}
             </button>
           </div>
         </div>

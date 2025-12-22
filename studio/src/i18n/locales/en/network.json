@@ -116,12 +116,14 @@
             "createTitle": "Create New Group",
             "editTitle": "Edit Group: {{name}}",
             "name": "Group Name",
+            "nameCannotChange": "Group name cannot be changed after creation",
             "description": "Description",
             "password": "Password (optional)",
             "clearPassword": "Clear existing password",
             "permissions": "Permissions (comma-separated)",
             "cancel": "Cancel",
             "create": "Create Group",
+            "update": "Update Group",
             "save": "Save Changes"
         },
         "messages": {
@@ -136,13 +138,13 @@
             "modal": {
                 "title": "Change Password - {{group}}",
                 "newPasswordLabel": "New Password *",
-                "newPasswordPlaceholder": "Enter new password (at least 4 characters)",
-                "passwordHint": "Password must be at least 4 characters",
+                "newPasswordPlaceholder": "Enter new password (at least 8 characters)",
+                "passwordHint": "Password must be at least 8 characters",
                 "cancel": "Cancel",
                 "confirm": "Confirm Change",
                 "changing": "Changing...",
                 "passwordRequired": "Password is required",
-                "passwordMinLength": "Password must be at least 4 characters",
+                "passwordMinLength": "Password must be at least 8 characters",
                 "failed": "Failed to change password"
             }
         }

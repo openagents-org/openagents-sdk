@@ -301,7 +301,7 @@ const AgentGroupsManagement: React.FC = () => {
       return;
     }
 
-    if (newPassword.length < 4) {
+    if (newPassword.length < 8) {
       setError(t('groups.changePassword.modal.passwordMinLength'));
       return;
     }
@@ -598,8 +598,9 @@ const AgentGroupsManagement: React.FC = () => {
                             e.stopPropagation();
                             openEditModal(group);
                           }}
-                          variant="primary"
+                          variant="ghost"
                           size="sm"
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20"
                         >
                           {t('groups.edit')}
                         </Button>
@@ -609,9 +610,9 @@ const AgentGroupsManagement: React.FC = () => {
                               e.stopPropagation();
                               openChangePasswordModal(group.name);
                             }}
-                            variant="primary"
+                            variant="ghost"
                             size="sm"
-                            className="whitespace-nowrap"
+                            className="whitespace-nowrap text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-900/20"
                           >
                             {t('groups.changePassword.button')}
                           </Button>
@@ -622,8 +623,9 @@ const AgentGroupsManagement: React.FC = () => {
                               e.stopPropagation();
                               handleDeleteGroup(group.name);
                             }}
-                            variant="destructive"
+                            variant="ghost"
                             size="sm"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20"
                           >
                             {t('groups.delete')}
                           </Button>
@@ -647,16 +649,18 @@ const AgentGroupsManagement: React.FC = () => {
               <div className="flex gap-2">
                 <Button
                   onClick={() => openEditModal(groupsData.agent_groups[selectedGroup])}
-                  variant="primary"
+                  variant="ghost"
                   size="sm"
+                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20"
                 >
-                  Edit
+                  {t('groups.edit')}
                 </Button>
                 {!groupsData.agent_groups[selectedGroup].is_default && (
                   <Button
                     onClick={() => handleDeleteGroup(selectedGroup)}
-                    variant="destructive"
+                    variant="ghost"
                     size="sm"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20"
                   >
                     {t('groups.delete')}
                   </Button>
@@ -832,12 +836,12 @@ const AgentGroupsManagement: React.FC = () => {
                     className="w-full p-3 rounded-lg border bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Group name cannot be changed after creation
+                    {t('groups.modal.nameCannotChange')}
                   </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Description
+                    {t('groups.modal.description')}
                   </label>
                   <textarea
                     value={formData.description}
@@ -865,13 +869,13 @@ const AgentGroupsManagement: React.FC = () => {
                     }}
                     className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
-                    Cancel
+                    {t('groups.modal.cancel')}
                   </button>
                   <button
                     onClick={handleUpdateGroup}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    Update Group
+                    {t('groups.modal.update')}
                   </button>
                 </div>
               </div>
@@ -932,7 +936,7 @@ const AgentGroupsManagement: React.FC = () => {
                   <button
                     onClick={handleChangePassword}
                     disabled={changingPassword || !newPassword.trim()}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {changingPassword ? t('groups.changePassword.modal.changing') : t('groups.changePassword.modal.confirm')}
                   </button>

@@ -116,12 +116,14 @@
             "createTitle": "创建新组",
             "editTitle": "编辑组: {{name}}",
             "name": "组名称",
+            "nameCannotChange": "组名创建后无法修改",
             "description": "描述",
             "password": "密码 (可选)",
             "clearPassword": "清除现有密码",
             "permissions": "权限 (逗号分隔)",
             "cancel": "取消",
             "create": "创建组",
+            "update": "更新组",
             "save": "保存更改"
         },
         "messages": {
@@ -136,13 +138,13 @@
             "modal": {
                 "title": "修改密码 - {{group}}",
                 "newPasswordLabel": "新密码 *",
-                "newPasswordPlaceholder": "请输入新密码（至少4个字符）",
-                "passwordHint": "密码长度至少为4个字符",
+                "newPasswordPlaceholder": "请输入新密码（至少8个字符）",
+                "passwordHint": "密码长度至少为8个字符",
                 "cancel": "取消",
                 "confirm": "确认修改",
                 "changing": "修改中...",
                 "passwordRequired": "密码是必需的",
-                "passwordMinLength": "密码长度至少为4个字符",
+                "passwordMinLength": "密码长度至少为8个字符",
                 "failed": "修改密码失败"
             }
         }

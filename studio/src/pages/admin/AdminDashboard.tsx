@@ -62,8 +62,8 @@ interface TransportInfo {
 const AdminDashboard: React.FC = () => {
   const { t } = useTranslation('admin');
   const navigate = useNavigate();
-  const { connector, disconnect } = useOpenAgents();
-  const { selectedNetwork, agentName, clearPasswordHash, setAgentGroup, getDefaultRoute } = useAuthStore();
+  const { connector } = useOpenAgents();
+  const { selectedNetwork, agentName } = useAuthStore();
   const { confirm } = useConfirm();
 
   const [stats, setStats] = useState<DashboardStats>({
@@ -292,11 +292,11 @@ const AdminDashboard: React.FC = () => {
 
   const handleSwitchToGuest = async () => {
     const confirmed = await confirm(
-      t('dashboard.switchRole.title', { default: '切换为 Guest 角色' }),
-      t('dashboard.switchRole.confirm', { default: '确定要切换到 Guest 角色吗？这将清除当前的管理员权限。' }),
+      t('dashboard.switchRole.title', { default: '进入用户界面' }),
+      t('dashboard.switchRole.confirm', { default: '确定要进入用户界面吗？您可以随时返回管理控制台。' }),
       {
-        type: "warning",
-        confirmText: t('dashboard.switchRole.confirmButton', { default: '切换' }),
+        type: "info",
+        confirmText: t('dashboard.switchRole.confirmButton', { default: '进入' }),
         cancelText: t('dashboard.switchRole.cancel', { default: '取消' }),
       }
     );
@@ -306,27 +306,12 @@ const AdminDashboard: React.FC = () => {
     }
 
     try {
-      // 1. 先断开当前连接
-      if (connector) {
-        await disconnect();
-      }
-      
-      // 2. 清除密码hash（这会触发OpenAgentsProvider重新初始化）
-      clearPasswordHash();
-      
-      // 3. 清除agent group（设置为null，表示guest）
-      setAgentGroup(null);
-      
-      // 4. 等待一下确保状态更新和重新连接
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // 5. 导航到默认路由（guest用户看到的页面）
-      const defaultRoute = getDefaultRoute();
-      toast.success(t('dashboard.switchRole.success', { default: '已切换到 Guest 角色' }));
-      navigate(defaultRoute, { replace: true });
+      // 直接导航到用户界面，保持 admin 身份
+      toast.success(t('dashboard.switchRole.success', { default: '已进入用户界面' }));
+      navigate('/', { replace: true });
     } catch (error) {
-      console.error("Failed to switch to guest:", error);
-      toast.error(t('dashboard.switchRole.failed', { default: '切换角色失败' }));
+      console.error("Failed to enter user interface:", error);
+      toast.error(t('dashboard.switchRole.failed', { default: '进入用户界面失败' }));
     }
   };
 

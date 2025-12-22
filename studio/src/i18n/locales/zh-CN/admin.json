@@ -73,13 +73,13 @@
       "failed": "重启网络失败"
     },
     "switchRole": {
-      "title": "切换为 Guest 角色",
-      "confirm": "确定要切换到 Guest 角色吗？这将清除当前的管理员权限。",
-      "confirmButton": "切换",
+      "title": "进入用户界面",
+      "confirm": "确定要进入用户界面吗？您可以随时返回管理控制台。",
+      "confirmButton": "进入",
       "cancel": "取消",
-      "success": "已切换到 Guest 角色",
-      "failed": "切换角色失败",
-      "button": "切换到 Guest 角色"
+      "success": "已进入用户界面",
+      "failed": "进入用户界面失败",
+      "button": "进入用户界面"
     }
   },
   "tour": {

@@ -12,6 +12,7 @@
         "lastUpdated": "最后更新",
         "latency": "延迟",
         "modulesEnabled": "已启用 {{count}} 个模块",
+        "backToDashboard": "返回控制台",
         "sidebar": {
             "networkStatus": "网络状态",
             "eventLogs": "事件日志",

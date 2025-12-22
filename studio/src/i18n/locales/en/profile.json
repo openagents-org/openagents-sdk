@@ -12,6 +12,7 @@
         "lastUpdated": "Last updated",
         "latency": "Latency",
         "modulesEnabled": "{{count}} modules enabled",
+        "backToDashboard": "Back to Dashboard",
         "sidebar": {
             "networkStatus": "Network Status",
             "eventLogs": "Event Logs",
