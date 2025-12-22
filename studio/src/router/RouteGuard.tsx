@@ -206,6 +206,16 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     return <>{children}</>
   }
 
+  // Handle /onboarding path access control
+  if (currentPath === "/onboarding") {
+    if (!selectedNetwork) {
+      console.log("🔄 Onboarding accessed without network, redirecting to /")
+      return <Navigate to="/" replace />
+    }
+    // Has network selection, allow access to onboarding
+    return <>{children}</>
+  }
+
   // Handle /agent-setup path access control
   if (currentPath === "/agent-setup") {
     if (!selectedNetwork) {

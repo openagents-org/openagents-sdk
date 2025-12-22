@@ -12,6 +12,7 @@ import {
   ManualNetworkConnection,
   fetchNetworkById,
   connectViaNetworkId,
+  getCurrentNetworkHealth,
 } from "@/services/networkService";
 import { ConnectionStatusEnum } from "@/types/connection";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -145,7 +146,24 @@ export default function ManualNetwork() {
           saveManualConnection(host, port, connectionUseHttps);
         }
         handleNetworkSelected(connection);
-        navigate("/agent-setup");
+        
+        // Check onboarding status
+        try {
+          const healthResult = await getCurrentNetworkHealth(connection);
+          const onboardingCompleted = healthResult.data?.data?.onboarding_completed;
+          
+          if (!onboardingCompleted) {
+            // First time - redirect to onboarding
+            navigate("/onboarding");
+          } else {
+            // Already completed - go to agent setup
+            navigate("/agent-setup");
+          }
+        } catch (error) {
+          console.error("Error checking onboarding status:", error);
+          // Default to agent setup if check fails
+          navigate("/agent-setup");
+        }
       } else {
         toast.error(
           "Failed to connect to the network. Please check the host and port."
@@ -197,7 +215,24 @@ export default function ManualNetwork() {
       if (connection.status === ConnectionStatusEnum.CONNECTED) {
         // Save the network ID for future reference
         handleNetworkSelected(connection);
-        navigate("/agent-setup");
+        
+        // Check onboarding status
+        try {
+          const healthResult = await getCurrentNetworkHealth(connection);
+          const onboardingCompleted = healthResult.data?.data?.onboarding_completed;
+          
+          if (!onboardingCompleted) {
+            // First time - redirect to onboarding
+            navigate("/onboarding");
+          } else {
+            // Already completed - go to agent setup
+            navigate("/agent-setup");
+          }
+        } catch (error) {
+          console.error("Error checking onboarding status:", error);
+          // Default to agent setup if check fails
+          navigate("/agent-setup");
+        }
       } else {
         toast.error(
           "Failed to connect to the network. The network may be offline or unreachable."

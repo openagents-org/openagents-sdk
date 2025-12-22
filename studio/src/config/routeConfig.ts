@@ -21,6 +21,7 @@ import FeedMainPage from "@/pages/feed/FeedMainPage"
 import LLMLogsMainPage from "@/pages/llmlogs/LLMLogsMainPage"
 import ServiceAgentsMainPage from "@/pages/serviceagents/ServiceAgentsMainPage"
 import AdminMainPage from "@/pages/admin/AdminMainPage"
+import OnboardingPage from "@/pages/OnboardingPage"
 
 // Navigation icon components
 export const NavigationIcons = {
@@ -376,6 +377,12 @@ export const dynamicRouteConfig: RouteConfig[] = [
     path: "/admin-login",
     element: AdminLoginPage,
     title: "Admin Login",
+    requiresLayout: false,
+  },
+  {
+    path: "/onboarding",
+    element: OnboardingPage,
+    title: "Onboarding",
     requiresLayout: false,
   },
 

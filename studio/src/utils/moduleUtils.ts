@@ -31,6 +31,7 @@ export interface HealthResponse {
     is_running: boolean
     mods: ModuleInfo[]
     readme?: string
+    onboarding_completed?: boolean
     network_profile?: {
       readme?: string
       [key: string]: any

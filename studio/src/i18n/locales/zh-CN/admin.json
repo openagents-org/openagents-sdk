@@ -71,6 +71,15 @@
       "cancel": "取消",
       "requested": "网络重启请求已发送。此功能需要后端支持。",
       "failed": "重启网络失败"
+    },
+    "switchRole": {
+      "title": "切换为 Guest 角色",
+      "confirm": "确定要切换到 Guest 角色吗？这将清除当前的管理员权限。",
+      "confirmButton": "切换",
+      "cancel": "取消",
+      "success": "已切换到 Guest 角色",
+      "failed": "切换角色失败",
+      "button": "切换到 Guest 角色"
     }
   },
   "tour": {

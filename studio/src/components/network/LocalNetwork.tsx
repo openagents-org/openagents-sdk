@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { detectLocalNetwork } from "@/services/networkService";
+import { detectLocalNetwork, getCurrentNetworkHealth } from "@/services/networkService";
 import { NetworkConnection } from "@/types/connection";
 import { useAuthStore } from "@/stores/authStore";
 import { useNavigate } from "react-router-dom";
@@ -38,9 +38,26 @@ const LocalNetworkShow = React.memo(
     const { host, port } = localNetwork;
     const { handleNetworkSelected } = useAuthStore();
 
-    const handleConnect = () => {
+    const handleConnect = async () => {
       handleNetworkSelected(localNetwork);
-      navigate("/agent-setup");
+      
+      // Check onboarding status
+      try {
+        const healthResult = await getCurrentNetworkHealth(localNetwork);
+        const onboardingCompleted = healthResult.data?.data?.onboarding_completed;
+        
+        if (!onboardingCompleted) {
+          // First time - redirect to onboarding
+          navigate("/onboarding");
+        } else {
+          // Already completed - go to agent setup
+          navigate("/agent-setup");
+        }
+      } catch (error) {
+        console.error("Error checking onboarding status:", error);
+        // Default to agent setup if check fails
+        navigate("/agent-setup");
+      }
     };
 
     return (

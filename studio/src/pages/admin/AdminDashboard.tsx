@@ -34,6 +34,8 @@ import {
   Radio,
   ExternalLink,
   Copy,
+  User,
+  Shuffle,
 } from "lucide-react";
 import { lookupNetworkPublication } from "@/services/networkService";
 
@@ -60,8 +62,8 @@ interface TransportInfo {
 const AdminDashboard: React.FC = () => {
   const { t } = useTranslation('admin');
   const navigate = useNavigate();
-  const { connector } = useOpenAgents();
-  const { selectedNetwork, agentName } = useAuthStore();
+  const { connector, disconnect } = useOpenAgents();
+  const { selectedNetwork, agentName, clearPasswordHash, setAgentGroup, getDefaultRoute } = useAuthStore();
   const { confirm } = useConfirm();
 
   const [stats, setStats] = useState<DashboardStats>({
@@ -288,6 +290,46 @@ const AdminDashboard: React.FC = () => {
     setShowBroadcastModal(true);
   };
 
+  const handleSwitchToGuest = async () => {
+    const confirmed = await confirm(
+      t('dashboard.switchRole.title', { default: '切换为 Guest 角色' }),
+      t('dashboard.switchRole.confirm', { default: '确定要切换到 Guest 角色吗？这将清除当前的管理员权限。' }),
+      {
+        type: "warning",
+        confirmText: t('dashboard.switchRole.confirmButton', { default: '切换' }),
+        cancelText: t('dashboard.switchRole.cancel', { default: '取消' }),
+      }
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      // 1. 先断开当前连接
+      if (connector) {
+        await disconnect();
+      }
+      
+      // 2. 清除密码hash（这会触发OpenAgentsProvider重新初始化）
+      clearPasswordHash();
+      
+      // 3. 清除agent group（设置为null，表示guest）
+      setAgentGroup(null);
+      
+      // 4. 等待一下确保状态更新和重新连接
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // 5. 导航到默认路由（guest用户看到的页面）
+      const defaultRoute = getDefaultRoute();
+      toast.success(t('dashboard.switchRole.success', { default: '已切换到 Guest 角色' }));
+      navigate(defaultRoute, { replace: true });
+    } catch (error) {
+      console.error("Failed to switch to guest:", error);
+      toast.error(t('dashboard.switchRole.failed', { default: '切换角色失败' }));
+    }
+  };
+
   const handleSendBroadcast = async () => {
     if (!broadcastMessage.trim() || !connector) {
       toast.error(t('dashboard.broadcast.enterMessage'));
@@ -382,6 +424,16 @@ const AdminDashboard: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-2">
+            <Button
+              onClick={handleSwitchToGuest}
+              variant="outline"
+              size="sm"
+              title={t('dashboard.switchRole.button', { default: '切换到 Guest 角色' })}
+              className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+            >
+              <Shuffle className="w-4 h-4 mr-1.5" />
+              <User className="w-3 h-3" />
+            </Button>
             <Button
               onClick={startTour}
               variant="outline"

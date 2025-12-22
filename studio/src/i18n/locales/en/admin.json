@@ -71,6 +71,15 @@
       "cancel": "Cancel",
       "requested": "Network restart requested. This feature requires backend support.",
       "failed": "Failed to restart network"
+    },
+    "switchRole": {
+      "title": "Switch to Guest Role",
+      "confirm": "Are you sure you want to switch to Guest role? This will clear your current admin privileges.",
+      "confirmButton": "Switch",
+      "cancel": "Cancel",
+      "success": "Switched to Guest role successfully",
+      "failed": "Failed to switch role",
+      "button": "Switch to Guest Role"
     }
   },
   "tour": {

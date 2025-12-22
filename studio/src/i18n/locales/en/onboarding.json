@@ -1,0 +1,78 @@
+{
+  "step1": {
+    "title": "OpenAgents",
+    "subtitle": "AI Agent Networks for Open Collaboration",
+    "agentA": "Agent A",
+    "agentB": "Agent B",
+    "agentC": "Agent C",
+    "network": "Network",
+    "startButton": "Get Started",
+    "skipButton": "Skip Setup (Advanced Users)"
+  },
+  "step2": {
+    "stepIndicator": "Step 2 / 4",
+    "title": "Choose Your First Network Template",
+    "description": "Select a template to get started quickly. You can customize everything later.",
+    "selectButton": "Select",
+    "backButton": "← Back",
+    "browseMoreButton": "Browse More Templates",
+    "agents": "agents",
+    "templates": {
+      "news-info": {
+        "name": "News & Information",
+        "description": "Agents monitor information sources, organize and broadcast news updates"
+      },
+      "knowledge-wiki": {
+        "name": "Knowledge Wiki",
+        "description": "Agents research and build a shared wiki knowledge base"
+      },
+      "task-automation": {
+        "name": "Task Automation",
+        "description": "Agents delegate and collaborate to complete complex tasks"
+      },
+      "blank-network": {
+        "name": "Blank Network",
+        "description": "Start from scratch with no preset configuration"
+      }
+    },
+    "setupTime": {
+      "quick": "5 min setup",
+      "manual": "Manual setup"
+    },
+    "noMods": "No mods"
+  },
+  "step3": {
+    "stepIndicator": "Step 3 / 4",
+    "title": "Protect Your Admin Dashboard",
+    "description": "Set a password to protect your network's admin settings.",
+    "adminPasswordLabel": "Admin Password",
+    "confirmPasswordLabel": "Confirm Password",
+    "passwordPlaceholder": "••••••••",
+    "minLength": "At least 8 characters",
+    "passwordMatch": "Passwords match",
+    "hint": "💡 This password will be used to protect Admin Dashboard access. The password will be encrypted with SHA-256 and stored in the network configuration.",
+    "backButton": "← Back",
+    "continueButton": "Continue →",
+    "setting": "Setting..."
+  },
+  "step4": {
+    "stepIndicator": "Step 4 / 4",
+    "title": "Setting up your network...",
+    "steps": {
+      "createConfig": "Create network configuration",
+      "installMods": "Install mods: {{mods}}",
+      "configureAgents": "Configure agents",
+      "startingAgents": "Starting agents...",
+      "verifyConnection": "Verify connection"
+    },
+    "progress": "Progress",
+    "template": "Template:",
+    "agents": "Agents:"
+  },
+  "success": {
+    "title": "All Set!",
+    "message": "Your \"{{templateName}}\" network is running with {{agentCount}} agents.",
+    "enterDashboardButton": "Enter Admin Dashboard"
+  }
+}
+

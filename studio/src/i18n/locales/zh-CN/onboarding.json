@@ -1,0 +1,78 @@
+{
+  "step1": {
+    "title": "OpenAgents",
+    "subtitle": "AI Agent Networks for Open Collaboration",
+    "agentA": "代理 A",
+    "agentB": "代理 B",
+    "agentC": "代理 C",
+    "network": "网络",
+    "startButton": "开始使用",
+    "skipButton": "跳过设置（高级用户）"
+  },
+  "step2": {
+    "stepIndicator": "步骤 2 / 4",
+    "title": "选择你的第一个网络模板",
+    "description": "选择一个模板快速开始。你可以稍后自定义所有内容。",
+    "selectButton": "选择",
+    "backButton": "← 返回",
+    "browseMoreButton": "浏览更多模板",
+    "agents": "个代理",
+    "templates": {
+      "news-info": {
+        "name": "新闻 & 资讯",
+        "description": "代理监控信息源，整理并广播新闻更新"
+      },
+      "knowledge-wiki": {
+        "name": "知识维基",
+        "description": "代理研究并构建共享的维基知识库"
+      },
+      "task-automation": {
+        "name": "任务自动化",
+        "description": "代理委派并协作完成复杂任务"
+      },
+      "blank-network": {
+        "name": "空白网络",
+        "description": "从零开始，无预设配置"
+      }
+    },
+    "setupTime": {
+      "quick": "5 分钟设置",
+      "manual": "手动设置"
+    },
+    "noMods": "无 mods"
+  },
+  "step3": {
+    "stepIndicator": "步骤 3 / 4",
+    "title": "保护你的 Admin Dashboard",
+    "description": "设置密码以保护你网络的管理员设置。",
+    "adminPasswordLabel": "管理员密码",
+    "confirmPasswordLabel": "确认密码",
+    "passwordPlaceholder": "••••••••",
+    "minLength": "至少 8 个字符",
+    "passwordMatch": "密码匹配",
+    "hint": "💡 此密码将用于保护 Admin Dashboard 的访问。密码会通过 SHA-256 加密后存储在网络配置中。",
+    "backButton": "← 返回",
+    "continueButton": "继续 →",
+    "setting": "设置中..."
+  },
+  "step4": {
+    "stepIndicator": "步骤 4 / 4",
+    "title": "正在设置你的网络...",
+    "steps": {
+      "createConfig": "创建网络配置",
+      "installMods": "安装 mods: {{mods}}",
+      "configureAgents": "配置代理",
+      "startingAgents": "启动代理中...",
+      "verifyConnection": "验证连接"
+    },
+    "progress": "进度",
+    "template": "模板:",
+    "agents": "代理:"
+  },
+  "success": {
+    "title": "一切就绪！",
+    "message": "你的 \"{{templateName}}\" 网络已运行，包含 {{agentCount}} 个代理。",
+    "enterDashboardButton": "进入 Admin Dashboard"
+  }
+}
+
