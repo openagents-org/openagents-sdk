@@ -40,24 +40,8 @@ const LocalNetworkShow = React.memo(
 
     const handleConnect = async () => {
       handleNetworkSelected(localNetwork);
-      
-      // Check onboarding status
-      try {
-        const healthResult = await getCurrentNetworkHealth(localNetwork);
-        const onboardingCompleted = healthResult.data?.data?.onboarding_completed;
-        
-        if (!onboardingCompleted) {
-          // First time - redirect to onboarding
-          navigate("/onboarding");
-        } else {
-          // Already completed - go to agent setup
-          navigate("/agent-setup");
-        }
-      } catch (error) {
-        console.error("Error checking onboarding status:", error);
-        // Default to agent setup if check fails
-        navigate("/agent-setup");
-      }
+      // Network selection will trigger onboarding check in NetworkSelectionPage
+      // No need to navigate here, the page will show onboarding if needed
     };
 
     return (

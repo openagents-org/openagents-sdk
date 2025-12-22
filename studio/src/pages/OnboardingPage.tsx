@@ -29,27 +29,8 @@ const OnboardingPage: React.FC = () => {
   const [deploymentProgress, setDeploymentProgress] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
 
-  // Check if onboarding is already completed
-  useEffect(() => {
-    const checkOnboardingStatus = async () => {
-      if (!selectedNetwork) {
-        navigate("/");
-        return;
-      }
-
-      try {
-        const healthResult = await getCurrentNetworkHealth(selectedNetwork);
-        if (healthResult.success && healthResult.data?.data?.onboarding_completed) {
-          // Already completed, redirect to admin dashboard
-          navigate("/admin");
-        }
-      } catch (error) {
-        console.error("Error checking onboarding status:", error);
-      }
-    };
-
-    checkOnboardingStatus();
-  }, [selectedNetwork, navigate]);
+  // Onboarding status is now checked in NetworkSelectionPage
+  // No need to check here since we're already showing onboarding
 
   const handleStep1Next = () => {
     setCurrentStep(2);

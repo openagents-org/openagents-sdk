@@ -58,7 +58,7 @@ const OnboardingStep4: React.FC<OnboardingStep4Props> = ({ template, isDeploying
                         : "text-gray-400"
                     }`}
                   >
-                    {step.completed ? "✅" : step.inProgress ? "🔄" : "○"} {step.name}
+                    {step.name}
                   </span>
                 </div>
               ))}
