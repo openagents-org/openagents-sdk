@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
 import { useAuthStore } from "@/stores/authStore";
 import { useConfirm } from "@/context/ConfirmContext";
@@ -34,6 +35,7 @@ interface TransportInfo extends TransportConfig {
 }
 
 const TransportConfigPage: React.FC = () => {
+  const { t } = useTranslation("admin");
   const { connector } = useOpenAgents();
   const { selectedNetwork } = useAuthStore();
   const { confirm } = useConfirm();
@@ -107,7 +109,7 @@ const TransportConfigPage: React.FC = () => {
       setTransports(transportsList);
     } catch (error) {
       console.error("Failed to fetch transports:", error);
-      toast.error("Failed to load transport configuration");
+      toast.error(t("transports.toast.loadFailed"));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -121,18 +123,18 @@ const TransportConfigPage: React.FC = () => {
   // Copy URL to clipboard
   const handleCopyUrl = (url: string) => {
     navigator.clipboard.writeText(url);
-    toast.success("URL copied to clipboard");
+    toast.success(t("transports.toast.urlCopied"));
   };
 
   // Toggle transport enable/disable status
   const handleToggleTransport = async (transport: TransportInfo) => {
     const action = transport.enabled ? "disable" : "enable";
     const confirmed = await confirm(
-      `${action === "enable" ? "Enable" : "Disable"} Transport`,
-      `Are you sure you want to ${action} the ${transport.type.toUpperCase()} transport? Network restart may be required.`,
+      t(action === "enable" ? "transports.confirm.enableTitle" : "transports.confirm.disableTitle"),
+      t(action === "enable" ? "transports.confirm.enableMessage" : "transports.confirm.disableMessage", { type: transport.type.toUpperCase() }),
       {
         type: "warning",
-        confirmText: action === "enable" ? "Enable" : "Disable",
+        confirmText: t(action === "enable" ? "transports.confirm.enable" : "transports.confirm.disable"),
       }
     );
 
@@ -141,7 +143,7 @@ const TransportConfigPage: React.FC = () => {
     }
 
     // TODO: Call API to update transport status
-    toast.info(`Transport ${action} requested (not implemented yet)`);
+    toast.info(t("transports.toast.toggleRequested", { action }));
     
     // Temporarily update local state
     setTransports((prev) =>
@@ -159,11 +161,11 @@ const TransportConfigPage: React.FC = () => {
   // Delete transport
   const handleDeleteTransport = async (transport: TransportInfo) => {
     const confirmed = await confirm(
-      "Delete Transport",
-      `Are you sure you want to delete the ${transport.type.toUpperCase()} transport? This action cannot be undone.`,
+      t("transports.confirm.deleteTitle"),
+      t("transports.confirm.deleteMessage", { type: transport.type.toUpperCase() }),
       {
         type: "danger",
-        confirmText: "Delete",
+        confirmText: t("transports.confirm.delete"),
       }
     );
 
@@ -172,7 +174,7 @@ const TransportConfigPage: React.FC = () => {
     }
 
     // TODO: Call API to delete transport
-    toast.info("Transport deletion requested (not implemented yet)");
+    toast.info(t("transports.toast.deleteRequested"));
     
     // Temporarily update local state
     setTransports((prev) => prev.filter((t) => t.type !== transport.type));
@@ -181,7 +183,7 @@ const TransportConfigPage: React.FC = () => {
   // Save transport configuration
   const handleSaveTransport = (updatedTransport: TransportInfo) => {
     // TODO: Call API to save configuration
-    toast.info("Transport configuration saved (not implemented yet)");
+    toast.info(t("transports.toast.saveRequested"));
     
     // Temporarily update local state
     setTransports((prev) =>
@@ -196,7 +198,7 @@ const TransportConfigPage: React.FC = () => {
   // Add new transport
   const handleAddTransport = (newTransport: TransportInfo) => {
     // TODO: Call API to add transport
-    toast.info("New transport added (not implemented yet)");
+    toast.info(t("transports.toast.addRequested"));
     
     // Temporarily update local state
     setTransports((prev) => [...prev, newTransport]);
@@ -208,7 +210,7 @@ const TransportConfigPage: React.FC = () => {
       <div className="p-6 h-full flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading transport configuration...</p>
+          <p className="text-gray-600 dark:text-gray-400">{t("transports.loading")}</p>
         </div>
       </div>
     );
@@ -220,10 +222,10 @@ const TransportConfigPage: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            Transport Configuration
+            {t("transports.title")}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Manage network transport layers (HTTP, gRPC, WebSocket)
+            {t("transports.subtitle")}
           </p>
         </div>
 
@@ -247,7 +249,7 @@ const TransportConfigPage: React.FC = () => {
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-            {refreshing ? "Refreshing..." : "Refresh"}
+            {refreshing ? t("transports.refreshing") : t("transports.refresh")}
           </Button>
 
           <Button
@@ -268,7 +270,7 @@ const TransportConfigPage: React.FC = () => {
                 d="M12 4v16m8-8H4"
               />
             </svg>
-            Add New Transport
+            {t("transports.addNew")}
           </Button>
         </div>
       </div>
@@ -277,7 +279,7 @@ const TransportConfigPage: React.FC = () => {
       {selectedNetwork && (
         <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
           <div className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-            Network: {selectedNetwork.host}:{selectedNetwork.port}
+            {t("transports.network")}: {selectedNetwork.host}:{selectedNetwork.port}
           </div>
         </div>
       )}
@@ -300,10 +302,10 @@ const TransportConfigPage: React.FC = () => {
           </svg>
           <div className="flex-1">
             <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-              Transport changes require network restart
+              {t("transports.warning.title")}
             </p>
             <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-              Any changes to transport configuration will take effect after restarting the network.
+              {t("transports.warning.description")}
             </p>
           </div>
         </div>
@@ -314,7 +316,7 @@ const TransportConfigPage: React.FC = () => {
         {transports.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <p className="text-gray-500 dark:text-gray-400">
-              No transports configured. Click "Add New Transport" to add one.
+              {t("transports.empty")}
             </p>
           </div>
         ) : (
@@ -368,6 +370,8 @@ const TransportCard: React.FC<TransportCardProps> = ({
   onDelete,
   onCopyUrl,
 }) => {
+  const { t } = useTranslation("admin");
+
   const getTransportIcon = (type: string) => {
     switch (type) {
       case "http":
@@ -409,12 +413,12 @@ const TransportCard: React.FC<TransportCardProps> = ({
           </div>
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {transport.type.toUpperCase()} Transport
+              {transport.type.toUpperCase()} {t("transports.card.transport")}
             </h3>
             <div className="flex items-center space-x-2 mt-1">
               <span className={`w-2 h-2 rounded-full ${transport.enabled ? "bg-green-500" : "bg-gray-400"}`} />
               <span className="text-sm text-gray-600 dark:text-gray-400">
-                {transport.enabled ? "Enabled" : "Disabled"}
+                {transport.enabled ? t("transports.card.enabled") : t("transports.card.disabled")}
               </span>
             </div>
           </div>
@@ -435,16 +439,16 @@ const TransportCard: React.FC<TransportCardProps> = ({
       <div className="p-4 space-y-3">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div>
-            <span className="text-gray-500 dark:text-gray-400">Port:</span>
+            <span className="text-gray-500 dark:text-gray-400">{t("transports.card.port")}:</span>
             <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{transport.port}</span>
           </div>
           <div>
-            <span className="text-gray-500 dark:text-gray-400">Host:</span>
+            <span className="text-gray-500 dark:text-gray-400">{t("transports.card.host")}:</span>
             <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{transport.host}</span>
           </div>
           {transport.url && (
             <div className="col-span-2">
-              <span className="text-gray-500 dark:text-gray-400">URL:</span>
+              <span className="text-gray-500 dark:text-gray-400">{t("transports.card.url")}:</span>
               <div className="flex items-center space-x-2 mt-1">
                 <code className="flex-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-900 dark:text-gray-100 truncate">
                   {transport.url}
@@ -454,7 +458,7 @@ const TransportCard: React.FC<TransportCardProps> = ({
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
-                  title="Copy URL"
+                  title={t("transports.card.copyUrl")}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -470,20 +474,20 @@ const TransportCard: React.FC<TransportCardProps> = ({
           <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2 text-sm">
             {transport.corsOrigins && transport.corsOrigins.length > 0 && (
               <div>
-                <span className="text-gray-500 dark:text-gray-400">CORS Origins:</span>
+                <span className="text-gray-500 dark:text-gray-400">{t("transports.card.corsOrigins")}:</span>
                 <span className="ml-2 text-gray-900 dark:text-gray-100">{transport.corsOrigins.join(", ")}</span>
               </div>
             )}
             {transport.serveMcp && (
               <div className="flex items-center space-x-2">
                 <span className="text-green-600 dark:text-green-400">✓</span>
-                <span className="text-gray-600 dark:text-gray-400">MCP Protocol Enabled</span>
+                <span className="text-gray-600 dark:text-gray-400">{t("transports.card.mcpEnabled")}</span>
               </div>
             )}
             {transport.serveStudio && (
               <div className="flex items-center space-x-2">
                 <span className="text-green-600 dark:text-green-400">✓</span>
-                <span className="text-gray-600 dark:text-gray-400">Studio Frontend Enabled</span>
+                <span className="text-gray-600 dark:text-gray-400">{t("transports.card.studioEnabled")}</span>
               </div>
             )}
           </div>
@@ -497,7 +501,7 @@ const TransportCard: React.FC<TransportCardProps> = ({
             size="sm"
             className="text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
           >
-            Edit Configuration
+            {t("transports.card.editConfig")}
           </Button>
           <Button
             onClick={() => onDelete(transport)}
@@ -505,7 +509,7 @@ const TransportCard: React.FC<TransportCardProps> = ({
             size="sm"
             className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
           >
-            Remove
+            {t("transports.card.remove")}
           </Button>
         </div>
       </div>
@@ -525,6 +529,7 @@ const TransportEditModal: React.FC<TransportEditModalProps> = ({
   onSave,
   onClose,
 }) => {
+  const { t } = useTranslation("admin");
   const [formData, setFormData] = useState<TransportInfo>({ ...transport });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -537,7 +542,7 @@ const TransportEditModal: React.FC<TransportEditModalProps> = ({
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-            Edit {transport.type.toUpperCase()} Transport
+            {t("transports.edit.title", { type: transport.type.toUpperCase() })}
           </h2>
         </div>
 
@@ -546,7 +551,7 @@ const TransportEditModal: React.FC<TransportEditModalProps> = ({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Port
+                {t("transports.edit.port")}
               </label>
               <input
                 type="number"
@@ -561,7 +566,7 @@ const TransportEditModal: React.FC<TransportEditModalProps> = ({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Host
+                {t("transports.edit.host")}
               </label>
               <input
                 type="text"
@@ -577,7 +582,7 @@ const TransportEditModal: React.FC<TransportEditModalProps> = ({
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    CORS Origins (comma-separated)
+                    {t("transports.edit.corsOrigins")}
                   </label>
                   <input
                     type="text"
@@ -589,7 +594,7 @@ const TransportEditModal: React.FC<TransportEditModalProps> = ({
                       })
                     }
                     className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    placeholder="*, http://localhost:3000"
+                    placeholder={t("transports.edit.corsPlaceholder")}
                   />
                 </div>
                 <div className="flex items-center space-x-2">
@@ -601,7 +606,7 @@ const TransportEditModal: React.FC<TransportEditModalProps> = ({
                     className="rounded border-gray-300 dark:border-gray-600"
                   />
                   <label htmlFor="serveMcp" className="text-sm text-gray-700 dark:text-gray-300">
-                    Serve MCP Protocol
+                    {t("transports.edit.serveMcp")}
                   </label>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -613,7 +618,7 @@ const TransportEditModal: React.FC<TransportEditModalProps> = ({
                     className="rounded border-gray-300 dark:border-gray-600"
                   />
                   <label htmlFor="serveStudio" className="text-sm text-gray-700 dark:text-gray-300">
-                    Serve Studio Frontend
+                    {t("transports.edit.serveStudio")}
                   </label>
                 </div>
               </>
@@ -623,7 +628,7 @@ const TransportEditModal: React.FC<TransportEditModalProps> = ({
             {formData.type === "grpc" && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Max Message Size (bytes)
+                  {t("transports.edit.maxMessageSize")}
                 </label>
                 <input
                   type="number"
@@ -639,7 +644,7 @@ const TransportEditModal: React.FC<TransportEditModalProps> = ({
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Ping Interval (ms)
+                    {t("transports.edit.pingInterval")}
                   </label>
                   <input
                     type="number"
@@ -650,7 +655,7 @@ const TransportEditModal: React.FC<TransportEditModalProps> = ({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Max Connections
+                    {t("transports.edit.maxConnections")}
                   </label>
                   <input
                     type="number"
@@ -670,13 +675,13 @@ const TransportEditModal: React.FC<TransportEditModalProps> = ({
               onClick={onClose}
               variant="outline"
             >
-              Cancel
+              {t("transports.edit.cancel")}
             </Button>
             <Button
               type="submit"
               variant="primary"
             >
-              Save Changes
+              {t("transports.edit.save")}
             </Button>
           </div>
         </form>
@@ -697,6 +702,7 @@ const TransportAddModal: React.FC<TransportAddModalProps> = ({
   onSave,
   onClose,
 }) => {
+  const { t } = useTranslation("admin");
   const availableTypes: ("http" | "grpc" | "websocket")[] = ["http", "grpc", "websocket"];
   const [selectedType, setSelectedType] = useState<"http" | "grpc" | "websocket">("http");
   const [port, setPort] = useState(8700);
@@ -736,14 +742,14 @@ const TransportAddModal: React.FC<TransportAddModalProps> = ({
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-            Add New Transport
+            {t("transports.add.title")}
           </h2>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Transport Type
+              {t("transports.add.type")}
             </label>
             <select
               value={selectedType}
@@ -760,14 +766,14 @@ const TransportAddModal: React.FC<TransportAddModalProps> = ({
             </select>
             {existingTypes.includes(selectedType) && (
               <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                This transport type already exists
+                {t("transports.add.typeExists")}
               </p>
             )}
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Port
+              {t("transports.add.port")}
             </label>
             <input
               type="number"
@@ -782,7 +788,7 @@ const TransportAddModal: React.FC<TransportAddModalProps> = ({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Host
+              {t("transports.add.host")}
             </label>
             <input
               type="text"
@@ -799,14 +805,14 @@ const TransportAddModal: React.FC<TransportAddModalProps> = ({
               onClick={onClose}
               variant="outline"
             >
-              Cancel
+              {t("transports.add.cancel")}
             </Button>
             <Button
               type="submit"
               disabled={existingTypes.includes(selectedType)}
               variant="primary"
             >
-              Add Transport
+              {t("transports.add.submit")}
             </Button>
           </div>
         </form>

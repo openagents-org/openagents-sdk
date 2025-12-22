@@ -22,6 +22,17 @@
         "connectionFailed": "네트워크 연결에 실패했습니다",
         "disconnected": "네트워크 연결이 해제되었습니다"
     },
+    "profile": {
+        "iconHint": "URL을 입력하거나 이미지를 업로드하세요 (최대 5MB). 업로드된 이미지는 네트워크의 자산 폴더에 저장됩니다.",
+        "upload": "업로드",
+        "uploading": "업로드 중...",
+        "tags": {
+            "add": "추가"
+        },
+        "categories": {
+            "add": "추가"
+        }
+    },
     "groups": {
         "changePassword": {
             "button": "비밀번호 변경",

@@ -110,13 +110,97 @@
       "modManagement": "モジュール管理",
       "eventLogs": "イベントログ",
       "llmLogs": "LLM ログ",
-      "eventDebugger": "イベントデバッガー"
+      "eventDebugger": "イベントデバッガー",
+      "publishNetwork": "ネットワークを公開"
+    }
+  },
+  "transports": {
+    "title": "トランスポート設定",
+    "subtitle": "ネットワークトランスポート層を管理（HTTP、gRPC、WebSocket）",
+    "loading": "トランスポート設定を読み込み中...",
+    "refresh": "更新",
+    "refreshing": "更新中...",
+    "addNew": "新しいトランスポートを追加",
+    "network": "ネットワーク",
+    "warning": {
+      "title": "トランスポートの変更にはネットワークの再起動が必要です",
+      "description": "トランスポート設定の変更は、ネットワークを再起動した後に有効になります。"
+    },
+    "empty": "トランスポートが設定されていません。「新しいトランスポートを追加」をクリックして追加してください。",
+    "card": {
+      "transport": "トランスポート",
+      "enabled": "有効",
+      "disabled": "無効",
+      "port": "ポート",
+      "host": "ホスト",
+      "url": "URL",
+      "copyUrl": "URLをコピー",
+      "editConfig": "設定を編集",
+      "remove": "削除",
+      "corsOrigins": "CORSオリジン",
+      "mcpEnabled": "MCPプロトコル有効",
+      "studioEnabled": "Studioフロントエンド有効"
+    },
+    "edit": {
+      "title": "{{type}}トランスポートを編集",
+      "port": "ポート",
+      "host": "ホスト",
+      "corsOrigins": "CORSオリジン（カンマ区切り）",
+      "corsPlaceholder": "*, http://localhost:3000",
+      "serveMcp": "MCPプロトコルを提供",
+      "serveStudio": "Studioフロントエンドを提供",
+      "maxMessageSize": "最大メッセージサイズ（バイト）",
+      "pingInterval": "Ping間隔（ミリ秒）",
+      "maxConnections": "最大接続数",
+      "cancel": "キャンセル",
+      "save": "変更を保存"
+    },
+    "add": {
+      "title": "新しいトランスポートを追加",
+      "type": "トランスポートタイプ",
+      "typeExists": "このトランスポートタイプは既に存在します",
+      "port": "ポート",
+      "host": "ホスト",
+      "cancel": "キャンセル",
+      "submit": "トランスポートを追加"
+    },
+    "confirm": {
+      "enableTitle": "トランスポートを有効化",
+      "disableTitle": "トランスポートを無効化",
+      "enableMessage": "{{type}}トランスポートを有効にしてもよろしいですか？ネットワークの再起動が必要な場合があります。",
+      "disableMessage": "{{type}}トランスポートを無効にしてもよろしいですか？ネットワークの再起動が必要な場合があります。",
+      "enable": "有効化",
+      "disable": "無効化",
+      "deleteTitle": "トランスポートを削除",
+      "deleteMessage": "{{type}}トランスポートを削除してもよろしいですか？この操作は取り消せません。",
+      "delete": "削除"
+    },
+    "toast": {
+      "urlCopied": "URLがクリップボードにコピーされました",
+      "loadFailed": "トランスポート設定の読み込みに失敗しました",
+      "toggleRequested": "トランスポート{{action}}がリクエストされました（未実装）",
+      "deleteRequested": "トランスポート削除がリクエストされました（未実装）",
+      "saveRequested": "トランスポート設定が保存されました（未実装）",
+      "addRequested": "新しいトランスポートが追加されました（未実装）"
     }
   },
   "publish": {
     "title": "ネットワークを公開",
     "subtitle": "ネットワークをOpenAgentsディレクトリに公開して、他のユーザーが見つけられるようにします。",
+    "apiKey": {
+      "title": "認証",
+      "label": "APIキー",
+      "placeholder": "oa-xxxxxxxxxxxxxxxx",
+      "help": "OpenAgents APIキーを入力して認証します。openagents.orgで取得できます",
+      "validate": "検証",
+      "validating": "検証中...",
+      "change": "変更",
+      "validated": "APIキーの検証に成功しました！",
+      "validSuccess": "APIキーの検証に成功しました",
+      "organization": "組織："
+    },
     "form": {
+      "title": "ネットワーク設定",
       "networkId": "ネットワークID",
       "networkIdPlaceholder": "例: my-awesome-network",
       "networkIdHelp": "ネットワークの一意識別子（最小7文字）",
@@ -126,9 +210,43 @@
       "organization": "組織",
       "organizationPlaceholder": "例: openagents",
       "organizationHelp": "OpenAgentsでの組織識別子",
+      "organizationFromApiKey": "組織はAPIキーによって決定されます",
       "host": "ホスト",
       "hostPlaceholder": "例: mynetwork.example.com",
       "port": "ポート"
+    },
+    "relay": {
+      "title": "ローカルホストネットワークを検出",
+      "description": "ネットワークがローカルホストで実行されており、インターネットから直接アクセスできません。リレーサービスに接続して公開アクセス可能にしてください。",
+      "connect": "リレー経由で接続",
+      "connecting": "接続中...",
+      "connectedTitle": "リレー経由で接続済み",
+      "publicUrl": "公開URL：",
+      "disconnect": "切断",
+      "connected": "リレーに接続しました！ネットワークが公開アクセス可能になりました。",
+      "connectionFailed": "リレーへの接続に失敗しました",
+      "disconnected": "リレーから切断しました",
+      "disconnectFailed": "リレーからの切断に失敗しました"
+    },
+    "publishedNetworks": {
+      "title": "公開済みネットワーク",
+      "agents": "エージェント",
+      "noNetworks": "まだネットワークが公開されていません。下のフォームに入力して最初のネットワークを公開してください。"
+    },
+    "unpublish": {
+      "button": "公開解除",
+      "success": "ネットワークの公開解除に成功しました！",
+      "failed": "ネットワークの公開解除に失敗しました",
+      "error": "公開解除中にエラーが発生しました"
+    },
+    "status": {
+      "checking": "公開状態を確認中...",
+      "published": "このネットワークは現在公開されています",
+      "notPublished": "このネットワークは公開されていません",
+      "publishedAs": "公開名：",
+      "org": "組織：",
+      "status": "状態：",
+      "uuidNote": "ネットワークUUID："
     },
     "buttons": {
       "validate": "設定を検証",
@@ -139,6 +257,8 @@
     "validation": {
       "success": "ネットワーク設定は有効です！",
       "successToast": "検証成功！",
+      "successRelay": "ネットワークはリレー経由でアクセス可能で、設定は有効です！",
+      "successPublic": "ネットワークは公開アクセス可能で、設定は有効です！",
       "detectedName": "検出された名前:",
       "onlineAgents": "オンラインエージェント:",
       "enabledMods": "有効なモジュール:"
@@ -156,15 +276,32 @@
       "validationError": "検証中にエラーが発生しました",
       "validateFirst": "先に設定を検証してください",
       "publishFailed": "ネットワークの公開に失敗しました",
-      "publishError": "公開中にエラーが発生しました"
+      "publishError": "公開中にエラーが発生しました",
+      "apiKeyRequired": "公開する前に、上の認証セクションでAPIキーを検証してください。",
+      "invalidApiKeyFormat": "APIキーは「oa-」で始まる必要があります",
+      "invalidApiKey": "APIキーが無効または期限切れです",
+      "apiKeyValidationFailed": "APIキーの検証に失敗しました",
+      "apiKeyValidationError": "APIキーの検証中にエラーが発生しました",
+      "apiKeyNotValidated": "先にAPIキーを検証してください",
+      "networkRequired": "ネットワークが選択されていません",
+      "localhostNotAllowed": "localhostとローカルアドレスは使用できません。公開ドメインまたはIPを使用してください。",
+      "privateIpNotAllowed": "プライベートIPアドレス（10.x.x.x、172.16-31.x.x、192.168.x.x）は使用できません。",
+      "localDomainNotAllowed": ".localドメインは使用できません。公開ドメインを使用してください。",
+      "invalidHostFormat": "ホスト形式が無効です。有効なドメイン名（例：example.com）または公開IPアドレスを使用してください。",
+      "hostNotPublic": "ホストは公開アクセス可能である必要があります（localhost、プライベートIP、.localドメインは不可）",
+      "hostPortAlreadyPublished": "このホスト:ポートは既に公開されています。先に公開解除してください。",
+      "alreadyPublished": "このホスト:ポートは既に公開されています",
+      "alreadyPublishedDetail": "ネットワーク「{{name}}」（{{id}}）は既に{{host}}:{{port}}で公開されています。上の公開済みネットワークリストから先に公開解除できます。",
+      "authFailed": "認証に失敗しました。APIキーを確認してください。",
+      "notPubliclyAccessible": "ネットワークは公開アクセスできません。ネットワークがインターネットに公開されており、ファイアウォールの背後にないことを確認してください。"
     },
     "success": "ネットワークが正常に公開されました！",
     "info": {
       "title": "公開について",
+      "point0": "公開するにはopenagents.orgの組織からAPIキーを取得する必要があります。",
       "point1": "ネットワークは指定されたホストとポートで公開アクセス可能である必要があります。",
       "point2": "検証のためにヘルスエンドポイント（/api/health）にアクセス可能である必要があります。",
-      "point3": "公開されたネットワークはOpenAgentsディレクトリに表示されます。",
-      "point4": "公開するにはOpenAgentsに組織として登録されている必要があります。"
+      "point3": "公開されたネットワークはOpenAgentsディレクトリに表示されます。"
     }
   }
 }

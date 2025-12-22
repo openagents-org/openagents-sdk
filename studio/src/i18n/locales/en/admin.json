@@ -107,6 +107,7 @@
       "dashboard": "Dashboard",
       "networkProfile": "Network Profile",
       "transports": "Transports",
+      "publishNetwork": "Publish Network",
       "importExport": "Import / Export",
       "connectedAgents": "Connected Agents",
       "agentGroups": "Agent Groups",
@@ -119,10 +120,93 @@
       "eventDebugger": "Event Debugger"
     }
   },
+  "transports": {
+    "title": "Transport Configuration",
+    "subtitle": "Manage network transport layers (HTTP, gRPC, WebSocket)",
+    "loading": "Loading transport configuration...",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing...",
+    "addNew": "Add New Transport",
+    "network": "Network",
+    "warning": {
+      "title": "Transport changes require network restart",
+      "description": "Any changes to transport configuration will take effect after restarting the network."
+    },
+    "empty": "No transports configured. Click \"Add New Transport\" to add one.",
+    "card": {
+      "transport": "Transport",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "port": "Port",
+      "host": "Host",
+      "url": "URL",
+      "copyUrl": "Copy URL",
+      "editConfig": "Edit Configuration",
+      "remove": "Remove",
+      "corsOrigins": "CORS Origins",
+      "mcpEnabled": "MCP Protocol Enabled",
+      "studioEnabled": "Studio Frontend Enabled"
+    },
+    "edit": {
+      "title": "Edit {{type}} Transport",
+      "port": "Port",
+      "host": "Host",
+      "corsOrigins": "CORS Origins (comma-separated)",
+      "corsPlaceholder": "*, http://localhost:3000",
+      "serveMcp": "Serve MCP Protocol",
+      "serveStudio": "Serve Studio Frontend",
+      "maxMessageSize": "Max Message Size (bytes)",
+      "pingInterval": "Ping Interval (ms)",
+      "maxConnections": "Max Connections",
+      "cancel": "Cancel",
+      "save": "Save Changes"
+    },
+    "add": {
+      "title": "Add New Transport",
+      "type": "Transport Type",
+      "typeExists": "This transport type already exists",
+      "port": "Port",
+      "host": "Host",
+      "cancel": "Cancel",
+      "submit": "Add Transport"
+    },
+    "confirm": {
+      "enableTitle": "Enable Transport",
+      "disableTitle": "Disable Transport",
+      "enableMessage": "Are you sure you want to enable the {{type}} transport? Network restart may be required.",
+      "disableMessage": "Are you sure you want to disable the {{type}} transport? Network restart may be required.",
+      "enable": "Enable",
+      "disable": "Disable",
+      "deleteTitle": "Delete Transport",
+      "deleteMessage": "Are you sure you want to delete the {{type}} transport? This action cannot be undone.",
+      "delete": "Delete"
+    },
+    "toast": {
+      "urlCopied": "URL copied to clipboard",
+      "loadFailed": "Failed to load transport configuration",
+      "toggleRequested": "Transport {{action}} requested (not implemented yet)",
+      "deleteRequested": "Transport deletion requested (not implemented yet)",
+      "saveRequested": "Transport configuration saved (not implemented yet)",
+      "addRequested": "New transport added (not implemented yet)"
+    }
+  },
   "publish": {
     "title": "Publish Network",
     "subtitle": "Publish your network to the OpenAgents directory to make it discoverable by others.",
+    "apiKey": {
+      "title": "Authentication",
+      "label": "API Key",
+      "placeholder": "oa-xxxxxxxxxxxxxxxx",
+      "help": "Enter your OpenAgents API key to authenticate. Get one from openagents.org",
+      "validate": "Validate",
+      "validating": "Validating...",
+      "change": "Change",
+      "validated": "API key validated successfully!",
+      "validSuccess": "API key validated successfully",
+      "organization": "Organization:"
+    },
     "form": {
+      "title": "Network Configuration",
       "networkId": "Network ID",
       "networkIdPlaceholder": "e.g., my-awesome-network",
       "networkIdHelp": "Unique identifier for your network (min 7 characters)",
@@ -132,9 +216,43 @@
       "organization": "Organization",
       "organizationPlaceholder": "e.g., openagents",
       "organizationHelp": "Your organization identifier on OpenAgents",
+      "organizationFromApiKey": "Organization is determined by your API key",
       "host": "Host",
       "hostPlaceholder": "e.g., mynetwork.example.com",
       "port": "Port"
+    },
+    "relay": {
+      "title": "Localhost Network Detected",
+      "description": "Your network is running on localhost and cannot be directly accessed from the internet. Connect via our relay service to make it publicly accessible.",
+      "connect": "Connect via Relay",
+      "connecting": "Connecting...",
+      "connectedTitle": "Connected via Relay",
+      "publicUrl": "Public URL:",
+      "disconnect": "Disconnect",
+      "connected": "Connected to relay! Your network is now publicly accessible.",
+      "connectionFailed": "Failed to connect to relay",
+      "disconnected": "Disconnected from relay",
+      "disconnectFailed": "Failed to disconnect from relay"
+    },
+    "publishedNetworks": {
+      "title": "Published Networks",
+      "agents": "agents",
+      "noNetworks": "No networks published yet. Fill in the form below to publish your first network."
+    },
+    "unpublish": {
+      "button": "Unpublish",
+      "success": "Network unpublished successfully!",
+      "failed": "Failed to unpublish network",
+      "error": "An error occurred while unpublishing"
+    },
+    "status": {
+      "checking": "Checking publishing status...",
+      "published": "This network is currently published",
+      "notPublished": "This network is not published",
+      "publishedAs": "Published as:",
+      "org": "Organization:",
+      "status": "Status:",
+      "uuidNote": "Network UUID:"
     },
     "buttons": {
       "validate": "Validate Configuration",
@@ -145,6 +263,8 @@
     "validation": {
       "success": "Network configuration is valid!",
       "successToast": "Validation successful!",
+      "successRelay": "Network is accessible via relay and configuration is valid!",
+      "successPublic": "Network is publicly accessible and configuration is valid!",
       "detectedName": "Detected Name:",
       "onlineAgents": "Online Agents:",
       "enabledMods": "Enabled Mods:"
@@ -162,15 +282,32 @@
       "validationError": "An error occurred during validation",
       "validateFirst": "Please validate the configuration first",
       "publishFailed": "Failed to publish network",
-      "publishError": "An error occurred while publishing"
+      "publishError": "An error occurred while publishing",
+      "apiKeyRequired": "Please validate your API key in the Authentication section above before publishing.",
+      "invalidApiKeyFormat": "API key must start with 'oa-'",
+      "invalidApiKey": "Invalid or expired API key",
+      "apiKeyValidationFailed": "Failed to validate API key",
+      "apiKeyValidationError": "An error occurred while validating API key",
+      "apiKeyNotValidated": "Please validate your API key first",
+      "networkRequired": "No network selected",
+      "localhostNotAllowed": "localhost and local addresses are not allowed. Use a public domain or IP.",
+      "privateIpNotAllowed": "Private IP addresses (10.x.x.x, 172.16-31.x.x, 192.168.x.x) are not allowed.",
+      "localDomainNotAllowed": ".local domains are not allowed. Use a public domain.",
+      "invalidHostFormat": "Invalid host format. Use a valid domain name (e.g., example.com) or public IP address.",
+      "hostNotPublic": "The host must be publicly accessible (no localhost, private IPs, or .local domains)",
+      "hostPortAlreadyPublished": "This host:port is already published. Unpublish it first.",
+      "alreadyPublished": "This host:port is already published",
+      "alreadyPublishedDetail": "Network \"{{name}}\" ({{id}}) is already published at {{host}}:{{port}}. You can unpublish it first from the Published Networks list above.",
+      "authFailed": "Authentication failed. Please check your API key.",
+      "notPubliclyAccessible": "Network is not publicly accessible. Make sure your network is exposed to the internet and not behind a firewall."
     },
     "success": "Network published successfully!",
     "info": {
       "title": "About Publishing",
+      "point0": "You need an API key from your organization on openagents.org to publish.",
       "point1": "Your network must be publicly accessible at the specified host and port.",
       "point2": "The health endpoint (/api/health) must be reachable for validation.",
-      "point3": "Published networks will appear in the OpenAgents directory.",
-      "point4": "You need to be registered with an organization on OpenAgents to publish."
+      "point3": "Published networks will appear in the OpenAgents directory."
     }
   }
 }

@@ -183,8 +183,8 @@ const AgentNamePicker: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Use fixed "admin" name for admin mode, otherwise use the page agent name
-    const agentNameTrimmed = isAdminMode ? "admin" : pageAgentName?.trim();
+    // Use the page agent name for both regular and admin mode
+    const agentNameTrimmed = pageAgentName?.trim();
     if (!agentNameTrimmed || !selectedNetwork) return;
 
     // Validate password requirements
@@ -323,8 +323,8 @@ const AgentNamePicker: React.FC = () => {
     hash: string | null,
     targetGroup: string | null
   ) => {
-    // Use fixed "admin" name for admin group, otherwise use the page agent name
-    const agentNameTrimmed = targetGroup === "admin" ? "admin" : pageAgentName?.trim();
+    // Use the page agent name for all cases
+    const agentNameTrimmed = pageAgentName?.trim();
     if (!agentNameTrimmed || !selectedNetwork) return;
 
     // Save the agent name for this network (but not for admin - it's a reserved name)
@@ -376,7 +376,7 @@ const AgentNamePicker: React.FC = () => {
               ? "bg-gradient-to-br from-amber-500 to-orange-600"
               : "bg-gradient-to-br from-blue-500 to-purple-600"
           }`}>
-            {isAdminMode ? "A" : getAvatarInitials(pageAgentName)}
+            {getAvatarInitials(pageAgentName)}
           </div>
           <div className="flex-1 text-left">
             <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-50">
@@ -481,16 +481,38 @@ const AgentNamePicker: React.FC = () => {
             </div>
           )}
 
-          {/* Admin Mode: Agent Name Info + Password Input */}
+          {/* Admin Mode: Agent Name Input + Password Input */}
           {isAdminMode && (
             <>
-              {/* Show fixed admin agent name */}
+              {/* Agent Name Input for Admin Mode */}
               <div className="text-left">
-                <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+                <label
+                  htmlFor="adminAgentName"
+                  className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300"
+                >
                   {t("agentSetup.agentName")}
                 </label>
-                <div className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm">
-                  admin
+                <div className="flex gap-3">
+                  <Input
+                    id="adminAgentName"
+                    type="text"
+                    variant="lg"
+                    value={pageAgentName || ""}
+                    onChange={(e) => setPageAgentName(e.target.value)}
+                    placeholder={t("agentSetup.agentNamePlaceholder")}
+                    maxLength={32}
+                    autoComplete="off"
+                    className="text-sm w-full px-4 py-0 border-1 rounded-lg transition-all duration-150 focus:outline-none focus:ring-3 bg-white text-gray-800 dark:bg-gray-600 dark:text-gray-50 border-gray-300 focus:border-blue-500 focus:ring-blue-500/10 dark:border-gray-500 dark:focus:border-blue-400 dark:focus:ring-blue-400/10"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="md"
+                    onClick={handleRandomize}
+                  >
+                    <RefreshCw className="w-4 h-4 mr-1.5" />
+                    {t("agentSetup.buttons.randomName")}
+                  </Button>
                 </div>
               </div>
 
@@ -663,8 +685,8 @@ const AgentNamePicker: React.FC = () => {
               disabled={
                 isVerifying ||
                 isLoadingGroups ||
+                !isValidName(pageAgentName) ||
                 (isAdminMode && !adminPassword.trim()) ||
-                (!isAdminMode && !isValidName(pageAgentName)) ||
                 (!isAdminMode && isReservedAgentName) ||
                 (!isAdminMode &&
                   selectedGroupRequiresPassword &&
@@ -673,8 +695,8 @@ const AgentNamePicker: React.FC = () => {
               className={`flex-[2] px-6 py-3 border-none rounded-lg text-base font-semibold cursor-pointer transition-all duration-150 text-white ${
                 isVerifying ||
                 isLoadingGroups ||
+                !isValidName(pageAgentName) ||
                 (isAdminMode && !adminPassword.trim()) ||
-                (!isAdminMode && !isValidName(pageAgentName)) ||
                 (!isAdminMode && isReservedAgentName) ||
                 (!isAdminMode &&
                   selectedGroupRequiresPassword &&

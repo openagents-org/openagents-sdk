@@ -33,6 +33,9 @@
         "name": "网络名称",
         "description": "描述",
         "icon": "图标 URL",
+        "iconHint": "输入 URL 或上传图片（最大 5MB）。上传的图片将保存到网络的资源文件夹中。",
+        "upload": "上传",
+        "uploading": "上传中...",
         "website": "网站 URL",
         "country": "国家/地区",
         "tags": {

@@ -382,6 +382,7 @@ const NetworkProfile: React.FC = () => {
                     checked={formData.discoverable}
                     onCheckedChange={(checked) => handleInputChange('discoverable', checked)}
                     size="lg"
+                    className="data-[state=unchecked]:bg-gray-300 dark:data-[state=unchecked]:bg-gray-600 data-[state=checked]:bg-blue-600"
                   />
                 </SwitchWrapper>
               </div>
@@ -450,18 +451,18 @@ const NetworkProfile: React.FC = () => {
                   {isUploadingIcon ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Uploading...
+                      {t('profile.uploading')}
                     </>
                   ) : (
                     <>
                       <Upload className="w-4 h-4 mr-2" />
-                      Upload
+                      {t('profile.upload')}
                     </>
                   )}
                 </Button>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Enter a URL or upload an image (max 5MB). Uploaded images will be saved to the network's assets folder.
+                {t('profile.iconHint')}
               </p>
               {formData.icon && (
                 <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 inline-block">
@@ -539,7 +540,7 @@ const NetworkProfile: React.FC = () => {
                 size="lg"
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Add
+                {t('profile.tags.add')}
               </Button>
             </div>
 
@@ -601,7 +602,7 @@ const NetworkProfile: React.FC = () => {
                 size="lg"
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Add
+                {t('profile.categories.add')}
               </Button>
             </div>
 

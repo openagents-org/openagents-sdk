@@ -33,6 +33,9 @@
         "name": "Network Name",
         "description": "Description",
         "icon": "Icon URL",
+        "iconHint": "Enter a URL or upload an image (max 5MB). Uploaded images will be saved to the network's assets folder.",
+        "upload": "Upload",
+        "uploading": "Uploading...",
         "website": "Website URL",
         "country": "Country",
         "tags": {

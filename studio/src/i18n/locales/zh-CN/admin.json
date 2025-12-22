@@ -107,6 +107,7 @@
       "dashboard": "仪表板",
       "networkProfile": "网络配置",
       "transports": "传输协议",
+      "publishNetwork": "发布网络",
       "importExport": "导入 / 导出",
       "connectedAgents": "已连接代理",
       "agentGroups": "代理组",
@@ -119,10 +120,93 @@
       "eventDebugger": "事件调试器"
     }
   },
+  "transports": {
+    "title": "传输协议配置",
+    "subtitle": "管理网络传输层（HTTP、gRPC、WebSocket）",
+    "loading": "正在加载传输协议配置...",
+    "refresh": "刷新",
+    "refreshing": "刷新中...",
+    "addNew": "添加新传输协议",
+    "network": "网络",
+    "warning": {
+      "title": "传输协议更改需要重启网络",
+      "description": "对传输协议配置的任何更改将在重启网络后生效。"
+    },
+    "empty": "没有配置传输协议。点击「添加新传输协议」添加一个。",
+    "card": {
+      "transport": "传输协议",
+      "enabled": "已启用",
+      "disabled": "已禁用",
+      "port": "端口",
+      "host": "主机",
+      "url": "URL",
+      "copyUrl": "复制 URL",
+      "editConfig": "编辑配置",
+      "remove": "移除",
+      "corsOrigins": "CORS 来源",
+      "mcpEnabled": "MCP 协议已启用",
+      "studioEnabled": "Studio 前端已启用"
+    },
+    "edit": {
+      "title": "编辑 {{type}} 传输协议",
+      "port": "端口",
+      "host": "主机",
+      "corsOrigins": "CORS 来源（逗号分隔）",
+      "corsPlaceholder": "*, http://localhost:3000",
+      "serveMcp": "提供 MCP 协议",
+      "serveStudio": "提供 Studio 前端",
+      "maxMessageSize": "最大消息大小（字节）",
+      "pingInterval": "Ping 间隔（毫秒）",
+      "maxConnections": "最大连接数",
+      "cancel": "取消",
+      "save": "保存更改"
+    },
+    "add": {
+      "title": "添加新传输协议",
+      "type": "传输协议类型",
+      "typeExists": "此传输协议类型已存在",
+      "port": "端口",
+      "host": "主机",
+      "cancel": "取消",
+      "submit": "添加传输协议"
+    },
+    "confirm": {
+      "enableTitle": "启用传输协议",
+      "disableTitle": "禁用传输协议",
+      "enableMessage": "您确定要启用 {{type}} 传输协议吗？可能需要重启网络。",
+      "disableMessage": "您确定要禁用 {{type}} 传输协议吗？可能需要重启网络。",
+      "enable": "启用",
+      "disable": "禁用",
+      "deleteTitle": "删除传输协议",
+      "deleteMessage": "您确定要删除 {{type}} 传输协议吗？此操作无法撤销。",
+      "delete": "删除"
+    },
+    "toast": {
+      "urlCopied": "URL 已复制到剪贴板",
+      "loadFailed": "加载传输协议配置失败",
+      "toggleRequested": "传输协议{{action}}请求已发送（尚未实现）",
+      "deleteRequested": "传输协议删除请求已发送（尚未实现）",
+      "saveRequested": "传输协议配置已保存（尚未实现）",
+      "addRequested": "新传输协议已添加（尚未实现）"
+    }
+  },
   "publish": {
     "title": "发布网络",
     "subtitle": "将您的网络发布到 OpenAgents 目录，让其他人可以发现它。",
+    "apiKey": {
+      "title": "身份验证",
+      "label": "API 密钥",
+      "placeholder": "oa-xxxxxxxxxxxxxxxx",
+      "help": "输入您的 OpenAgents API 密钥进行身份验证。可从 openagents.org 获取",
+      "validate": "验证",
+      "validating": "验证中...",
+      "change": "更改",
+      "validated": "API 密钥验证成功！",
+      "validSuccess": "API 密钥验证成功",
+      "organization": "组织："
+    },
     "form": {
+      "title": "网络配置",
       "networkId": "网络 ID",
       "networkIdPlaceholder": "例如: my-awesome-network",
       "networkIdHelp": "网络的唯一标识符（最少 7 个字符）",
@@ -132,9 +216,43 @@
       "organization": "组织",
       "organizationPlaceholder": "例如: openagents",
       "organizationHelp": "您在 OpenAgents 上的组织标识符",
+      "organizationFromApiKey": "组织由您的 API 密钥决定",
       "host": "主机",
       "hostPlaceholder": "例如: mynetwork.example.com",
       "port": "端口"
+    },
+    "relay": {
+      "title": "检测到本地网络",
+      "description": "您的网络运行在本地主机上，无法从互联网直接访问。通过我们的中继服务连接以使其可公开访问。",
+      "connect": "通过中继连接",
+      "connecting": "连接中...",
+      "connectedTitle": "已通过中继连接",
+      "publicUrl": "公共 URL：",
+      "disconnect": "断开连接",
+      "connected": "已连接到中继！您的网络现在可以公开访问。",
+      "connectionFailed": "连接中继失败",
+      "disconnected": "已断开中继连接",
+      "disconnectFailed": "断开中继连接失败"
+    },
+    "publishedNetworks": {
+      "title": "已发布的网络",
+      "agents": "个代理",
+      "noNetworks": "尚未发布任何网络。填写下面的表单发布您的第一个网络。"
+    },
+    "unpublish": {
+      "button": "取消发布",
+      "success": "网络取消发布成功！",
+      "failed": "取消发布网络失败",
+      "error": "取消发布过程中发生错误"
+    },
+    "status": {
+      "checking": "正在检查发布状态...",
+      "published": "此网络当前已发布",
+      "notPublished": "此网络未发布",
+      "publishedAs": "发布为：",
+      "org": "组织：",
+      "status": "状态：",
+      "uuidNote": "网络 UUID："
     },
     "buttons": {
       "validate": "验证配置",
@@ -145,6 +263,8 @@
     "validation": {
       "success": "网络配置有效！",
       "successToast": "验证成功！",
+      "successRelay": "网络可通过中继访问且配置有效！",
+      "successPublic": "网络可公开访问且配置有效！",
       "detectedName": "检测到的名称：",
       "onlineAgents": "在线代理：",
       "enabledMods": "已启用的模块："
@@ -162,16 +282,32 @@
       "validationError": "验证过程中发生错误",
       "validateFirst": "请先验证配置",
       "publishFailed": "发布网络失败",
-      "publishError": "发布过程中发生错误"
+      "publishError": "发布过程中发生错误",
+      "apiKeyRequired": "请先在上方的身份验证部分验证您的 API 密钥。",
+      "invalidApiKeyFormat": "API 密钥必须以「oa-」开头",
+      "invalidApiKey": "API 密钥无效或已过期",
+      "apiKeyValidationFailed": "API 密钥验证失败",
+      "apiKeyValidationError": "验证 API 密钥时发生错误",
+      "apiKeyNotValidated": "请先验证您的 API 密钥",
+      "networkRequired": "未选择网络",
+      "localhostNotAllowed": "不允许使用 localhost 和本地地址。请使用公共域名或 IP。",
+      "privateIpNotAllowed": "不允许使用私有 IP 地址（10.x.x.x、172.16-31.x.x、192.168.x.x）。",
+      "localDomainNotAllowed": "不允许使用 .local 域名。请使用公共域名。",
+      "invalidHostFormat": "主机格式无效。请使用有效的域名（例如：example.com）或公共 IP 地址。",
+      "hostNotPublic": "主机必须可公开访问（不能是 localhost、私有 IP 或 .local 域名）",
+      "hostPortAlreadyPublished": "此主机:端口已发布。请先取消发布。",
+      "alreadyPublished": "此主机:端口已发布",
+      "alreadyPublishedDetail": "网络「{{name}}」（{{id}}）已在 {{host}}:{{port}} 发布。您可以先从上方的已发布网络列表中取消发布。",
+      "authFailed": "身份验证失败。请检查您的 API 密钥。",
+      "notPubliclyAccessible": "网络无法公开访问。请确保您的网络已暴露到互联网且不在防火墙后面。"
     },
     "success": "网络发布成功！",
     "info": {
       "title": "关于发布",
+      "point0": "您需要从 openagents.org 上的组织获取 API 密钥才能发布。",
       "point1": "您的网络必须在指定的主机和端口上公开可访问。",
-      "point2": "健康端点 (/api/health) 必须可访问以进行验证。",
-      "point3": "发布的网络将显示在 OpenAgents 目录中。",
-      "point4": "您需要在 OpenAgents 上注册组织才能发布。"
+      "point2": "健康端点（/api/health）必须可访问以进行验证。",
+      "point3": "发布的网络将显示在 OpenAgents 目录中。"
     }
   }
 }
-

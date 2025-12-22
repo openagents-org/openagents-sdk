@@ -22,6 +22,17 @@
         "connectionFailed": "ネットワークへの接続に失敗しました",
         "disconnected": "ネットワークから切断されました"
     },
+    "profile": {
+        "iconHint": "URL を入力するか、画像をアップロードしてください（最大 5MB）。アップロードされた画像はネットワークのアセットフォルダに保存されます。",
+        "upload": "アップロード",
+        "uploading": "アップロード中...",
+        "tags": {
+            "add": "追加"
+        },
+        "categories": {
+            "add": "追加"
+        }
+    },
     "groups": {
         "changePassword": {
             "button": "パスワードを変更",
