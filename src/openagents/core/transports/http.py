@@ -1138,7 +1138,6 @@ class HttpTransport(Transport):
 
         logger.info(f"HTTP transport listening on {host}:{port}")
         self.is_listening = True
-        self.site = site  # Store the site for shutdown
         self._listen_host = host
         self._listen_port = int(port)  # Store port for relay request handling
 
