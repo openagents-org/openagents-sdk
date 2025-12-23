@@ -29,6 +29,11 @@ from openagents.config.globals import (
     SYSTEM_EVENT_POLL_MESSAGES,
     SYSTEM_EVENT_UNREGISTER_AGENT,
 )
+from openagents.models.network_management import ImportMode
+from openagents.utils.network_export import NetworkExporter
+from openagents.utils.network_import import NetworkImporter
+from io import BytesIO
+from aiohttp import web
 
 # No need for external CORS library, implement manually
 
@@ -82,6 +87,7 @@ class HttpTransport(Transport):
         super().__init__(TransportType.HTTP, config, is_notifiable=False)
         self.app = web.Application(middlewares=[self.cors_middleware])
         self.site = None
+        self.runner = None  # AppRunner instance for proper cleanup
         self.network_instance: Optional["AgentNetwork"] = None  # Reference to network instance
 
         # MCP serving configuration (enabled via serve_mcp: true)
@@ -131,6 +137,11 @@ class HttpTransport(Transport):
         self.app.router.add_post("/api/unregister", self.unregister_agent)
         self.app.router.add_get("/api/poll", self.poll_messages)
         self.app.router.add_post("/api/send_event", self.send_message)
+
+        # Network management endpoints (admin only)
+        self.app.router.add_get("/api/network/export", self.export_network)
+        self.app.router.add_post("/api/network/import/validate", self.validate_import)
+        self.app.router.add_post("/api/network/import/apply", self.apply_import)
         # LLM Logs API endpoints
         self.app.router.add_get("/api/agents/service/{agent_id}/llm-logs", self.get_llm_logs)
         self.app.router.add_get("/api/agents/service/{agent_id}/llm-logs/{log_id}", self.get_llm_log_entry)
@@ -277,6 +288,11 @@ class HttpTransport(Transport):
         if self.site:
             await self.site.stop()
             self.site = None
+        
+        if self.runner:
+            await self.runner.cleanup()
+            self.runner = None
+            
         return True
 
     async def send(self, message: Event) -> bool:
@@ -351,7 +367,7 @@ class HttpTransport(Transport):
                 payload={},
             )
             event_response = await self.call_event_handler(health_check_event)
-            
+
             if event_response and event_response.success and event_response.data:
                 network_stats = event_response.data
                 network_name = network_stats.get("network_name", "OpenAgents Network")
@@ -377,7 +393,7 @@ class HttpTransport(Transport):
         # Escape HTML to prevent XSS attacks
         network_name_escaped = html.escape(network_name)
         description_escaped = html.escape(description)
-        
+
         # Get additional network profile information safely
         network_profile = {}
         if 'network_stats' in locals() and network_stats is not None:
@@ -385,16 +401,16 @@ class HttpTransport(Transport):
                 network_profile = network_stats.get("network_profile", {})
             except (AttributeError, TypeError):
                 network_profile = {}
-        
+
         website = network_profile.get("website", "https://openagents.org")
         tags = network_profile.get("tags", [])
-        
+
         # Validate and escape additional fields for security
         # Validate website URL - only allow http/https schemes to prevent javascript: or data: injection
         if not website.startswith(('http://', 'https://')):
             website = "https://openagents.org"
         website_escaped = html.escape(website)
-        
+
         # Limit displayed tags to avoid cluttering the UI
         MAX_DISPLAYED_TAGS = 8
 
@@ -653,14 +669,14 @@ class HttpTransport(Transport):
                 logger.info(
                     f"✅ Successfully registered HTTP agent {agent_id} with network {network_name}"
                 )
-                
+
                 # Extract secret and assigned_group from response data
                 secret = ""
                 assigned_group = None
                 if event_response.data and isinstance(event_response.data, dict):
                     secret = event_response.data.get("secret", "")
                     assigned_group = event_response.data.get("assigned_group")
-                
+
                 return web.json_response(
                     {
                         "success": True,
@@ -1103,8 +1119,8 @@ class HttpTransport(Transport):
             )
 
     async def listen(self, address: str) -> bool:
-        runner = web.AppRunner(self.app)
-        await runner.setup()
+        self.runner = web.AppRunner(self.app)
+        await self.runner.setup()
 
         # Use a different port for HTTP (gRPC port + 1000)
         if ":" in address:
@@ -1112,8 +1128,8 @@ class HttpTransport(Transport):
         else:
             host = "0.0.0.0"
             port = address
-        site = web.TCPSite(runner, host, port)
-        await site.start()
+        self.site = web.TCPSite(self.runner, host, port)
+        await self.site.start()
 
         logger.info(f"HTTP transport listening on {host}:{port}")
         self.is_listening = True
@@ -1758,9 +1774,9 @@ class HttpTransport(Transport):
                 {"success": False, "error": str(e)},
                 status=500,
             )
-    
+
     # Agent Management API handlers
-    
+
     async def get_service_agents(self, request):
         """Get list of all service agents with their status."""
         try:
@@ -1769,138 +1785,138 @@ class HttpTransport(Transport):
                     {"success": False, "error": "Agent manager not available"},
                     status=503,
                 )
-            
+
             agent_manager = self.network_instance.agent_manager
             agents_status = agent_manager.get_all_agents_status()
-            
+
             return web.json_response({
                 "success": True,
                 "agents": agents_status
             })
-        
+
         except Exception as e:
             logger.error(f"Error getting service agents: {e}")
             return web.json_response(
                 {"success": False, "error": str(e)},
                 status=500,
             )
-    
+
     async def start_service_agent(self, request):
         """Start a specific service agent."""
         try:
             agent_id = request.match_info.get("agent_id")
-            
+
             if not agent_id:
                 return web.json_response(
                     {"success": False, "error": "agent_id is required"},
                     status=400,
                 )
-            
+
             if not self.network_instance or not hasattr(self.network_instance, "agent_manager"):
                 return web.json_response(
                     {"success": False, "error": "Agent manager not available"},
                     status=503,
                 )
-            
+
             agent_manager = self.network_instance.agent_manager
             result = await agent_manager.start_agent(agent_id)
-            
+
             if result["success"]:
                 return web.json_response(result)
             else:
                 return web.json_response(result, status=400)
-        
+
         except Exception as e:
             logger.error(f"Error starting service agent: {e}")
             return web.json_response(
                 {"success": False, "error": str(e)},
                 status=500,
             )
-    
+
     async def stop_service_agent(self, request):
         """Stop a specific service agent."""
         try:
             agent_id = request.match_info.get("agent_id")
-            
+
             if not agent_id:
                 return web.json_response(
                     {"success": False, "error": "agent_id is required"},
                     status=400,
                 )
-            
+
             if not self.network_instance or not hasattr(self.network_instance, "agent_manager"):
                 return web.json_response(
                     {"success": False, "error": "Agent manager not available"},
                     status=503,
                 )
-            
+
             agent_manager = self.network_instance.agent_manager
             result = await agent_manager.stop_agent(agent_id)
-            
+
             if result["success"]:
                 return web.json_response(result)
             else:
                 return web.json_response(result, status=400)
-        
+
         except Exception as e:
             logger.error(f"Error stopping service agent: {e}")
             return web.json_response(
                 {"success": False, "error": str(e)},
                 status=500,
             )
-    
+
     async def restart_service_agent(self, request):
         """Restart a specific service agent."""
         try:
             agent_id = request.match_info.get("agent_id")
-            
+
             if not agent_id:
                 return web.json_response(
                     {"success": False, "error": "agent_id is required"},
                     status=400,
                 )
-            
+
             if not self.network_instance or not hasattr(self.network_instance, "agent_manager"):
                 return web.json_response(
                     {"success": False, "error": "Agent manager not available"},
                     status=503,
                 )
-            
+
             agent_manager = self.network_instance.agent_manager
             result = await agent_manager.restart_agent(agent_id)
-            
+
             if result["success"]:
                 return web.json_response(result)
             else:
                 return web.json_response(result, status=400)
-        
+
         except Exception as e:
             logger.error(f"Error restarting service agent: {e}")
             return web.json_response(
                 {"success": False, "error": str(e)},
                 status=500,
             )
-    
+
     async def get_service_agent_status(self, request):
         """Get status of a specific service agent."""
         try:
             agent_id = request.match_info.get("agent_id")
-            
+
             if not agent_id:
                 return web.json_response(
                     {"success": False, "error": "agent_id is required"},
                     status=400,
                 )
-            
+
             if not self.network_instance or not hasattr(self.network_instance, "agent_manager"):
                 return web.json_response(
                     {"success": False, "error": "Agent manager not available"},
                     status=503,
                 )
-            
+
             agent_manager = self.network_instance.agent_manager
             status = agent_manager.get_agent_status(agent_id)
-            
+
             if status:
                 return web.json_response({
                     "success": True,
@@ -1911,42 +1927,42 @@ class HttpTransport(Transport):
                     {"success": False, "error": "Agent not found"},
                     status=404,
                 )
-        
+
         except Exception as e:
             logger.error(f"Error getting service agent status: {e}")
             return web.json_response(
                 {"success": False, "error": str(e)},
                 status=500,
             )
-    
+
     async def get_service_agent_logs(self, request):
         """Get recent log lines for a specific service agent."""
         try:
             agent_id = request.match_info.get("agent_id")
             lines = int(request.query.get("lines", "100"))
-            
+
             if not agent_id:
                 return web.json_response(
                     {"success": False, "error": "agent_id is required"},
                     status=400,
                 )
-            
+
             # Validate lines parameter
             if lines < 1 or lines > 10000:
                 return web.json_response(
                     {"success": False, "error": "lines must be between 1 and 10000"},
                     status=400,
                 )
-            
+
             if not self.network_instance or not hasattr(self.network_instance, "agent_manager"):
                 return web.json_response(
                     {"success": False, "error": "Agent manager not available"},
                     status=503,
                 )
-            
+
             agent_manager = self.network_instance.agent_manager
             log_lines = agent_manager.get_agent_logs(agent_id, lines)
-            
+
             if log_lines is not None:
                 return web.json_response({
                     "success": True,
@@ -1957,7 +1973,7 @@ class HttpTransport(Transport):
                     {"success": False, "error": "Agent not found or no logs available"},
                     status=404,
                 )
-        
+
         except ValueError:
             return web.json_response(
                 {"success": False, "error": "Invalid lines parameter"},
@@ -2331,10 +2347,10 @@ class HttpTransport(Transport):
         """Handle event index sync from GitHub."""
         try:
             from openagents.utils.event_indexer import get_event_indexer
-            
+
             indexer = get_event_indexer()
             result = indexer.sync_from_github()
-            
+
             return web.json_response({
                 "success": True,
                 "data": result
@@ -2350,18 +2366,18 @@ class HttpTransport(Transport):
         """List all indexed events with optional filters."""
         try:
             from openagents.utils.event_indexer import get_event_indexer
-            
+
             indexer = get_event_indexer()
-            
+
             # Get query parameters
             mod_filter = request.query.get("mod")
             type_filter = request.query.get("type")
-            
+
             events = indexer.get_all_events(
                 mod_filter=mod_filter if mod_filter else None,
                 type_filter=type_filter if type_filter else None
             )
-            
+
             return web.json_response({
                 "success": True,
                 "data": {
@@ -2380,10 +2396,10 @@ class HttpTransport(Transport):
         """List all indexed mods."""
         try:
             from openagents.utils.event_indexer import get_event_indexer
-            
+
             indexer = get_event_indexer()
             mods = indexer.get_mods()
-            
+
             return web.json_response({
                 "success": True,
                 "data": {
@@ -2402,18 +2418,18 @@ class HttpTransport(Transport):
         """Search events by query string."""
         try:
             from openagents.utils.event_indexer import get_event_indexer
-            
+
             indexer = get_event_indexer()
-            
+
             query = request.query.get("q", "")
             if not query:
                 return web.json_response(
                     {"success": False, "error_message": "Query parameter 'q' is required"},
                     status=400
                 )
-            
+
             results = indexer.search_events(query)
-            
+
             return web.json_response({
                 "success": True,
                 "data": {
@@ -2434,31 +2450,31 @@ class HttpTransport(Transport):
         try:
             from openagents.utils.event_indexer import get_event_indexer
             import urllib.parse
-            
+
             indexer = get_event_indexer()
-            
+
             event_name = request.match_info.get("event_name")
             if not event_name:
                 return web.json_response(
                     {"success": False, "error_message": "Event name is required"},
                     status=400
                 )
-            
+
             # Decode URL-encoded event name
             event_name = urllib.parse.unquote(event_name)
-            
+
             event = indexer.get_event(event_name)
-            
+
             if not event:
                 return web.json_response(
                     {"success": False, "error_message": f"Event '{event_name}' not found"},
                     status=404
                 )
-            
+
             # Generate example code
             examples = _generate_event_examples(event)
             event_with_examples = {**event, "examples": examples}
-            
+
             return web.json_response({
                 "success": True,
                 "data": event_with_examples
@@ -2869,6 +2885,249 @@ class HttpTransport(Transport):
                 logger.error(f"HTTP Studio: Error reading asset {file_path}: {e}")
                 return web.Response(status=500, text="Internal server error")
         return web.Response(status=404, text="Not found")
+
+    def _require_admin(self, request) -> bool:
+        """Check if request is from an agent in the 'admin' group.
+
+        Validates agent credentials (X-Agent-ID and X-Agent-Secret headers)
+        and checks if the agent belongs to the 'admin' group.
+
+        This uses the same approach as SystemCommandProcessor._check_admin_access,
+        checking topology.agent_group_membership.
+
+        Args:
+            request: aiohttp request object
+        Returns:
+            bool: True if agent is in admin group, False otherwise
+        """
+        # return True
+        if not self.network_instance:
+            logger.warning("Admin check failed: network instance not available")
+            return False
+
+        # Extract agent credentials from headers
+        agent_id = request.headers.get('X-Agent-ID')
+        agent_secret = request.headers.get('X-Agent-Secret')
+
+        if not agent_id or not agent_secret:
+            logger.warning("Admin check failed: missing X-Agent-ID or X-Agent-Secret headers")
+            return False
+
+        # Validate agent secret
+        if hasattr(self.network_instance, 'secret_manager'):
+            if not self.network_instance.secret_manager.validate_secret(agent_id, agent_secret):
+                logger.warning(f"Admin check failed: invalid secret for agent {agent_id}")
+                return False
+        else:
+            logger.warning("Admin check failed: secret_manager not available")
+            return False
+
+        # Check if agent is in admin group (using topology.agent_group_membership)
+        # This is consistent with SystemCommandProcessor._check_admin_access
+        if not self.network_instance.topology:
+            logger.warning("Admin check failed: topology not available")
+            return False
+
+        agent_group = self.network_instance.topology.agent_group_membership.get(agent_id)
+        if agent_group == "admin":
+            logger.info(f"Admin access granted for agent: {agent_id} (group: {agent_group})")
+            return True
+        else:
+            logger.warning(f"Admin check failed: agent {agent_id} is in group '{agent_group}', not 'admin'")
+            return False
+
+    async def export_network(self, request):
+        """Export network configuration (admin only)."""
+        try:
+            # Check admin permissions
+            if not self._require_admin(request):
+                return web.json_response(
+                    {"success": False, "error_message": "Admin access required"},
+                    status=403
+                )
+
+            # Get query parameters
+            include_passwords = request.query.get("include_password_hashes", "false").lower() == "true"
+            include_sensitive = request.query.get("include_sensitive_config", "false").lower() == "true"
+            notes = request.query.get("notes")
+
+            logger.info(f"Network export requested (passwords={include_passwords}, sensitive={include_sensitive})")
+
+            # Get network instance from event handler
+            # The network_instance is set when transport is bound to network
+            if not self.network_instance:
+                return web.json_response(
+                    {"success": False, "error_message": "Network instance not available"},
+                    status=500
+                )
+
+            # Export network
+            exporter = NetworkExporter(self.network_instance)
+            zip_buffer = exporter.export_to_zip(
+                include_password_hashes=include_passwords,
+                include_sensitive_config=include_sensitive,
+                notes=notes
+            )
+
+            # Generate filename
+            filename = f"{self.network_instance.network_name}_export.zip"
+
+            # Return as streaming response
+            return web.Response(
+                body=zip_buffer.getvalue(),
+                headers={
+                    'Content-Type': 'application/zip',
+                    'Content-Disposition': f'attachment; filename="{filename}"'
+                }
+            )
+
+        except Exception as e:
+            logger.error(f"Network export failed: {e}", exc_info=True)
+            return web.json_response(
+                {"success": False, "error_message": "Export failed"},
+                status=500
+            )
+
+    async def validate_import(self, request):
+        """Validate network import file (admin only)."""
+        try:
+            # Check admin permissions
+            if not self._require_admin(request):
+                return web.json_response(
+                    {"success": False, "error_message": "Admin access required"},
+                    status=403
+                )
+
+            logger.info("Import validation requested")
+
+            # Read multipart/form-data
+            reader = await request.multipart()
+            zip_data = None
+
+            async for field in reader:
+                if field.name == 'file':
+                    zip_data = await field.read()
+                    break
+
+            if not zip_data:
+                return web.json_response(
+                    {"success": False, "error_message": "No file provided"},
+                    status=400
+                )
+
+            # Validate import
+            zip_buffer = BytesIO(zip_data)
+            importer = NetworkImporter()
+            validation_result = importer.validate(zip_buffer)
+
+            # Return validation result
+            return web.json_response(validation_result.model_dump())
+
+        except Exception as e:
+            logger.error(f"Import validation failed: {e}", exc_info=True)
+            return web.json_response(
+                {
+                    "valid": False,
+                    "errors": ["Validation error occurred"],
+                    "warnings": []
+                },
+                status=200  # Return 200 with error in body, not 500
+            )
+
+    async def apply_import(self, request):
+        """Apply network import (admin only)."""
+        try:
+            # Check admin permissions
+            if not self._require_admin(request):
+                return web.json_response(
+                    {"success": False, "error_message": "Admin access required"},
+                    status=403
+                )
+
+            logger.info("Import apply requested")
+
+            if not self.network_instance:
+                return web.json_response(
+                    {
+                        "success": False,
+                        "message": "Network instance not available",
+                        "errors": ["Network not initialized"]
+                    },
+                    status=500
+                )
+
+            # Read multipart/form-data
+            reader = await request.multipart()
+            zip_data = None
+            mode = ImportMode.OVERWRITE  # Default
+            new_name = None
+
+            async for field in reader:
+                if field.name == 'file':
+                    zip_data = await field.read()
+                elif field.name == 'mode':
+                    mode_str = (await field.read()).decode('utf-8')
+                    try:
+                        mode = ImportMode(mode_str)
+                    except ValueError:
+                        logger.warning(f"Invalid import mode: {mode_str}, using OVERWRITE")
+                elif field.name == 'new_name':
+                    new_name = (await field.read()).decode('utf-8')
+
+            if not zip_data:
+                return web.json_response(
+                    {
+                        "success": False,
+                        "message": "No file provided",
+                        "errors": ["File is required"]
+                    },
+                    status=400
+                )
+
+            # Apply import asynchronously to avoid deadlock
+            # (network restart will shutdown HTTP transport which would wait for this request)
+            zip_buffer = BytesIO(zip_data)
+            importer = NetworkImporter(self.network_instance)
+            
+            # Execute import in background to avoid blocking the response
+            async def _do_import():
+                """Execute import in background."""
+                try:
+                    result = await importer.apply(
+                        zip_buffer,
+                        mode=mode,
+                        network=self.network_instance,
+                        new_name=new_name
+                    )
+                    if result.success:
+                        logger.info(f"Import completed successfully: {result.message}")
+                    else:
+                        logger.error(f"Import failed: {result.message}, errors: {result.errors}")
+                except Exception as e:
+                    logger.error(f"Import background task failed: {e}", exc_info=True)
+            
+            # Schedule the import task but don't await it
+            asyncio.create_task(_do_import())
+            
+            # Return immediate success response (actual result will be in logs)
+            return web.json_response({
+                "success": True,
+                "message": f"Import initiated (mode: {mode}). Network will restart in background. Check logs for status.",
+                "warnings": ["Import is executing asynchronously. Monitor logs for completion status."],
+                "network_restarted": False,  # Not yet, will happen in background
+                "applied_config": None
+            })
+
+        except Exception as e:
+            logger.error(f"Import apply failed: {e}", exc_info=True)
+            return web.json_response(
+                {
+                    "success": False,
+                    "message": "Import failed",
+                    "errors": [str(e)]
+                },
+                status=200  # Return 200 with error in body, not 500
+            )
 
 
 def _generate_event_examples(event: Dict[str, Any]) -> Dict[str, str]:

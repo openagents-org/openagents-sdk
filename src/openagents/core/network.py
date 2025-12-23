@@ -32,6 +32,7 @@ from openagents.config.globals import (
 )
 from openagents.core.base_mod import BaseMod
 from openagents.models.event_response import EventResponse
+from openagents.core.mod_registry import ModRegistry
 
 if TYPE_CHECKING:
     from openagents.core.workspace import Workspace
@@ -101,6 +102,9 @@ class AgentNetwork:
         # Network state
         self.is_running = False
         self.start_time: Optional[float] = None
+
+        # Dynamic mod registry
+        self.mod_registry = ModRegistry()
 
         # Connection management
         self.metadata: Dict[str, Any] = {}
@@ -384,6 +388,14 @@ class AgentNetwork:
             if not await self.topology.initialize():
                 logger.error("Failed to initialize network topology")
                 return False
+            # Set network instance reference in HTTP transport for network management APIs
+            if hasattr(self.topology, 'transports'):
+                from openagents.models.transport import TransportType
+                if TransportType.HTTP in self.topology.transports:
+                    http_transport = self.topology.transports[TransportType.HTTP]
+                    if hasattr(http_transport, 'network_instance'):
+                        http_transport.network_instance = self
+                        logger.debug("Set network instance reference in HTTP transport")
 
             # Re-register message handlers after topology initialization
             self._register_internal_handlers()
@@ -486,7 +498,6 @@ class AgentNetwork:
             password_hash=password_hash,
             requested_group=requested_group
         )
-
         if success:
             # Generate and store authentication secret
             secret = self.secret_manager.generate_secret(agent_id)
@@ -868,6 +879,9 @@ class AgentNetwork:
             # Set loaded_at timestamp
             mod_instance.loaded_at = time.time()
 
+            # Register in registry
+            self.mod_registry.register(mod_id, mod_instance)
+
             # Add to network.mods so ModEventProcessor can process events through this mod
             self.mods[mod_path] = mod_instance
 
@@ -919,7 +933,10 @@ class AgentNetwork:
 
             # Remove from dynamic tracking
             self._dynamic_mod_ids.discard(mod_id)
-            
+
+            # Unregister from registry
+            self.mod_registry.unregister(mod_id)
+
             logger.info(f"✅ Successfully unloaded mod: {mod_id}")
             
             return EventResponse(
@@ -993,6 +1010,141 @@ class AgentNetwork:
         
         return await self.unload_mod(mod_path)
 
+    async def restart(self, new_config: Optional[NetworkConfig] = None) -> bool:
+        """Gracefully restart the network without restarting the process.
+
+        This performs an in-process restart by:
+        1. Shutting down current network gracefully
+        2. Applying new configuration (or reloading from file)
+        3. Reinitializing the network
+
+        The FastAPI application or process is NOT restarted.
+
+        Args:
+            new_config: Optional new NetworkConfig to apply. If None, reloads from existing config file.
+
+        Returns:
+            bool: True if restart successful, False otherwise
+        """
+        logger.info("Starting network restart...")
+
+        try:
+            # Step 1: Shutdown current network
+            logger.info("Shutting down current network...")
+            shutdown_success = await self.shutdown()
+            if not shutdown_success:
+                logger.error("Failed to shutdown network")
+                return False
+
+            # Step 2: Apply new configuration
+            if new_config is not None:
+                logger.info(f"Applying new configuration: {new_config.name}")
+                self.config = new_config
+                self.network_name = new_config.name
+
+                # Reload mods from new config
+                if new_config.mods:
+                    logger.info(f"Loading {len(new_config.mods)} mods from new config...")
+                    try:
+                        from openagents.utils.mod_loaders import load_network_mods
+
+                        # Convert ModConfig objects to dictionaries
+                        mod_configs = []
+                        for mod_config in new_config.mods:
+                            if hasattr(mod_config, "model_dump"):
+                                mod_configs.append(mod_config.model_dump())
+                            elif hasattr(mod_config, "dict"):
+                                mod_configs.append(mod_config.dict())
+                            else:
+                                mod_configs.append(mod_config)
+
+                        mods = load_network_mods(mod_configs)
+
+                        # Clear existing mods and register new ones
+                        self.mods.clear()
+                        for mod_name, mod_instance in mods.items():
+                            mod_instance.bind_network(self)
+                            self.mods[mod_name] = mod_instance
+                            logger.info(f"Registered mod: {mod_name}")
+
+                        logger.info(f"Successfully loaded {len(mods)} mods")
+
+                    except Exception as e:
+                        logger.error(f"Failed to load mods: {e}")
+                        # Continue with restart even if mod loading fails
+
+            else:
+                # Reload from existing config file
+                logger.info("Reloading configuration from file...")
+                reloaded_config = self._load_config_from_file()
+                if reloaded_config:
+                    self.config = reloaded_config
+                    self.network_name = reloaded_config.name
+                else:
+                    logger.warning("Could not reload config from file, using existing config")
+
+            # Recreate topology if config changed
+            topology_mode = (
+                NetworkMode.DECENTRALIZED
+                if str(self.config.mode) == str(ConfigNetworkMode.DECENTRALIZED)
+                else NetworkMode.CENTRALIZED
+            )
+            self.topology = create_topology(topology_mode, self.network_id, self.config)
+            
+            # Set network context for new topology (required for MCP and other transports)
+            self.topology.network_context = self._create_network_context()
+            logger.debug("Network context set for new topology after restart")
+
+            # Step 3: Reinitialize the network
+            logger.info("Reinitializing network...")
+            init_success = await self.initialize()
+            if not init_success:
+                logger.error("Failed to initialize network")
+                return False
+
+            logger.info(f"✅ Network restart completed successfully: {self.network_name}")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Network restart failed: {e}", exc_info=True)
+            return False
+
+    def _load_config_from_file(self) -> Optional[NetworkConfig]:
+        """Load network configuration from existing config file.
+
+        Returns:
+            NetworkConfig if successfully loaded, None otherwise
+        """
+        if not self.config_path:
+            logger.warning("No config_path available, cannot reload from file")
+            return None
+
+        try:
+            config_file = Path(self.config_path)
+            if not config_file.exists():
+                logger.error(f"Config file not found: {config_file}")
+                return None
+
+            logger.info(f"Loading config from: {config_file}")
+
+            with open(config_file, 'r') as f:
+                config_dict = yaml.safe_load(f)
+
+            if "network" not in config_dict:
+                logger.error("Config file missing 'network' section")
+                return None
+
+            network_config_dict = config_dict["network"]
+            if "network_profile" in config_dict:
+                network_config_dict["network_profile"] = config_dict["network_profile"]
+
+            network_config = NetworkConfig(**network_config_dict)
+            logger.info("Successfully loaded config from file")
+            return network_config
+
+        except Exception as e:
+            logger.error(f"Failed to load config from file: {e}")
+            return None
 
 def create_network(config: Union[NetworkConfig, str, Path]) -> AgentNetwork:
     """Create an agent network from configuration.
