@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { getCurrentNetworkHealth } from "@/services/networkService";
 import OnboardingStep1 from "@/components/onboarding/OnboardingStep1";
@@ -20,7 +19,6 @@ export interface Template {
 }
 
 const OnboardingPage: React.FC = () => {
-  const navigate = useNavigate();
   const { selectedNetwork } = useAuthStore();
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
@@ -109,16 +107,12 @@ const OnboardingPage: React.FC = () => {
     }
   };
 
-  const handleSuccess = () => {
-    navigate("/admin");
-  };
-
   if (isComplete) {
     return (
       <OnboardingSuccess
         template={selectedTemplate!}
         agentCount={selectedTemplate?.agentCount || 0}
-        onEnterDashboard={handleSuccess}
+        adminPassword={adminPassword}
       />
     );
   }

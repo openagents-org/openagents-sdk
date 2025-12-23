@@ -18,6 +18,8 @@
     },
     "quickActions": {
       "title": "快捷操作",
+      "publishNetwork": "发布网络",
+      "publishNetworkDesc": "发布到 OpenAgents 目录",
       "networkProfile": "网络配置",
       "networkProfileDesc": "配置网络设置",
       "transports": "传输协议",
@@ -96,8 +98,8 @@
       "content": "代理组管理功能允许您创建和管理不同的代理组，设置权限和密码保护。这是管理网络访问控制的重要工具。"
     },
     "step4": {
-      "title": "修改 Admin 密码",
-      "content": "为了安全，建议您立即修改 admin 组的默认密码。点击此按钮可以快速进入密码修改页面。"
+      "title": "发布网络",
+      "content": "将您的网络发布到 OpenAgents 目录，让其他代理可以发现您的网络。这允许外部代理连接并与您的网络服务进行交互。"
     },
     "previous": "上一步",
     "next": "下一步",

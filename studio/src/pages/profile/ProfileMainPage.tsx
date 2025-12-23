@@ -4,7 +4,6 @@ import { Routes, Route, useNavigate } from "react-router-dom";
 import { useProfileData } from "./hooks/useProfileData";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Button } from "@/components/layout/ui/button";
-import { LayoutDashboard } from "lucide-react";
 
 // Components (to be created)
 import NetworkInfoCard from "./components/NetworkInfoCard";
@@ -65,7 +64,6 @@ const ProfileMainPage: React.FC = () => {
       <Route path="network-profile" element={<NetworkProfile />} />
       <Route path="agent-groups" element={<AgentGroupsManagement />} />
       <Route path="mod-management" element={<ModManagementPage />} />
-      <Route path="network-import-export" element={<NetworkImportExport />} />
 
 
       {/* Event Logs subpage */}
@@ -191,18 +189,6 @@ const ProfileDashboard: React.FC = () => {
             </svg>
             {loading ? t('profile.refreshing') : t('profile.refresh')}
           </Button>
-
-          {/* Back to Dashboard Button - Admin only */}
-          {isAdmin && (
-            <Button
-              onClick={() => navigate('/admin')}
-              size="sm"
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium shadow-md hover:shadow-lg transition-all"
-            >
-              <LayoutDashboard className="w-4 h-4 mr-2" />
-              {t('profile.backToDashboard')}
-            </Button>
-          )}
         </div>
       </div>
 

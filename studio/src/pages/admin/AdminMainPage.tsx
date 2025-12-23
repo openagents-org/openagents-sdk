@@ -10,6 +10,7 @@ import AgentGroupsManagement from "@/pages/profile/AgentGroupsManagement";
 import EventLogs from "@/pages/profile/EventLogs";
 import EventDebugger from "@/pages/profile/EventDebugger";
 import ModManagementPage from "@/pages/mod-management/ModManagementPage";
+import NetworkImportExport from "@/pages/profile/NetworkImportExport";
 import TransportConfig from "./TransportConfig";
 import ConnectionGuide from "./ConnectionGuide";
 import NetworkPublishPage from "./NetworkPublish";
@@ -37,7 +38,7 @@ const AdminMainPage: React.FC = () => {
         <Route path="network" element={<NetworkProfile />} />
         <Route path="transports" element={<TransportConfig />} />
         <Route path="publish" element={<NetworkPublishPage />} />
-        <Route path="import-export" element={<ImportExportPlaceholder />} />
+        <Route path="import-export" element={<NetworkImportExport />} />
         
         {/* Agent Management */}
         <Route path="agents" element={<AgentManagement />} />
@@ -56,19 +57,6 @@ const AdminMainPage: React.FC = () => {
         <Route path="event-explorer/*" element={<EventsMainPage />} />
       </Routes>
     </AdminRouteGuard>
-  );
-};
-
-const ImportExportPlaceholder: React.FC = () => {
-  return (
-    <div className="p-6 h-full overflow-y-auto dark:bg-gray-800">
-      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-        Import / Export
-      </h1>
-      <p className="text-gray-600 dark:text-gray-400">
-        Network import/export functionality coming soon...
-      </p>
-    </div>
   );
 };
 

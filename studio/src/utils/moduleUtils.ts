@@ -31,7 +31,7 @@ export interface HealthResponse {
     is_running: boolean
     mods: ModuleInfo[]
     readme?: string
-    onboarding_completed?: boolean
+    initialized?: boolean
     network_profile?: {
       readme?: string
       [key: string]: any
@@ -72,7 +72,10 @@ export const updateRouteVisibilityFromModules = (
   // Settings should also be controlled by network if it exists as a mod
   // LLM_LOGS and SERVICE_AGENTS are admin-only, controlled separately
   Object.values(PLUGIN_NAME_ENUM).forEach((plugin) => {
-    if (plugin !== PLUGIN_NAME_ENUM.PROFILE && plugin !== PLUGIN_NAME_ENUM.README) {
+    if (
+      plugin !== PLUGIN_NAME_ENUM.PROFILE &&
+      plugin !== PLUGIN_NAME_ENUM.README
+    ) {
       updateRouteVisibility(plugin, false)
     }
   })
@@ -90,14 +93,19 @@ export const updateRouteVisibilityFromModules = (
       updateRouteVisibility(plugin, true)
     }
   })
-  
-  console.log(`📊 updateRouteVisibilityFromModules: ${enabledModules.join(', ')}`)
+
+  console.log(
+    `📊 updateRouteVisibilityFromModules: ${enabledModules.join(", ")}`
+  )
 }
 
 /**
  * Get default route (first enabled module)
  */
-export const getDefaultRoute = (enabledModules: string[], hasReadme: boolean = false): string => {
+export const getDefaultRoute = (
+  enabledModules: string[],
+  hasReadme: boolean = false
+): string => {
   // If README content is available, prioritize the readme page
   if (hasReadme) {
     return "/readme"
@@ -109,7 +117,14 @@ export const getDefaultRoute = (enabledModules: string[], hasReadme: boolean = f
   }
 
   // Sort modules by priority
-  const priorityOrder = ["messaging", "documents", "forum", "artifact", "wiki", "feed"]
+  const priorityOrder = [
+    "messaging",
+    "documents",
+    "forum",
+    "artifact",
+    "wiki",
+    "feed",
+  ]
 
   for (const priority of priorityOrder) {
     if (enabledModules.includes(priority)) {
@@ -170,7 +185,10 @@ export const generateRouteConfigFromHealth = (
   const enabledModules = getEnabledModules(healthResponse)
 
   // Check if README content is available
-  const readmeContent = healthResponse.data?.network_profile?.readme || healthResponse.data?.readme || ""
+  const readmeContent =
+    healthResponse.data?.network_profile?.readme ||
+    healthResponse.data?.readme ||
+    ""
   const hasReadme = readmeContent.trim().length > 0
 
   const defaultRoute = getDefaultRoute(enabledModules, hasReadme)

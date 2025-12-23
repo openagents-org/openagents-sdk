@@ -33,13 +33,20 @@
       "blank-network": {
         "name": "Blank Network",
         "description": "Start from scratch with no preset configuration"
+      },
+      "custom": {
+        "name": "Custom",
+        "description": "Skip template configuration, set up network manually later"
       }
     },
     "setupTime": {
       "quick": "5 min setup",
       "manual": "Manual setup"
     },
-    "noMods": "No mods"
+    "noMods": "No mods",
+    "retry": "Retry",
+    "noTemplates": "No templates available",
+    "nextButton": "Continue →"
   },
   "step3": {
     "stepIndicator": "Step 3 / 4",
@@ -50,7 +57,7 @@
     "passwordPlaceholder": "••••••••",
     "minLength": "At least 8 characters",
     "passwordMatch": "Passwords match",
-    "hint": "💡 This password will be used to protect Admin Dashboard access. The password will be encrypted with SHA-256 and stored in the network configuration.",
+    "hint": "This password will be used to protect Admin Dashboard access. The password will be encrypted with SHA-256 and stored in the network configuration.",
     "backButton": "← Back",
     "continueButton": "Continue →",
     "setting": "Setting..."
@@ -75,4 +82,3 @@
     "enterDashboardButton": "Enter Admin Dashboard"
   }
 }
-

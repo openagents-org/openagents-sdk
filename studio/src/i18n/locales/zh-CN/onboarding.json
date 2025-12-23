@@ -33,13 +33,20 @@
       "blank-network": {
         "name": "空白网络",
         "description": "从零开始，无预设配置"
+      },
+      "custom": {
+        "name": "自定义",
+        "description": "跳过模板配置，稍后手动设置网络"
       }
     },
     "setupTime": {
       "quick": "5 分钟设置",
       "manual": "手动设置"
     },
-    "noMods": "无 mods"
+    "noMods": "无 mods",
+    "retry": "重试",
+    "noTemplates": "暂无可用模板",
+    "nextButton": "继续 →"
   },
   "step3": {
     "stepIndicator": "步骤 3 / 4",
@@ -50,7 +57,7 @@
     "passwordPlaceholder": "••••••••",
     "minLength": "至少 8 个字符",
     "passwordMatch": "密码匹配",
-    "hint": "💡 此密码将用于保护 Admin Dashboard 的访问。密码会通过 SHA-256 加密后存储在网络配置中。",
+    "hint": "此密码将用于保护 Admin Dashboard 的访问。密码会通过 SHA-256 加密后存储在网络配置中。",
     "backButton": "← 返回",
     "continueButton": "继续 →",
     "setting": "设置中..."
@@ -75,4 +82,3 @@
     "enterDashboardButton": "进入 Admin Dashboard"
   }
 }
-

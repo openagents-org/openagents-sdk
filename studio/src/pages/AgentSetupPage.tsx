@@ -351,8 +351,9 @@ const AgentNamePicker: React.FC = () => {
   };
 
   const handleAdminLogin = () => {
-    // Switch to admin mode - show password input
+    // Switch to admin mode - use fixed "admin" name
     setIsAdminMode(true);
+    setPageAgentName("admin");
     setPasswordError("");
     setAdminPassword("");
   };
@@ -361,6 +362,12 @@ const AgentNamePicker: React.FC = () => {
     setIsAdminMode(false);
     setAdminPassword("");
     setPasswordError("");
+    // Restore to saved name or generate random name
+    if (savedAgentName) {
+      setPageAgentName(savedAgentName);
+    } else {
+      handleRandomize();
+    }
   };
 
   return (
@@ -408,8 +415,8 @@ const AgentNamePicker: React.FC = () => {
           )}
         </div>
 
-        {/* Saved Agent Name Info */}
-        {savedAgentName && (
+        {/* Saved Agent Name Info - Hidden in Admin Mode */}
+        {savedAgentName && !isAdminMode && (
           <div className="bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-lg p-3 mb-4 text-left">
             <div className="text-sm font-medium text-sky-700 dark:text-sky-400">
               {t("agentSetup.previousName")}:{" "}
@@ -479,38 +486,18 @@ const AgentNamePicker: React.FC = () => {
             </div>
           )}
 
-          {/* Admin Mode: Agent Name Input + Password Input */}
+          {/* Admin Mode: Fixed Admin Name + Password Input */}
           {isAdminMode && (
             <>
-              {/* Agent Name Input for Admin Mode */}
+              {/* Fixed Admin Name Display */}
               <div className="text-left">
                 <label
-                  htmlFor="adminAgentName"
                   className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300"
                 >
                   {t("agentSetup.agentName")}
                 </label>
-                <div className="flex gap-3">
-                  <Input
-                    id="adminAgentName"
-                    type="text"
-                    variant="lg"
-                    value={pageAgentName || ""}
-                    onChange={(e) => setPageAgentName(e.target.value)}
-                    placeholder={t("agentSetup.agentNamePlaceholder")}
-                    maxLength={32}
-                    autoComplete="off"
-                    className="text-sm w-full px-4 py-0 border-1 rounded-lg transition-all duration-150 focus:outline-none focus:ring-3 bg-white text-gray-800 dark:bg-gray-600 dark:text-gray-50 border-gray-300 focus:border-blue-500 focus:ring-blue-500/10 dark:border-gray-500 dark:focus:border-blue-400 dark:focus:ring-blue-400/10"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="md"
-                    onClick={handleRandomize}
-                  >
-                    <RefreshCw className="w-4 h-4 mr-1.5" />
-                    {t("agentSetup.buttons.randomName")}
-                  </Button>
+                <div className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-base font-medium text-gray-800 dark:text-gray-100">
+                  admin
                 </div>
               </div>
 

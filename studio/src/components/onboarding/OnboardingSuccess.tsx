@@ -1,60 +1,148 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { Template } from "@/pages/OnboardingPage";
+import { useAuthStore } from "@/stores/authStore";
+import { hashPassword } from "@/utils/passwordHash";
+import { networkFetch } from "@/utils/httpClient";
 import StarfieldBackground from "./StarfieldBackground";
+import OpenAgentsLogo from "@/assets/images/openagents-logo-trans-white.png";
+
+const ADMIN_AGENT_NAME = "admin";
 
 interface OnboardingSuccessProps {
   template: Template;
   agentCount: number;
-  onEnterDashboard: () => void;
+  adminPassword: string;
 }
 
 const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
-  template,
-  agentCount,
-  onEnterDashboard,
+  adminPassword,
 }) => {
   const { t } = useTranslation('onboarding');
-  
+  const navigate = useNavigate();
+  const {
+    selectedNetwork,
+    setAgentName,
+    setPasswordHash,
+    setAgentGroup,
+  } = useAuthStore();
+
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleEnterDashboard = async () => {
+    if (!selectedNetwork || !adminPassword) return;
+
+    setIsLoggingIn(true);
+    setError(null);
+
+    try {
+      // Hash the password
+      const hashedPassword = await hashPassword(adminPassword);
+
+      // Verify credentials by attempting registration with admin group
+      const verifyResponse = await networkFetch(
+        selectedNetwork.host,
+        selectedNetwork.port,
+        "/api/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            agent_id: ADMIN_AGENT_NAME,
+            metadata: {
+              display_name: ADMIN_AGENT_NAME,
+              platform: "web",
+              verification_only: true,
+            },
+            password_hash: hashedPassword,
+            agent_group: "admin",
+          }),
+          useHttps: selectedNetwork.useHttps,
+        }
+      );
+
+      const verifyData = await verifyResponse.json();
+
+      if (!verifyData.success) {
+        const errorMessage = verifyData.error_message || "Failed to connect as admin";
+        setError(errorMessage);
+        setIsLoggingIn(false);
+        return;
+      }
+
+      // Registration succeeded - unregister to let the main app re-register
+      try {
+        await networkFetch(
+          selectedNetwork.host,
+          selectedNetwork.port,
+          "/api/unregister",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              agent_id: ADMIN_AGENT_NAME,
+              secret: verifyData.secret,
+            }),
+            useHttps: selectedNetwork.useHttps,
+          }
+        );
+      } catch (unregError) {
+        console.warn("Failed to unregister after verification:", unregError);
+      }
+
+      // Store the admin group in authStore
+      setPasswordHash(hashedPassword);
+      setAgentGroup("admin");
+
+      // Navigate first, then set agentName to avoid RouteGuard redirect
+      navigate("/admin/dashboard", { replace: true });
+
+      // Set agentName after navigation to avoid triggering redirects
+      requestAnimationFrame(() => {
+        setAgentName(ADMIN_AGENT_NAME);
+      });
+    } catch (err: any) {
+      console.error("Failed to login as admin:", err);
+      setError(err.message || "Failed to login as admin");
+      setIsLoggingIn(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative">
       <StarfieldBackground />
-      <div className="max-w-2xl w-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden relative z-10 border border-white/20">
+      <div className="max-w-2xl w-full bg-white/10 dark:bg-gray-800/20 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden relative z-10 border border-white/20">
         <div className="p-12 text-center">
-          <div className="text-6xl mb-6">🎉</div>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          <div className="mb-8">
+            <img
+              src={OpenAgentsLogo}
+              alt="OpenAgents Logo"
+              className="w-24 h-24 mx-auto drop-shadow-2xl"
+            />
+          </div>
+          <h1 className="text-4xl font-bold text-white mb-8">
             {t('success.title')}
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-            {t('success.message', { templateName: template.name, agentCount })}
-          </p>
 
-          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl p-8 mb-8">
-            <div className="space-y-4">
-              <div className="flex items-center justify-center space-x-4">
-                {template.agents.map((agent, index) => (
-                  <React.Fragment key={index}>
-                    <div className="text-center">
-                      <div className="w-16 h-16 bg-indigo-500 rounded-full flex items-center justify-center text-white font-bold mb-2">
-                        {agent[0]}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {agent}
-                      </div>
-                    </div>
-                    {index < template.agents.length - 1 && (
-                      <div className="text-2xl text-gray-400">→</div>
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
+          {error && (
+            <div className="mb-6 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
+              {error}
             </div>
-          </div>
+          )}
 
           <button
-            onClick={onEnterDashboard}
-            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg text-lg transition-all transform hover:scale-105 shadow-lg"
+            onClick={handleEnterDashboard}
+            disabled={isLoggingIn}
+            className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 text-white font-semibold py-4 px-8 rounded-xl text-lg transition-all transform hover:scale-105 shadow-2xl shadow-purple-500/50 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
           >
+            {isLoggingIn && <Loader2 className="w-5 h-5 animate-spin" />}
             {t('success.enterDashboardButton')}
           </button>
         </div>
@@ -64,4 +152,3 @@ const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
 };
 
 export default OnboardingSuccess;
-

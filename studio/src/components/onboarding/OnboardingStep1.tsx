@@ -52,9 +52,6 @@ const OnboardingStep1: React.FC<OnboardingStep1Props> = ({ onNext }) => {
               <div className="absolute inset-0 bg-indigo-400/30 rounded-full blur-2xl animate-pulse" />
             </div>
             <h1 className="text-6xl font-bold mb-4 text-white drop-shadow-lg">
-              <span className="inline-block animate-bounce" style={{ animationDelay: "0s" }}>
-                🚀
-              </span>{" "}
               <span className="bg-gradient-to-r from-white via-indigo-200 to-purple-200 bg-clip-text text-transparent animate-gradient-text">
                 OpenAgents
               </span>

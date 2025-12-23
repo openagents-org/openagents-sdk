@@ -18,7 +18,6 @@ import {
   HelpCircle,
   RefreshCw,
   Lock,
-  Download,
   Server,
   Globe,
   ArrowLeftRight,
@@ -34,8 +33,6 @@ import {
   Radio,
   ExternalLink,
   Copy,
-  User,
-  Shuffle,
 } from "lucide-react";
 import { lookupNetworkPublication } from "@/services/networkService";
 
@@ -122,10 +119,10 @@ const AdminDashboard: React.FC = () => {
       position: 'bottom' as const,
     },
     {
-      target: '[data-tour="update-password"]',
+      target: '[data-tour="publish-network"]',
       title: t('tour.step4.title'),
       content: t('tour.step4.content'),
-      position: 'top' as const,
+      position: 'bottom' as const,
     },
   ];
 
@@ -290,31 +287,6 @@ const AdminDashboard: React.FC = () => {
     setShowBroadcastModal(true);
   };
 
-  const handleSwitchToGuest = async () => {
-    const confirmed = await confirm(
-      t('dashboard.switchRole.title', { default: '进入用户界面' }),
-      t('dashboard.switchRole.confirm', { default: '确定要进入用户界面吗？您可以随时返回管理控制台。' }),
-      {
-        type: "info",
-        confirmText: t('dashboard.switchRole.confirmButton', { default: '进入' }),
-        cancelText: t('dashboard.switchRole.cancel', { default: '取消' }),
-      }
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      // 直接导航到用户界面，保持 admin 身份
-      toast.success(t('dashboard.switchRole.success', { default: '已进入用户界面' }));
-      navigate('/', { replace: true });
-    } catch (error) {
-      console.error("Failed to enter user interface:", error);
-      toast.error(t('dashboard.switchRole.failed', { default: '进入用户界面失败' }));
-    }
-  };
-
   const handleSendBroadcast = async () => {
     if (!broadcastMessage.trim() || !connector) {
       toast.error(t('dashboard.broadcast.enterMessage'));
@@ -409,16 +381,6 @@ const AdminDashboard: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-2">
-            <Button
-              onClick={handleSwitchToGuest}
-              variant="outline"
-              size="sm"
-              title={t('dashboard.switchRole.button', { default: '切换到 Guest 角色' })}
-              className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-            >
-              <Shuffle className="w-4 h-4 mr-1.5" />
-              <User className="w-3 h-3" />
-            </Button>
             <Button
               onClick={startTour}
               variant="outline"
@@ -593,41 +555,25 @@ const AdminDashboard: React.FC = () => {
           </Card>
         )}
 
-        {/* Quick Actions - Only 3 essential actions */}
+        {/* Quick Actions - 4 essential actions */}
         <div className="mb-4" data-tour="quick-actions">
           <h2 className="text-lg font-semibold text-foreground mb-3">
             {t('dashboard.quickActions.title')}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* Update Admin Password */}
+            {/* Publish Network */}
             <Card
               className="cursor-pointer hover:bg-accent transition-colors border-gray-200 dark:border-gray-700"
-              onClick={() => navigate("/admin/groups?changePassword=admin")}
-              data-tour="update-password"
+              onClick={() => navigate("/admin/publish")}
+              data-tour="publish-network"
             >
               <CardContent className="flex items-center space-x-3 p-4">
-                <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center flex-shrink-0">
-                  <Lock className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
+                  <ExternalLink className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium">{t('dashboard.quickActions.updateAdminPassword')}</div>
-                  <CardDescription className="text-xs mt-0.5">{t('dashboard.quickActions.updateAdminPasswordDesc')}</CardDescription>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Import / Export */}
-            <Card
-              className="cursor-pointer hover:bg-accent transition-colors border-gray-200 dark:border-gray-700"
-              onClick={() => navigate("/admin/import-export")}
-            >
-              <CardContent className="flex items-center space-x-3 p-4">
-                <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center flex-shrink-0">
-                  <Download className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium">{t('dashboard.quickActions.importExport')}</div>
-                  <CardDescription className="text-xs mt-0.5">{t('dashboard.quickActions.importExportDesc')}</CardDescription>
+                  <div className="text-sm font-medium">{t('dashboard.quickActions.publishNetwork')}</div>
+                  <CardDescription className="text-xs mt-0.5">{t('dashboard.quickActions.publishNetworkDesc')}</CardDescription>
                 </div>
               </CardContent>
             </Card>
@@ -644,6 +590,38 @@ const AdminDashboard: React.FC = () => {
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium">{t('sidebar.items.serviceAgents')}</div>
                   <CardDescription className="text-xs mt-0.5">{t('dashboard.menuGroups.serviceAgentsDesc')}</CardDescription>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Import / Export */}
+            <Card
+              className="cursor-pointer hover:bg-accent transition-colors border-gray-200 dark:border-gray-700"
+              onClick={() => navigate("/admin/import-export")}
+            >
+              <CardContent className="flex items-center space-x-3 p-4">
+                <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center flex-shrink-0">
+                  <FileDown className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium">{t('dashboard.quickActions.importExport')}</div>
+                  <CardDescription className="text-xs mt-0.5">{t('dashboard.quickActions.importExportDesc')}</CardDescription>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Update Admin Password */}
+            <Card
+              className="cursor-pointer hover:bg-accent transition-colors border-gray-200 dark:border-gray-700"
+              onClick={() => navigate("/admin/groups?changePassword=admin")}
+            >
+              <CardContent className="flex items-center space-x-3 p-4">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center flex-shrink-0">
+                  <Lock className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium">{t('dashboard.quickActions.updateAdminPassword')}</div>
+                  <CardDescription className="text-xs mt-0.5">{t('dashboard.quickActions.updateAdminPasswordDesc')}</CardDescription>
                 </div>
               </CardContent>
             </Card>
@@ -683,6 +661,20 @@ const AdminDashboard: React.FC = () => {
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-medium">{t('dashboard.quickActions.transports')}</div>
                     <CardDescription className="text-xs mt-0.5">{t('dashboard.quickActions.transportsDesc')}</CardDescription>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card
+                className="cursor-pointer hover:bg-accent transition-colors border-gray-200 dark:border-gray-700"
+                onClick={() => navigate("/admin/publish")}
+              >
+                <CardContent className="flex items-center space-x-3 p-4">
+                  <div className="w-10 h-10 rounded-full bg-cyan-100 dark:bg-cyan-900 flex items-center justify-center flex-shrink-0">
+                    <ExternalLink className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium">{t('dashboard.quickActions.publishNetwork')}</div>
+                    <CardDescription className="text-xs mt-0.5">{t('dashboard.quickActions.publishNetworkDesc')}</CardDescription>
                   </div>
                 </CardContent>
               </Card>

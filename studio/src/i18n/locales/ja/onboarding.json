@@ -33,13 +33,20 @@
       "blank-network": {
         "name": "空白ネットワーク",
         "description": "事前設定なしでゼロから開始"
+      },
+      "custom": {
+        "name": "カスタム",
+        "description": "テンプレート設定をスキップし、後でネットワークを手動で設定"
       }
     },
     "setupTime": {
       "quick": "5分セットアップ",
       "manual": "手動セットアップ"
     },
-    "noMods": "モードなし"
+    "noMods": "モードなし",
+    "retry": "再試行",
+    "noTemplates": "利用可能なテンプレートがありません",
+    "nextButton": "続ける →"
   },
   "step3": {
     "stepIndicator": "ステップ 3 / 4",
@@ -50,7 +57,7 @@
     "passwordPlaceholder": "••••••••",
     "minLength": "最低8文字",
     "passwordMatch": "パスワード一致",
-    "hint": "💡 このパスワードは管理者ダッシュボードへのアクセスを保護するために使用されます。パスワードはSHA-256で暗号化され、ネットワーク設定に保存されます。",
+    "hint": "このパスワードは管理者ダッシュボードへのアクセスを保護するために使用されます。パスワードはSHA-256で暗号化され、ネットワーク設定に保存されます。",
     "backButton": "← 戻る",
     "continueButton": "続ける →",
     "setting": "設定中..."
@@ -75,4 +82,3 @@
     "enterDashboardButton": "管理者ダッシュボードに入る"
   }
 }
-

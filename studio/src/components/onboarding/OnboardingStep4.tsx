@@ -23,18 +23,18 @@ const OnboardingStep4: React.FC<OnboardingStep4Props> = ({ template, isDeploying
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative">
       <StarfieldBackground />
-      <div className="max-w-2xl w-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden relative z-10 border border-white/20">
+      <div className="max-w-2xl w-full bg-white/10 dark:bg-gray-800/20 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden relative z-10 border border-white/20">
         <div className="p-8">
           <div className="mb-8">
-            <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+            <div className="text-sm text-gray-300 mb-2">
               {t('step4.stepIndicator')}
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-3xl font-bold text-white mb-2">
               {t('step4.title')}
             </h1>
           </div>
 
-          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-6 mb-6">
+          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 mb-6 border border-white/10">
             <div className="space-y-4">
               {steps.map((step, index) => (
                 <div key={index} className="flex items-center">
@@ -52,10 +52,10 @@ const OnboardingStep4: React.FC<OnboardingStep4Props> = ({ template, isDeploying
                   <span
                     className={`${
                       step.completed
-                        ? "text-green-600 dark:text-green-400"
+                        ? "text-green-400"
                         : step.inProgress
-                        ? "text-indigo-600 dark:text-indigo-400"
-                        : "text-gray-400"
+                        ? "text-indigo-300"
+                        : "text-gray-500"
                     }`}
                   >
                     {step.name}
@@ -65,25 +65,25 @@ const OnboardingStep4: React.FC<OnboardingStep4Props> = ({ template, isDeploying
             </div>
 
             <div className="mt-6">
-              <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
+              <div className="flex justify-between text-sm text-gray-400 mb-2">
                 <span>{t('step4.progress')}</span>
                 <span>{progress}%</span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div className="w-full bg-white/10 rounded-full h-2">
                 <div
-                  className="bg-gradient-to-r from-indigo-600 to-purple-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${progress}%` }}
                 ></div>
               </div>
             </div>
           </div>
 
-          <div className="text-center text-gray-600 dark:text-gray-400">
+          <div className="text-center text-gray-400">
             <div className="mb-2">
-              <strong className="text-gray-900 dark:text-white">{t('step4.template')}</strong> {template.name}
+              <strong className="text-white">{t('step4.template')}</strong> {template.name}
             </div>
             <div>
-              <strong className="text-gray-900 dark:text-white">{t('step4.agents')}</strong>{" "}
+              <strong className="text-white">{t('step4.agents')}</strong>{" "}
               {template.agents.join(", ")}
             </div>
           </div>

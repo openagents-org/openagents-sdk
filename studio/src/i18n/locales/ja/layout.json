@@ -35,7 +35,21 @@
         "readme": "README",
         "modManagement": "Mod管理",
         "serviceAgents": "サービスエージェント",
-        "llmLogs": "LLMログ"
+        "llmLogs": "LLMログ",
+        "connectionGuide": "エージェント接続",
+        "admin": "管理",
+        "switchToAdmin": {
+            "title": "管理コンソールに入る",
+            "confirm": "管理コンソールに入りますか？",
+            "confirmButton": "入る",
+            "cancel": "キャンセル"
+        },
+        "switchToUser": {
+            "title": "ユーザーインターフェースに入る",
+            "confirm": "ユーザーインターフェースに入りますか？いつでも管理コンソールに戻ることができます。",
+            "confirmButton": "入る",
+            "cancel": "キャンセル"
+        }
     },
     "defaultSidebar": {
         "navigation": "ナビゲーションコンテンツがここに表示されます",

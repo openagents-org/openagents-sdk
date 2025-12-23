@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Template } from "@/pages/OnboardingPage";
+import { useAuthStore } from "@/stores/authStore";
 import StarfieldBackground from "./StarfieldBackground";
 
 interface OnboardingStep2Props {
@@ -8,123 +10,240 @@ interface OnboardingStep2Props {
   onBack: () => void;
 }
 
+const TEMPLATES_PER_PAGE = 5;
+const CUSTOM_TEMPLATE_ID = "custom";
+
 const OnboardingStep2: React.FC<OnboardingStep2Props> = ({ onNext, onBack }) => {
   const { t } = useTranslation('onboarding');
+  const { selectedNetwork } = useAuthStore();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
-  const templates: Template[] = useMemo(() => [
-    {
-      id: "news-info",
-      name: t('step2.templates.news-info.name'),
-      description: t('step2.templates.news-info.description'),
-      icon: "📰",
-      agentCount: 3,
-      mods: ["messaging mod"],
-      setupTime: t('step2.setupTime.quick'),
-      agents: ["Curator", "Editor", "Broadcaster"],
-    },
-    {
-      id: "knowledge-wiki",
-      name: t('step2.templates.knowledge-wiki.name'),
-      description: t('step2.templates.knowledge-wiki.description'),
-      icon: "📚",
-      agentCount: 4,
-      mods: ["wiki mod"],
-      setupTime: t('step2.setupTime.quick'),
-      agents: ["Researcher", "Writer", "Editor", "Publisher"],
-    },
-    {
-      id: "task-automation",
-      name: t('step2.templates.task-automation.name'),
-      description: t('step2.templates.task-automation.description'),
-      icon: "✅",
-      agentCount: 3,
-      mods: ["task mod"],
-      setupTime: t('step2.setupTime.quick'),
-      agents: ["Coordinator", "Executor", "Validator"],
-    },
-    {
-      id: "blank-network",
-      name: t('step2.templates.blank-network.name'),
-      description: t('step2.templates.blank-network.description'),
-      icon: "⚙️",
-      agentCount: 0,
-      mods: [t('step2.noMods')],
-      setupTime: t('step2.setupTime.manual'),
-      agents: [],
-    },
-  ], [t]);
+  // Custom template definition
+  const customTemplate: Template = {
+    id: CUSTOM_TEMPLATE_ID,
+    name: t('step2.templates.custom.name'),
+    description: t('step2.templates.custom.description'),
+    icon: "",
+    agentCount: 0,
+    mods: [],
+    setupTime: "",
+    agents: [],
+  };
+
+  // Fetch templates from API
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      if (!selectedNetwork) {
+        setError("No network connection");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const protocol = selectedNetwork.useHttps ? "https" : "http";
+        const baseUrl = `${protocol}://${selectedNetwork.host}:${selectedNetwork.port}`;
+
+        const response = await fetch(`${baseUrl}/api/templates`, {
+          method: "GET",
+          headers: {
+            "Accept": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success && Array.isArray(result.templates)) {
+          // Map API response to Template interface
+          const mappedTemplates: Template[] = result.templates.map((item: any) => ({
+            id: item.name || item.id,
+            name: item.name,
+            description: item.description || "",
+            icon: item.icon || "",
+            agentCount: item.agentCount || item.agent_count || 0,
+            mods: item.mods || [],
+            setupTime: item.setupTime || item.setup_time || t('step2.setupTime.quick'),
+            agents: item.agents || [],
+          }));
+          setTemplates(mappedTemplates);
+        } else {
+          throw new Error("Invalid response format");
+        }
+      } catch (err: any) {
+        console.error("Failed to fetch templates:", err);
+        setError(err.message || "Failed to load templates");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTemplates();
+  }, [selectedNetwork, t]);
+
+  // All templates including custom
+  const allTemplates = [...templates, customTemplate];
+
+  const totalPages = Math.ceil(allTemplates.length / TEMPLATES_PER_PAGE);
+  const visibleTemplates = allTemplates.slice(
+    currentPage * TEMPLATES_PER_PAGE,
+    (currentPage + 1) * TEMPLATES_PER_PAGE
+  );
 
   const handleSelect = (template: Template) => {
     setSelectedTemplateId(template.id);
-    onNext(template);
+  };
+
+  const handleNext = async () => {
+    const selected = allTemplates.find(t => t.id === selectedTemplateId);
+    if (!selected || !selectedNetwork) return;
+
+    // If not custom template, call initialize/template API
+    if (selected.id !== CUSTOM_TEMPLATE_ID) {
+      try {
+        setSubmitting(true);
+        const protocol = selectedNetwork.useHttps ? "https" : "http";
+        const baseUrl = `${protocol}://${selectedNetwork.host}:${selectedNetwork.port}`;
+
+        const response = await fetch(`${baseUrl}/api/network/initialize/template`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ template_name: selected.id }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+      } catch (err: any) {
+        console.error("Failed to initialize template:", err);
+        setError(err.message || "Failed to initialize template");
+        setSubmitting(false);
+        return;
+      } finally {
+        setSubmitting(false);
+      }
+    }
+
+    onNext(selected);
+  };
+
+  const handlePrevPage = () => {
+    setCurrentPage((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(totalPages - 1, prev + 1));
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative">
       <StarfieldBackground />
-      <div className="max-w-6xl w-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden relative z-10 border border-white/20">
+      <div className="max-w-6xl w-full bg-white/10 dark:bg-gray-800/20 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden relative z-10 border border-white/20">
         <div className="p-8">
-          <div className="mb-6">
-            <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-              {t('step2.stepIndicator')}
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <div className="text-sm text-gray-300 mb-2">
+                {t('step2.stepIndicator')}
+              </div>
+              <h1 className="text-3xl font-bold text-white mb-2">
+                {t('step2.title')}
+              </h1>
+              <p className="text-gray-200">
+                {t('step2.description')}
+              </p>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              {t('step2.title')}
-            </h1>
-            <p className="text-gray-600 dark:text-gray-300">
-              {t('step2.description')}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {templates.map((template) => (
-              <div
-                key={template.id}
-                className={`border-2 rounded-xl p-6 cursor-pointer transition-all ${
-                  selectedTemplateId === template.id
-                    ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20"
-                    : "border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700"
-                }`}
-                onClick={() => handleSelect(template)}
-              >
-                <div className="text-5xl mb-4">{template.icon}</div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  {template.name}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
-                  {template.description}
-                </p>
-                <div className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
-                  <div>○ {template.agentCount} {t('step2.agents')}</div>
-                  <div>○ {template.mods.join(", ")}</div>
-                  <div>○ {template.setupTime}</div>
-                </div>
+            {/* Pagination controls in header */}
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
                 <button
-                  className={`mt-4 w-full py-2 rounded-lg font-medium transition-colors ${
-                    selectedTemplateId === template.id
-                      ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                  }`}
+                  onClick={handlePrevPage}
+                  disabled={currentPage === 0}
+                  className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
-                  {t('step2.selectButton')}
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <span className="text-gray-300 text-sm">
+                  {currentPage + 1} / {totalPages}
+                </span>
+                <button
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages - 1}
+                  className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
-            ))}
+            )}
           </div>
+
+          {/* Loading state */}
+          {loading && (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+            </div>
+          )}
+
+          {/* Error state */}
+          {error && !loading && (
+            <div className="text-center py-16">
+              <p className="text-red-400 mb-4">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors"
+              >
+                {t('step2.retry') || 'Retry'}
+              </button>
+            </div>
+          )}
+
+          {/* Templates grid - horizontal layout, max 5 per row */}
+          {!loading && !error && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+              {visibleTemplates.map((template) => (
+                <div
+                  key={template.id}
+                  className={`border-2 rounded-xl p-5 cursor-pointer transition-all backdrop-blur-sm flex flex-col ${
+                    selectedTemplateId === template.id
+                      ? "border-indigo-400 bg-indigo-500/20"
+                      : "border-white/20 bg-white/5 hover:border-indigo-300 hover:bg-white/10"
+                  }`}
+                  onClick={() => handleSelect(template)}
+                >
+                  <h3 className="text-lg font-semibold text-white mb-2">
+                    {template.name}
+                  </h3>
+                  <p className="text-gray-300 text-sm flex-grow">
+                    {template.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="flex justify-between">
             <button
               onClick={onBack}
-              className="px-6 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+              className="px-6 py-2 text-gray-300 hover:text-white transition-colors"
             >
               {t('step2.backButton')}
             </button>
             <button
-              onClick={() => {}}
-              className="px-6 py-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors"
+              onClick={handleNext}
+              disabled={!selectedTemplateId || submitting}
+              className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
-              {t('step2.browseMoreButton')}
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {t('step2.nextButton')}
             </button>
           </div>
         </div>

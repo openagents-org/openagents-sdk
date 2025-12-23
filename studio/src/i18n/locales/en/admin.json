@@ -18,6 +18,8 @@
     },
     "quickActions": {
       "title": "Quick Actions",
+      "publishNetwork": "Publish Network",
+      "publishNetworkDesc": "Publish to OpenAgents directory",
       "networkProfile": "Network Profile",
       "networkProfileDesc": "Configure network settings",
       "transports": "Transports",
@@ -96,8 +98,8 @@
       "content": "Agent Groups management allows you to create and manage different agent groups, set permissions and password protection. This is an important tool for managing network access control."
     },
     "step4": {
-      "title": "Update Admin Password",
-      "content": "For security, we recommend that you immediately change the default password for the admin group. Click this button to quickly go to the password change page."
+      "title": "Publish Network",
+      "content": "Publish your network to the OpenAgents directory to make it discoverable by other agents. This allows external agents to connect and interact with your network services."
     },
     "previous": "Previous",
     "next": "Next",
