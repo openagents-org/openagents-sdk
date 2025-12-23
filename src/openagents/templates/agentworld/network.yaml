@@ -1,4 +1,4 @@
-# Demo 5: AgentWorld
+# AgentWorld Template
 # AI agents playing in a 2D MMORPG game environment
 
 network:
@@ -44,12 +44,23 @@ network:
   message_timeout: 30.0
   message_routing_enabled: true
 
-  # Mod configuration - only agentworld enabled
+  # Agent groups
+  default_agent_group: guest
+  requires_password: false
+
+  agent_groups:
+    admin:
+      description: "Administrator agents with full permissions"
+      password_hash: ""  # Set via initialization API
+      metadata:
+        permissions: ["all"]
+
+  # Mod configuration - agentworld mod only
   mods:
     - name: "openagents.mods.games.agentworld"
       enabled: true
       config:
-      # AgentWorld game server address
+        # AgentWorld game server address
         game_server_host: "play.agentworld.io"
         game_server_port: 7031  # AgentWorld API port
 
@@ -74,15 +85,15 @@ network_profile:
   name: "AgentWorld"
   description: "AI agents playing in a 2D MMORPG game environment"
   tags:
-    - "demo"
+    - "template"
     - "agentworld"
     - "game"
     - "mmorpg"
   categories:
-    - "demo"
+    - "template"
     - "games"
   country: "Worldwide"
-  required_openagents_version: "0.6.13"
+  required_openagents_version: "0.7.0"
   capacity: 50
   authentication:
     type: "none"
@@ -91,7 +102,7 @@ network_profile:
 
 # Global settings
 log_level: "INFO"
-data_dir: "./data/agentworld"
+data_dir: "./data"
 
 runtime_limit: null
 shutdown_timeout: 30

@@ -142,6 +142,11 @@ class HttpTransport(Transport):
         self.app.router.add_get("/api/network/export", self.export_network)
         self.app.router.add_post("/api/network/import/validate", self.validate_import)
         self.app.router.add_post("/api/network/import/apply", self.apply_import)
+
+        # Network initialization endpoints (only work when network is not initialized)
+        self.app.router.add_post("/api/network/initialize/admin-password", self.initialize_admin_password)
+        self.app.router.add_post("/api/network/initialize/template", self.initialize_network_with_template)
+        self.app.router.add_get("/api/templates", self.list_templates)
         # LLM Logs API endpoints
         self.app.router.add_get("/api/agents/service/{agent_id}/llm-logs", self.get_llm_logs)
         self.app.router.add_get("/api/agents/service/{agent_id}/llm-logs/{log_id}", self.get_llm_log_entry)
@@ -3127,6 +3132,311 @@ class HttpTransport(Transport):
                     "errors": [str(e)]
                 },
                 status=200  # Return 200 with error in body, not 500
+            )
+
+    async def initialize_admin_password(self, request):
+        """Initialize the admin password for the network.
+
+        This endpoint only works when the network is not yet initialized.
+        After initialization, this endpoint will return an error.
+
+        Request body:
+            {
+                "password": "secure_password_123"
+            }
+
+        Returns:
+            JSON response with success status
+        """
+        try:
+            if not self.network_instance:
+                return web.json_response(
+                    {"success": False, "message": "Network instance not available"},
+                    status=500
+                )
+
+            # Check if network is already initialized
+            if getattr(self.network_instance.config, 'initialized', False):
+                return web.json_response(
+                    {"success": False, "message": "Network already initialized"},
+                    status=400
+                )
+
+            # Parse request body
+            try:
+                data = await request.json()
+            except json.JSONDecodeError:
+                return web.json_response(
+                    {"success": False, "message": "Invalid JSON in request body"},
+                    status=400
+                )
+
+            password = data.get("password")
+            if not password:
+                return web.json_response(
+                    {"success": False, "message": "Password is required"},
+                    status=400
+                )
+
+            # Validate password strength
+            from openagents.utils.password_utils import hash_password, validate_password_strength
+            is_valid, error_msg = validate_password_strength(password)
+            if not is_valid:
+                return web.json_response(
+                    {"success": False, "message": error_msg},
+                    status=400
+                )
+
+            # Hash the password
+            password_hash = hash_password(password)
+
+            # Create admin group if it doesn't exist
+            from openagents.models.network_config import AgentGroupConfig
+            if 'admin' not in self.network_instance.config.agent_groups:
+                self.network_instance.config.agent_groups['admin'] = AgentGroupConfig(
+                    password_hash=password_hash,
+                    description="Administrator agents with full permissions",
+                    metadata={"permissions": ["all"]}
+                )
+            else:
+                # Update existing admin group password
+                self.network_instance.config.agent_groups['admin'].password_hash = password_hash
+
+            # Mark network as initialized
+            self.network_instance.config.initialized = True
+
+            # Save configuration to file
+            if not self.network_instance.save_config():
+                return web.json_response(
+                    {"success": False, "message": "Failed to save configuration"},
+                    status=500
+                )
+
+            logger.info("Admin password initialized successfully")
+            return web.json_response({
+                "success": True,
+                "message": "Admin password initialized successfully"
+            })
+
+        except Exception as e:
+            logger.error(f"Failed to initialize admin password: {e}", exc_info=True)
+            return web.json_response(
+                {"success": False, "message": f"Failed to initialize admin password: {str(e)}"},
+                status=500
+            )
+
+    async def initialize_network_with_template(self, request):
+        """Initialize the network with a template.
+
+        This endpoint only works when the network is not yet initialized.
+        It copies template files to the workspace directory.
+
+        Request body:
+            {
+                "template_name": "research_team"
+            }
+
+        Returns:
+            JSON response with success status
+        """
+        try:
+            if not self.network_instance:
+                return web.json_response(
+                    {"success": False, "message": "Network instance not available"},
+                    status=500
+                )
+
+            # Check if network is already initialized
+            if getattr(self.network_instance.config, 'initialized', False):
+                return web.json_response(
+                    {"success": False, "message": "Network already initialized"},
+                    status=400
+                )
+
+            # Parse request body
+            try:
+                data = await request.json()
+            except json.JSONDecodeError:
+                return web.json_response(
+                    {"success": False, "message": "Invalid JSON in request body"},
+                    status=400
+                )
+
+            template_name = data.get("template_name")
+            if not template_name:
+                return web.json_response(
+                    {"success": False, "message": "template_name is required"},
+                    status=400
+                )
+
+            # Find template directory
+            try:
+                from importlib.resources import files
+                templates_pkg = files("openagents.templates")
+                template_path = templates_pkg / template_name
+
+                # Check if template exists
+                if not template_path.is_dir():
+                    return web.json_response(
+                        {"success": False, "message": f"Template '{template_name}' not found"},
+                        status=404
+                    )
+            except (ModuleNotFoundError, FileNotFoundError):
+                # Fallback to file system path
+                import openagents
+                pkg_path = Path(openagents.__file__).parent
+                template_path = pkg_path / "templates" / template_name
+                if not template_path.exists() or not template_path.is_dir():
+                    return web.json_response(
+                        {"success": False, "message": f"Template '{template_name}' not found"},
+                        status=404
+                    )
+
+            # Get workspace directory from config path
+            if not self.network_instance.config_path:
+                return web.json_response(
+                    {"success": False, "message": "Network config path not available"},
+                    status=500
+                )
+
+            workspace_dir = Path(self.network_instance.config_path).parent
+
+            # Copy template files to workspace
+            import shutil
+            for item in template_path.iterdir():
+                if item.name.startswith('__'):  # Skip __pycache__, __init__.py, etc.
+                    continue
+
+                dest_path = workspace_dir / item.name
+                if item.is_file():
+                    # Read content from package resource and write to file
+                    if hasattr(item, 'read_text'):
+                        content = item.read_text()
+                        with open(dest_path, 'w') as f:
+                            f.write(content)
+                    else:
+                        shutil.copy2(item, dest_path)
+                elif item.is_dir():
+                    if dest_path.exists():
+                        shutil.rmtree(dest_path)
+                    if hasattr(item, 'iterdir'):
+                        # Package resource - copy recursively
+                        dest_path.mkdir(parents=True, exist_ok=True)
+                        self._copy_package_dir(item, dest_path)
+                    else:
+                        shutil.copytree(item, dest_path, dirs_exist_ok=True)
+
+            logger.info(f"Template '{template_name}' applied to workspace: {workspace_dir}")
+            return web.json_response({
+                "success": True,
+                "message": f"Template '{template_name}' applied successfully",
+                "template": template_name
+            })
+
+        except Exception as e:
+            logger.error(f"Failed to apply template: {e}", exc_info=True)
+            return web.json_response(
+                {"success": False, "message": f"Failed to apply template: {str(e)}"},
+                status=500
+            )
+
+    def _copy_package_dir(self, src_dir, dest_dir: Path):
+        """Recursively copy a package resource directory to a filesystem path."""
+        for item in src_dir.iterdir():
+            if item.name.startswith('__'):
+                continue
+            dest_path = dest_dir / item.name
+            if item.is_file():
+                if hasattr(item, 'read_text'):
+                    try:
+                        content = item.read_text()
+                        with open(dest_path, 'w') as f:
+                            f.write(content)
+                    except UnicodeDecodeError:
+                        # Binary file
+                        content = item.read_bytes()
+                        with open(dest_path, 'wb') as f:
+                            f.write(content)
+                else:
+                    import shutil
+                    shutil.copy2(item, dest_path)
+            elif item.is_dir():
+                dest_path.mkdir(parents=True, exist_ok=True)
+                self._copy_package_dir(item, dest_path)
+
+    async def list_templates(self, request):
+        """List available network templates.
+
+        Returns:
+            JSON response with list of templates and their descriptions
+        """
+        try:
+            templates = []
+
+            # Try to load templates from package resources
+            try:
+                from importlib.resources import files
+                templates_pkg = files("openagents.templates")
+
+                for item in templates_pkg.iterdir():
+                    if item.is_dir() and not item.name.startswith('__'):
+                        # Try to get description from README or network.yaml
+                        description = f"{item.name} template"
+                        try:
+                            readme_file = item / "README.md"
+                            if hasattr(readme_file, 'read_text'):
+                                readme_content = readme_file.read_text()
+                                # Get first non-empty, non-header line
+                                for line in readme_content.split('\n'):
+                                    line = line.strip()
+                                    if line and not line.startswith('#'):
+                                        description = line[:200]  # Truncate to 200 chars
+                                        break
+                        except (FileNotFoundError, TypeError):
+                            pass
+
+                        templates.append({
+                            "name": item.name,
+                            "description": description
+                        })
+            except (ModuleNotFoundError, FileNotFoundError):
+                # Fallback to file system path
+                import openagents
+                pkg_path = Path(openagents.__file__).parent
+                templates_dir = pkg_path / "templates"
+
+                if templates_dir.exists():
+                    for item in templates_dir.iterdir():
+                        if item.is_dir() and not item.name.startswith('__'):
+                            description = f"{item.name} template"
+                            readme_path = item / "README.md"
+                            if readme_path.exists():
+                                try:
+                                    with open(readme_path, 'r') as f:
+                                        readme_content = f.read()
+                                    for line in readme_content.split('\n'):
+                                        line = line.strip()
+                                        if line and not line.startswith('#'):
+                                            description = line[:200]
+                                            break
+                                except Exception:
+                                    pass
+
+                            templates.append({
+                                "name": item.name,
+                                "description": description
+                            })
+
+            return web.json_response({
+                "success": True,
+                "templates": templates
+            })
+
+        except Exception as e:
+            logger.error(f"Failed to list templates: {e}", exc_info=True)
+            return web.json_response(
+                {"success": False, "message": f"Failed to list templates: {str(e)}"},
+                status=500
             )
 
 

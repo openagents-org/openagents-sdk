@@ -651,6 +651,7 @@ class AgentNetwork:
             "network_id": self.network_id,
             "network_uuid": self.network_uuid,
             "network_name": self.network_name,
+            "initialized": getattr(self.config, 'initialized', False),
             "is_running": self.is_running,
             "uptime_seconds": uptime,
             "agent_count": len(agent_registry),
@@ -692,6 +693,57 @@ class AgentNetwork:
             stats["network_profile"] = network_profile_data
 
         return stats
+
+    def save_config(self) -> bool:
+        """Save the current network configuration to the config file.
+
+        This method persists changes made to the network configuration back to
+        the YAML file. It preserves the existing YAML structure and comments
+        while updating specific fields.
+
+        Returns:
+            bool: True if config was saved successfully, False otherwise
+        """
+        if not self.config_path:
+            logger.warning("Cannot save config: no config_path set")
+            return False
+
+        try:
+            # Load existing YAML to preserve structure and comments
+            with open(self.config_path, 'r') as f:
+                config_dict = yaml.safe_load(f)
+
+            if not config_dict:
+                config_dict = {}
+
+            if 'network' not in config_dict:
+                config_dict['network'] = {}
+
+            # Update the network section with current config values
+            config_dict['network']['initialized'] = self.config.initialized
+
+            # Update admin group password if it exists
+            if 'admin' in self.config.agent_groups:
+                if 'agent_groups' not in config_dict['network']:
+                    config_dict['network']['agent_groups'] = {}
+                if 'admin' not in config_dict['network']['agent_groups']:
+                    config_dict['network']['agent_groups']['admin'] = {
+                        'description': 'Administrator agents with full permissions',
+                        'metadata': {'permissions': ['all']}
+                    }
+                config_dict['network']['agent_groups']['admin']['password_hash'] = \
+                    self.config.agent_groups['admin'].password_hash
+
+            # Write back to file
+            with open(self.config_path, 'w') as f:
+                yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
+            logger.info(f"Network configuration saved to {self.config_path}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to save network configuration: {e}")
+            return False
 
     async def process_external_event(self, event: Event) -> EventResponse:
         """Handle incoming transport messages.
