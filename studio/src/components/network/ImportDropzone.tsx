@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface ImportDropzoneProps {
   onFileSelected: (file: File) => void;
@@ -11,6 +12,7 @@ const ImportDropzone: React.FC<ImportDropzoneProps> = ({
   accept = ".zip",
   disabled = false,
 }) => {
+  const { t } = useTranslation('network');
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +42,7 @@ const ImportDropzone: React.FC<ImportDropzoneProps> = ({
       const zipFile = files.find((f) => f.name.endsWith(".zip"));
 
       if (!zipFile) {
-        setError("请选择 .zip 文件");
+        setError(t('importExport.dropzone.selectZipFile'));
         return;
       }
 
@@ -57,7 +59,7 @@ const ImportDropzone: React.FC<ImportDropzoneProps> = ({
 
       const file = files[0];
       if (!file.name.endsWith(".zip")) {
-        setError("请选择 .zip 文件");
+        setError(t('importExport.dropzone.selectZipFile'));
         return;
       }
 
@@ -110,10 +112,10 @@ const ImportDropzone: React.FC<ImportDropzoneProps> = ({
               />
             </svg>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              拖放文件到这里，或点击选择文件
+              {t('importExport.dropzone.dragDrop')}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              支持 .zip 格式的网络配置文件
+              {t('importExport.dropzone.supportedFormat')}
             </p>
           </div>
         </label>

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { networkManagementService } from "@/services/networkManagementService";
 import { ImportMode } from "@/types/networkManagement";
 import ImportDropzone from "@/components/network/ImportDropzone";
@@ -10,6 +11,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
 
 const NetworkImportExport: React.FC = () => {
+  const { t } = useTranslation('network');
   const networkInfo = profileSelectors.useNetworkInfo();
   const { selectedNetwork, agentName } = useAuthStore();
   const { connector } = useOpenAgents();
@@ -43,7 +45,7 @@ const NetworkImportExport: React.FC = () => {
       const agentId = agentName || null;
 
       if (!secret || !agentId) {
-        throw new Error("需要先登录才能导出网络配置");
+        throw new Error(t('importExport.export.loginRequired'));
       }
 
       const blob = await networkManagementService.exportNetwork(
@@ -55,7 +57,7 @@ const NetworkImportExport: React.FC = () => {
       const filename = `${networkName}_${timestamp}.zip`;
       networkManagementService.downloadBlob(blob, filename);
     } catch (error: any) {
-      alert(`导出失败: ${error.message}`);
+      alert(t('importExport.export.failed', { error: error.message }));
     } finally {
       setIsExporting(false);
     }
@@ -72,7 +74,7 @@ const NetworkImportExport: React.FC = () => {
       const agentId = agentName || null;
 
       if (!secret || !agentId) {
-        throw new Error("需要先登录才能验证导入文件");
+        throw new Error(t('importExport.import.loginRequired'));
       }
 
       const result = await networkManagementService.validateImport(
@@ -84,10 +86,10 @@ const NetworkImportExport: React.FC = () => {
       if (result.valid) {
         setShowPreview(true);
       } else {
-        alert(`验证失败:\n${result.errors.join("\n")}`);
+        alert(`${t('importExport.import.validationFailed')}:\n${result.errors.join("\n")}`);
       }
     } catch (error: any) {
-      alert(`验证失败: ${error.message}`);
+      alert(`${t('importExport.import.validationFailed')}: ${error.message}`);
     } finally {
       setIsImporting(false);
     }
@@ -117,7 +119,7 @@ const NetworkImportExport: React.FC = () => {
       const agentId = agentName || null;
 
       if (!secret || !agentId) {
-        throw new Error("需要先登录才能导入网络配置");
+        throw new Error(t('importExport.import.loginRequiredImport'));
       }
 
       const result = await networkManagementService.applyImport(
@@ -129,9 +131,9 @@ const NetworkImportExport: React.FC = () => {
       );
 
       if (result.success) {
-        const networkName = result.applied_config?.network_name || "网络";
+        const appliedNetworkName = result.applied_config?.network_name || networkName;
         if (result.network_restarted) {
-          alert(`导入成功！网络已重启。\n网络名称: ${networkName}`);
+          alert(t('importExport.import.importSuccess', { name: appliedNetworkName }));
           // Refresh profile data after successful import
           setTimeout(() => {
             window.location.reload();
@@ -140,19 +142,19 @@ const NetworkImportExport: React.FC = () => {
           // 如果是异步执行，network_restarted 会是 false，但导入已启动
           const errorMsg = result.errors && result.errors.length > 0 
             ? result.errors.join("\n")
-            : "网络重启状态未知（异步执行中）";
+            : t('importExport.import.networkRestartUnknown');
           alert(
-            `配置导入已启动。\n网络名称: ${networkName}\n状态: ${errorMsg}`
+            t('importExport.import.importStarted', { name: appliedNetworkName, status: errorMsg })
           );
         }
       } else {
         const errorMsg = result.errors && result.errors.length > 0
           ? result.errors.join("\n")
           : result.message;
-        alert(`导入失败: ${errorMsg}`);
+        alert(t('importExport.import.importFailed', { error: errorMsg }));
       }
     } catch (error: any) {
-      alert(`导入失败: ${error.message}`);
+      alert(t('importExport.import.importFailed', { error: error.message }));
     } finally {
       setIsImporting(false);
       setSelectedFile(null);
@@ -173,7 +175,7 @@ const NetworkImportExport: React.FC = () => {
       <div className="p-6 dark:bg-gray-900 h-full">
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
           <p className="text-sm text-yellow-800 dark:text-yellow-200">
-            请先连接到网络
+            {t('importExport.connectFirst')}
           </p>
         </div>
       </div>
@@ -185,10 +187,10 @@ const NetworkImportExport: React.FC = () => {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          网络导入/导出
+          {t('importExport.title')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
-          备份、恢复或迁移网络配置
+          {t('importExport.subtitle')}
         </p>
       </div>
 
@@ -210,18 +212,18 @@ const NetworkImportExport: React.FC = () => {
               />
             </svg>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              导出网络配置
+              {t('importExport.export.title')}
             </h2>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            将当前网络配置导出为 .zip 文件，用于备份或分享。
+            {t('importExport.export.description')}
           </p>
           <button
             onClick={handleExportClick}
             disabled={isExporting}
             className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isExporting ? "导出中..." : "导出网络配置"}
+            {isExporting ? t('importExport.export.exporting') : t('importExport.export.button')}
           </button>
         </div>
 
@@ -242,11 +244,11 @@ const NetworkImportExport: React.FC = () => {
               />
             </svg>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              导入网络配置
+              {t('importExport.import.title')}
             </h2>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            从 .zip 文件导入网络配置，可以覆盖当前配置或创建新网络。
+            {t('importExport.import.description')}
           </p>
           <ImportDropzone
             onFileSelected={handleFileSelected}
@@ -277,10 +279,10 @@ const NetworkImportExport: React.FC = () => {
 
       <ConfirmDialog
         isOpen={showOverwriteConfirm}
-        title="确认覆盖"
-        message="此操作将覆盖当前网络配置。网络将在导入后自动重启。是否继续？"
-        confirmText="确认覆盖"
-        cancelText="取消"
+        title={t('importExport.overwriteConfirm.title')}
+        message={t('importExport.overwriteConfirm.message')}
+        confirmText={t('importExport.overwriteConfirm.confirm')}
+        cancelText={t('importExport.overwriteConfirm.cancel')}
         onConfirm={handleOverwriteConfirm}
         onCancel={() => {
           setShowOverwriteConfirm(false);

@@ -154,5 +154,72 @@
                 "failed": "修改密码失败"
             }
         }
+    },
+    "importExport": {
+        "title": "网络导入/导出",
+        "subtitle": "备份、恢复或迁移网络配置",
+        "connectFirst": "请先连接到网络",
+        "export": {
+            "title": "导出网络配置",
+            "description": "将当前网络配置导出为 .zip 文件，用于备份或分享。",
+            "button": "导出网络配置",
+            "exporting": "导出中...",
+            "loginRequired": "需要先登录才能导出网络配置",
+            "failed": "导出失败: {{error}}"
+        },
+        "import": {
+            "title": "导入网络配置",
+            "description": "从 .zip 文件导入网络配置，可以覆盖当前配置或创建新网络。",
+            "loginRequired": "需要先登录才能验证导入文件",
+            "loginRequiredImport": "需要先登录才能导入网络配置",
+            "validationFailed": "验证失败",
+            "importSuccess": "导入成功！网络已重启。\n网络名称: {{name}}",
+            "importStarted": "配置导入已启动。\n网络名称: {{name}}\n状态: {{status}}",
+            "importFailed": "导入失败: {{error}}",
+            "networkRestartUnknown": "网络重启状态未知（异步执行中）"
+        },
+        "dropzone": {
+            "dragDrop": "拖放文件到这里，或点击选择文件",
+            "supportedFormat": "支持 .zip 格式的网络配置文件",
+            "selectZipFile": "请选择 .zip 文件"
+        },
+        "preview": {
+            "title": "导入预览",
+            "validationError": "验证错误",
+            "warnings": "警告",
+            "networkName": "网络名称",
+            "networkMode": "网络模式",
+            "modules": "模块 ({{count}})",
+            "agentGroups": "代理组 ({{count}})",
+            "transports": "传输协议 ({{count}})",
+            "exportTime": "导出时间",
+            "exportNotes": "导出备注",
+            "importMode": "导入模式",
+            "overwrite": "覆盖当前网络配置",
+            "createNew": "创建新网络",
+            "newNetworkName": "新网络名称",
+            "newNetworkNamePlaceholder": "输入新网络名称",
+            "cancel": "取消",
+            "confirmImport": "确认导入",
+            "importing": "导入中..."
+        },
+        "exportOptions": {
+            "title": "导出选项",
+            "includePasswordHashes": "包含密码哈希",
+            "includePasswordHashesDesc": "导出代理组密码哈希值（用于恢复密码）",
+            "includeSensitiveConfig": "包含敏感配置",
+            "includeSensitiveConfigDesc": "导出 API 密钥、密钥等敏感配置信息",
+            "notes": "备注（可选）",
+            "notesPlaceholder": "添加导出说明...",
+            "cancel": "取消",
+            "export": "导出",
+            "exporting": "导出中..."
+        },
+        "overwriteConfirm": {
+            "title": "确认覆盖",
+            "message": "此操作将覆盖当前网络配置。网络将在导入后自动重启。是否继续？",
+            "confirm": "确认覆盖",
+            "cancel": "取消"
+        }
     }
 }
