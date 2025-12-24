@@ -288,11 +288,11 @@ class HttpTransport(Transport):
         if self.site:
             await self.site.stop()
             self.site = None
-        
+
         if self.runner:
             await self.runner.cleanup()
             self.runner = None
-            
+
         return True
 
     async def send(self, message: Event) -> bool:
@@ -582,14 +582,14 @@ class HttpTransport(Transport):
     <div class="card">
         <h1>{network_name_escaped}</h1>
         <div class="subtitle">OpenAgents Agent Network</div>
-        
+
         <div class="status-badge {'online' if is_running else 'offline'}">
             <span>{'🟢' if is_running else '🔴'}</span>
             <span>{'Online' if is_running else 'Offline'}</span>
         </div>
-        
+
         {f'<div class="description">{description_escaped}</div>' if description_escaped else ''}
-        
+
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-value">{agent_count}</div>
@@ -606,7 +606,7 @@ class HttpTransport(Transport):
         {f'''<div class="tags">
             {''.join([f'<span class="tag">{html.escape(tag)}</span>' for tag in tags[:MAX_DISPLAYED_TAGS]])}
         </div>''' if tags else ''}
-        
+
         <div class="footer">
             <div class="footer-text">Powered by OpenAgents</div>
             <div class="links">
@@ -1133,7 +1133,6 @@ class HttpTransport(Transport):
 
         logger.info(f"HTTP transport listening on {host}:{port}")
         self.is_listening = True
-        self.site = site  # Store the site for shutdown
         self._listen_host = host
         self._listen_port = int(port)  # Store port for relay request handling
 
@@ -3088,7 +3087,7 @@ class HttpTransport(Transport):
             # (network restart will shutdown HTTP transport which would wait for this request)
             zip_buffer = BytesIO(zip_data)
             importer = NetworkImporter(self.network_instance)
-            
+
             # Execute import in background to avoid blocking the response
             async def _do_import():
                 """Execute import in background."""
@@ -3105,10 +3104,10 @@ class HttpTransport(Transport):
                         logger.error(f"Import failed: {result.message}, errors: {result.errors}")
                 except Exception as e:
                     logger.error(f"Import background task failed: {e}", exc_info=True)
-            
+
             # Schedule the import task but don't await it
             asyncio.create_task(_do_import())
-            
+
             # Return immediate success response (actual result will be in logs)
             return web.json_response({
                 "success": True,
@@ -3135,7 +3134,7 @@ def _generate_event_examples(event: Dict[str, Any]) -> Dict[str, str]:
     event_name = event.get('event_name', '')
     event_type = event.get('event_type', 'operation')
     request_schema = event.get('request_schema', {})
-    
+
     # Python example
     python_example = f"""# Python example
 from openagents import Agent
@@ -3147,7 +3146,7 @@ response = await agent.send_event(
     payload={{
         # Add your payload here based on the schema
 """
-    
+
     # Add payload fields from schema
     if request_schema and 'properties' in request_schema:
         for prop_name, prop_info in request_schema['properties'].items():
@@ -3155,19 +3154,19 @@ response = await agent.send_event(
                 prop_type = prop_info.get('type', 'string')
                 is_required = prop_info.get('required', False)
                 default = prop_info.get('default')
-                
+
                 if default is not None:
                     python_example += f'        "{prop_name}": {repr(default)},  # {prop_type}\n'
                 elif is_required:
                     python_example += f'        "{prop_name}": "value",  # {prop_type} (required)\n'
                 else:
                     python_example += f'        # "{prop_name}": "value",  # {prop_type} (optional)\n'
-    
+
     python_example += """    }
 )
 print(response)
 """
-    
+
     # JavaScript example
     js_example = f"""// JavaScript example
 const response = await connector.sendEvent({{
@@ -3176,26 +3175,26 @@ const response = await connector.sendEvent({{
     payload: {{
         // Add your payload here based on the schema
 """
-    
+
     if request_schema and 'properties' in request_schema:
         for prop_name, prop_info in request_schema['properties'].items():
             if isinstance(prop_info, dict):
                 prop_type = prop_info.get('type', 'string')
                 is_required = prop_info.get('required', False)
                 default = prop_info.get('default')
-                
+
                 if default is not None:
                     js_example += f'        {prop_name}: {repr(default)},  // {prop_type}\n'
                 elif is_required:
                     js_example += f'        {prop_name}: "value",  // {prop_type} (required)\n'
                 else:
                     js_example += f'        // {prop_name}: "value",  // {prop_type} (optional)\n'
-    
+
     js_example += """    }
 });
 console.log(response);
 """
-    
+
     return {
         "python": python_example,
         "javascript": js_example,
