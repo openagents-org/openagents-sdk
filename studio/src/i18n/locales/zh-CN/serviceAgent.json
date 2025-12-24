@@ -48,6 +48,22 @@
             "restarted": "服务智能体 {{id}} 已重启",
             "failed": "操作失败",
             "fetchFailed": "无法获取服务智能体列表"
+        },
+        "globalEnv": {
+            "title": "全局环境变量",
+            "subtitle": "所有服务智能体共享的环境变量",
+            "loading": "加载中...",
+            "variableName": "变量名",
+            "value": "值",
+            "empty": "未定义全局环境变量",
+            "saving": "保存中...",
+            "saveChanges": "保存更改",
+            "note": "注意：全局环境变量的更改将在重启后应用于所有服务智能体。",
+            "fetchFailed": "获取全局环境变量失败",
+            "saveSuccess": "全局环境变量保存成功",
+            "saveFailed": "保存全局环境变量失败",
+            "variableNameRequired": "变量名不能为空",
+            "variableExists": "变量已存在"
         }
     },
     "detail": {

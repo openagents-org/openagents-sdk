@@ -10,7 +10,7 @@ const ProfileSidebar: React.FC = () => {
   const { t } = useTranslation("profile")
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAdmin, isLoading } = useIsAdmin()
+  const { isLoading } = useIsAdmin()
   const healthData = useProfileStore((state) => state.healthData)
   const [showProjectDialog, setShowProjectDialog] = useState(false)
 

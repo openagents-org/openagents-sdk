@@ -62,5 +62,11 @@
         "failed": "连接失败，请重试。",
         "retry": "重试",
         "backToNetwork": "返回选择网络"
+    },
+    "breadcrumb": {
+        "home": "首页",
+        "admin": "管理",
+        "dashboard": "仪表板",
+        "detail": "详情"
     }
 }

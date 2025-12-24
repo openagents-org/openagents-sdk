@@ -127,7 +127,7 @@ const AgentNamePicker: React.FC = () => {
           if (nonAdminGroups.length === 0) {
             const fallbackGroup: GroupConfig = {
               name: defaultGroupName,
-              description: "Default agent group",
+              description: t("agentSetup.defaultAgentGroup"),
               has_password: false,
             };
             setAvailableGroups([fallbackGroup]);
@@ -154,7 +154,7 @@ const AgentNamePicker: React.FC = () => {
         const fallbackGroupName = "guest";
         const fallbackGroup: GroupConfig = {
           name: fallbackGroupName,
-          description: "Default agent group",
+          description: t("agentSetup.defaultAgentGroup"),
           has_password: false,
         };
         setAvailableGroups([fallbackGroup]);
@@ -165,7 +165,7 @@ const AgentNamePicker: React.FC = () => {
     };
 
     fetchNetworkConfig();
-  }, [selectedNetwork]);
+  }, [selectedNetwork, t]);
 
   // Get the selected group's configuration
   const selectedGroupConfig = availableGroups.find(
@@ -257,7 +257,7 @@ const AgentNamePicker: React.FC = () => {
       if (!verifyData.success) {
         // Registration failed
         const errorMessage =
-          verifyData.error_message || "Failed to connect to network";
+          verifyData.error_message || t("agentSetup.errors.connectionFailed");
         console.error("Failed to connect:", errorMessage);
 
         if (isAdminMode) {

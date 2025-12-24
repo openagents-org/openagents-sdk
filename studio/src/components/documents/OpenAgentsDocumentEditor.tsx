@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DocumentContent, DocumentComment, AgentPresence } from '../../types';
 import { Button } from '@/components/layout/ui/button';
 // TODO: Implement with HTTP event system
@@ -27,6 +28,7 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
   onBack,
   readOnly = false
 }) => {
+  const { t } = useTranslation('documents');
   // Core state
   const [documentContent, setDocumentContent] = useState<DocumentContent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -735,7 +737,7 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
                 ? 'bg-gray-900 text-gray-100 placeholder-gray-500 dark-mode' 
                 : 'bg-white text-gray-900 placeholder-gray-400'
             } ${readOnly ? 'cursor-default' : ''}`}
-            placeholder={readOnly ? 'This document is read-only' : 'Start typing your document...'}
+            placeholder={readOnly ? t('editor.readOnlyPlaceholder') : t('editor.startTypingPlaceholder')}
             spellCheck={false}
             style={{ 
               lineHeight: '1.6',
@@ -750,7 +752,7 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
           {/* Debug info */}
           {process.env.NODE_ENV === 'development' && (
             <div className="absolute bottom-2 right-2 text-xs opacity-50 bg-black text-white p-1 rounded">
-              Content: {textContent.length} chars | {isSaving ? '💾 Saving...' : hasUnsavedChanges ? '✏️ Unsaved' : '✅ Saved'} {liveUpdateIndicator ? '🔄 Live Update' : ''}
+              {t('editor.debugInfo.content')}: {textContent.length} {t('editor.debugInfo.chars')} | {isSaving ? t('editor.debugInfo.saving') : hasUnsavedChanges ? t('editor.debugInfo.unsaved') : t('editor.debugInfo.saved')} {liveUpdateIndicator ? t('editor.debugInfo.liveUpdate') : ''}
             </div>
           )}
         </div>

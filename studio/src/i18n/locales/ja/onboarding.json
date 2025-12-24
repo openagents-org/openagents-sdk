@@ -68,6 +68,7 @@
     "steps": {
       "createConfig": "ネットワーク構成を作成",
       "installMods": "モードをインストール: {{mods}}",
+      "installModsEmpty": "モードをインストール",
       "configureAgents": "エージェントを構成",
       "startingAgents": "エージェントを起動中...",
       "verifyConnection": "接続を確認"

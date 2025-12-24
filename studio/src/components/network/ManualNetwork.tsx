@@ -28,7 +28,7 @@ const QUICK_CONNECT_TAB = "quick-connect";
 type ConnectionTab = typeof HOST_PORT_TAB | typeof NETWORK_ID_TAB | typeof QUICK_CONNECT_TAB;
 
 export default function ManualNetwork() {
-  const { t } = useTranslation('auth');
+  const { t } = useTranslation(['auth', 'network']);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -149,12 +149,10 @@ export default function ManualNetwork() {
         // Network selection will trigger onboarding check in NetworkSelectionPage
         // No need to navigate here, the page will show onboarding if needed
       } else {
-        toast.error(
-          "Failed to connect to the network. Please check the host and port."
-        );
+        toast.error(t("errors.connectFailedCheckHostPort", { ns: "network" }));
       }
     } catch (error) {
-      toast.error("Error connecting to network: " + error);
+      toast.error(t("errors.errorConnecting", { ns: "network" }) + ": " + error);
     } finally {
       setIsLoadingConnection(false);
     }
@@ -202,9 +200,7 @@ export default function ManualNetwork() {
         // Network selection will trigger onboarding check in NetworkSelectionPage
         // No need to navigate here, the page will show onboarding if needed
       } else {
-        toast.error(
-          "Failed to connect to the network. The network may be offline or unreachable."
-        );
+        toast.error(t("errors.connectFailedOffline", { ns: "network" }));
       }
     } catch (error: any) {
       toast.error(`Error connecting with network ID: ${error.message || error}`);

@@ -68,6 +68,7 @@
     "steps": {
       "createConfig": "创建网络配置",
       "installMods": "安装 mods: {{mods}}",
+      "installModsEmpty": "安装 mods",
       "configureAgents": "配置代理",
       "startingAgents": "启动代理中...",
       "verifyConnection": "验证连接"

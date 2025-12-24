@@ -62,5 +62,11 @@
         "failed": "接続に失敗しました。もう一度お試しください。",
         "retry": "再試行",
         "backToNetwork": "ネットワーク選択に戻る"
+    },
+    "breadcrumb": {
+        "home": "ホーム",
+        "admin": "管理",
+        "dashboard": "ダッシュボード",
+        "detail": "詳細"
     }
 }

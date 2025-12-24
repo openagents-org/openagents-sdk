@@ -314,6 +314,119 @@
       "point2": "検証のためにヘルスエンドポイント（/api/health）にアクセス可能である必要があります。",
       "point3": "公開されたネットワークはOpenAgentsディレクトリに表示されます。"
     }
+  },
+  "checkingPrivileges": "管理者権限を確認中...",
+  "noAdminPrivileges": "管理者権限がありません",
+  "connectionGuide": {
+    "title": "ネットワークに接続",
+    "subtitle": "WorkerAgentまたはCollaboratorAgentベースクラスを使用して完全な制御でカスタムエージェントを構築します。",
+    "tabs": {
+      "python": "Python SDK",
+      "yaml": "YAML設定",
+      "langchain": "LangChain",
+      "mcp": "MCP統合"
+    },
+    "yamlDescription": "コードを書かずに宣言的にエージェントを起動します。使用: openagents agent start ./config.yaml",
+    "mcpDescription": "Claude Desktopを設定して、このネットワークをMCPサーバーとして接続します。",
+    "langchainDescription": "既存のLangChainエージェントをLangChainAgentRunnerでラップしてネットワークに接続します。",
+    "copyCode": "コードがクリップボードにコピーされました",
+    "copyFailed": "クリップボードへのコピーに失敗しました",
+    "loadFailed": "接続ガイドを読み込み中...",
+    "connectionMethod": "接続方法",
+    "networkId": "ネットワークID",
+    "directConnection": "直接接続",
+    "recommended": "推奨",
+    "copy": "コピー",
+    "codeLanguage": {
+      "python": "Python",
+      "yaml": "YAML",
+      "json": "JSON"
+    }
+  },
+  "modManagement": {
+    "title": "動的モジュール管理",
+    "subtitle": "ネットワークモジュールを動的に読み込み、アンロード",
+    "checkingPermissions": "権限を確認中...",
+    "accessDenied": "アクセス拒否",
+    "adminOnly": "このページにアクセスする管理者権限がありません。ネットワーク管理者のみが動的モジュールを管理できます。",
+    "goBack": "戻る",
+    "loadMod": {
+      "title": "モジュールを読み込む",
+      "modPath": "モジュールパス",
+      "modPathPlaceholder": "例: openagents.mods.workspace.shared_artifact",
+      "config": "設定 (JSON, オプション)",
+      "configPlaceholder": "{\"key\": \"value\"}",
+      "button": "モジュールを読み込む",
+      "loading": "読み込み中...",
+      "enterModPath": "モジュールパスを入力してください",
+      "notConnected": "ネットワークに接続されていません",
+      "invalidJson": "設定のJSON形式が無効です",
+      "loadSuccess": "モジュールの読み込みに成功しました: {{modId}}",
+      "loadFailed": "読み込みに失敗しました: {{error}}"
+    },
+    "loadedMods": {
+      "title": "読み込まれたモジュール",
+      "total": "合計",
+      "refresh": "更新",
+      "empty": "動的モジュールがまだ読み込まれていません",
+      "unload": "アンロード",
+      "unloading": "アンロード中...",
+      "unloadSuccess": "モジュールのアンロードに成功しました: {{modId}}",
+      "unloadFailed": "アンロードに失敗しました: {{error}}"
+    }
+  },
+  "eventLogs": {
+    "title": "イベントログ",
+    "subtitle": "最近送信または受信したイベントを表示",
+    "clearLogs": "ログをクリア",
+    "clearConfirm": "すべてのイベントログをクリアしてもよろしいですか？",
+    "tabs": {
+      "events": "イベント",
+      "httpRequests": "HTTPリクエスト"
+    },
+    "searchPlaceholder": "キーワードを検索...",
+    "filter": "フィルター:",
+    "include": "含む",
+    "exclude": "除外",
+    "totalEvents": "総イベント数",
+    "currentPage": "現在のページ",
+    "empty": "イベントログがありません",
+    "from": "送信元",
+    "to": "送信先",
+    "eventName": "イベント名",
+    "source": "ソース",
+    "destination": "宛先",
+    "payload": "ペイロード",
+    "response": "レスポンス",
+    "timestamp": "タイムスタンプ"
+  },
+  "eventDebugger": {
+    "title": "イベントデバッガー",
+    "subtitle": "イベント送信のデバッグとテスト用。送信されたすべてのイベントは自動的にイベントログページに記録されます。",
+    "examples": {
+      "directMessage": "例: 直接メッセージ",
+      "channelMessage": "例: チャネルメッセージ",
+      "projectList": "例: プロジェクトリスト",
+      "channelsList": "例: チャネルリスト"
+    },
+    "eventName": "イベント名 *",
+    "eventNamePlaceholder": "例: thread.direct_message.send",
+    "destinationId": "宛先ID",
+    "destinationIdPlaceholder": "例: agent:target_agent_id または channel:general (オプション)",
+    "destinationIdHint": "空のままにすると、ネットワーク全体に送信されます",
+    "payload": "ペイロード (JSON)",
+    "payloadPlaceholder": "{\"key\": \"value\"}",
+    "payloadHint": "有効なJSONデータを入力し、空のままにすると空のオブジェクトが使用されます",
+    "sendEvent": "イベントを送信",
+    "sending": "送信中...",
+    "tip": "ヒント: Ctrl+EnterまたはCmd+Enterを押すと素早く送信できます",
+    "notConnected": "ネットワークに接続されていません。まず接続してください",
+    "networkNotConnected": "ネットワークが接続されていません。接続状態を確認してください",
+    "enterEventName": "イベント名を入力してください",
+    "invalidJson": "無効なJSON形式: {{error}}",
+    "sendFailed": "イベントの送信に失敗しました",
+    "connected": "接続済み",
+    "notConnectedStatus": "未接続"
   }
 }
 
