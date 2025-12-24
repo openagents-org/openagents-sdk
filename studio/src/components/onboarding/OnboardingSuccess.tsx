@@ -6,8 +6,7 @@ import { Template } from "@/pages/OnboardingPage";
 import { useAuthStore } from "@/stores/authStore";
 import { hashPassword } from "@/utils/passwordHash";
 import { networkFetch } from "@/utils/httpClient";
-import StarfieldBackground from "./StarfieldBackground";
-import OpenAgentsLogo from "@/assets/images/openagents-logo-trans-white.png";
+import OpenAgentsLogo from "@/assets/images/openagents_logo_color_280.png";
 
 const ADMIN_AGENT_NAME = "admin";
 
@@ -116,23 +115,29 @@ const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative">
-      <StarfieldBackground />
-      <div className="max-w-2xl w-full bg-white/10 dark:bg-gray-800/20 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden relative z-10 border border-white/20">
+    <div className="min-h-screen flex items-center justify-center p-4 relative bg-white">
+      {/* Subtle gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-indigo-50/30" />
+
+      {/* Decorative gradient orbs */}
+      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-gradient-to-r from-purple-200/30 to-pink-200/30 rounded-full blur-3xl" />
+      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-gradient-to-r from-blue-200/30 to-indigo-200/30 rounded-full blur-3xl" />
+
+      <div className="max-w-2xl w-full bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl overflow-hidden relative z-10 border border-gray-200">
         <div className="p-12 text-center">
           <div className="mb-8">
             <img
               src={OpenAgentsLogo}
               alt="OpenAgents Logo"
-              className="w-24 h-24 mx-auto drop-shadow-2xl"
+              className="w-24 h-24 mx-auto"
             />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-8">
             {t('success.title')}
           </h1>
 
           {error && (
-            <div className="mb-6 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
+            <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
               {error}
             </div>
           )}
@@ -140,7 +145,7 @@ const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
           <button
             onClick={handleEnterDashboard}
             disabled={isLoggingIn}
-            className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 text-white font-semibold py-4 px-8 rounded-xl text-lg transition-all transform hover:scale-105 shadow-2xl shadow-purple-500/50 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+            className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 text-white font-semibold py-4 px-8 rounded-xl text-lg transition-all transform hover:scale-105 shadow-lg shadow-indigo-500/25 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
           >
             {isLoggingIn && <Loader2 className="w-5 h-5 animate-spin" />}
             {t('success.enterDashboardButton')}

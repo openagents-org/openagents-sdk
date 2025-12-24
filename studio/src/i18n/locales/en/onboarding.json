@@ -50,7 +50,7 @@
   },
   "step3": {
     "stepIndicator": "Step 3 / 4",
-    "title": "Protect Your Admin Dashboard",
+    "title": "Protect Admin Access to the Network",
     "description": "Set a password to protect your network's admin settings.",
     "adminPasswordLabel": "Admin Password",
     "confirmPasswordLabel": "Confirm Password",
@@ -67,9 +67,9 @@
     "title": "Setting up your network...",
     "steps": {
       "createConfig": "Create network configuration",
-      "installMods": "Install mods: {{mods}}",
-      "configureAgents": "Configure agents",
-      "startingAgents": "Starting agents...",
+      "installMods": "Applying mods: {{mods}}",
+      "configureAgents": "Consolidating network configuration",
+      "startingAgents": "Starting network...",
       "verifyConnection": "Verify connection"
     },
     "progress": "Progress",

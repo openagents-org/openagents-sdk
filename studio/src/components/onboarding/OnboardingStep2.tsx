@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Template } from "@/pages/OnboardingPage";
 import { useAuthStore } from "@/stores/authStore";
-import StarfieldBackground from "./StarfieldBackground";
 
 interface OnboardingStep2Props {
   onNext: (template: Template) => void;
@@ -146,19 +145,25 @@ const OnboardingStep2: React.FC<OnboardingStep2Props> = ({ onNext, onBack }) => 
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative">
-      <StarfieldBackground />
-      <div className="max-w-6xl w-full bg-white/10 dark:bg-gray-800/20 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden relative z-10 border border-white/20">
+    <div className="min-h-screen flex items-center justify-center p-4 relative bg-white">
+      {/* Subtle gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-indigo-50/30" />
+
+      {/* Decorative gradient orbs */}
+      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-gradient-to-r from-purple-200/30 to-pink-200/30 rounded-full blur-3xl" />
+      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-gradient-to-r from-blue-200/30 to-indigo-200/30 rounded-full blur-3xl" />
+
+      <div className="max-w-6xl w-full bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl overflow-hidden relative z-10 border border-gray-200">
         <div className="p-8">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <div className="text-sm text-gray-300 mb-2">
+              <div className="text-sm text-gray-500 mb-2">
                 {t('step2.stepIndicator')}
               </div>
-              <h1 className="text-3xl font-bold text-white mb-2">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 {t('step2.title')}
               </h1>
-              <p className="text-gray-200">
+              <p className="text-gray-600">
                 {t('step2.description')}
               </p>
             </div>
@@ -168,17 +173,17 @@ const OnboardingStep2: React.FC<OnboardingStep2Props> = ({ onNext, onBack }) => 
                 <button
                   onClick={handlePrevPage}
                   disabled={currentPage === 0}
-                  className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
-                <span className="text-gray-300 text-sm">
+                <span className="text-gray-500 text-sm">
                   {currentPage + 1} / {totalPages}
                 </span>
                 <button
                   onClick={handleNextPage}
                   disabled={currentPage === totalPages - 1}
-                  className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>
@@ -189,17 +194,17 @@ const OnboardingStep2: React.FC<OnboardingStep2Props> = ({ onNext, onBack }) => 
           {/* Loading state */}
           {loading && (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+              <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
             </div>
           )}
 
           {/* Error state */}
           {error && !loading && (
             <div className="text-center py-16">
-              <p className="text-red-400 mb-4">{error}</p>
+              <p className="text-red-500 mb-4">{error}</p>
               <button
                 onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors"
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 {t('step2.retry') || 'Retry'}
               </button>
@@ -212,17 +217,17 @@ const OnboardingStep2: React.FC<OnboardingStep2Props> = ({ onNext, onBack }) => 
               {visibleTemplates.map((template) => (
                 <div
                   key={template.id}
-                  className={`border-2 rounded-xl p-5 cursor-pointer transition-all backdrop-blur-sm flex flex-col ${
+                  className={`border-2 rounded-xl p-5 cursor-pointer transition-all flex flex-col ${
                     selectedTemplateId === template.id
-                      ? "border-indigo-400 bg-indigo-500/20"
-                      : "border-white/20 bg-white/5 hover:border-indigo-300 hover:bg-white/10"
+                      ? "border-indigo-500 bg-indigo-50"
+                      : "border-gray-200 bg-white hover:border-indigo-300 hover:bg-gray-50"
                   }`}
                   onClick={() => handleSelect(template)}
                 >
-                  <h3 className="text-lg font-semibold text-white mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     {template.name}
                   </h3>
-                  <p className="text-gray-300 text-sm flex-grow">
+                  <p className="text-gray-600 text-sm flex-grow">
                     {template.description}
                   </p>
                 </div>
@@ -233,14 +238,14 @@ const OnboardingStep2: React.FC<OnboardingStep2Props> = ({ onNext, onBack }) => 
           <div className="flex justify-between">
             <button
               onClick={onBack}
-              className="px-6 py-2 text-gray-300 hover:text-white transition-colors"
+              className="px-6 py-2 text-gray-500 hover:text-gray-700 transition-colors"
             >
               {t('step2.backButton')}
             </button>
             <button
               onClick={handleNext}
               disabled={!selectedTemplateId || submitting}
-              className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {t('step2.nextButton')}
@@ -253,4 +258,3 @@ const OnboardingStep2: React.FC<OnboardingStep2Props> = ({ onNext, onBack }) => 
 };
 
 export default OnboardingStep2;
-
