@@ -4,8 +4,15 @@ import { getCurrentNetworkHealth } from "@/services/networkService";
 import OnboardingStep1 from "@/components/onboarding/OnboardingStep1";
 import OnboardingStep2 from "@/components/onboarding/OnboardingStep2";
 import OnboardingStep3 from "@/components/onboarding/OnboardingStep3";
+import OnboardingStepModelConfig from "@/components/onboarding/OnboardingStepModelConfig";
 import OnboardingStep4 from "@/components/onboarding/OnboardingStep4";
 import OnboardingSuccess from "@/components/onboarding/OnboardingSuccess";
+
+interface ModelConfig {
+  provider: string;
+  modelName: string;
+  apiKey: string;
+}
 
 export interface Template {
   id: string;
@@ -23,6 +30,7 @@ const OnboardingPage: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [adminPassword, setAdminPassword] = useState("");
+  const [modelConfig, setModelConfig] = useState<ModelConfig | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploymentProgress, setDeploymentProgress] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
@@ -46,46 +54,89 @@ const OnboardingPage: React.FC = () => {
   const handleStep3Next = (password: string) => {
     setAdminPassword(password);
     setCurrentStep(4);
-    // Start deployment
-    handleDeployment();
   };
 
   const handleStep3Back = () => {
     setCurrentStep(2);
   };
 
-  const handleDeployment = async () => {
+  const handleModelConfigNext = (config: ModelConfig | null) => {
+    // Store the config first, then start deployment with it
+    setModelConfig(config);
+    setCurrentStep(5);
+    // Start deployment with the config passed directly (since setState is async)
+    handleDeployment(config);
+  };
+
+  const handleModelConfigBack = () => {
+    setCurrentStep(3);
+  };
+
+  const handleDeployment = async (config: ModelConfig | null) => {
+    if (!selectedNetwork) return;
+
     setIsDeploying(true);
     setDeploymentProgress(0);
 
-    // Simulate deployment progress
-    const steps = [
-      { progress: 25, message: "创建网络配置" },
-      { progress: 50, message: "安装 mods" },
-      { progress: 75, message: "配置代理" },
-      { progress: 90, message: "启动代理中..." },
-      { progress: 100, message: "验证连接" },
-    ];
+    const protocol = selectedNetwork.useHttps ? "https" : "http";
+    const baseUrl = `${protocol}://${selectedNetwork.host}:${selectedNetwork.port}`;
 
-    for (const step of steps) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setDeploymentProgress(step.progress);
-    }
-
-    // 模拟部署成功，不调用真实API
     try {
-      // 模拟部署延迟
+      // Step 1: Set admin password (25%)
+      setDeploymentProgress(25);
+      const passwordResponse = await fetch(`${baseUrl}/api/network/initialize/admin-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: adminPassword }),
+      });
+      if (!passwordResponse.ok) {
+        throw new Error(`Failed to set admin password: ${passwordResponse.statusText}`);
+      }
+
+      // Step 2: Apply mods / template (50%)
+      setDeploymentProgress(50);
+      if (selectedTemplate) {
+        const templateResponse = await fetch(`${baseUrl}/api/network/initialize/template`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ template_name: selectedTemplate.id }),
+        });
+        if (!templateResponse.ok) {
+          console.warn("Template application failed, continuing...");
+        }
+      }
+
+      // Step 3: Configure model (if provided) (75%)
+      setDeploymentProgress(75);
+      if (config) {
+        const modelResponse = await fetch(`${baseUrl}/api/network/initialize/model-config`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            provider: config.provider,
+            model_name: config.modelName,
+            api_key: config.apiKey,
+          }),
+        });
+        if (!modelResponse.ok) {
+          console.warn("Model config failed, continuing...");
+        }
+      }
+
+      // Step 4: Starting network (90%)
+      setDeploymentProgress(90);
       await new Promise((resolve) => setTimeout(resolve, 500));
-      
-      // 标记onboarding完成（可选，如果需要的话）
-      // await markOnboardingComplete();
-      
+
+      // Step 5: Verify connection (100%)
+      setDeploymentProgress(100);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       setIsDeploying(false);
       setIsComplete(true);
     } catch (error) {
-      console.error("Deployment simulation failed:", error);
+      console.error("Deployment failed:", error);
       setIsDeploying(false);
-      // Handle error
+      // TODO: Show error to user
     }
   };
 
@@ -135,6 +186,12 @@ const OnboardingPage: React.FC = () => {
         />
       )}
       {currentStep === 4 && (
+        <OnboardingStepModelConfig
+          onNext={handleModelConfigNext}
+          onBack={handleModelConfigBack}
+        />
+      )}
+      {currentStep === 5 && (
         <OnboardingStep4
           template={selectedTemplate!}
           isDeploying={isDeploying}

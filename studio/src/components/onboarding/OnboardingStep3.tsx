@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Eye, EyeOff, Info, Loader2 } from "lucide-react";
-import { useAuthStore } from "@/stores/authStore";
+import { Eye, EyeOff, Info } from "lucide-react";
 
 interface OnboardingStep3Props {
   onNext: (password: string) => void;
@@ -10,46 +9,18 @@ interface OnboardingStep3Props {
 
 const OnboardingStep3: React.FC<OnboardingStep3Props> = ({ onNext, onBack }) => {
   const { t } = useTranslation('onboarding');
-  const { selectedNetwork } = useAuthStore();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const isValid = password.length >= 8 && password === confirmPassword;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isValid || !selectedNetwork) return;
-
-    try {
-      setSubmitting(true);
-      setError(null);
-
-      const protocol = selectedNetwork.useHttps ? "https" : "http";
-      const baseUrl = `${protocol}://${selectedNetwork.host}:${selectedNetwork.port}`;
-
-      const response = await fetch(`${baseUrl}/api/network/initialize/admin-password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ password }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      onNext(password);
-    } catch (err: any) {
-      console.error("Failed to set admin password:", err);
-      setError(err.message || "Failed to set admin password");
-    } finally {
-      setSubmitting(false);
-    }
+    if (!isValid) return;
+    // Just pass the password to the next step - actual configuration happens during deployment
+    onNext(password);
   };
 
   return (
@@ -154,12 +125,6 @@ const OnboardingStep3: React.FC<OnboardingStep3Props> = ({ onNext, onBack }) => 
               <p>{t('step3.hint')}</p>
             </div>
 
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-                {error}
-              </div>
-            )}
-
             <div className="flex justify-between">
               <button
                 type="button"
@@ -170,10 +135,9 @@ const OnboardingStep3: React.FC<OnboardingStep3Props> = ({ onNext, onBack }) => 
               </button>
               <button
                 type="submit"
-                disabled={!isValid || submitting}
-                className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                disabled={!isValid}
+                className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
               >
-                {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                 {t('step3.continueButton')}
               </button>
             </div>

@@ -10,7 +10,7 @@
     "skipButton": "Skip Setup (Advanced Users)"
   },
   "step2": {
-    "stepIndicator": "Step 2 / 4",
+    "stepIndicator": "Step 2 / 5",
     "title": "Choose Your First Network Template",
     "description": "Select a template to get started quickly. You can customize everything later.",
     "selectButton": "Select",
@@ -49,7 +49,7 @@
     "nextButton": "Continue →"
   },
   "step3": {
-    "stepIndicator": "Step 3 / 4",
+    "stepIndicator": "Step 3 / 5",
     "title": "Protect Admin Access to the Network",
     "description": "Set a password to protect your network's admin settings.",
     "adminPasswordLabel": "Admin Password",
@@ -62,8 +62,24 @@
     "continueButton": "Continue →",
     "setting": "Setting..."
   },
+  "stepModelConfig": {
+    "stepIndicator": "Step 4 / 5",
+    "title": "Configure Default AI Model (Optional)",
+    "description": "Optionally set up a default AI model for service agents. This can be configured later in settings.",
+    "providerLabel": "Model Provider",
+    "selectProvider": "Select a provider...",
+    "modelNameLabel": "Model Name",
+    "selectModel": "Select a model...",
+    "modelNamePlaceholder": "Enter model name (e.g., gpt-4o)",
+    "apiKeyLabel": "API Key",
+    "apiKeyPlaceholder": "Enter your API key",
+    "hint": "This configuration will be used as the default for service agents in auto mode. You can change this later in the network settings.",
+    "backButton": "← Back",
+    "skipButton": "Skip",
+    "continueButton": "Continue →"
+  },
   "step4": {
-    "stepIndicator": "Step 4 / 4",
+    "stepIndicator": "Step 5 / 5",
     "title": "Setting up your network...",
     "steps": {
       "createConfig": "Create network configuration",
