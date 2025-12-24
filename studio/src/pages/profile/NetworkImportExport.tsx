@@ -183,9 +183,9 @@ const NetworkImportExport: React.FC = () => {
   }
 
   return (
-    <div className="p-6 dark:bg-gray-900 h-full min-h-screen overflow-y-auto">
+    <div className="p-6 dark:bg-gray-900 h-full overflow-y-auto">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           {t('importExport.title')}
         </h1>
@@ -194,66 +194,72 @@ const NetworkImportExport: React.FC = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Export Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div className="flex items-center mb-4">
-            <svg
-              className="w-6 h-6 text-blue-500 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+      <div className="max-w-4xl">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Export Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 flex flex-col">
+            <div className="flex items-center mb-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mr-3">
+                <svg
+                  className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {t('importExport.export.title')}
+              </h2>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 flex-1">
+              {t('importExport.export.description')}
+            </p>
+            <button
+              onClick={handleExportClick}
+              disabled={isExporting}
+              className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {t('importExport.export.title')}
-            </h2>
+              {isExporting ? t('importExport.export.exporting') : t('importExport.export.button')}
+            </button>
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            {t('importExport.export.description')}
-          </p>
-          <button
-            onClick={handleExportClick}
-            disabled={isExporting}
-            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isExporting ? t('importExport.export.exporting') : t('importExport.export.button')}
-          </button>
-        </div>
 
-        {/* Import Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div className="flex items-center mb-4">
-            <svg
-              className="w-6 h-6 text-green-500 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-              />
-            </svg>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {t('importExport.import.title')}
-            </h2>
+          {/* Import Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 flex flex-col">
+            <div className="flex items-center mb-3">
+              <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center mr-3">
+                <svg
+                  className="w-5 h-5 text-green-600 dark:text-green-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
+                </svg>
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {t('importExport.import.title')}
+              </h2>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              {t('importExport.import.description')}
+            </p>
+            <ImportDropzone
+              onFileSelected={handleFileSelected}
+              disabled={isImporting}
+            />
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            {t('importExport.import.description')}
-          </p>
-          <ImportDropzone
-            onFileSelected={handleFileSelected}
-            disabled={isImporting}
-          />
         </div>
       </div>
 

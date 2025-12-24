@@ -76,7 +76,7 @@ const ImportDropzone: React.FC<ImportDropzoneProps> = ({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`
-          relative border-2 border-dashed rounded-lg p-8 text-center transition-colors
+          relative border-2 border-dashed rounded-lg p-6 text-center transition-colors
           ${
             isDragging
               ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
@@ -99,7 +99,7 @@ const ImportDropzone: React.FC<ImportDropzoneProps> = ({
         >
           <div className="flex flex-col items-center">
             <svg
-              className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-4"
+              className="w-10 h-10 text-gray-400 dark:text-gray-500 mb-3"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
