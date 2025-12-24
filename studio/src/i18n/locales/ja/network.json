@@ -22,6 +22,11 @@
         "connectionFailed": "ネットワークへの接続に失敗しました",
         "disconnected": "ネットワークから切断されました"
     },
+    "errors": {
+        "connectFailedCheckHostPort": "ネットワークへの接続に失敗しました。ホストとポートを確認してください。",
+        "connectFailedOffline": "ネットワークへの接続に失敗しました。ネットワークがオフラインか、到達できない可能性があります。",
+        "errorConnecting": "ネットワーク接続中にエラーが発生しました"
+    },
     "profile": {
         "iconHint": "URL を入力するか、画像をアップロードしてください（最大 5MB）。アップロードされた画像はネットワークのアセットフォルダに保存されます。",
         "upload": "アップロード",

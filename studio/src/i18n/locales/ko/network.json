@@ -22,6 +22,11 @@
         "connectionFailed": "네트워크 연결에 실패했습니다",
         "disconnected": "네트워크 연결이 해제되었습니다"
     },
+    "errors": {
+        "connectFailedCheckHostPort": "네트워크 연결에 실패했습니다. 호스트와 포트를 확인하세요.",
+        "connectFailedOffline": "네트워크 연결에 실패했습니다. 네트워크가 오프라인이거나 접근할 수 없을 수 있습니다.",
+        "errorConnecting": "네트워크 연결 중 오류가 발생했습니다"
+    },
     "profile": {
         "iconHint": "URL을 입력하거나 이미지를 업로드하세요 (최대 5MB). 업로드된 이미지는 네트워크의 자산 폴더에 저장됩니다.",
         "upload": "업로드",

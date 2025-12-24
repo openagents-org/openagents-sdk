@@ -28,7 +28,17 @@
         "lastSaved": "上次保存: {{time}}",
         "collaborators": "协作者",
         "onlineUsers": "在线用户",
-        "noCollaborators": "还没有协作者"
+        "noCollaborators": "还没有协作者",
+        "readOnlyPlaceholder": "此文档为只读",
+        "startTypingPlaceholder": "开始输入文档内容...",
+        "debugInfo": {
+            "content": "内容",
+            "chars": "字符",
+            "saving": "💾 保存中...",
+            "unsaved": "✏️ 未保存",
+            "saved": "✅ 已保存",
+            "liveUpdate": "🔄 实时更新"
+        }
     },
     "actions": {
         "new": "新建文档",

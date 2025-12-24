@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/stores/authStore";
 import { useNavigate } from "react-router-dom";
 import { hashPassword } from "@/utils/passwordHash";
@@ -8,6 +9,7 @@ import { Shield } from "lucide-react";
 const ADMIN_AGENT_NAME = "admin";
 
 const AdminLoginPage: React.FC = () => {
+  const { t } = useTranslation("auth");
   const navigate = useNavigate();
   const {
     selectedNetwork,
@@ -37,7 +39,7 @@ const AdminLoginPage: React.FC = () => {
 
     // Validate password
     if (!password.trim()) {
-      setPasswordError("Password is required for admin login");
+      setPasswordError(t("agentSetup.errors.adminPasswordRequired"));
       return;
     }
 
@@ -76,7 +78,7 @@ const AdminLoginPage: React.FC = () => {
       const verifyData = await verifyResponse.json();
 
       if (!verifyData.success) {
-        const errorMessage = verifyData.error_message || "Failed to connect as admin";
+        const errorMessage = verifyData.error_message || t("agentSetup.errors.adminConnectionFailed");
         setPasswordError(errorMessage);
         setIsVerifying(false);
         return;
@@ -117,7 +119,7 @@ const AdminLoginPage: React.FC = () => {
       });
     } catch (error) {
       console.error("Failed to verify admin credentials:", error);
-      setPasswordError("Failed to connect as admin. Please check your password and try again.");
+      setPasswordError(t("agentSetup.errors.adminConnectionFailed"));
       setIsVerifying(false);
     }
   };
@@ -133,10 +135,10 @@ const AdminLoginPage: React.FC = () => {
           </div>
 
           <h1 className="text-3xl font-bold mb-3 text-gray-800 dark:text-gray-50">
-            Admin Login
+            {t("agentSetup.buttons.loginAsAdmin")}
           </h1>
           <p className="text-base leading-relaxed text-gray-500 dark:text-gray-300">
-            Enter the admin password to access the dashboard.
+            {t("agentSetup.adminPasswordHint")}
           </p>
         </div>
 
@@ -144,7 +146,7 @@ const AdminLoginPage: React.FC = () => {
         {selectedNetwork && (
           <div className="rounded-xl p-4 mb-6 text-left bg-gray-100 dark:bg-gray-700">
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              Network
+              {t("agentSetup.connectingTo")}
             </div>
             <div className="text-base font-semibold text-gray-800 dark:text-gray-100">
               {selectedNetwork.host}:{selectedNetwork.port}
@@ -160,7 +162,7 @@ const AdminLoginPage: React.FC = () => {
               htmlFor="password"
               className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300"
             >
-              Admin Password
+              {t("agentSetup.adminPassword")} <span className="text-red-500 ml-1">*</span>
             </label>
             <input
               id="password"
@@ -175,7 +177,7 @@ const AdminLoginPage: React.FC = () => {
                   ? "border-red-500 dark:border-red-400"
                   : "border-gray-300 dark:border-gray-500"
               }`}
-              placeholder="Enter admin password..."
+              placeholder={t("agentSetup.adminPasswordPlaceholder")}
               autoComplete="current-password"
               autoFocus
               required
@@ -198,7 +200,7 @@ const AdminLoginPage: React.FC = () => {
               disabled={isVerifying}
               className="flex-1 px-6 py-3 border rounded-lg text-base font-semibold cursor-pointer transition-all duration-150 bg-gray-50 border-gray-300 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-600 dark:border-gray-500 dark:text-gray-300 dark:hover:bg-gray-500 dark:hover:text-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              ← Back
+              {t("agentSetup.buttons.back")}
             </button>
             <button
               type="submit"
@@ -231,10 +233,10 @@ const AdminLoginPage: React.FC = () => {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  <span>Verifying...</span>
+                  <span>{t("agentSetup.buttons.connecting")}</span>
                 </div>
               ) : (
-                <span>Login →</span>
+                <span>{t("agentSetup.buttons.loginAsAdmin")} →</span>
               )}
             </button>
           </div>

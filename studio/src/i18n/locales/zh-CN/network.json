@@ -24,6 +24,11 @@
         "connectionFailed": "连接失败",
         "retrying": "重试中..."
     },
+    "errors": {
+        "connectFailedCheckHostPort": "连接网络失败。请检查主机和端口。",
+        "connectFailedOffline": "连接网络失败。网络可能离线或无法访问。",
+        "errorConnecting": "连接网络时出错"
+    },
     "profile": {
         "title": "网络配置文件",
         "subtitle": "配置您的网络设置",

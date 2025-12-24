@@ -24,6 +24,11 @@
         "connectionFailed": "Connection failed",
         "retrying": "Retrying..."
     },
+    "errors": {
+        "connectFailedCheckHostPort": "Failed to connect to the network. Please check the host and port.",
+        "connectFailedOffline": "Failed to connect to the network. The network may be offline or unreachable.",
+        "errorConnecting": "Error connecting to network"
+    },
     "profile": {
         "title": "Network Profile",
         "subtitle": "Configure your network profile settings",

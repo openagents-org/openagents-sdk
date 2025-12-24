@@ -28,7 +28,17 @@
         "lastSaved": "Last saved: {{time}}",
         "collaborators": "Collaborators",
         "onlineUsers": "Online Users",
-        "noCollaborators": "No collaborators yet"
+        "noCollaborators": "No collaborators yet",
+        "readOnlyPlaceholder": "This document is read-only",
+        "startTypingPlaceholder": "Start typing your document...",
+        "debugInfo": {
+            "content": "Content",
+            "chars": "chars",
+            "saving": "💾 Saving...",
+            "unsaved": "✏️ Unsaved",
+            "saved": "✅ Saved",
+            "liveUpdate": "🔄 Live Update"
+        }
     },
     "actions": {
         "new": "New Document",
