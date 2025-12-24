@@ -68,6 +68,7 @@
     "steps": {
       "createConfig": "네트워크 구성 생성",
       "installMods": "모드 설치: {{mods}}",
+      "installModsEmpty": "모드 설치",
       "configureAgents": "에이전트 구성",
       "startingAgents": "에이전트 시작 중...",
       "verifyConnection": "연결 확인"

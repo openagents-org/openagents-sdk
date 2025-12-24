@@ -68,6 +68,7 @@
     "steps": {
       "createConfig": "Create network configuration",
       "installMods": "Install mods: {{mods}}",
+      "installModsEmpty": "Install mods",
       "configureAgents": "Configure agents",
       "startingAgents": "Starting agents...",
       "verifyConnection": "Verify connection"

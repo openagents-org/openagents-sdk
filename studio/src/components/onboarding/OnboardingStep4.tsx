@@ -12,9 +12,13 @@ interface OnboardingStep4Props {
 const OnboardingStep4: React.FC<OnboardingStep4Props> = ({ template, isDeploying, progress }) => {
   const { t } = useTranslation('onboarding');
   
+  const modsText = template.mods.length > 0
+    ? t('step4.steps.installMods', { mods: template.mods.join(", ") })
+    : t('step4.steps.installModsEmpty');
+
   const steps = [
     { name: t('step4.steps.createConfig'), completed: progress >= 25 },
-    { name: t('step4.steps.installMods', { mods: template.mods.join(", ") }), completed: progress >= 50 },
+    { name: modsText, completed: progress >= 50 },
     { name: t('step4.steps.configureAgents'), completed: progress >= 75 },
     { name: t('step4.steps.startingAgents'), completed: progress >= 90, inProgress: progress >= 75 && progress < 90 },
     { name: t('step4.steps.verifyConnection'), completed: progress >= 100 },
@@ -78,15 +82,21 @@ const OnboardingStep4: React.FC<OnboardingStep4Props> = ({ template, isDeploying
             </div>
           </div>
 
-          <div className="text-center text-gray-400">
-            <div className="mb-2">
-              <strong className="text-white">{t('step4.template')}</strong> {template.name}
+          {(template.name || template.agents.length > 0) && (
+            <div className="text-center text-gray-400">
+              {template.name && (
+                <div className="mb-2">
+                  <strong className="text-white">{t('step4.template')}</strong> {template.name}
+                </div>
+              )}
+              {template.agents.length > 0 && (
+                <div>
+                  <strong className="text-white">{t('step4.agents')}</strong>{" "}
+                  {template.agents.join(", ")}
+                </div>
+              )}
             </div>
-            <div>
-              <strong className="text-white">{t('step4.agents')}</strong>{" "}
-              {template.agents.join(", ")}
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
