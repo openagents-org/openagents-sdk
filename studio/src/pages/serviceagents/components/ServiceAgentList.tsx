@@ -71,12 +71,12 @@ const ServiceAgentList: React.FC = () => {
       setOriginalGlobalEnvVars(envVars);
     } catch (err) {
       console.error("Failed to fetch global env vars:", err);
-      toast.error("Failed to fetch global environment variables");
+      toast.error(t('list.globalEnv.fetchFailed'));
     } finally {
       setLoadingGlobalEnv(false);
       setGlobalEnvFetched(true);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (globalEnvExpanded && !globalEnvFetched && !loadingGlobalEnv) {
@@ -88,11 +88,11 @@ const ServiceAgentList: React.FC = () => {
   const handleAddGlobalEnvVar = () => {
     const name = newGlobalEnvName.trim();
     if (!name) {
-      toast.error("Variable name is required");
+      toast.error(t('list.globalEnv.variableNameRequired'));
       return;
     }
     if (globalEnvVars[name] !== undefined) {
-      toast.error("Variable already exists");
+      toast.error(t('list.globalEnv.variableExists'));
       return;
     }
     setGlobalEnvVars({ ...globalEnvVars, [name]: newGlobalEnvValue });
@@ -118,9 +118,9 @@ const ServiceAgentList: React.FC = () => {
       setSavingGlobalEnv(true);
       await saveGlobalEnvVars(globalEnvVars);
       setOriginalGlobalEnvVars(globalEnvVars);
-      toast.success("Global environment variables saved successfully");
+      toast.success(t('list.globalEnv.saveSuccess'));
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to save global environment variables";
+      const errorMessage = err instanceof Error ? err.message : t('list.globalEnv.saveFailed');
       toast.error(errorMessage);
     } finally {
       setSavingGlobalEnv(false);
@@ -288,10 +288,10 @@ const ServiceAgentList: React.FC = () => {
             <Settings className="w-5 h-5 text-gray-500 dark:text-gray-400" />
             <div>
               <h3 className="font-medium text-gray-900 dark:text-gray-100">
-                Global Environment Variables
+                {t('list.globalEnv.title')}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Shared environment variables for all service agents
+                {t('list.globalEnv.subtitle')}
               </p>
             </div>
           </div>
@@ -307,7 +307,7 @@ const ServiceAgentList: React.FC = () => {
             {loadingGlobalEnv ? (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-                <span className="ml-2 text-gray-600 dark:text-gray-400">Loading...</span>
+                <span className="ml-2 text-gray-600 dark:text-gray-400">{t('list.globalEnv.loading')}</span>
               </div>
             ) : (
               <>
@@ -315,14 +315,14 @@ const ServiceAgentList: React.FC = () => {
                 <div className="flex items-center space-x-2 mb-4">
                   <input
                     type="text"
-                    placeholder="Variable name"
+                    placeholder={t('list.globalEnv.variableName')}
                     value={newGlobalEnvName}
                     onChange={(e) => setNewGlobalEnvName(e.target.value)}
                     className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <input
                     type="text"
-                    placeholder="Value"
+                    placeholder={t('list.globalEnv.value')}
                     value={newGlobalEnvValue}
                     onChange={(e) => setNewGlobalEnvValue(e.target.value)}
                     className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -342,7 +342,7 @@ const ServiceAgentList: React.FC = () => {
                 <div className="space-y-2">
                   {Object.keys(globalEnvVars).length === 0 ? (
                     <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-                      No global environment variables defined
+                      {t('list.globalEnv.empty')}
                     </p>
                   ) : (
                     Object.entries(globalEnvVars).map(([name, value]) => (
@@ -387,12 +387,12 @@ const ServiceAgentList: React.FC = () => {
                       {savingGlobalEnv ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Saving...
+                          {t('list.globalEnv.saving')}
                         </>
                       ) : (
                         <>
                           <Save className="w-4 h-4 mr-2" />
-                          Save Changes
+                          {t('list.globalEnv.saveChanges')}
                         </>
                       )}
                     </Button>
@@ -401,7 +401,7 @@ const ServiceAgentList: React.FC = () => {
 
                 {/* Note about restart */}
                 <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-                  Note: Changes to global environment variables will apply to all service agents after restart.
+                  {t('list.globalEnv.note')}
                 </p>
               </>
             )}

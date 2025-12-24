@@ -62,5 +62,11 @@
         "failed": "Connection failed. Please try again.",
         "retry": "Retry",
         "backToNetwork": "Back To Select Network"
+    },
+    "breadcrumb": {
+        "home": "Home",
+        "admin": "Admin",
+        "dashboard": "Dashboard",
+        "detail": "Detail"
     }
 }

@@ -17,7 +17,34 @@
         "noDocuments": "아직 문서가 없습니다",
         "createFirst": "첫 번째 문서를 만들어 시작하세요",
         "loading": "문서 로딩 중...",
-        "searchPlaceholder": "문서 검색..."
+        "searchPlaceholder": "문서 검색...",
+        "justNow": "방금",
+        "minutesAgo": "{{count}}분 전",
+        "hoursAgo": "{{count}}시간 전",
+        "daysAgo": "{{count}}일 전",
+        "noActiveEditors": "활성 편집자가 없습니다",
+        "isEditing": "{{user}}님이 편집 중",
+        "areEditing": "{{users}}님이 편집 중",
+        "othersEditing": "{{users}}님과 다른 {{count}}명이 편집 중",
+        "createdBy": "{{user}}님이 생성",
+        "lastModified": "마지막 수정 {{time}}",
+        "active": "활성",
+        "clickToOpen": "클릭하여 열기"
+    },
+    "sidebar": {
+        "top10ActiveDocuments": "상위 10개 활성 문서",
+        "noDocumentsYet": "아직 문서가 없습니다"
+    },
+    "view": {
+        "loadingDocuments": "문서 로딩 중...",
+        "connectionError": "연결 오류",
+        "backToChat": "채팅으로 돌아가기",
+        "documentDetails": "문서 세부 정보",
+        "documentId": "문서 ID: {{id}}",
+        "backToList": "목록으로 돌아가기",
+        "sharedDocuments": "공유 문서",
+        "collaborativeEditingHint": "다른 브라우저 창에서 같은 문서를 열어 실시간 공동 편집을 시작하세요",
+        "newDocument": "새 문서"
     },
     "editor": {
         "untitled": "제목 없는 문서",

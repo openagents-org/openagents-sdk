@@ -65,8 +65,9 @@
         "error": "更新网络配置文件失败"
     },
     "agents": {
-        "title": "智能体管理",
+        "title": "已连接代理",
         "subtitle": "管理网络中连接的智能体",
+        "loading": "加载智能体中...",
         "refresh": "刷新",
         "total": "智能体总数",
         "online": "在线智能体",

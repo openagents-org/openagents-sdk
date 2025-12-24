@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useForumStore } from "@/stores/forumStore";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 import ForumCommentThread from "./components/ForumCommentThread";
@@ -10,6 +11,7 @@ import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
 interface ForumTopicDetailProps {}
 
 const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
+  const { t } = useTranslation('forum');
   const context = useContext(OpenAgentsContext);
   const { topicId } = useParams<{ topicId: string }>();
   const navigate = useNavigate();
@@ -99,8 +101,8 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">
             {!openAgentsService
-              ? "Connecting to network..."
-              : "Establishing connection..."}
+              ? t('detail.connectingToNetwork')
+              : t('detail.establishingConnection')}
           </p>
         </div>
       </div>
@@ -113,7 +115,7 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
       <div className="flex-1 flex items-center justify-center dark:bg-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Loading topic...</p>
+          <p className="text-gray-600 dark:text-gray-400">{t('detail.loadingTopic')}</p>
         </div>
       </div>
     );
@@ -140,13 +142,13 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
             </svg>
           </div>
           <p className="mb-4 text-gray-700 dark:text-gray-300">
-            {commentsError || "Topic not found"}
+            {commentsError || t('detail.topicNotFound')}
           </p>
           <button
             onClick={handleBack}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
-            Back to Forum List
+            {t('detail.backToForumList')}
           </button>
         </div>
       </div>
@@ -176,7 +178,7 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
               d="M15 19l-7-7 7-7"
             />
           </svg>
-          <span>Back to Forum List</span>
+          <span>{t('detail.backToForumList')}</span>
         </button>
       </div>
 
@@ -193,9 +195,9 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
             {/* Topic meta information */}
             <div className="flex items-center justify-between mb-4 text-sm text-gray-600 dark:text-gray-400">
               <span>
-                by {selectedTopic.owner_id} • {timeAgo}
+                {t('detail.by', { user: selectedTopic.owner_id, time: timeAgo })}
               </span>
-              <span>{totalComments} comments</span>
+              <span>{t('detail.commentsCount', { count: totalComments })}</span>
             </div>
 
             {/* Topic content */}
@@ -244,7 +246,7 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                <span className="text-sm font-medium">Add Comment</span>
+                <span className="text-sm font-medium">{t('detail.addComment')}</span>
               </button>
             </div>
           </div>
@@ -252,7 +254,7 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
           {/* Comments title */}
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Comments ({totalComments})
+              {t('detail.commentsTitle', { count: totalComments })}
             </h2>
           </div>
 
@@ -262,13 +264,13 @@ const ForumTopicDetail: React.FC<ForumTopicDetailProps> = () => {
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
                 <p className="text-gray-600 dark:text-gray-400">
-                  Loading comments...
+                  {t('detail.loadingComments')}
                 </p>
               </div>
             ) : comments.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-600 dark:text-gray-400">
-                  No comments yet. Be the first to comment!
+                  {t('detail.noCommentsYet')}
                 </p>
               </div>
             ) : (

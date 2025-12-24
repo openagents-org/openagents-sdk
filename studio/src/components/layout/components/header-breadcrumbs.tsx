@@ -23,6 +23,7 @@ export function HeaderBreadcrumbs() {
   const location = useLocation()
   const navigate = useNavigate()
   const { t } = useTranslation("layout")
+  const { t: tAdmin } = useTranslation("admin")
   const { isAdmin } = useIsAdmin()
   const { confirm } = useConfirm()
 
@@ -109,7 +110,7 @@ export function HeaderBreadcrumbs() {
     // Add home/dashboard as first item (only if not on root path and not admin route)
     if (pathname !== "/" && !isAdminRoute) {
       items.push({
-        label: "Home",
+        label: t("breadcrumb.home"),
         href: "/",
         isActive: false,
       })
@@ -155,11 +156,62 @@ export function HeaderBreadcrumbs() {
       const segments = pathname.split("/").filter(Boolean)
       segments.forEach((segment, index) => {
         const segmentPath = "/" + segments.slice(0, index + 1).join("/")
-        // Capitalize first letter for admin routes
         const decodedSegment = decodeURIComponent(segment)
-        const label = isAdminRoute
-          ? decodedSegment.charAt(0).toUpperCase() + decodedSegment.slice(1)
-          : decodedSegment
+        
+        // Translate admin route segments
+        let label = decodedSegment
+        if (isAdminRoute) {
+          // Map admin route paths to translation keys
+          const adminRouteMap: Record<string, string> = {
+            "dashboard": "sidebar.items.dashboard",
+            "transports": "sidebar.items.transports",
+            "network": "sidebar.items.networkProfile",
+            "publish": "sidebar.items.publishNetwork",
+            "import-export": "sidebar.items.importExport",
+            "agents": "sidebar.items.connectedAgents",
+            "groups": "sidebar.items.agentGroups",
+            "service-agents": "sidebar.items.serviceAgents",
+            "connect": "sidebar.items.connectionGuide",
+            "mods": "sidebar.items.modManagement",
+            "events": "sidebar.items.eventLogs",
+            "event-explorer": "sidebar.items.eventExplorer",
+            "llm-logs": "sidebar.items.llmLogs",
+            "debugger": "sidebar.items.eventDebugger",
+          }
+          
+          // First try to get translation from admin.sidebar.items using the map
+          const translationKey = adminRouteMap[decodedSegment]
+          if (translationKey) {
+            const adminTranslated = tAdmin(translationKey, { defaultValue: null })
+            if (adminTranslated && adminTranslated !== translationKey) {
+              label = adminTranslated
+            }
+          }
+          
+          // If not found in map, try direct lookup
+          if (label === decodedSegment) {
+            const adminSidebarKey = `sidebar.items.${decodedSegment}`
+            const adminTranslated = tAdmin(adminSidebarKey, { defaultValue: null })
+            if (adminTranslated && adminTranslated !== adminSidebarKey) {
+              label = adminTranslated
+            }
+          }
+          
+          // Fallback to breadcrumb translations
+          if (label === decodedSegment) {
+            const breadcrumbKey = `breadcrumb.${decodedSegment.toLowerCase()}`
+            const breadcrumbTranslated = t(breadcrumbKey, { defaultValue: null })
+            if (breadcrumbTranslated && breadcrumbTranslated !== breadcrumbKey) {
+              label = breadcrumbTranslated
+            }
+          }
+          
+          // Final fallback: capitalize first letter
+          if (label === decodedSegment) {
+            label = decodedSegment.charAt(0).toUpperCase() + decodedSegment.slice(1)
+          }
+        }
+        
         items.push({
           label,
           href: segmentPath,
@@ -169,7 +221,7 @@ export function HeaderBreadcrumbs() {
     }
 
     return items
-  }, [location.pathname, t, isAdmin])
+  }, [location.pathname, t, tAdmin, isAdmin])
 
   const handleBreadcrumbClick = (
     href: string,

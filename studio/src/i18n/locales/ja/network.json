@@ -38,6 +38,36 @@
             "add": "追加"
         }
     },
+    "agents": {
+        "title": "接続済みエージェント",
+        "subtitle": "ネットワークに接続されているエージェントを管理",
+        "loading": "エージェントを読み込み中...",
+        "refresh": "更新",
+        "total": "エージェント総数",
+        "online": "オンラインエージェント",
+        "empty": "接続されているエージェントがありません",
+        "you": "(あなた)",
+        "kick": "キック",
+        "kicking": "キック中...",
+        "table": {
+            "id": "エージェント ID",
+            "status": "ステータス",
+            "actions": "操作"
+        },
+        "kickConfirm": {
+            "title": "エージェントをキック",
+            "message": "エージェント \"{{name}}\" をキックしてもよろしいですか？これにより、ネットワークから切断されます。",
+            "confirm": "キック",
+            "cancel": "キャンセル"
+        },
+        "messages": {
+            "kickSelf": "自分自身をキックすることはできません！",
+            "kickSuccess": "{{name}} を正常にキックしました",
+            "kickSuccessDesc": "エージェントがネットワークから削除されました",
+            "kickError": "エージェントのキックに失敗しました",
+            "fetchError": "エージェントの取得に失敗しました"
+        }
+    },
     "groups": {
         "changePassword": {
             "button": "パスワードを変更",

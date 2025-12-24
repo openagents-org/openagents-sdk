@@ -320,6 +320,119 @@
       "point2": "The health endpoint (/api/health) must be reachable for validation.",
       "point3": "Published networks will appear in the OpenAgents directory."
     }
+  },
+  "checkingPrivileges": "Checking admin privileges...",
+  "noAdminPrivileges": "You do not have admin privileges",
+  "connectionGuide": {
+    "title": "Connect to Network",
+    "subtitle": "Build custom agents with full control using WorkerAgent or CollaboratorAgent base classes.",
+    "tabs": {
+      "python": "Python SDK",
+      "yaml": "YAML Config",
+      "langchain": "LangChain",
+      "mcp": "MCP Integration"
+    },
+    "yamlDescription": "Launch agents declaratively without writing code. Use: openagents agent start ./config.yaml",
+    "mcpDescription": "Configure Claude Desktop to connect to this network as an MCP server.",
+    "langchainDescription": "Wrap existing LangChain agents with LangChainAgentRunner to connect to the network.",
+    "copyCode": "Code copied to clipboard",
+    "copyFailed": "Failed to copy to clipboard",
+    "loadFailed": "Loading connection guide...",
+    "connectionMethod": "Connection Method",
+    "networkId": "Network ID",
+    "directConnection": "Direct Connection",
+    "recommended": "Recommended",
+    "copy": "Copy",
+    "codeLanguage": {
+      "python": "Python",
+      "yaml": "YAML",
+      "json": "JSON"
+    }
+  },
+  "modManagement": {
+    "title": "Dynamic Mod Management",
+    "subtitle": "Dynamically load and unload network Mods",
+    "checkingPermissions": "Checking permissions...",
+    "accessDenied": "Access Denied",
+    "adminOnly": "You do not have administrator permissions to access this page. Only network administrators can manage dynamic Mods.",
+    "goBack": "Go Back",
+    "loadMod": {
+      "title": "Load Mod",
+      "modPath": "Mod Path",
+      "modPathPlaceholder": "e.g., openagents.mods.workspace.shared_artifact",
+      "config": "Config (JSON, optional)",
+      "configPlaceholder": "{\"key\": \"value\"}",
+      "button": "Load Mod",
+      "loading": "Loading...",
+      "enterModPath": "Please enter Mod path",
+      "notConnected": "Not connected to network",
+      "invalidJson": "Invalid JSON format in config",
+      "loadSuccess": "Mod loaded successfully: {{modId}}",
+      "loadFailed": "Failed to load: {{error}}"
+    },
+    "loadedMods": {
+      "title": "Loaded Mods",
+      "total": "Total",
+      "refresh": "Refresh",
+      "empty": "No dynamic Mods loaded yet",
+      "unload": "Unload",
+      "unloading": "Unloading...",
+      "unloadSuccess": "Mod unloaded successfully: {{modId}}",
+      "unloadFailed": "Failed to unload: {{error}}"
+    }
+  },
+  "eventLogs": {
+    "title": "Event Logs",
+    "subtitle": "View recent sent or received events",
+    "clearLogs": "Clear Logs",
+    "clearConfirm": "Are you sure you want to clear all event logs?",
+    "tabs": {
+      "events": "Events",
+      "httpRequests": "HTTP Requests"
+    },
+    "searchPlaceholder": "Search keywords...",
+    "filter": "Filter:",
+    "include": "Include",
+    "exclude": "Exclude",
+    "totalEvents": "Total Events",
+    "currentPage": "Current Page",
+    "empty": "No event logs",
+    "from": "From",
+    "to": "To",
+    "eventName": "Event Name",
+    "source": "Source",
+    "destination": "Destination",
+    "payload": "Payload",
+    "response": "Response",
+    "timestamp": "Timestamp"
+  },
+  "eventDebugger": {
+    "title": "Event Debugger",
+    "subtitle": "For debugging and testing event sending. All sent events will be automatically recorded to Event Logs page.",
+    "examples": {
+      "directMessage": "Example: Direct Message",
+      "channelMessage": "Example: Channel Message",
+      "projectList": "Example: Project List",
+      "channelsList": "Example: Channels List"
+    },
+    "eventName": "Event Name *",
+    "eventNamePlaceholder": "e.g., thread.direct_message.send",
+    "destinationId": "Destination ID",
+    "destinationIdPlaceholder": "e.g., agent:target_agent_id or channel:general (optional)",
+    "destinationIdHint": "Leave empty to send to entire network",
+    "payload": "Payload (JSON)",
+    "payloadPlaceholder": "{\"key\": \"value\"}",
+    "payloadHint": "Enter valid JSON data, leave empty to use empty object",
+    "sendEvent": "Send Event",
+    "sending": "Sending...",
+    "tip": "Tip: Press Ctrl+Enter or Cmd+Enter to send quickly",
+    "notConnected": "Not connected to network, please connect first",
+    "networkNotConnected": "Network not connected, please check connection status",
+    "enterEventName": "Please enter event name",
+    "invalidJson": "Invalid JSON format: {{error}}",
+    "sendFailed": "Failed to send event",
+    "connected": "Connected",
+    "notConnectedStatus": "Not Connected"
   }
 }
 

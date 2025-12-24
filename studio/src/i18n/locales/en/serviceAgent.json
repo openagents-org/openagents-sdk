@@ -48,6 +48,22 @@
             "restarted": "Service agent {{id}} restarted",
             "failed": "Operation failed",
             "fetchFailed": "Failed to fetch service agents list"
+        },
+        "globalEnv": {
+            "title": "Global Environment Variables",
+            "subtitle": "Shared environment variables for all service agents",
+            "loading": "Loading...",
+            "variableName": "Variable name",
+            "value": "Value",
+            "empty": "No global environment variables defined",
+            "saving": "Saving...",
+            "saveChanges": "Save Changes",
+            "note": "Note: Changes to global environment variables will apply to all service agents after restart.",
+            "fetchFailed": "Failed to fetch global environment variables",
+            "saveSuccess": "Global environment variables saved successfully",
+            "saveFailed": "Failed to save global environment variables",
+            "variableNameRequired": "Variable name is required",
+            "variableExists": "Variable already exists"
         }
     },
     "detail": {

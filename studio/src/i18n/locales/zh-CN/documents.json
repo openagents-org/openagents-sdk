@@ -17,7 +17,34 @@
         "noDocuments": "还没有文档",
         "createFirst": "创建您的第一个文档开始使用",
         "loading": "加载文档中...",
-        "searchPlaceholder": "搜索文档..."
+        "searchPlaceholder": "搜索文档...",
+        "justNow": "刚刚",
+        "minutesAgo": "{{count}} 分钟前",
+        "hoursAgo": "{{count}} 小时前",
+        "daysAgo": "{{count}} 天前",
+        "noActiveEditors": "没有活跃的编辑者",
+        "isEditing": "{{user}} 正在编辑",
+        "areEditing": "{{users}} 正在编辑",
+        "othersEditing": "{{users}} 和其他 {{count}} 人正在编辑",
+        "createdBy": "由 {{user}} 创建",
+        "lastModified": "最后修改 {{time}}",
+        "active": "活跃",
+        "clickToOpen": "点击打开"
+    },
+    "sidebar": {
+        "top10ActiveDocuments": "前 10 个活跃文档",
+        "noDocumentsYet": "还没有文档"
+    },
+    "view": {
+        "loadingDocuments": "加载文档中...",
+        "connectionError": "连接错误",
+        "backToChat": "返回聊天",
+        "documentDetails": "文档详情",
+        "documentId": "文档 ID: {{id}}",
+        "backToList": "返回列表",
+        "sharedDocuments": "共享文档",
+        "collaborativeEditingHint": "在不同的浏览器窗口中打开同一文档以开始实时协作编辑",
+        "newDocument": "新建文档"
     },
     "editor": {
         "untitled": "无标题文档",

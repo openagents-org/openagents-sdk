@@ -38,6 +38,36 @@
             "add": "추가"
         }
     },
+    "agents": {
+        "title": "연결된 에이전트",
+        "subtitle": "네트워크에 연결된 에이전트 관리",
+        "loading": "에이전트 로딩 중...",
+        "refresh": "새로고침",
+        "total": "총 에이전트",
+        "online": "온라인 에이전트",
+        "empty": "연결된 에이전트가 없습니다",
+        "you": "(당신)",
+        "kick": "추방",
+        "kicking": "추방 중...",
+        "table": {
+            "id": "에이전트 ID",
+            "status": "상태",
+            "actions": "작업"
+        },
+        "kickConfirm": {
+            "title": "에이전트 추방",
+            "message": "에이전트 \"{{name}}\"을(를) 추방하시겠습니까? 이렇게 하면 네트워크에서 연결이 끊어집니다.",
+            "confirm": "추방",
+            "cancel": "취소"
+        },
+        "messages": {
+            "kickSelf": "자신을 추방할 수 없습니다!",
+            "kickSuccess": "{{name}}을(를) 성공적으로 추방했습니다",
+            "kickSuccessDesc": "에이전트가 네트워크에서 제거되었습니다",
+            "kickError": "에이전트 추방에 실패했습니다",
+            "fetchError": "에이전트 가져오기에 실패했습니다"
+        }
+    },
     "groups": {
         "changePassword": {
             "button": "비밀번호 변경",

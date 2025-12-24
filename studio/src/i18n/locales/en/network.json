@@ -65,8 +65,9 @@
         "error": "Failed to update network profile"
     },
     "agents": {
-        "title": "Agent Management",
+        "title": "Connected Agents",
         "subtitle": "Manage connected agents on the network",
+        "loading": "Loading agents...",
         "refresh": "Refresh",
         "total": "Total Agents",
         "online": "Online Agents",

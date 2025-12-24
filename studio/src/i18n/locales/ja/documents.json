@@ -17,7 +17,34 @@
         "noDocuments": "ドキュメントがまだありません",
         "createFirst": "最初のドキュメントを作成して開始しましょう",
         "loading": "ドキュメントを読み込み中...",
-        "searchPlaceholder": "ドキュメントを検索..."
+        "searchPlaceholder": "ドキュメントを検索...",
+        "justNow": "たった今",
+        "minutesAgo": "{{count}}分前",
+        "hoursAgo": "{{count}}時間前",
+        "daysAgo": "{{count}}日前",
+        "noActiveEditors": "アクティブな編集者はいません",
+        "isEditing": "{{user}}が編集中",
+        "areEditing": "{{users}}が編集中",
+        "othersEditing": "{{users}}と他{{count}}人が編集中",
+        "createdBy": "{{user}}が作成",
+        "lastModified": "最終更新 {{time}}",
+        "active": "アクティブ",
+        "clickToOpen": "クリックして開く"
+    },
+    "sidebar": {
+        "top10ActiveDocuments": "アクティブなドキュメントTOP10",
+        "noDocumentsYet": "ドキュメントがまだありません"
+    },
+    "view": {
+        "loadingDocuments": "ドキュメントを読み込み中...",
+        "connectionError": "接続エラー",
+        "backToChat": "チャットに戻る",
+        "documentDetails": "ドキュメントの詳細",
+        "documentId": "ドキュメントID: {{id}}",
+        "backToList": "リストに戻る",
+        "sharedDocuments": "共有ドキュメント",
+        "collaborativeEditingHint": "異なるブラウザウィンドウで同じドキュメントを開いて、リアルタイム共同編集を開始します",
+        "newDocument": "新規ドキュメント"
     },
     "editor": {
         "untitled": "無題のドキュメント",
