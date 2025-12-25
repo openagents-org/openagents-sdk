@@ -160,6 +160,7 @@
     },
     "edit": {
       "title": "编辑 {{type}} 传输协议",
+      "description": "修改传输协议的配置参数",
       "port": "端口",
       "host": "主机",
       "corsOrigins": "CORS 来源（逗号分隔）",
@@ -174,8 +175,10 @@
     },
     "add": {
       "title": "添加新传输协议",
+      "description": "配置新的传输协议以扩展网络连接能力",
       "type": "传输协议类型",
       "typeExists": "此传输协议类型已存在",
+      "allTypesExist": "所有传输协议类型都已配置",
       "port": "端口",
       "host": "主机",
       "cancel": "取消",
@@ -374,7 +377,9 @@
       "title": "已加载的模块",
       "total": "总计",
       "refresh": "刷新",
+      "refreshing": "刷新中...",
       "empty": "尚未加载任何动态模块",
+      "loaded": "已加载",
       "unload": "卸载",
       "unloading": "卸载中...",
       "unloadSuccess": "模块卸载成功: {{modId}}",
@@ -386,6 +391,8 @@
     "subtitle": "查看最近发送或接收的事件",
     "clearLogs": "清除日志",
     "clearConfirm": "确定要清除所有事件日志吗？",
+    "refresh": "刷新",
+    "refreshing": "刷新中...",
     "tabs": {
       "events": "事件",
       "httpRequests": "HTTP 请求"
@@ -404,7 +411,9 @@
     "destination": "目标",
     "payload": "载荷",
     "response": "响应",
-    "timestamp": "时间戳"
+    "timestamp": "时间戳",
+    "previous": "上一页",
+    "next": "下一页"
   },
   "eventDebugger": {
     "title": "事件调试器",
@@ -415,7 +424,7 @@
       "projectList": "示例: 项目列表",
       "channelsList": "示例: 频道列表"
     },
-    "eventName": "事件名称 *",
+    "eventName": "事件名称",
     "eventNamePlaceholder": "例如: thread.direct_message.send",
     "destinationId": "目标 ID",
     "destinationIdPlaceholder": "例如: agent:target_agent_id 或 channel:general (可选)",

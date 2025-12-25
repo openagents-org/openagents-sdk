@@ -160,6 +160,7 @@
     },
     "edit": {
       "title": "Edit {{type}} Transport",
+      "description": "Modify transport configuration parameters",
       "port": "Port",
       "host": "Host",
       "corsOrigins": "CORS Origins (comma-separated)",
@@ -174,8 +175,10 @@
     },
     "add": {
       "title": "Add New Transport",
+      "description": "Configure a new transport to expand network connectivity",
       "type": "Transport Type",
       "typeExists": "This transport type already exists",
+      "allTypesExist": "All transport types are already configured",
       "port": "Port",
       "host": "Host",
       "cancel": "Cancel",
@@ -374,7 +377,9 @@
       "title": "Loaded Mods",
       "total": "Total",
       "refresh": "Refresh",
+      "refreshing": "Refreshing...",
       "empty": "No dynamic Mods loaded yet",
+      "loaded": "Loaded",
       "unload": "Unload",
       "unloading": "Unloading...",
       "unloadSuccess": "Mod unloaded successfully: {{modId}}",
@@ -386,6 +391,8 @@
     "subtitle": "View recent sent or received events",
     "clearLogs": "Clear Logs",
     "clearConfirm": "Are you sure you want to clear all event logs?",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing...",
     "tabs": {
       "events": "Events",
       "httpRequests": "HTTP Requests"
@@ -404,7 +411,9 @@
     "destination": "Destination",
     "payload": "Payload",
     "response": "Response",
-    "timestamp": "Timestamp"
+    "timestamp": "Timestamp",
+    "previous": "Previous",
+    "next": "Next"
   },
   "eventDebugger": {
     "title": "Event Debugger",
@@ -415,7 +424,7 @@
       "projectList": "Example: Project List",
       "channelsList": "Example: Channels List"
     },
-    "eventName": "Event Name *",
+    "eventName": "Event Name",
     "eventNamePlaceholder": "e.g., thread.direct_message.send",
     "destinationId": "Destination ID",
     "destinationIdPlaceholder": "e.g., agent:target_agent_id or channel:general (optional)",
@@ -435,4 +444,3 @@
     "notConnectedStatus": "Not Connected"
   }
 }
-

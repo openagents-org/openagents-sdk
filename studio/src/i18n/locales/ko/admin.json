@@ -409,7 +409,7 @@
       "projectList": "예: 프로젝트 목록",
       "channelsList": "예: 채널 목록"
     },
-    "eventName": "이벤트 이름 *",
+    "eventName": "이벤트 이름",
     "eventNamePlaceholder": "예: thread.direct_message.send",
     "destinationId": "대상 ID",
     "destinationIdPlaceholder": "예: agent:target_agent_id 또는 channel:general (선택 사항)",
@@ -429,4 +429,3 @@
     "notConnectedStatus": "연결되지 않음"
   }
 }
-

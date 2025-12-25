@@ -409,7 +409,7 @@
       "projectList": "例: プロジェクトリスト",
       "channelsList": "例: チャネルリスト"
     },
-    "eventName": "イベント名 *",
+    "eventName": "イベント名",
     "eventNamePlaceholder": "例: thread.direct_message.send",
     "destinationId": "宛先ID",
     "destinationIdPlaceholder": "例: agent:target_agent_id または channel:general (オプション)",
@@ -429,4 +429,3 @@
     "notConnectedStatus": "未接続"
   }
 }
-
