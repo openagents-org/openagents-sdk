@@ -1,5 +1,4 @@
 import React, { ReactNode, useContext, useState } from "react";
-import Sidebar from "./Sidebar";
 import ConnectionLoadingOverlay from "./ConnectionLoadingOverlay";
 import {
   OpenAgentsProvider,
@@ -41,7 +40,7 @@ const ConditionalOpenAgentsProvider: React.FC<{
 
 /**
  * Root layout component - responsible for overall layout structure
- * Contains: left module navigation + middle content area (sidebar + main content)
+ * Contains: middle content area (secondary sidebar + main content)
  *
  * Now also responsible for conditionally rendering OpenAgentsProvider:
  * - Only initializes OpenAgentsProvider after user completes network selection and agent setup
@@ -121,10 +120,6 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
   // Determine if current route should hide the secondary sidebar (content sidebar)
   const shouldHideSecondarySidebar = location.pathname.startsWith("/agentworld");
 
-  // Determine if current route should hide the primary sidebar (left navigation icons)
-  // AgentWorld should still show the primary sidebar for navigation
-  const shouldHidePrimarySidebar = false;
-
   // Note: Admin users can access both admin routes and user routes
   // The only restriction is that non-admin users cannot access /admin/* routes
   // (handled by AdminRouteGuard)
@@ -137,22 +132,14 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
   }, [location.pathname, isMobile]);
 
   return (
-    <div className="h-screen w-screen flex overflow-hidden bg-[#F4F4F5] dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+    <div className="h-screen flex overflow-hidden bg-[#F4F4F5] dark:bg-gray-800 text-gray-900 dark:text-gray-100">
       {/* Connection status overlay - only shown when OpenAgentsProvider exists but not connected */}
       {context && !isConnected && <ConnectionLoadingOverlay />}
 
       {context && isConnected && (
         <LayoutProvider>
-          {/* Middle content area: sidebar + main content */}
+          {/* Middle content area: main content */}
           <div className="flex-1 flex overflow-hidden relative">
-            {/* Primary sidebar (left navigation icons) - hidden on mobile, shown in drawer instead */}
-            {/* Use Tailwind responsive classes: hidden by default, show on md (768px) and up */}
-            {!shouldHidePrimarySidebar && (
-              <div className="hidden md:block">
-                <Sidebar />
-              </div>
-            )}
-
             {/* Mobile menu button - only shown on mobile */}
             {/* Use Tailwind responsive classes: show by default, hide on md (768px) and up */}
             {!shouldHideSecondarySidebar && (
@@ -172,15 +159,8 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
                 </SheetTrigger>
                 <SheetContent side="left" className="w-[85%] max-w-[400px] p-0">
                   <LayoutProvider>
-                    <div className="flex h-full">
-                      {/* Primary Sidebar */}
-                      <div className="flex-shrink-0">
-                        <Sidebar />
-                      </div>
-                      {/* Secondary Sidebar */}
-                      <div className="flex-1 flex flex-col overflow-hidden">
-                        <SidebarSecondary />
-                      </div>
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                      <SidebarSecondary />
                     </div>
                   </LayoutProvider>
                 </SheetContent>
