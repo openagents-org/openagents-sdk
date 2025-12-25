@@ -666,7 +666,7 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
       <div className="flex-1 flex">
         {/* Line authorship and locking sidebar */}
         <div className={`w-12 flex-shrink-0 ${
-          currentTheme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
+          currentTheme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
         } border-r`}>
           <div className="py-6">
             {textContent.split('\n').map((line, index) => {
@@ -759,7 +759,7 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
 
         {/* Comments sidebar */}
         {showComments && (
-          <div className={`w-80 border-l ${currentTheme === 'dark' ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+          <div className={`w-80 border-l ${currentTheme === 'dark' ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
             <div className="p-4">
               <h3 className="font-semibold mb-4">Comments</h3>
               <div className="space-y-4">

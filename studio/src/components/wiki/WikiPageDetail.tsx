@@ -95,7 +95,7 @@ const WikiPageDetail: React.FC = () => {
 
   if (!selectedPage) {
     return (
-      <div className="flex-1 flex items-center justify-center dark:bg-gray-800">
+      <div className="flex-1 flex items-center justify-center bg-white dark:bg-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">{t('detail.loadingPage')}</p>
@@ -106,7 +106,7 @@ const WikiPageDetail: React.FC = () => {
 
   if (pagesError) {
     return (
-      <div className="flex-1 flex items-center justify-center dark:bg-gray-800">
+      <div className="flex-1 flex items-center justify-center bg-white dark:bg-gray-800">
         <div className="text-center">
           <div className={`text-red-500 mb-4`}>
             <svg
@@ -138,9 +138,9 @@ const WikiPageDetail: React.FC = () => {
   const isOwner = selectedPage.creator_id === openAgentsService?.getAgentId();
 
   return (
-    <div className="flex-1 flex flex-col h-full dark:bg-gray-800">
+    <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-800">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-800">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800">
         <div className="flex items-center space-x-3">
           <button
             onClick={handleBack}
@@ -194,7 +194,7 @@ const WikiPageDetail: React.FC = () => {
       </div>
 
       {/* Page content */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 dark:bg-gray-800">
+      <div className="flex-1 overflow-y-auto px-6 py-6 bg-white dark:bg-gray-800">
         <div className="max-w-none">
           <MarkdownRenderer
             content={selectedPage.wiki_content || "No content available"}
@@ -206,7 +206,7 @@ const WikiPageDetail: React.FC = () => {
       {/* Edit modal */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="w-full max-w-4xl h-5/6 mx-4 flex flex-col rounded-lg bg-white dark:bg-gray-800">
+          <div className="w-full max-w-4xl max-h-[600px] mx-4 flex flex-col rounded-lg bg-white dark:bg-gray-800">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                 {isOwner 
