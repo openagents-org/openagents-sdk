@@ -118,7 +118,9 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Determine if current route should hide the secondary sidebar (content sidebar)
-  const shouldHideSecondarySidebar = location.pathname.startsWith("/agentworld");
+  const shouldHideSecondarySidebar = 
+    location.pathname.startsWith("/agentworld") || 
+    location.pathname.startsWith("/admin");
 
   // Note: Admin users can access both admin routes and user routes
   // The only restriction is that non-admin users cannot access /admin/* routes

@@ -16,6 +16,13 @@ import {
   DialogTitle,
 } from "@/components/layout/ui/dialog"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/layout/ui/select';
+import {
   Globe,
   Terminal,
   Wifi,
@@ -814,21 +821,23 @@ const TransportAddForm: React.FC<TransportAddFormProps> = ({
             {t("transports.add.type")}
           </label>
           {filteredTypes.length > 0 ? (
-            <select
+            <Select
               value={selectedType}
-              onChange={(e) =>
-                handleTypeChange(
-                  e.target.value as "http" | "grpc" | "websocket"
-                )
+              onValueChange={(value) =>
+                handleTypeChange(value as "http" | "grpc" | "websocket")
               }
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              {filteredTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type.toUpperCase()}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger size="lg" className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type.toUpperCase()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           ) : (
             <p className="text-sm text-amber-600 dark:text-amber-400">
               {t("transports.add.allTypesExist")}

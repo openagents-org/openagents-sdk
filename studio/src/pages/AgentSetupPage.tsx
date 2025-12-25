@@ -16,6 +16,13 @@ import { networkFetch } from "@/utils/httpClient";
 import LanguageSwitcher from "@/components/common/LanguageSwitcher";
 import { Button } from "@/components/layout/ui/button";
 import { Input } from "@/components/layout/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/layout/ui/select';
 import { Loader2, RefreshCw, ArrowLeft } from "lucide-react";
 
 // Interface for group configuration from /api/health
@@ -563,26 +570,29 @@ const AgentNamePicker: React.FC = () => {
                     {t("agentSetup.loadingGroups")}
                   </div>
                 ) : (
-                  <select
-                    id="agentGroup"
+                  <Select
                     value={selectedGroup || ""}
-                    onChange={(e) => {
-                      setSelectedGroup(e.target.value);
+                    onValueChange={(value) => {
+                      setSelectedGroup(value);
                       setGroupPassword("");
                       setPasswordError("");
                     }}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-500 rounded-lg text-base transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-50"
                   >
-                    {availableGroups.map((group) => (
-                      <option key={group.name} value={group.name}>
-                        {group.has_password ? "🔒 " : ""}
-                        {group.name}
-                        {group.name === defaultGroup
-                          ? ` (${t("agentSetup.default")})`
-                          : ""}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger size="lg" className="w-full px-4 py-3 border border-gray-300 dark:border-gray-500 rounded-lg text-base transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableGroups.map((group) => (
+                        <SelectItem key={group.name} value={group.name}>
+                          {group.has_password ? "🔒 " : ""}
+                          {group.name}
+                          {group.name === defaultGroup
+                            ? ` (${t("agentSetup.default")})`
+                            : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
 
