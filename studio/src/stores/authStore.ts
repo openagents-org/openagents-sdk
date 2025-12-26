@@ -40,6 +40,94 @@ interface NetworkState {
   isModuleEnabled: (moduleName: string) => boolean;
 }
 
+// Helper function to validate NetworkConnection data
+const isValidNetworkConnection = (data: any): data is NetworkConnection => {
+  if (!data || typeof data !== 'object') return false;
+  return (
+    typeof data.host === 'string' &&
+    data.host.length > 0 &&
+    typeof data.port === 'number' &&
+    data.port > 0 &&
+    data.port <= 65535
+  );
+};
+
+// Helper function to validate restored state
+const validateRestoredState = (state: any): Partial<NetworkState> | null => {
+  try {
+    const validated: Partial<NetworkState> = {
+      selectedNetwork: null,
+      agentName: null,
+      agentGroup: null,
+      passwordHashEncrypted: null,
+      moduleState: {
+        enabledModules: [],
+        defaultRoute: null,
+        modulesLoaded: false,
+        networkId: null,
+        networkName: null,
+      },
+    };
+
+    // Validate selectedNetwork
+    if (state.selectedNetwork) {
+      if (isValidNetworkConnection(state.selectedNetwork)) {
+        validated.selectedNetwork = state.selectedNetwork;
+      } else {
+        console.warn('⚠️ Invalid selectedNetwork data in localStorage, clearing it');
+      }
+    }
+
+    // Validate agentName
+    if (state.agentName !== null && state.agentName !== undefined) {
+      if (typeof state.agentName === 'string') {
+        validated.agentName = state.agentName;
+      } else {
+        console.warn('⚠️ Invalid agentName data in localStorage, clearing it');
+      }
+    }
+
+    // Validate agentGroup
+    if (state.agentGroup !== null && state.agentGroup !== undefined) {
+      if (typeof state.agentGroup === 'string') {
+        validated.agentGroup = state.agentGroup;
+      } else {
+        console.warn('⚠️ Invalid agentGroup data in localStorage, clearing it');
+      }
+    }
+
+    // Validate passwordHashEncrypted
+    if (state.passwordHashEncrypted !== null && state.passwordHashEncrypted !== undefined) {
+      if (typeof state.passwordHashEncrypted === 'string') {
+        validated.passwordHashEncrypted = state.passwordHashEncrypted;
+      } else {
+        console.warn('⚠️ Invalid passwordHashEncrypted data in localStorage, clearing it');
+      }
+    }
+
+    // Validate moduleState
+    if (state.moduleState && typeof state.moduleState === 'object') {
+      const moduleState = state.moduleState;
+      validated.moduleState = {
+        enabledModules: Array.isArray(moduleState.enabledModules)
+          ? moduleState.enabledModules.filter((m: any) => typeof m === 'string')
+          : [],
+        defaultRoute: null, // Always reset to null on restore
+        modulesLoaded: false, // Always reset to false on restore
+        networkId:
+          typeof moduleState.networkId === 'string' ? moduleState.networkId : null,
+        networkName:
+          typeof moduleState.networkName === 'string' ? moduleState.networkName : null,
+      };
+    }
+
+    return validated;
+  } catch (error) {
+    console.error('❌ Error validating restored state:', error);
+    return null;
+  }
+};
+
 export const useAuthStore = create<NetworkState>()(
   persist(
     (set, get) => ({
@@ -181,6 +269,57 @@ export const useAuthStore = create<NetworkState>()(
           modulesLoaded: false, // Force reload on next login
         },
       }), // persist network, agent, agent group, encrypted password hash, and module state
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          console.error('❌ Error rehydrating auth store from localStorage:', error);
+          // Clear corrupted storage
+          try {
+            localStorage.removeItem('auth-storage');
+            console.log('🧹 Cleared corrupted auth-storage from localStorage');
+          } catch (clearError) {
+            console.error('❌ Failed to clear corrupted storage:', clearError);
+          }
+          return;
+        }
+
+        if (state) {
+          // Validate and sanitize restored state
+          const validated = validateRestoredState(state);
+          if (validated) {
+            // Update state with validated data
+            if (validated.selectedNetwork !== undefined) {
+              state.selectedNetwork = validated.selectedNetwork;
+            }
+            if (validated.agentName !== undefined) {
+              state.agentName = validated.agentName;
+            }
+            if (validated.agentGroup !== undefined) {
+              state.agentGroup = validated.agentGroup;
+            }
+            if (validated.passwordHashEncrypted !== undefined) {
+              state.passwordHashEncrypted = validated.passwordHashEncrypted;
+            }
+            if (validated.moduleState) {
+              state.moduleState = validated.moduleState;
+            }
+            console.log('✅ Auth store rehydrated and validated successfully');
+          } else {
+            // Validation failed, reset to default state
+            console.warn('⚠️ Restored state validation failed, resetting to default');
+            state.selectedNetwork = null;
+            state.agentName = null;
+            state.agentGroup = null;
+            state.passwordHashEncrypted = null;
+            state.moduleState = {
+              enabledModules: [],
+              defaultRoute: null,
+              modulesLoaded: false,
+              networkId: null,
+              networkName: null,
+            };
+          }
+        }
+      },
     }
   )
 );

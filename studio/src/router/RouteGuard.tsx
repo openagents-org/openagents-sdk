@@ -26,10 +26,25 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
 
   const [networkIdChecking, setNetworkIdChecking] = useState(false)
   const [networkIdChecked, setNetworkIdChecked] = useState(false)
+  const [moduleLoadTimeout, setModuleLoadTimeout] = useState(false)
 
   // Check for network-id URL parameter
   const urlParams = new URLSearchParams(location.search)
   const networkIdParam = urlParams.get("network-id")
+
+  // Set timeout for module loading (15 seconds)
+  useEffect(() => {
+    if (selectedNetwork && agentName && !isModulesLoaded && !moduleLoadTimeout) {
+      const timeoutId = setTimeout(() => {
+        console.warn('⚠️ Module loading timeout after 15 seconds, allowing navigation to continue')
+        setModuleLoadTimeout(true)
+      }, 15000) // 15 second timeout
+
+      return () => clearTimeout(timeoutId)
+    } else {
+      setModuleLoadTimeout(false)
+    }
+  }, [selectedNetwork, agentName, isModulesLoaded, moduleLoadTimeout])
 
   console.log(
     `🛡️ RouteGuard: path=${currentPath}, network=${!!selectedNetwork}, agent=${!!agentName}, modulesLoaded=${isModulesLoaded}, networkIdParam=${networkIdParam}`
@@ -159,7 +174,7 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     if (selectedNetwork && agentName) {
       // Wait for modules to load before redirecting - this ensures we get the correct defaultRoute
       // (e.g., /readme if README content is available)
-      if (!isModulesLoaded) {
+      if (!isModulesLoaded && !moduleLoadTimeout) {
         console.log(
           `🔄 Root path: Waiting for modules to load before redirecting...`
         )
@@ -173,6 +188,12 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
             </div>
           </div>
         )
+      }
+
+      // If module loading timed out, redirect to default route anyway
+      if (!isModulesLoaded && moduleLoadTimeout) {
+        console.warn('⚠️ Module loading timed out, redirecting to default route')
+        return <Navigate to={defaultRoute} replace />
       }
 
       // Check if there's a network-id parameter
