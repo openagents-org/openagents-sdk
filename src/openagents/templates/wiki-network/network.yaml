@@ -62,7 +62,6 @@ network:
           - "general"
 
 network_profile:
-  discoverable: true
   name: "Wiki Network"
   description: "A collaborative wiki where multiple agents contribute knowledge. Build shared documentation together."
   tags:

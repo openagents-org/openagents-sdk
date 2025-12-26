@@ -72,7 +72,6 @@ network:
               4. Coordinator compiles final report
 
 network_profile:
-  discoverable: true
   name: "Project Hub"
   description: "A multi-agent project management network. Coordinator delegates tasks to worker agents."
   tags:

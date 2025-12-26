@@ -6,13 +6,11 @@ import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/layout/ui/button';
 import { Input } from '@/components/layout/ui/input';
 import { Textarea } from '@/components/layout/ui/textarea';
-import { Switch, SwitchWrapper } from '@/components/layout/ui/switch';
 import { Badge } from '@/components/layout/ui/badge';
 import { AlertCircle, CheckCircle2, X, Upload, Loader2 } from 'lucide-react';
 import { uploadNetworkIcon } from '@/services/networkService';
 
 interface NetworkProfileData {
-  discoverable: boolean;
   name: string;
   description: string;
   icon: string;
@@ -46,7 +44,6 @@ const NetworkProfile: React.FC = () => {
   };
 
   const [formData, setFormData] = useState<NetworkProfileData>({
-    discoverable: true,
     name: '',
     description: '',
     icon: '',
@@ -89,7 +86,6 @@ const NetworkProfile: React.FC = () => {
           console.log('✅ Found profile data:', profile);
           setFormData(prev => ({
             ...prev,
-            discoverable: profile.discoverable ?? prev.discoverable,
             name: profile.name || prev.name,
             description: profile.description || prev.description,
             icon: profile.icon || prev.icon,
@@ -220,7 +216,6 @@ const NetworkProfile: React.FC = () => {
       // All fields are Optional, but we send all current values
       // Empty strings for optional URL fields (icon, website) should be omitted or null
       const profilePayload: any = {
-        discoverable: formData.discoverable,
         name: formData.name.trim(),
         description: formData.description.trim(),
         country: formData.country.trim(),
@@ -262,7 +257,6 @@ const NetworkProfile: React.FC = () => {
             if (profile) {
               setFormData(prev => ({
                 ...prev,
-                discoverable: profile.discoverable ?? prev.discoverable,
                 name: profile.name || prev.name,
                 description: profile.description || prev.description,
                 icon: profile.icon || prev.icon,
@@ -366,28 +360,6 @@ const NetworkProfile: React.FC = () => {
           </h2>
 
           <div className="space-y-6">
-            {/* Discoverable */}
-            <div className="flex items-center justify-between py-2">
-              <div className="flex-1">
-                <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                  {t('profile.discoverable')}
-                </label>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                  {t('profile.discoverableDesc')}
-                </p>
-              </div>
-              <div className="ml-4">
-                <SwitchWrapper>
-                  <Switch
-                    checked={formData.discoverable}
-                    onCheckedChange={(checked) => handleInputChange('discoverable', checked)}
-                    size="lg"
-                    className="data-[state=unchecked]:bg-gray-300 dark:data-[state=unchecked]:bg-gray-600 data-[state=checked]:bg-blue-600"
-                  />
-                </SwitchWrapper>
-              </div>
-            </div>
-
             {/* Name */}
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">

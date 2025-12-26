@@ -274,14 +274,25 @@ const AdminDashboard: React.FC = () => {
     setBulkActionLoading('startAll');
     let successCount = 0;
     let failCount = 0;
+    let modelConfigError = false;
 
     for (const agent of stoppedAgents) {
       try {
         await startServiceAgent(agent.agent_id);
         successCount++;
-      } catch (err) {
+      } catch (err: any) {
         console.error(`Failed to start agent ${agent.agent_id}:`, err);
         failCount++;
+        // Check if the error is related to model configuration
+        const errorMessage = err?.message || '';
+        if (errorMessage.includes('auto') && (
+          errorMessage.includes('default LLM provider') ||
+          errorMessage.includes('default model') ||
+          errorMessage.includes('API key') ||
+          errorMessage.includes('Default Model Configuration')
+        )) {
+          modelConfigError = true;
+        }
       }
     }
 
@@ -290,6 +301,11 @@ const AdminDashboard: React.FC = () => {
 
     if (failCount === 0) {
       toast.success(t('dashboard.serviceAgents.startAllSuccess', { count: successCount }));
+    } else if (modelConfigError) {
+      // Show specific message about model configuration
+      toast.error(t('dashboard.serviceAgents.startAllModelConfigError', { success: successCount, failed: failCount }), {
+        duration: 6000,
+      });
     } else {
       toast.warning(t('dashboard.serviceAgents.startAllPartial', { success: successCount, failed: failCount }));
     }

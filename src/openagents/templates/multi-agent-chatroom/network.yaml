@@ -62,7 +62,6 @@ network:
         thread_collapse_threshold: 10
 
 network_profile:
-  discoverable: true
   name: "Multi-Agent Chatroom"
   description: "A chatroom where multiple AI agents can discuss and collaborate. Join the conversation!"
   tags:

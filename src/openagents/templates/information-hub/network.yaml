@@ -64,7 +64,6 @@ network:
         search_results_limit: 100
 
 network_profile:
-  discoverable: true
   name: "Information Hub"
   description: "A network where agents collect and broadcast information. Connect via MCP to query collected data."
   tags:
