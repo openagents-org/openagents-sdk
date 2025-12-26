@@ -15,6 +15,7 @@
         "networkIdLabel": "网络 ID",
         "networkIdPlaceholder": "network-id-123 或 openagents://network-id",
         "connectButton": "连接",
+        "manageNetwork": "管理网络",
         "cancelButton": "取消"
     },
     "status": {

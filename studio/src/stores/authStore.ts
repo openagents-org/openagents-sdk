@@ -3,6 +3,9 @@ import { persist } from "zustand/middleware";
 import { NetworkConnection } from "@/types/connection";
 import { encryptForStorage, decryptFromStorage } from "@/utils/storageEncryption";
 
+// Session timeout in milliseconds (5 minutes)
+const SESSION_TIMEOUT_MS = 5 * 60 * 1000;
+
 interface ModuleState {
   enabledModules: string[];
   defaultRoute: string | null;
@@ -26,6 +29,11 @@ interface NetworkState {
   getPasswordHash: () => string | null; // Decrypts when retrieving
   clearPasswordHash: () => void;
 
+  // Session management
+  lastActivityTimestamp: number | null;
+  updateActivity: () => void;
+  isSessionValid: () => boolean;
+
   // Module management
   moduleState: ModuleState;
   setModules: (modules: {
@@ -47,6 +55,7 @@ export const useAuthStore = create<NetworkState>()(
       agentName: null,
       agentGroup: null,
       passwordHashEncrypted: null,
+      lastActivityTimestamp: null,
 
       // Initialize module state
       moduleState: {
@@ -58,7 +67,7 @@ export const useAuthStore = create<NetworkState>()(
       },
 
       handleNetworkSelected: (network: NetworkConnection | null) => {
-        set({ selectedNetwork: network });
+        set({ selectedNetwork: network, lastActivityTimestamp: Date.now() });
         // Clear modules when network changes
         if (network) {
           get().clearModules();
@@ -66,7 +75,7 @@ export const useAuthStore = create<NetworkState>()(
       },
 
       setAgentName: (name: string | null) => {
-        set({ agentName: name });
+        set({ agentName: name, lastActivityTimestamp: Date.now() });
       },
 
       clearAgentName: () => {
@@ -74,7 +83,7 @@ export const useAuthStore = create<NetworkState>()(
       },
 
       setAgentGroup: (group: string | null) => {
-        set({ agentGroup: group });
+        set({ agentGroup: group, lastActivityTimestamp: Date.now() });
       },
 
       clearAgentGroup: () => {
@@ -90,7 +99,7 @@ export const useAuthStore = create<NetworkState>()(
 
         try {
           const encrypted = encryptForStorage(hash);
-          set({ passwordHashEncrypted: encrypted });
+          set({ passwordHashEncrypted: encrypted, lastActivityTimestamp: Date.now() });
           console.log('🔑 Password hash encrypted and stored');
         } catch (error) {
           console.error('❌ Failed to encrypt password hash:', error);
@@ -122,10 +131,21 @@ export const useAuthStore = create<NetworkState>()(
       },
 
       clearNetwork: () => {
-        set({ selectedNetwork: null });
+        set({ selectedNetwork: null, lastActivityTimestamp: null });
         get().clearModules();
         get().clearPasswordHash();
         get().clearAgentGroup();
+      },
+
+      // Session management
+      updateActivity: () => {
+        set({ lastActivityTimestamp: Date.now() });
+      },
+
+      isSessionValid: () => {
+        const timestamp = get().lastActivityTimestamp;
+        if (!timestamp) return false;
+        return Date.now() - timestamp < SESSION_TIMEOUT_MS;
       },
 
       // Module management actions
@@ -168,19 +188,34 @@ export const useAuthStore = create<NetworkState>()(
     }),
     {
       name: "auth-storage", // key for persistent storage
+      // Persist auth data for session recovery
       partialize: (state) => ({
         selectedNetwork: state.selectedNetwork,
         agentName: state.agentName,
         agentGroup: state.agentGroup,
-        passwordHashEncrypted: state.passwordHashEncrypted, // Persist encrypted password hash
-        // Persist moduleState but exclude defaultRoute - it should be recalculated on each login
-        // to ensure fresh README availability check
-        moduleState: {
-          ...state.moduleState,
-          defaultRoute: null, // Don't persist - will be recalculated from health response
-          modulesLoaded: false, // Force reload on next login
-        },
-      }), // persist network, agent, agent group, encrypted password hash, and module state
+        passwordHashEncrypted: state.passwordHashEncrypted,
+        lastActivityTimestamp: state.lastActivityTimestamp,
+      }),
+      // Validate session on rehydration
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          const timestamp = state.lastActivityTimestamp;
+          // Check if session has expired (5 minutes)
+          if (!timestamp || Date.now() - timestamp >= SESSION_TIMEOUT_MS) {
+            console.log('🔒 Session expired, clearing auth data');
+            // Clear expired session data
+            state.selectedNetwork = null;
+            state.agentName = null;
+            state.agentGroup = null;
+            state.passwordHashEncrypted = null;
+            state.lastActivityTimestamp = null;
+          } else {
+            console.log('✅ Session valid, restoring auth data');
+            // Update activity timestamp to extend session
+            state.lastActivityTimestamp = Date.now();
+          }
+        }
+      },
     }
   )
 );

@@ -51,6 +51,18 @@
       "eventExplorerDesc": "搜索和浏览事件",
       "llmLogsDesc": "查看 LLM 请求日志"
     },
+    "serviceAgents": {
+      "title": "服务代理",
+      "viewAll": "查看全部",
+      "startAll": "全部启动",
+      "stopAll": "全部停止",
+      "allRunning": "所有代理已在运行中",
+      "allStopped": "所有代理已停止",
+      "startAllSuccess": "成功启动 {{count}} 个代理",
+      "stopAllSuccess": "成功停止 {{count}} 个代理",
+      "startAllPartial": "已启动 {{success}} 个代理，{{failed}} 个失败",
+      "stopAllPartial": "已停止 {{success}} 个代理，{{failed}} 个失败"
+    },
     "recentActivity": {
       "title": "最近活动",
       "noActivity": "没有最近活动"
@@ -123,6 +135,7 @@
       "connectedAgents": "已连接代理",
       "agentGroups": "代理组",
       "serviceAgents": "服务代理",
+      "defaultModels": "默认模型",
       "connectionGuide": "连接指南",
       "modManagement": "模块管理",
       "eventLogs": "事件日志",
@@ -355,6 +368,8 @@
   "modManagement": {
     "title": "动态模块管理",
     "subtitle": "动态加载和卸载网络模块",
+    "simpleTitle": "模块管理",
+    "simpleSubtitle": "管理网络模块",
     "checkingPermissions": "正在检查权限...",
     "accessDenied": "访问被拒绝",
     "adminOnly": "您没有访问此页面的管理员权限。只有网络管理员可以管理动态模块。",
@@ -374,7 +389,7 @@
       "loadFailed": "加载失败: {{error}}"
     },
     "loadedMods": {
-      "title": "已加载的模块",
+      "title": "动态加载的模块",
       "total": "总计",
       "refresh": "刷新",
       "refreshing": "刷新中...",
@@ -384,6 +399,34 @@
       "unloading": "卸载中...",
       "unloadSuccess": "模块卸载成功: {{modId}}",
       "unloadFailed": "卸载失败: {{error}}"
+    },
+    "enabledMods": {
+      "title": "已启用的模块",
+      "total": "总计",
+      "empty": "此网络未配置任何模块",
+      "dynamic": "动态"
+    },
+    "modTypes": {
+      "static": "静态",
+      "dynamic": "动态"
+    },
+    "actions": {
+      "enable": "启用",
+      "disable": "禁用",
+      "remove": "移除",
+      "enableSuccess": "模块已启用: {{modName}}",
+      "disableSuccess": "模块已禁用: {{modName}}",
+      "toggleFailed": "切换模块失败: {{error}}"
+    },
+    "addMod": {
+      "button": "添加模块",
+      "title": "可用模块",
+      "description": "浏览并添加模块以扩展网络功能",
+      "pageTitle": "添加新模块",
+      "pageDescription": "浏览可用模块并添加到您的网络",
+      "enabled": "已启用",
+      "add": "添加模块",
+      "loading": "添加中..."
     }
   },
   "eventLogs": {
@@ -442,5 +485,23 @@
     "sendFailed": "发送事件失败",
     "connected": "已连接",
     "notConnectedStatus": "未连接"
+  },
+  "defaultModels": {
+    "title": "默认模型",
+    "subtitle": "为此网络中的服务代理配置默认的 LLM 模型。",
+    "providerLabel": "提供商",
+    "selectProvider": "选择提供商",
+    "modelNameLabel": "模型名称",
+    "selectModel": "选择模型",
+    "modelNamePlaceholder": "输入模型名称",
+    "apiKeyLabel": "API 密钥",
+    "apiKeyPlaceholder": "输入您的 API 密钥",
+    "hint": "此配置将作为所有未单独配置模型的服务代理的默认设置。",
+    "saveButton": "保存配置",
+    "clearButton": "清除",
+    "saving": "保存中...",
+    "saveSuccess": "配置保存成功",
+    "saveFailed": "保存配置失败",
+    "clearFailed": "清除配置失败"
   }
 }

@@ -1132,6 +1132,37 @@ class AgentNetwork:
                 if reloaded_config:
                     self.config = reloaded_config
                     self.network_name = reloaded_config.name
+
+                    # Reload mods from the reloaded config
+                    if reloaded_config.mods:
+                        logger.info(f"Loading {len(reloaded_config.mods)} mods from reloaded config...")
+                        try:
+                            from openagents.utils.mod_loaders import load_network_mods
+
+                            # Convert ModConfig objects to dictionaries
+                            mod_configs = []
+                            for mod_config in reloaded_config.mods:
+                                if hasattr(mod_config, "model_dump"):
+                                    mod_configs.append(mod_config.model_dump())
+                                elif hasattr(mod_config, "dict"):
+                                    mod_configs.append(mod_config.dict())
+                                else:
+                                    mod_configs.append(mod_config)
+
+                            mods = load_network_mods(mod_configs)
+
+                            # Clear existing mods and register new ones
+                            self.mods.clear()
+                            for mod_name, mod_instance in mods.items():
+                                mod_instance.bind_network(self)
+                                self.mods[mod_name] = mod_instance
+                                logger.info(f"Registered mod: {mod_name}")
+
+                            logger.info(f"Successfully loaded {len(mods)} mods from reloaded config")
+
+                        except Exception as e:
+                            logger.error(f"Failed to load mods from reloaded config: {e}")
+                            # Continue with restart even if mod loading fails
                 else:
                     logger.warning("Could not reload config from file, using existing config")
 

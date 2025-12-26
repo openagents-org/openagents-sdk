@@ -17,6 +17,7 @@ import {
   Search,
   Monitor,
   Bug,
+  Cpu,
 } from "lucide-react";
 
 const AdminSidebar: React.FC = () => {
@@ -67,6 +68,12 @@ const AdminSidebar: React.FC = () => {
           icon: ArrowLeftRight,
         },
         {
+          id: "mods",
+          label: t("sidebar.items.modManagement"),
+          path: "/admin/mods",
+          icon: Settings,
+        },
+        {
           id: "publish",
           label: t("sidebar.items.publishNetwork"),
           path: "/admin/publish",
@@ -105,6 +112,12 @@ const AdminSidebar: React.FC = () => {
                 path: "/admin/service-agents",
                 icon: Server,
               },
+              {
+                id: "default-models",
+                label: t("sidebar.items.defaultModels"),
+                path: "/admin/default-models",
+                icon: Cpu,
+              },
             ]
           : []),
         {
@@ -124,17 +137,6 @@ const AdminSidebar: React.FC = () => {
           label: t("sidebar.items.connectionGuide"),
           path: "/admin/connect",
           icon: Link2,
-        },
-      ],
-    },
-    {
-      title: t("sidebar.sections.modules"),
-      items: [
-        {
-          id: "mods",
-          label: t("sidebar.items.modManagement"),
-          path: "/admin/mods",
-          icon: Settings,
         },
       ],
     },

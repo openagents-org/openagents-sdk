@@ -128,11 +128,24 @@ class AgentManager:
             return False
     
     def _discover_agents(self) -> None:
-        """Discover agent configuration files in workspace/agents/ directory."""
+        """Discover agent configuration files in workspace/agents/ directory.
+
+        This clears and rebuilds the agent registry from the current filesystem state,
+        ensuring that deleted agent files are no longer tracked.
+        """
         if not self.agents_dir.exists():
             logger.warning(f"Agents directory not found: {self.agents_dir}")
             return
-        
+
+        # Clear existing agent registry to remove stale entries from deleted files
+        # (Preserve running agent info by filtering out stopped agents only)
+        running_agents = {
+            agent_id: info for agent_id, info in self.agents.items()
+            if info.status == AgentStatus.RUNNING and info.process is not None
+        }
+        self.agents.clear()
+        self.agents.update(running_agents)
+
         discovered_count = 0
         
         # Discover YAML agents

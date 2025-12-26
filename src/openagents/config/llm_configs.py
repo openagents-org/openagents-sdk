@@ -24,6 +24,7 @@ class LLMProviderType(str, Enum):
     COHERE = "cohere"
     TOGETHER = "together"
     PERPLEXITY = "perplexity"
+    GROQ = "groq"
 
 
 # Model provider configurations
@@ -45,6 +46,7 @@ MODEL_CONFIGS: Dict[str, Dict[str, Any]] = {
     "claude": {
         "provider": "anthropic",
         "models": [
+            "claude-sonnet-4-20250514",   # Latest Claude 4 Sonnet
             "claude-3-5-sonnet-20241022",
             "claude-3-5-haiku-20241022",
             "claude-3-opus-20240229",
@@ -60,17 +62,23 @@ MODEL_CONFIGS: Dict[str, Dict[str, Any]] = {
         ],
         "API_KEY_ENV_VAR": "BEDROCK_API_KEY",
     },
-    # Google Gemini
+    # Google Gemini (free tier: 20-25 req/day as of Dec 2025)
     "gemini": {
         "provider": "gemini",
-        "models": ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro"],
+        "models": [
+            "gemini-2.0-flash",    # Latest
+            "gemini-2.5-flash",    # Newer
+            "gemini-1.5-flash",    # Stable
+            "gemini-1.5-pro",      # Higher quality
+        ],
         "API_KEY_ENV_VAR": "GEMINI_API_KEY",
+        "free_tier": True,
     },
     # DeepSeek
     "deepseek": {
         "provider": "generic",
         "api_base": "https://api.deepseek.com/v1",
-        "models": ["deepseek-chat", "deepseek-coder"],
+        "models": ["deepseek-chat", "deepseek-reasoner"],
         "API_KEY_ENV_VAR": "DEEPSEEK_API_KEY",
     },
     # Qwen
@@ -87,17 +95,17 @@ MODEL_CONFIGS: Dict[str, Dict[str, Any]] = {
         "models": ["grok-beta"],
         "API_KEY_ENV_VAR": "XAI_API_KEY",
     },
-    # Mistral AI
+    # Mistral AI (free tier: 1B tokens/month)
     "mistral": {
         "provider": "generic",
         "api_base": "https://api.mistral.ai/v1",
         "models": [
             "mistral-large-latest",
-            "mistral-medium-latest",
             "mistral-small-latest",
-            "mixtral-8x7b-instruct",
+            "codestral-latest",
         ],
         "API_KEY_ENV_VAR": "MISTRAL_API_KEY",
+        "free_tier": True,
     },
     # Cohere
     "cohere": {
@@ -125,6 +133,19 @@ MODEL_CONFIGS: Dict[str, Dict[str, Any]] = {
             "llama-3.1-sonar-large-128k-online",
         ],
         "API_KEY_ENV_VAR": "PERPLEXITY_API_KEY",
+    },
+    # Groq (free tier: 14,400 req/day, excellent tool use support)
+    "groq": {
+        "provider": "generic",
+        "api_base": "https://api.groq.com/openai/v1",
+        "models": [
+            "llama-3.3-70b-versatile",      # Best for tool use
+            "llama-3.1-8b-instant",          # Fastest
+            "qwen/qwen3-32b",                # Great reasoning
+            "deepseek-r1-distill-llama-70b", # Reasoning model
+        ],
+        "API_KEY_ENV_VAR": "GROQ_API_KEY",
+        "free_tier": True,
     },
 }
 
@@ -200,6 +221,39 @@ def get_all_models() -> Dict[str, List[str]]:
     }
 
 
+def resolve_auto_model_config() -> Dict[str, Optional[str]]:
+    """Resolve 'auto' model configuration from environment variables.
+
+    When an agent specifies model_name="auto", this function resolves the
+    actual model configuration from the following environment variables:
+    - DEFAULT_LLM_PROVIDER: The provider name (e.g., "openai", "claude")
+    - DEFAULT_LLM_MODEL_NAME: The model name (e.g., "gpt-4o", "claude-3-5-sonnet")
+    - DEFAULT_LLM_API_KEY: The API key for the provider
+
+    Returns:
+        Dictionary with 'provider', 'model_name', and 'api_key' resolved from env vars
+    """
+    return {
+        "provider": os.getenv("DEFAULT_LLM_PROVIDER"),
+        "model_name": os.getenv("DEFAULT_LLM_MODEL_NAME"),
+        "api_key": os.getenv("DEFAULT_LLM_API_KEY"),
+    }
+
+
+def is_auto_model(model_name: Optional[str]) -> bool:
+    """Check if the model name indicates automatic configuration.
+
+    Args:
+        model_name: The model name to check
+
+    Returns:
+        True if model should use auto configuration
+    """
+    if not model_name:
+        return False
+    return model_name.lower() == "auto"
+
+
 def determine_provider(
     provider: Optional[str], model_name: str, api_base: Optional[str]
 ) -> str:
@@ -230,6 +284,8 @@ def determine_provider(
             return "claude"
         elif "googleapis.com" in api_base:
             return "gemini"
+        elif "groq.com" in api_base:
+            return "groq"
 
     # Auto-detect based on model name
     model_lower = model_name.lower()
@@ -245,16 +301,19 @@ def determine_provider(
         return "qwen"
     elif any(name in model_lower for name in ["grok"]):
         return "grok"
-    elif any(name in model_lower for name in ["mistral", "mixtral"]):
+    elif any(name in model_lower for name in ["mistral"]):
         return "mistral"
     elif any(name in model_lower for name in ["command"]):
         return "cohere"
-    elif "llama" in model_lower or "meta-" in model_lower:
-        return "together"
     elif "sonar" in model_lower:
         return "perplexity"
     elif "anthropic." in model_name:
         return "bedrock"
+    # Groq-specific model patterns (llama with specific suffixes, mixtral with context size)
+    elif any(name in model_lower for name in ["versatile", "instant", "32768", "gemma2"]):
+        return "groq"
+    elif "llama" in model_lower or "meta-" in model_lower or "mixtral" in model_lower:
+        return "together"
 
     # Default to OpenAI
     return "openai"
@@ -312,6 +371,7 @@ def create_model_provider(
         "cohere",
         "together",
         "perplexity",
+        "groq",
     ]:
         # Use predefined API base if not provided
         if not api_base and provider in MODEL_CONFIGS:

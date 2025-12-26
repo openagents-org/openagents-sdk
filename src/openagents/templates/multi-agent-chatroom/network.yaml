@@ -1,13 +1,12 @@
-# Hello World Template
-# The simplest possible OpenAgents network - basic messaging setup
+# Multi-Agent Chatroom Template
+# A network where multiple agents can chat and discuss topics together.
+# Uses the messaging mod for chat functionality.
 
 network:
-  name: "HelloWorld"
+  name: "MultiAgentChatroom"
   mode: "centralized"
-  node_id: "hello-world-1"
-  initialized: false
+  node_id: "chatroom-1"
 
-  # Transport configuration
   transports:
     - type: "http"
       config:
@@ -25,69 +24,62 @@ network:
   manifest_transport: "http"
   recommended_transport: "grpc"
 
-  # Security configuration
   encryption_enabled: false
-
-  # Discovery configuration
   discovery_interval: 10
   discovery_enabled: true
 
-  # Connection management
-  max_connections: 10
+  max_connections: 20
   connection_timeout: 30.0
   retry_attempts: 3
   heartbeat_interval: 60
   agent_timeout: 180
 
-  # Messaging configuration
   message_queue_size: 1000
   message_timeout: 30.0
   message_routing_enabled: true
 
-  # Agent groups
-  default_agent_group: guest
+  default_agent_group: "guest"
   requires_password: false
 
   agent_groups:
     admin:
       description: "Administrator agents with full permissions"
-      password_hash: ""  # Set via initialization API
+      password_hash: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"  # password: admin
       metadata:
         permissions: ["all"]
 
-  # Mod configuration
+  # Messaging mod for chat functionality
   mods:
     - name: "openagents.mods.workspace.messaging"
       enabled: true
       config:
         default_channels:
           - name: "general"
-            description: "General chat channel"
+            description: "General discussion channel"
+          - name: "ideas"
+            description: "Share and discuss ideas"
         max_thread_depth: 5
+        thread_collapse_threshold: 10
 
-# Network profile for discovery
 network_profile:
   discoverable: true
-  name: "Hello World"
-  description: "The simplest OpenAgents setup - basic messaging with one channel"
+  name: "Multi-Agent Chatroom"
+  description: "A chatroom where multiple AI agents can discuss and collaborate. Join the conversation!"
   tags:
-    - "template"
-    - "hello-world"
-    - "beginner"
-    - "messaging"
+    - "chat"
+    - "collaboration"
+    - "discussion"
   categories:
-    - "template"
+    - "collaboration"
   country: "Worldwide"
-  required_openagents_version: "0.7.0"
-  capacity: 10
+  capacity: 20
   authentication:
     type: "none"
   host: "0.0.0.0"
   port: 8700
 
-# Global settings
 log_level: "INFO"
-data_dir: "./data"
+data_dir: "./data/multi-agent-chatroom"
 
 runtime_limit: null
 shutdown_timeout: 30

@@ -42,13 +42,15 @@
             "title": "进入管理控制台",
             "confirm": "确定要进入管理控制台吗？",
             "confirmButton": "进入",
-            "cancel": "取消"
+            "cancel": "取消",
+            "button": "管理控制台"
         },
         "switchToUser": {
             "title": "进入用户界面",
             "confirm": "确定要进入用户界面吗？您可以随时返回管理控制台。",
             "confirmButton": "进入",
-            "cancel": "取消"
+            "cancel": "取消",
+            "button": "用户控制台"
         }
     },
     "defaultSidebar": {

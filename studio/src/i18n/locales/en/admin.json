@@ -51,6 +51,18 @@
       "eventExplorerDesc": "Search and browse events",
       "llmLogsDesc": "View LLM request logs"
     },
+    "serviceAgents": {
+      "title": "Service Agents",
+      "viewAll": "View All",
+      "startAll": "Start All",
+      "stopAll": "Stop All",
+      "allRunning": "All agents are already running",
+      "allStopped": "All agents are already stopped",
+      "startAllSuccess": "Successfully started {{count}} agent(s)",
+      "stopAllSuccess": "Successfully stopped {{count}} agent(s)",
+      "startAllPartial": "Started {{success}} agent(s), {{failed}} failed",
+      "stopAllPartial": "Stopped {{success}} agent(s), {{failed}} failed"
+    },
     "recentActivity": {
       "title": "Recent Activity",
       "noActivity": "No recent activity"
@@ -123,6 +135,7 @@
       "connectedAgents": "Connected Agents",
       "agentGroups": "Agent Groups",
       "serviceAgents": "Service Agents",
+      "defaultModels": "Default Models",
       "connectionGuide": "Connection Guide",
       "modManagement": "Mod Management",
       "eventLogs": "Event Logs",
@@ -355,6 +368,8 @@
   "modManagement": {
     "title": "Dynamic Mod Management",
     "subtitle": "Dynamically load and unload network Mods",
+    "simpleTitle": "Mod Management",
+    "simpleSubtitle": "Manage network mods",
     "checkingPermissions": "Checking permissions...",
     "accessDenied": "Access Denied",
     "adminOnly": "You do not have administrator permissions to access this page. Only network administrators can manage dynamic Mods.",
@@ -374,7 +389,7 @@
       "loadFailed": "Failed to load: {{error}}"
     },
     "loadedMods": {
-      "title": "Loaded Mods",
+      "title": "Dynamically Loaded Mods",
       "total": "Total",
       "refresh": "Refresh",
       "refreshing": "Refreshing...",
@@ -384,6 +399,34 @@
       "unloading": "Unloading...",
       "unloadSuccess": "Mod unloaded successfully: {{modId}}",
       "unloadFailed": "Failed to unload: {{error}}"
+    },
+    "enabledMods": {
+      "title": "Enabled Mods",
+      "total": "Total",
+      "empty": "No mods configured in this network",
+      "dynamic": "Dynamic"
+    },
+    "modTypes": {
+      "static": "Static",
+      "dynamic": "Dynamic"
+    },
+    "actions": {
+      "enable": "Enable",
+      "disable": "Disable",
+      "remove": "Remove",
+      "enableSuccess": "Mod enabled: {{modName}}",
+      "disableSuccess": "Mod disabled: {{modName}}",
+      "toggleFailed": "Failed to toggle mod: {{error}}"
+    },
+    "addMod": {
+      "button": "Add Mod",
+      "title": "Available Mods",
+      "description": "Browse and add mods to extend your network's capabilities",
+      "pageTitle": "Add New Mod",
+      "pageDescription": "Browse available mods and add them to your network",
+      "enabled": "Enabled",
+      "add": "Add Mod",
+      "loading": "Adding..."
     }
   },
   "eventLogs": {
@@ -442,5 +485,23 @@
     "sendFailed": "Failed to send event",
     "connected": "Connected",
     "notConnectedStatus": "Not Connected"
+  },
+  "defaultModels": {
+    "title": "Default Models",
+    "subtitle": "Configure the default LLM model for service agents in this network.",
+    "providerLabel": "Provider",
+    "selectProvider": "Select a provider",
+    "modelNameLabel": "Model Name",
+    "selectModel": "Select a model",
+    "modelNamePlaceholder": "Enter model name",
+    "apiKeyLabel": "API Key",
+    "apiKeyPlaceholder": "Enter your API key",
+    "hint": "This configuration will be used as the default for all service agents that don't have a specific model configured.",
+    "saveButton": "Save Configuration",
+    "clearButton": "Clear",
+    "saving": "Saving...",
+    "saveSuccess": "Configuration saved successfully",
+    "saveFailed": "Failed to save configuration",
+    "clearFailed": "Failed to clear configuration"
   }
 }

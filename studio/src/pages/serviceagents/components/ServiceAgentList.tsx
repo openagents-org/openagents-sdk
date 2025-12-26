@@ -14,7 +14,73 @@ import {
 } from "@/services/serviceAgentsApi";
 import { Button } from "@/components/layout/ui/button";
 import { Badge } from "@/components/layout/ui/badge";
-import { AlertCircle, RefreshCw, FileText, Eye, Play, Square, Loader2, Settings, Plus, Trash2, Save, ChevronDown, ChevronUp } from "lucide-react";
+import { AlertCircle, RefreshCw, FileText, Eye, Play, Square, Loader2, Settings, Plus, Trash2, Save, ChevronDown, ChevronUp, Cpu, EyeOff } from "lucide-react";
+
+// Model provider configurations
+// Note: Providers marked with (Free) have free tiers available
+const MODEL_CONFIGS: Record<string, { provider: string; models: string[]; apiKeyEnvVar: string; free?: boolean }> = {
+  // === FREE TIER PROVIDERS (Recommended for getting started) ===
+  groq: {
+    provider: "generic",
+    models: [
+      "llama-3.3-70b-versatile",    // Best for tool use, 14,400 req/day free
+      "llama-3.1-8b-instant",        // Fastest, good for simple tasks
+      "qwen/qwen3-32b",              // Great reasoning, tool use support
+      "deepseek-r1-distill-llama-70b", // Reasoning model
+    ],
+    apiKeyEnvVar: "GROQ_API_KEY",
+    free: true,
+  },
+  gemini: {
+    provider: "gemini",
+    models: [
+      "gemini-3-flash",              // Latest, fastest
+      "gemini-3-pro",                // Latest, most capable
+      "gemini-2.5-flash",            // Fast and capable
+      "gemini-2.5-pro",              // High quality reasoning
+      "gemini-2.0-flash",            // Stable multimodal
+    ],
+    apiKeyEnvVar: "GEMINI_API_KEY",
+    free: true,
+  },
+  // === PAID PROVIDERS ===
+  openai: {
+    provider: "openai",
+    models: ["gpt-5.2", "gpt-5.2-pro", "gpt-5.1", "gpt-5-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini", "o4-mini", "o3-mini"],
+    apiKeyEnvVar: "OPENAI_API_KEY",
+  },
+  claude: {
+    provider: "anthropic",
+    models: ["claude-opus-4-5-20251124", "claude-sonnet-4-5-20250514", "claude-haiku-4-5-20251015", "claude-sonnet-4-20250514"],
+    apiKeyEnvVar: "ANTHROPIC_API_KEY",
+  },
+  deepseek: {
+    provider: "generic",
+    models: ["deepseek-chat", "deepseek-reasoner"],
+    apiKeyEnvVar: "DEEPSEEK_API_KEY",
+  },
+  qwen: {
+    provider: "generic",
+    models: ["qwen-turbo", "qwen-plus", "qwen-max"],
+    apiKeyEnvVar: "DASHSCOPE_API_KEY",
+  },
+  mistral: {
+    provider: "generic",
+    models: ["mistral-large-latest", "mistral-small-latest", "codestral-latest"],
+    apiKeyEnvVar: "MISTRAL_API_KEY",
+    free: true, // 1B tokens/month free
+  },
+  azure: {
+    provider: "openai",
+    models: ["gpt-4.1", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini"],
+    apiKeyEnvVar: "AZURE_OPENAI_API_KEY",
+  },
+  grok: {
+    provider: "generic",
+    models: ["grok-3", "grok-3-mini", "grok-2"],
+    apiKeyEnvVar: "XAI_API_KEY",
+  },
+};
 
 /**
  * Service Agent List Component
@@ -37,6 +103,17 @@ const ServiceAgentList: React.FC = () => {
   const [globalEnvFetched, setGlobalEnvFetched] = useState(false);
   const [newGlobalEnvName, setNewGlobalEnvName] = useState("");
   const [newGlobalEnvValue, setNewGlobalEnvValue] = useState("");
+
+  // Model configuration state
+  const [modelConfigExpanded, setModelConfigExpanded] = useState(false);
+  const [modelProvider, setModelProvider] = useState<string>("");
+  const [modelName, setModelName] = useState<string>("");
+  const [apiKey, setApiKey] = useState<string>("");
+  const [originalModelConfig, setOriginalModelConfig] = useState<{ provider: string; model: string; apiKey: string }>({ provider: "", model: "", apiKey: "" });
+  const [loadingModelConfig, setLoadingModelConfig] = useState(false);
+  const [savingModelConfig, setSavingModelConfig] = useState(false);
+  const [modelConfigFetched, setModelConfigFetched] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   // Fetch agents
   const fetchAgents = useCallback(async () => {
@@ -83,6 +160,75 @@ const ServiceAgentList: React.FC = () => {
       fetchGlobalEnvVars();
     }
   }, [globalEnvExpanded, globalEnvFetched, loadingGlobalEnv, fetchGlobalEnvVars]);
+
+  // Fetch model configuration when expanded
+  const fetchModelConfig = useCallback(async () => {
+    try {
+      setLoadingModelConfig(true);
+      const envVars = await getGlobalEnvVars();
+      const provider = envVars["DEFAULT_LLM_PROVIDER"] || "";
+      const model = envVars["DEFAULT_LLM_MODEL_NAME"] || "";
+      const key = envVars["DEFAULT_LLM_API_KEY"] || "";
+      setModelProvider(provider);
+      setModelName(model);
+      setApiKey(key);
+      setOriginalModelConfig({ provider, model, apiKey: key });
+    } catch (err) {
+      console.error("Failed to fetch model config:", err);
+      toast.error(t('list.modelConfig.fetchFailed'));
+    } finally {
+      setLoadingModelConfig(false);
+      setModelConfigFetched(true);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    if (modelConfigExpanded && !modelConfigFetched && !loadingModelConfig) {
+      fetchModelConfig();
+    }
+  }, [modelConfigExpanded, modelConfigFetched, loadingModelConfig, fetchModelConfig]);
+
+  // Handle provider change
+  const handleProviderChange = (provider: string) => {
+    setModelProvider(provider);
+    // Reset model name when provider changes, set to first available model
+    if (provider && MODEL_CONFIGS[provider]) {
+      const models = MODEL_CONFIGS[provider].models;
+      setModelName(models.length > 0 ? models[0] : "");
+    } else {
+      setModelName("");
+    }
+  };
+
+  // Handle saving model configuration
+  const handleSaveModelConfig = async () => {
+    try {
+      setSavingModelConfig(true);
+      // Get current global env vars first
+      const currentEnvVars = await getGlobalEnvVars();
+      // Update with model config
+      const updatedEnvVars = {
+        ...currentEnvVars,
+        DEFAULT_LLM_PROVIDER: modelProvider,
+        DEFAULT_LLM_MODEL_NAME: modelName,
+        DEFAULT_LLM_API_KEY: apiKey,
+      };
+      await saveGlobalEnvVars(updatedEnvVars);
+      setOriginalModelConfig({ provider: modelProvider, model: modelName, apiKey: apiKey });
+      toast.success(t('list.modelConfig.saveSuccess'));
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : t('list.modelConfig.saveFailed');
+      toast.error(errorMessage);
+    } finally {
+      setSavingModelConfig(false);
+    }
+  };
+
+  // Check if model config has changed
+  const hasModelConfigChanges =
+    modelProvider !== originalModelConfig.provider ||
+    modelName !== originalModelConfig.model ||
+    apiKey !== originalModelConfig.apiKey;
 
   // Handle adding new global env var
   const handleAddGlobalEnvVar = () => {
@@ -275,6 +421,144 @@ const ServiceAgentList: React.FC = () => {
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
           {loading ? t('list.refreshing') : t('list.refresh')}
         </Button>
+      </div>
+
+      {/* Model Configuration */}
+      <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+        <button
+          type="button"
+          onClick={() => setModelConfigExpanded(!modelConfigExpanded)}
+          className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+        >
+          <div className="flex items-center space-x-3">
+            <Cpu className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            <div>
+              <h3 className="font-medium text-gray-900 dark:text-gray-100">
+                {t('list.modelConfig.title')}
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t('list.modelConfig.subtitle')}
+              </p>
+            </div>
+          </div>
+          {modelConfigExpanded ? (
+            <ChevronUp className="w-5 h-5 text-gray-400" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-gray-400" />
+          )}
+        </button>
+
+        {modelConfigExpanded && (
+          <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+            {loadingModelConfig ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                <span className="ml-2 text-gray-600 dark:text-gray-400">{t('list.modelConfig.loading')}</span>
+              </div>
+            ) : (
+              <>
+                {/* Provider Selection */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('list.modelConfig.provider')}
+                    </label>
+                    <select
+                      value={modelProvider}
+                      onChange={(e) => handleProviderChange(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">{t('list.modelConfig.selectProvider')}</option>
+                      {Object.entries(MODEL_CONFIGS).map(([provider, config]) => (
+                        <option key={provider} value={provider}>
+                          {provider.charAt(0).toUpperCase() + provider.slice(1)}{config.free ? ' (Free)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Model Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('list.modelConfig.modelName')}
+                    </label>
+                    <select
+                      value={modelName}
+                      onChange={(e) => setModelName(e.target.value)}
+                      disabled={!modelProvider}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="">{t('list.modelConfig.selectModel')}</option>
+                      {modelProvider && MODEL_CONFIGS[modelProvider]?.models.map((model) => (
+                        <option key={model} value={model}>
+                          {model}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* API Key */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('list.modelConfig.apiKey')}
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showApiKey ? "text" : "password"}
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        placeholder={t('list.modelConfig.apiKeyPlaceholder')}
+                        className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowApiKey(!showApiKey)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      >
+                        {showApiKey ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Save button */}
+                {hasModelConfigChanges && (
+                  <div className="mt-4 flex justify-end">
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      onClick={handleSaveModelConfig}
+                      disabled={savingModelConfig}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+                    >
+                      {savingModelConfig ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          {t('list.modelConfig.saving')}
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          {t('list.modelConfig.saveChanges')}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Note */}
+                <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                  {t('list.modelConfig.note')}
+                </p>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Global Environment Variables */}

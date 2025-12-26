@@ -68,24 +68,24 @@ export const getEnabledModules = (healthResponse: HealthResponse): string[] => {
 export const updateRouteVisibilityFromModules = (
   enabledModules: string[]
 ): void => {
-  // First hide all main routes (only keep Profile, README, and AgentWorld always visible)
+  // First hide all main routes (only keep Profile and README always visible)
   // Settings should also be controlled by network if it exists as a mod
   // LLM_LOGS and SERVICE_AGENTS are admin-only, controlled separately
+  // AGENTWORLD is only visible if the agentworld mod is enabled
   Object.values(PLUGIN_NAME_ENUM).forEach((plugin) => {
     if (
       plugin !== PLUGIN_NAME_ENUM.PROFILE &&
-      plugin !== PLUGIN_NAME_ENUM.README &&
-      plugin !== PLUGIN_NAME_ENUM.AGENTWORLD
+      plugin !== PLUGIN_NAME_ENUM.README
     ) {
       updateRouteVisibility(plugin, false)
     }
   })
 
-  // Ensure PROFILE, README, and AGENTWORLD are always visible
+  // Ensure PROFILE and README are always visible
   // LLM_LOGS and SERVICE_AGENTS are admin-only (shown in admin dashboard)
+  // AGENTWORLD visibility is controlled by whether the mod is enabled
   updateRouteVisibility(PLUGIN_NAME_ENUM.PROFILE, true)
   updateRouteVisibility(PLUGIN_NAME_ENUM.README, true)
-  updateRouteVisibility(PLUGIN_NAME_ENUM.AGENTWORLD, true)
 
   // Then enable routes based on mods returned from network
   enabledModules.forEach((moduleName) => {
@@ -160,13 +160,13 @@ export const isRouteAvailable = (
 
   // Check special routes (always available)
   // Note: llm-logs and studio (service agents) are admin-only, accessed through admin dashboard
+  // Note: agentworld visibility is controlled by whether the mod is enabled
   const alwaysAvailableRoutes = [
     "profile",
     "settings",
     "mod-management",
     "network-selection",
     "agent-setup",
-    "agentworld",
     "artifact",
     "readme",
     "events",

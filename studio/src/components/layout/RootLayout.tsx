@@ -58,7 +58,8 @@ const RootLayout: React.FC<RootLayoutProps> = ({ children }) => {
 const MainContentArea: React.FC<{
   children: ReactNode;
   shouldHideSidebar: boolean;
-}> = ({ children, shouldHideSidebar }) => {
+  shouldHideBreadcrumbs: boolean;
+}> = ({ children, shouldHideSidebar, shouldHideBreadcrumbs }) => {
   const isMobile = useIsMobile();
   const { isSidebarOpen } = useLayout();
 
@@ -93,7 +94,7 @@ const MainContentArea: React.FC<{
         {/* Page Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-gray-800">
           {/* Breadcrumb Navigation - fixed at top, doesn't scroll */}
-          {!shouldHideSidebar && (
+          {!shouldHideBreadcrumbs && (
             <div className="flex-shrink-0">
               <HeaderBreadcrumbs />
             </div>
@@ -118,9 +119,12 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Determine if current route should hide the secondary sidebar (content sidebar)
-  const shouldHideSecondarySidebar = 
-    location.pathname.startsWith("/agentworld") || 
+  const shouldHideSecondarySidebar =
+    location.pathname.startsWith("/agentworld") ||
     location.pathname.startsWith("/admin");
+
+  // Determine if breadcrumbs should be hidden (only for agentworld)
+  const shouldHideBreadcrumbs = location.pathname.startsWith("/agentworld");
 
   // Note: Admin users can access both admin routes and user routes
   // The only restriction is that non-admin users cannot access /admin/* routes
@@ -170,7 +174,10 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
             )}
 
             {/* Main content area - uses internal component to access LayoutProvider context */}
-            <MainContentArea shouldHideSidebar={shouldHideSecondarySidebar}>
+            <MainContentArea
+              shouldHideSidebar={shouldHideSecondarySidebar}
+              shouldHideBreadcrumbs={shouldHideBreadcrumbs}
+            >
               {children}
             </MainContentArea>
           </div>

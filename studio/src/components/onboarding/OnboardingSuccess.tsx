@@ -96,17 +96,13 @@ const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
         console.warn("Failed to unregister after verification:", unregError);
       }
 
-      // Store the admin group in authStore
+      // Store the admin credentials in authStore
       setPasswordHash(hashedPassword);
       setAgentGroup("admin");
+      setAgentName(ADMIN_AGENT_NAME);
 
-      // Navigate first, then set agentName to avoid RouteGuard redirect
+      // Navigate to admin dashboard
       navigate("/admin/dashboard", { replace: true });
-
-      // Set agentName after navigation to avoid triggering redirects
-      requestAnimationFrame(() => {
-        setAgentName(ADMIN_AGENT_NAME);
-      });
     } catch (err: any) {
       console.error("Failed to login as admin:", err);
       setError(err.message || "Failed to login as admin");

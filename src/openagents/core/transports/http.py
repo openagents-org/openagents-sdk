@@ -146,6 +146,7 @@ class HttpTransport(Transport):
         # Network initialization endpoints (only work when network is not initialized)
         self.app.router.add_post("/api/network/initialize/admin-password", self.initialize_admin_password)
         self.app.router.add_post("/api/network/initialize/template", self.initialize_network_with_template)
+        self.app.router.add_post("/api/network/initialize/model-config", self.initialize_model_config)
         self.app.router.add_get("/api/templates", self.list_templates)
         # LLM Logs API endpoints
         self.app.router.add_get("/api/agents/service/{agent_id}/llm-logs", self.get_llm_logs)
@@ -3300,6 +3301,12 @@ class HttpTransport(Transport):
 
             workspace_dir = Path(self.network_instance.config_path).parent
 
+            # Preserve admin password hash before applying template
+            # (template has a default password that we need to replace)
+            admin_password_hash = None
+            if 'admin' in self.network_instance.config.agent_groups:
+                admin_password_hash = self.network_instance.config.agent_groups['admin'].password_hash
+
             # Copy template files to workspace
             import shutil
             for item in template_path.iterdir():
@@ -3326,10 +3333,50 @@ class HttpTransport(Transport):
                         shutil.copytree(item, dest_path, dirs_exist_ok=True)
 
             logger.info(f"Template '{template_name}' applied to workspace: {workspace_dir}")
+
+            # Restore admin password hash in the copied network.yaml
+            if admin_password_hash:
+                config_file = workspace_dir / "network.yaml"
+                if config_file.exists():
+                    import yaml
+                    with open(config_file, 'r') as f:
+                        config_data = yaml.safe_load(f)
+
+                    # Update admin password hash in the config
+                    if 'network' in config_data and 'agent_groups' in config_data['network']:
+                        if 'admin' in config_data['network']['agent_groups']:
+                            config_data['network']['agent_groups']['admin']['password_hash'] = admin_password_hash
+                            logger.info("Restored admin password hash in network.yaml")
+
+                    with open(config_file, 'w') as f:
+                        yaml.dump(config_data, f, default_flow_style=False, sort_keys=False)
+
+            # Full network restart (not hot reload) to ensure clean state
+            # Run in background to avoid blocking the HTTP response
+            logger.info("Scheduling full network restart with template configuration...")
+
+            async def _do_restart():
+                """Execute network restart in background."""
+                try:
+                    # Small delay to allow the HTTP response to be sent first
+                    await asyncio.sleep(0.5)
+                    restart_success = await self.network_instance.restart()
+                    if restart_success:
+                        logger.info(f"Network restart completed successfully with template '{template_name}'")
+                    else:
+                        logger.error(f"Network restart failed for template '{template_name}'")
+                except Exception as e:
+                    logger.error(f"Network restart background task failed: {e}", exc_info=True)
+
+            # Schedule the restart task but don't await it
+            asyncio.create_task(_do_restart())
+
+            # Return immediately - client should expect to reconnect
             return web.json_response({
                 "success": True,
-                "message": f"Template '{template_name}' applied successfully",
-                "template": template_name
+                "message": f"Template '{template_name}' applied. Network is restarting - please reconnect.",
+                "template": template_name,
+                "network_restarting": True
             })
 
         except Exception as e:
@@ -3362,6 +3409,98 @@ class HttpTransport(Transport):
             elif item.is_dir():
                 dest_path.mkdir(parents=True, exist_ok=True)
                 self._copy_package_dir(item, dest_path)
+
+    async def initialize_model_config(self, request):
+        """Initialize default LLM model configuration.
+
+        This endpoint saves the default LLM configuration to global environment
+        variables that will be used by all agents.
+
+        Request body:
+            {
+                "provider": "openai",
+                "model_name": "gpt-4",
+                "api_key": "sk-..."
+            }
+
+        Returns:
+            JSON response with success status
+        """
+        try:
+            if not self.network_instance:
+                return web.json_response(
+                    {"success": False, "message": "Network instance not available"},
+                    status=500
+                )
+
+            if not hasattr(self.network_instance, "agent_manager") or not self.network_instance.agent_manager:
+                return web.json_response(
+                    {"success": False, "message": "Agent manager not available"},
+                    status=503
+                )
+
+            # Parse request body
+            try:
+                data = await request.json()
+            except json.JSONDecodeError:
+                return web.json_response(
+                    {"success": False, "message": "Invalid JSON in request body"},
+                    status=400
+                )
+
+            provider = data.get("provider")
+            model_name = data.get("model_name")
+            api_key = data.get("api_key")
+
+            if not provider:
+                return web.json_response(
+                    {"success": False, "message": "provider is required"},
+                    status=400
+                )
+
+            # Build environment variables
+            env_vars = {}
+
+            if provider:
+                env_vars["DEFAULT_LLM_PROVIDER"] = provider
+
+            if model_name:
+                env_vars["DEFAULT_LLM_MODEL_NAME"] = model_name
+
+            if api_key:
+                env_vars["DEFAULT_LLM_API_KEY"] = api_key
+
+            # Get existing global env vars and merge
+            agent_manager = self.network_instance.agent_manager
+            existing_env = agent_manager.get_global_env_vars()
+            existing_env.update(env_vars)
+
+            # Save merged env vars
+            result = agent_manager.set_global_env_vars(existing_env)
+
+            if not result.get("success"):
+                return web.json_response(
+                    {"success": False, "message": result.get("message", "Failed to save model config")},
+                    status=500
+                )
+
+            logger.info(f"Model config initialized: provider={provider}, model={model_name}")
+            return web.json_response({
+                "success": True,
+                "message": "Model configuration saved successfully",
+                "config": {
+                    "provider": provider,
+                    "model_name": model_name,
+                    "api_key_set": bool(api_key)
+                }
+            })
+
+        except Exception as e:
+            logger.error(f"Failed to initialize model config: {e}", exc_info=True)
+            return web.json_response(
+                {"success": False, "message": f"Failed to initialize model config: {str(e)}"},
+                status=500
+            )
 
     async def list_templates(self, request):
         """List available network templates.

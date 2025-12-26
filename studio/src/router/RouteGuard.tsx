@@ -226,6 +226,20 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     return <>{children}</>
   }
 
+  // Handle /admin-login path access control
+  if (currentPath === "/admin-login") {
+    // Check for pending connection in location state (passed from ManualNetwork)
+    const locationState = location.state as { pendingConnection?: unknown } | null
+    const hasPendingConnection = !!locationState?.pendingConnection
+
+    if (!selectedNetwork && !hasPendingConnection) {
+      console.log("🔄 Admin login accessed without network, redirecting to /")
+      return <Navigate to="/" replace />
+    }
+    // Has network selection or pending connection, allow access to admin-login
+    return <>{children}</>
+  }
+
   // NetworkSelectionPage is now served under /, so no special handling needed here
 
   // Handle authenticated routes (ModSidebar related routes)

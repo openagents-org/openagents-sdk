@@ -10,6 +10,7 @@ import AgentGroupsManagement from "@/pages/profile/AgentGroupsManagement";
 import EventLogs from "@/pages/profile/EventLogs";
 import EventDebugger from "@/pages/profile/EventDebugger";
 import ModManagementPage from "@/pages/mod-management/ModManagementPage";
+import AddModPage from "@/pages/mod-management/AddModPage";
 import NetworkImportExport from "@/pages/profile/NetworkImportExport";
 import TransportConfig from "./TransportConfig";
 import ConnectionGuide from "./ConnectionGuide";
@@ -19,6 +20,7 @@ import NetworkPublishPage from "./NetworkPublish";
 import LLMLogsMainPage from "@/pages/llmlogs/LLMLogsMainPage";
 import ServiceAgentsMainPage from "@/pages/serviceagents/ServiceAgentsMainPage";
 import EventsMainPage from "@/pages/events/EventsMainPage";
+import DefaultModelsPage from "./DefaultModelsPage";
 
 /**
  * AdminMainPage - Main router for admin pages
@@ -44,10 +46,12 @@ const AdminMainPage: React.FC = () => {
         <Route path="agents" element={<AgentManagement />} />
         <Route path="groups" element={<AgentGroupsManagement />} />
         <Route path="service-agents/*" element={<ServiceAgentsMainPage />} />
+        <Route path="default-models" element={<DefaultModelsPage />} />
         <Route path="connect" element={<ConnectionGuide />} />
 
         {/* Modules */}
         <Route path="mods" element={<ModManagementPage />} />
+        <Route path="mods/add" element={<AddModPage />} />
 
         {/* Monitoring */}
         <Route path="events" element={<EventLogs />} />

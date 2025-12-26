@@ -1,33 +1,54 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/stores/authStore";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { hashPassword } from "@/utils/passwordHash";
 import { networkFetch } from "@/utils/httpClient";
 import { Shield } from "lucide-react";
+import { NetworkConnection } from "@/types/connection";
 
 const ADMIN_AGENT_NAME = "admin";
+
+interface LocationState {
+  pendingConnection?: NetworkConnection;
+}
 
 const AdminLoginPage: React.FC = () => {
   const { t } = useTranslation("auth");
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     selectedNetwork,
     setAgentName,
     setPasswordHash,
     setAgentGroup,
+    handleNetworkSelected,
   } = useAuthStore();
 
   const [password, setPassword] = useState<string>("");
   const [passwordError, setPasswordError] = useState<string>("");
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
 
-  // Redirect if no network selected
+  // Get pending connection from navigation state
+  const locationState = location.state as LocationState | null;
+  const pendingConnection = locationState?.pendingConnection;
+
+  // Set network from pending connection if available
   useEffect(() => {
-    if (!selectedNetwork) {
+    if (pendingConnection && !selectedNetwork) {
+      handleNetworkSelected(pendingConnection);
+    }
+  }, [pendingConnection, selectedNetwork, handleNetworkSelected]);
+
+  // Use either selectedNetwork or pendingConnection for display
+  const networkToUse = selectedNetwork || pendingConnection;
+
+  // Redirect if no network selected and no pending connection
+  useEffect(() => {
+    if (!selectedNetwork && !pendingConnection) {
       navigate("/");
     }
-  }, [selectedNetwork, navigate]);
+  }, [selectedNetwork, pendingConnection, navigate]);
 
   const onBack = () => {
     navigate("/agent-setup");
@@ -35,7 +56,7 @@ const AdminLoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedNetwork) return;
+    if (!networkToUse) return;
 
     // Validate password
     if (!password.trim()) {
@@ -53,8 +74,8 @@ const AdminLoginPage: React.FC = () => {
 
       // Verify credentials by attempting registration with admin group
       const verifyResponse = await networkFetch(
-        selectedNetwork.host,
-        selectedNetwork.port,
+        networkToUse.host,
+        networkToUse.port,
         "/api/register",
         {
           method: "POST",
@@ -71,7 +92,7 @@ const AdminLoginPage: React.FC = () => {
             password_hash: hashedPassword,
             agent_group: "admin",
           }),
-          useHttps: selectedNetwork.useHttps,
+          useHttps: networkToUse.useHttps,
         }
       );
 
@@ -87,8 +108,8 @@ const AdminLoginPage: React.FC = () => {
       // Registration succeeded - unregister to let the main app re-register
       try {
         await networkFetch(
-          selectedNetwork.host,
-          selectedNetwork.port,
+          networkToUse.host,
+          networkToUse.port,
           "/api/unregister",
           {
             method: "POST",
@@ -99,7 +120,7 @@ const AdminLoginPage: React.FC = () => {
               agent_id: ADMIN_AGENT_NAME,
               secret: verifyData.secret,
             }),
-            useHttps: selectedNetwork.useHttps,
+            useHttps: networkToUse.useHttps,
           }
         );
       } catch (unregError) {
@@ -143,13 +164,13 @@ const AdminLoginPage: React.FC = () => {
         </div>
 
         {/* Network Info */}
-        {selectedNetwork && (
+        {networkToUse && (
           <div className="rounded-xl p-4 mb-6 text-left bg-gray-100 dark:bg-gray-700">
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
               {t("agentSetup.connectingTo")}
             </div>
             <div className="text-base font-semibold text-gray-800 dark:text-gray-100">
-              {selectedNetwork.host}:{selectedNetwork.port}
+              {networkToUse.host}:{networkToUse.port}
             </div>
           </div>
         )}

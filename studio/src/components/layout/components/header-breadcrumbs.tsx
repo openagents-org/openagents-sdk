@@ -311,13 +311,13 @@ export function HeaderBreadcrumbs() {
           onClick={handleSwitchToAdmin}
           variant="outline"
           size="sm"
-          title={t("navigation.switchToAdmin", {
+          title={t("navigation.switchToAdmin.title", {
             default: "Switch to Admin Dashboard",
           })}
           className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 flex-shrink-0"
         >
-          <Shuffle className="w-4 h-4 mr-1.5" />
-          <LayoutDashboard className="w-3 h-3" />
+          <LayoutDashboard className="w-4 h-4 mr-1.5" />
+          <span className="hidden sm:inline">{t("navigation.switchToAdmin.button", { default: "Admin" })}</span>
         </Button>
       )}
 
@@ -327,13 +327,13 @@ export function HeaderBreadcrumbs() {
           onClick={handleSwitchToUser}
           variant="outline"
           size="sm"
-          title={t("navigation.switchToUser", {
-            default: "Switch to User Dashboard",
+          title={t("navigation.switchToUser.title", {
+            default: "Switch to User Console",
           })}
           className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 flex-shrink-0"
         >
-          <Shuffle className="w-4 h-4 mr-1.5" />
-          <User className="w-3 h-3" />
+          <User className="w-4 h-4 mr-1.5" />
+          <span className="hidden sm:inline">{t("navigation.switchToUser.button", { default: "User Console" })}</span>
         </Button>
       )}
     </div>

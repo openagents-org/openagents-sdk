@@ -33,8 +33,12 @@ import {
   Radio,
   ExternalLink,
   Copy,
+  Play,
+  Square,
+  Loader2,
 } from "lucide-react";
 import { lookupNetworkPublication } from "@/services/networkService";
+import { getServiceAgents, startServiceAgent, stopServiceAgent, type ServiceAgent } from "@/services/serviceAgentsApi";
 
 interface DashboardStats {
   totalAgents: number;
@@ -87,6 +91,8 @@ const AdminDashboard: React.FC = () => {
     loading: boolean;
   }>({ published: false, loading: true });
   const [networkUuid, setNetworkUuid] = useState<string | null>(null);
+  const [serviceAgents, setServiceAgents] = useState<ServiceAgent[]>([]);
+  const [bulkActionLoading, setBulkActionLoading] = useState<'startAll' | 'stopAll' | null>(null);
 
   // Check if user has seen the tour
   useEffect(() => {
@@ -210,6 +216,16 @@ const AdminDashboard: React.FC = () => {
         ...t.config,
       }));
       setTransports(transportList);
+
+      // Fetch service agents
+      try {
+        const agents = await getServiceAgents();
+        setServiceAgents(agents);
+      } catch (serviceAgentsError) {
+        console.error("Failed to fetch service agents:", serviceAgentsError);
+        // Don't show toast for service agents error - it's not critical
+        setServiceAgents([]);
+      }
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
       toast.error("Failed to load dashboard data");
@@ -246,6 +262,70 @@ const AdminDashboard: React.FC = () => {
 
     checkPublication();
   }, [networkUuid]);
+
+  // Handle starting all stopped service agents
+  const handleStartAllAgents = async () => {
+    const stoppedAgents = serviceAgents.filter(a => a.status === 'stopped' || a.status === 'error');
+    if (stoppedAgents.length === 0) {
+      toast.info(t('dashboard.serviceAgents.allRunning'));
+      return;
+    }
+
+    setBulkActionLoading('startAll');
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const agent of stoppedAgents) {
+      try {
+        await startServiceAgent(agent.agent_id);
+        successCount++;
+      } catch (err) {
+        console.error(`Failed to start agent ${agent.agent_id}:`, err);
+        failCount++;
+      }
+    }
+
+    setBulkActionLoading(null);
+    await fetchDashboardData();
+
+    if (failCount === 0) {
+      toast.success(t('dashboard.serviceAgents.startAllSuccess', { count: successCount }));
+    } else {
+      toast.warning(t('dashboard.serviceAgents.startAllPartial', { success: successCount, failed: failCount }));
+    }
+  };
+
+  // Handle stopping all running service agents
+  const handleStopAllAgents = async () => {
+    const runningAgents = serviceAgents.filter(a => a.status === 'running');
+    if (runningAgents.length === 0) {
+      toast.info(t('dashboard.serviceAgents.allStopped'));
+      return;
+    }
+
+    setBulkActionLoading('stopAll');
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const agent of runningAgents) {
+      try {
+        await stopServiceAgent(agent.agent_id);
+        successCount++;
+      } catch (err) {
+        console.error(`Failed to stop agent ${agent.agent_id}:`, err);
+        failCount++;
+      }
+    }
+
+    setBulkActionLoading(null);
+    await fetchDashboardData();
+
+    if (failCount === 0) {
+      toast.success(t('dashboard.serviceAgents.stopAllSuccess', { count: successCount }));
+    } else {
+      toast.warning(t('dashboard.serviceAgents.stopAllPartial', { success: successCount, failed: failCount }));
+    }
+  };
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _handleRestartNetwork = async () => {
@@ -551,6 +631,94 @@ const AdminDashboard: React.FC = () => {
                   )}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Service Agents Status Panel */}
+        {serviceAgents.length > 0 && (
+          <Card className="mb-4 border-gray-200 dark:border-gray-700">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Server className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {t('dashboard.serviceAgents.title')}
+                  </span>
+                  <Badge
+                    variant="secondary"
+                    appearance="light"
+                    size="sm"
+                  >
+                    {serviceAgents.filter(a => a.status === 'running').length}/{serviceAgents.length}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  {/* Start All Button */}
+                  <button
+                    onClick={handleStartAllAgents}
+                    disabled={bulkActionLoading !== null || serviceAgents.every(a => a.status === 'running')}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={t('dashboard.serviceAgents.startAll')}
+                  >
+                    {bulkActionLoading === 'startAll' ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Play className="w-3 h-3" />
+                    )}
+                    {t('dashboard.serviceAgents.startAll')}
+                  </button>
+                  {/* Stop All Button */}
+                  <button
+                    onClick={handleStopAllAgents}
+                    disabled={bulkActionLoading !== null || serviceAgents.every(a => a.status !== 'running')}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={t('dashboard.serviceAgents.stopAll')}
+                  >
+                    {bulkActionLoading === 'stopAll' ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Square className="w-3 h-3" />
+                    )}
+                    {t('dashboard.serviceAgents.stopAll')}
+                  </button>
+                  <div className="h-4 w-px bg-gray-300 dark:bg-gray-600" />
+                  <button
+                    onClick={() => navigate("/admin/service-agents")}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                  >
+                    {t('dashboard.serviceAgents.viewAll')}
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {serviceAgents.map((agent) => (
+                  <button
+                    key={agent.agent_id}
+                    onClick={() => navigate(`/admin/service-agents/${agent.agent_id}`)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                      agent.status === 'running'
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
+                        : agent.status === 'error'
+                        ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50'
+                        : agent.status === 'starting' || agent.status === 'stopping'
+                        ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <div className={`w-1.5 h-1.5 rounded-full ${
+                      agent.status === 'running'
+                        ? 'bg-green-500 animate-pulse'
+                        : agent.status === 'error'
+                        ? 'bg-red-500'
+                        : agent.status === 'starting' || agent.status === 'stopping'
+                        ? 'bg-yellow-500 animate-pulse'
+                        : 'bg-gray-400'
+                    }`} />
+                    {agent.agent_id}
+                  </button>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}

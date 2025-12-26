@@ -15,6 +15,7 @@
         "networkIdLabel": "Network ID",
         "networkIdPlaceholder": "network-id-123 or openagents://network-id",
         "connectButton": "Connect",
+        "manageNetwork": "Manage Network",
         "cancelButton": "Cancel"
     },
     "status": {

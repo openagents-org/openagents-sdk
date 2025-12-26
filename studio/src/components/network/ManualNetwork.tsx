@@ -173,6 +173,47 @@ export default function ManualNetwork() {
     }
   };
 
+  const handleManageNetwork = async () => {
+    setIsLoadingConnection(true);
+    try {
+      let host: string;
+      let port: string;
+      let connectionUseHttps: boolean;
+
+      if (activeTab === HOST_PORT_TAB) {
+        host = manualHost;
+        port = manualPort;
+        connectionUseHttps = useHttps;
+      } else if (activeTab === QUICK_CONNECT_TAB && savedConnection) {
+        host = savedConnection.host;
+        port = savedConnection.port;
+        connectionUseHttps = savedConnection.useHttps || false;
+      } else {
+        // Network ID tab - not supported for manage network
+        toast.error(t("errors.connectFailedCheckHostPort", { ns: "network" }));
+        setIsLoadingConnection(false);
+        return;
+      }
+
+      const connection = await ManualNetworkConnection(host, parseInt(port), connectionUseHttps);
+      if (connection.status === ConnectionStatusEnum.CONNECTED) {
+        saveManualConnection(host, port, connectionUseHttps);
+        // Navigate to admin login page with connection info in state
+        // Don't call handleNetworkSelected here to avoid triggering NetworkSelectionPage's redirect
+        navigate('/admin-login', {
+          state: { pendingConnection: connection },
+          replace: true
+        });
+      } else {
+        toast.error(t("errors.connectFailedCheckHostPort", { ns: "network" }));
+      }
+    } catch (error) {
+      toast.error(t("errors.errorConnecting", { ns: "network" }) + ": " + error);
+    } finally {
+      setIsLoadingConnection(false);
+    }
+  };
+
   const handleNetworkIdConnect = async () => {
     setIsLoadingConnection(true);
     try {
@@ -361,13 +402,22 @@ export default function ManualNetwork() {
         ) : null}
 
         <div className="flex justify-between items-center gap-3 mt-4 relative z-10">
-          <button
-            onClick={handleManualConnect}
-            disabled={manualConnectButtonDisabled}
-            className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-          >
-            {isLoadingConnection ? t('manualNetwork.connecting') : t('manualNetwork.connect')}
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleManualConnect}
+              disabled={manualConnectButtonDisabled}
+              className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+            >
+              {isLoadingConnection ? t('manualNetwork.connecting') : t('manualNetwork.connect')}
+            </button>
+            <button
+              onClick={handleManageNetwork}
+              disabled={manualConnectButtonDisabled}
+              className="bg-slate-500 hover:bg-slate-600 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+            >
+              {t('manual.manageNetwork', { ns: 'network' })}
+            </button>
+          </div>
         </div>
 
         <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">

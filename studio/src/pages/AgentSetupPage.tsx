@@ -358,11 +358,8 @@ const AgentNamePicker: React.FC = () => {
   };
 
   const handleAdminLogin = () => {
-    // Switch to admin mode - use fixed "admin" name
-    setIsAdminMode(true);
-    setPageAgentName("admin");
-    setPasswordError("");
-    setAdminPassword("");
+    // Navigate to dedicated admin login page
+    navigate("/admin-login");
   };
 
   const handleExitAdminMode = () => {

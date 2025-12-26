@@ -1,53 +1,63 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useProfileData } from '@/pages/profile/hooks/useProfileData';
-import { useAuthStore } from '@/stores/authStore';
-import { useOpenAgents } from '@/context/OpenAgentsProvider';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useOpenAgents } from '@/context/OpenAgentsProvider';
+import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/layout/ui/button';
-import { Input } from '@/components/layout/ui/input';
-import { Textarea } from '@/components/layout/ui/textarea';
 import { Badge } from '@/components/layout/ui/badge';
 import { Card, CardContent } from '@/components/layout/ui/card';
 import { ScrollArea } from '@/components/layout/ui/scroll-area';
-import { Lock, Settings, Trash2, RefreshCw, Package, Clock, FolderCode } from 'lucide-react';
+import { Lock, RefreshCw, Layers, CheckCircle, XCircle, Plus, Zap, Trash2, Power, Loader2 } from 'lucide-react';
+
+interface StaticModInfo {
+  name: string;
+  enabled: boolean;
+  config?: Record<string, any>;
+}
 
 interface DynamicModInfo {
   mod_id: string;
   mod_path: string;
-  loaded_at: number;
-}
-
-interface DynamicModsData {
-  loaded: string[];
-  count: number;
-  details: { [mod_id: string]: DynamicModInfo };
+  loaded_at: string;
 }
 
 const ModManagementPage: React.FC = () => {
   const { t } = useTranslation('admin');
-  const { agentName } = useAuthStore();
-  const { connector } = useOpenAgents();
+  const navigate = useNavigate();
   const { healthData, refresh } = useProfileData();
   const { isAdmin, isLoading: isCheckingAdmin } = useIsAdmin();
+  const { connector } = useOpenAgents();
+  const { agentName } = useAuthStore();
 
-  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [modPath, setModPath] = useState('');
-  const [modConfig, setModConfig] = useState('{}');
-  const [dynamicMods, setDynamicMods] = useState<DynamicModsData | null>(null);
+  const [staticMods, setStaticMods] = useState<StaticModInfo[]>([]);
+  const [dynamicMods, setDynamicMods] = useState<DynamicModInfo[]>([]);
+  const [loadingMod, setLoadingMod] = useState<string | null>(null);
 
-  // Extract dynamic_mods information from healthData
+  // Extract mods information from healthData
   useEffect(() => {
-    if (healthData?.data?.dynamic_mods) {
-      setDynamicMods(healthData.data.dynamic_mods as DynamicModsData);
+    // Extract static mods from config
+    if (healthData?.data?.mods) {
+      setStaticMods(healthData.data.mods as StaticModInfo[]);
     } else {
-      setDynamicMods({
-        loaded: [],
-        count: 0,
-        details: {},
-      });
+      setStaticMods([]);
+    }
+    // Extract dynamic mods (loaded at runtime)
+    // dynamic_mods is an object with {loaded: [], count: number, details: {}}
+    if (healthData?.data?.dynamic_mods?.loaded && Array.isArray(healthData.data.dynamic_mods.loaded)) {
+      // Map the loaded array to DynamicModInfo format
+      const details = healthData.data.dynamic_mods.details || {};
+      const dynamicModsList: DynamicModInfo[] = healthData.data.dynamic_mods.loaded.map((modId: string) => ({
+        mod_id: modId,
+        mod_path: details[modId]?.mod_path || modId,
+        loaded_at: details[modId]?.loaded_at || '',
+      }));
+      setDynamicMods(dynamicModsList);
+    } else {
+      setDynamicMods([]);
     }
   }, [healthData]);
 
@@ -58,81 +68,26 @@ const ModManagementPage: React.FC = () => {
     setRefreshing(false);
   }, [refresh]);
 
-  // Load Mod
-  const handleLoadMod = useCallback(async () => {
-    if (!modPath.trim()) {
-      toast.error(t('modManagement.loadMod.enterModPath'));
-      return;
-    }
-
+  // Handle unload dynamic mod
+  const handleUnloadMod = useCallback(async (modId: string, modPath: string) => {
     if (!connector) {
       toast.error(t('modManagement.loadMod.notConnected'));
       return;
     }
 
-    setLoading(true);
-    try {
-      let configObj = {};
-      try {
-        if (modConfig.trim()) {
-          configObj = JSON.parse(modConfig);
-        }
-      } catch (e) {
-        toast.error(t('modManagement.loadMod.invalidJson'));
-        setLoading(false);
-        return;
-      }
-
-      const response = await connector.sendEvent({
-        event_name: 'system.mod.load',
-        source_id: agentName || 'system',
-        destination_id: 'system:system',
-        payload: {
-          mod_path: modPath.trim(),
-          config: configObj,
-        },
-      });
-
-      if (response.success) {
-        toast.success(t('modManagement.loadMod.loadSuccess', { modId: response.data?.mod_id || modPath }));
-        setModPath('');
-        setModConfig('{}');
-        // Refresh data
-        setTimeout(() => {
-          refresh();
-        }, 500);
-      } else {
-        toast.error(t('modManagement.loadMod.loadFailed', { error: response.message || 'Unknown error' }));
-      }
-    } catch (error: any) {
-      console.error('Failed to load Mod:', error);
-      toast.error(t('modManagement.loadMod.loadFailed', { error: error.message || 'Unknown error' }));
-    } finally {
-      setLoading(false);
-    }
-  }, [modPath, modConfig, connector, agentName, refresh, t]);
-
-  // Unload Mod
-  const handleUnloadMod = useCallback(async (modPathToUnload: string) => {
-    if (!connector) {
-      toast.error(t('modManagement.loadMod.notConnected'));
-      return;
-    }
-
-    setLoading(true);
+    setLoadingMod(modId);
     try {
       const response = await connector.sendEvent({
         event_name: 'system.mod.unload',
         source_id: agentName || 'system',
         destination_id: 'system:system',
         payload: {
-          mod_path: modPathToUnload,
+          mod_id: modId,
         },
       });
 
       if (response.success) {
-        toast.success(t('modManagement.loadedMods.unloadSuccess', { modId: response.data?.mod_id || modPathToUnload }));
-        // Refresh data
+        toast.success(t('modManagement.loadedMods.unloadSuccess', { modId: modPath.split('.').pop() }));
         setTimeout(() => {
           refresh();
         }, 500);
@@ -143,15 +98,46 @@ const ModManagementPage: React.FC = () => {
       console.error('Failed to unload Mod:', error);
       toast.error(t('modManagement.loadedMods.unloadFailed', { error: error.message || 'Unknown error' }));
     } finally {
-      setLoading(false);
+      setLoadingMod(null);
     }
   }, [connector, agentName, refresh, t]);
 
-  // Format timestamp
-  const formatTimestamp = (timestamp: number) => {
-    const date = new Date(timestamp * 1000);
-    return date.toLocaleString();
-  };
+  // Handle toggle static mod (enable/disable)
+  const handleToggleMod = useCallback(async (modName: string, currentEnabled: boolean) => {
+    if (!connector) {
+      toast.error(t('modManagement.loadMod.notConnected'));
+      return;
+    }
+
+    setLoadingMod(modName);
+    try {
+      const response = await connector.sendEvent({
+        event_name: currentEnabled ? 'system.mod.disable' : 'system.mod.enable',
+        source_id: agentName || 'system',
+        destination_id: 'system:system',
+        payload: {
+          mod_path: modName,
+        },
+      });
+
+      if (response.success) {
+        toast.success(currentEnabled
+          ? t('modManagement.actions.disableSuccess', { modName: modName.split('.').pop() })
+          : t('modManagement.actions.enableSuccess', { modName: modName.split('.').pop() })
+        );
+        setTimeout(() => {
+          refresh();
+        }, 500);
+      } else {
+        toast.error(t('modManagement.actions.toggleFailed', { error: response.message || 'Unknown error' }));
+      }
+    } catch (error: any) {
+      console.error('Failed to toggle Mod:', error);
+      toast.error(t('modManagement.actions.toggleFailed', { error: error.message || 'Unknown error' }));
+    } finally {
+      setLoadingMod(null);
+    }
+  }, [connector, agentName, refresh, t]);
 
   // Check admin permission
   if (isCheckingAdmin) {
@@ -198,145 +184,171 @@ const ModManagementPage: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-              {t('modManagement.title')}
+              {t('modManagement.simpleTitle', 'Mod Management')}
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              {t('modManagement.subtitle')}
+              {t('modManagement.simpleSubtitle', 'Manage network mods')}
             </p>
           </div>
 
-          <Button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            variant="outline"
-            size="sm"
-          >
-            <RefreshCw className={`w-4 h-4 mr-1.5 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? t('modManagement.loadedMods.refreshing') : t('modManagement.loadedMods.refresh')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => navigate('/admin/mods/add')}
+              variant="primary"
+              size="sm"
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
+              {t('modManagement.addMod.button')}
+            </Button>
+            <Button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              variant="outline"
+              size="sm"
+            >
+              <RefreshCw className={`w-4 h-4 mr-1.5 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? t('modManagement.loadedMods.refreshing') : t('modManagement.loadedMods.refresh')}
+            </Button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Load Module Form */}
-          <Card className="border-gray-200 dark:border-gray-700">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-                  <Package className="w-5 h-5" />
+        {/* Enabled Mods Section */}
+        <Card className="border-gray-200 dark:border-gray-700">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                  <Layers className="w-5 h-5" />
                 </div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {t('modManagement.loadMod.title')}
+                  {t('modManagement.enabledMods.title', 'Enabled Mods')}
                 </h2>
               </div>
+              <Badge variant="secondary" appearance="light" size="sm">
+                {t('modManagement.enabledMods.total', 'Total')}: {staticMods.filter(m => m.enabled).length + dynamicMods.length}
+              </Badge>
+            </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    {t('modManagement.loadMod.modPath')} <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="text"
-                    value={modPath}
-                    onChange={(e) => setModPath(e.target.value)}
-                    placeholder={t('modManagement.loadMod.modPathPlaceholder')}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    disabled={loading}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    {t('modManagement.loadMod.config')}
-                  </label>
-                  <Textarea
-                    value={modConfig}
-                    onChange={(e) => setModConfig(e.target.value)}
-                    placeholder={t('modManagement.loadMod.configPlaceholder')}
-                    rows={4}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono resize-none"
-                    disabled={loading}
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={handleLoadMod}
-                  disabled={loading || !modPath.trim()}
-                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400"
-                >
-                  {loading ? t('modManagement.loadMod.loading') : t('modManagement.loadMod.button')}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Loaded Modules List */}
-          <Card className="border-gray-200 dark:border-gray-700">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400">
-                    <FolderCode className="w-5 h-5" />
-                  </div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    {t('modManagement.loadedMods.title')}
-                  </h2>
-                </div>
-                <Badge variant="secondary" appearance="light" size="sm">
-                  {t('modManagement.loadedMods.total')}: {dynamicMods?.count || 0}
-                </Badge>
-              </div>
-
-              {dynamicMods && dynamicMods.count > 0 ? (
-                <div className="space-y-3">
-                  {Object.values(dynamicMods.details).map((mod) => (
+            {(staticMods.length > 0 || dynamicMods.length > 0) ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {/* Static Mods */}
+                {staticMods.map((mod, index) => {
+                  const isLoading = loadingMod === mod.name;
+                  return (
                     <div
-                      key={mod.mod_id}
-                      className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700"
+                      key={mod.name || index}
+                      className={`p-3 rounded-lg border ${
+                        mod.enabled
+                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                          : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'
+                      }`}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                              {mod.mod_id}
-                            </span>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
-                              {t('modManagement.loadedMods.loaded')}
-                            </span>
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate mb-1">
-                            {mod.mod_path}
-                          </div>
-                          <div className="flex items-center text-xs text-gray-400 dark:text-gray-500">
-                            <Clock className="w-3 h-3 mr-1" />
-                            {formatTimestamp(mod.loaded_at)}
-                          </div>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        {mod.enabled ? (
+                          <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                        )}
+                        <span className={`font-medium truncate flex-1 ${
+                          mod.enabled
+                            ? 'text-gray-900 dark:text-gray-100'
+                            : 'text-gray-500 dark:text-gray-400'
+                        }`}>
+                          {mod.name.split('.').pop() || mod.name}
+                        </span>
+                        <Badge variant="secondary" appearance="light" size="sm" className="flex-shrink-0">
+                          {t('modManagement.modTypes.static', 'Static')}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate mt-1 pl-6">
+                        {mod.name}
+                      </div>
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2 mt-3 pl-6">
                         <Button
-                          type="button"
-                          variant="ghost"
+                          variant={mod.enabled ? "outline" : "primary"}
                           size="sm"
-                          onClick={() => handleUnloadMod(mod.mod_path)}
-                          disabled={loading}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20 flex-shrink-0"
+                          onClick={() => handleToggleMod(mod.name, mod.enabled)}
+                          disabled={isLoading || loadingMod !== null}
+                          className="flex-1"
                         >
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          {t('modManagement.loadedMods.unload')}
+                          {isLoading ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <>
+                              <Power className="w-3.5 h-3.5 mr-1" />
+                              {mod.enabled
+                                ? t('modManagement.actions.disable', 'Disable')
+                                : t('modManagement.actions.enable', 'Enable')
+                              }
+                            </>
+                          )}
                         </Button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Settings className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {t('modManagement.loadedMods.empty')}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                  );
+                })}
+                {/* Dynamic Mods */}
+                {dynamicMods.map((mod) => {
+                  const isLoading = loadingMod === mod.mod_id;
+                  return (
+                    <div
+                      key={mod.mod_id}
+                      className="p-3 rounded-lg border bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                        <span className="font-medium truncate flex-1 text-gray-900 dark:text-gray-100">
+                          {mod.mod_path.split('.').pop() || mod.mod_path}
+                        </span>
+                        <Badge variant="info" appearance="light" size="sm" className="flex-shrink-0">
+                          {t('modManagement.enabledMods.dynamic', 'Dynamic')}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate mt-1 pl-6">
+                        {mod.mod_path}
+                      </div>
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2 mt-3 pl-6">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleUnloadMod(mod.mod_id, mod.mod_path)}
+                          disabled={isLoading || loadingMod !== null}
+                          className="flex-1"
+                        >
+                          {isLoading ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <>
+                              <Trash2 className="w-3.5 h-3.5 mr-1" />
+                              {t('modManagement.actions.remove', 'Remove')}
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Layers className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  {t('modManagement.enabledMods.empty', 'No mods configured')}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/admin/mods/add')}
+                >
+                  <Plus className="w-4 h-4 mr-1.5" />
+                  {t('modManagement.addMod.button')}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </ScrollArea>
   );

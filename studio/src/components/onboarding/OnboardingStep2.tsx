@@ -4,6 +4,22 @@ import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Template } from "@/pages/OnboardingPage";
 import { useAuthStore } from "@/stores/authStore";
 
+// Import template icons
+import chatroomIcon from "@/assets/images/template_icons/chatroom.png";
+import customIcon from "@/assets/images/template_icons/custom.png";
+import infoIcon from "@/assets/images/template_icons/info.png";
+import projectIcon from "@/assets/images/template_icons/project.png";
+import wikiIcon from "@/assets/images/template_icons/wiki.png";
+
+// Template ID to icon mapping
+const templateIconMap: Record<string, string> = {
+  "multi-agent-chatroom": chatroomIcon,
+  "information-hub": infoIcon,
+  "project-hub": projectIcon,
+  "wiki-network": wikiIcon,
+  "custom": customIcon,
+};
+
 interface OnboardingStep2Props {
   onNext: (template: Template) => void;
   onBack: () => void;
@@ -123,6 +139,41 @@ const OnboardingStep2: React.FC<OnboardingStep2Props> = ({ onNext, onBack }) => 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
+
+        const result = await response.json();
+
+        // If network is restarting, wait for it to come back up
+        if (result.network_restarting) {
+          console.log("🔄 Network is restarting, waiting for it to come back up...");
+
+          // Wait for network to restart (poll health endpoint)
+          const maxRetries = 10;
+          const retryDelay = 1000; // 1 second
+          let networkReady = false;
+
+          for (let i = 0; i < maxRetries; i++) {
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+
+            try {
+              const healthResponse = await fetch(`${baseUrl}/api/health`, {
+                method: "GET",
+                headers: { "Accept": "application/json" },
+              });
+
+              if (healthResponse.ok) {
+                console.log("✅ Network is back online");
+                networkReady = true;
+                break;
+              }
+            } catch {
+              console.log(`⏳ Waiting for network... (attempt ${i + 1}/${maxRetries})`);
+            }
+          }
+
+          if (!networkReady) {
+            throw new Error("Network did not restart in time. Please refresh the page.");
+          }
+        }
       } catch (err: any) {
         console.error("Failed to initialize template:", err);
         setError(err.message || "Failed to initialize template");
@@ -224,6 +275,16 @@ const OnboardingStep2: React.FC<OnboardingStep2Props> = ({ onNext, onBack }) => 
                   }`}
                   onClick={() => handleSelect(template)}
                 >
+                  {/* Template icon */}
+                  {templateIconMap[template.id] && (
+                    <div className="mb-3 flex justify-center">
+                      <img
+                        src={templateIconMap[template.id]}
+                        alt={`${template.name} icon`}
+                        className="w-full h-24 object-cover rounded-lg"
+                      />
+                    </div>
+                  )}
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     {template.name}
                   </h3>

@@ -4,7 +4,7 @@
 # to initialize new networks.
 #
 # Available templates:
-# - hello_world: Simple messaging setup
-# - research_team: Multi-agent research workflow
-# - forum: Discussion forum with topics
-# - agentworld: 2D MMORPG game integration
+# - information-hub: Feed-based network for collecting and broadcasting information
+# - project-hub: Project mod with coordinator and worker agents
+# - wiki-network: Collaborative wiki for building shared knowledge
+# - multi-agent-chatroom: Messaging mod for multi-agent discussions

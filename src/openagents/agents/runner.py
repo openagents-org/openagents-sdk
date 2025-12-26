@@ -5,7 +5,12 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from openagents.agents.orchestrator import orchestrate_agent
-from openagents.config.llm_configs import create_model_provider, determine_provider
+from openagents.config.llm_configs import (
+    create_model_provider,
+    determine_provider,
+    is_auto_model,
+    resolve_auto_model_config,
+)
 from openagents.core.base_mod_adapter import BaseModAdapter
 from openagents.lms.providers import BaseModelProvider
 from openagents.models.agent_actions import AgentTrajectory
@@ -285,17 +290,51 @@ class AgentRunner(ABC):
         )
     
     def get_llm(self) -> BaseModelProvider:
-        """Get the LLM provider for the agent."""
+        """Get the LLM provider for the agent.
+
+        If the agent is configured with model_name="auto", this method will
+        resolve the actual model configuration from environment variables:
+        - DEFAULT_LLM_PROVIDER: The provider name
+        - DEFAULT_LLM_MODEL_NAME: The model name
+        - DEFAULT_LLM_API_KEY: The API key
+        """
         agent_config = self.agent_config
-        provider = determine_provider(
-            agent_config.provider, agent_config.model_name, agent_config.api_base
-        )
-        model_provider = create_model_provider(
-            provider=provider,
-            model_name=agent_config.model_name,
-            api_base=agent_config.api_base,
-            api_key=agent_config.api_key,
-        )
+
+        # Resolve "auto" model configuration from environment variables
+        if is_auto_model(agent_config.model_name):
+            auto_config = resolve_auto_model_config()
+            model_name = auto_config.get("model_name")
+            provider_name = auto_config.get("provider")
+            api_key = auto_config.get("api_key")
+
+            if not model_name:
+                raise ValueError(
+                    "Model is set to 'auto' but DEFAULT_LLM_MODEL_NAME environment variable is not set. "
+                    "Please configure the default model in the network settings."
+                )
+
+            logger.info(f"Resolved 'auto' model to: provider={provider_name}, model={model_name}")
+
+            provider = determine_provider(
+                provider_name, model_name, agent_config.api_base
+            )
+            model_provider = create_model_provider(
+                provider=provider,
+                model_name=model_name,
+                api_base=agent_config.api_base,
+                api_key=api_key or agent_config.api_key,
+            )
+        else:
+            provider = determine_provider(
+                agent_config.provider, agent_config.model_name, agent_config.api_base
+            )
+            model_provider = create_model_provider(
+                provider=provider,
+                model_name=agent_config.model_name,
+                api_base=agent_config.api_base,
+                api_key=agent_config.api_key,
+            )
+
         return model_provider
     
     async def run_llm(

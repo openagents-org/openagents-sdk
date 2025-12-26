@@ -502,7 +502,7 @@ export const dynamicRouteConfig: RouteConfig[] = [
       key: PLUGIN_NAME_ENUM.AGENTWORLD,
       label: "AgentWorld",
       icon: "AgentWorld",
-      visible: true,
+      visible: false, // Only visible when agentworld mod is enabled
       order: 3.5,
       group: "primary",
     },
