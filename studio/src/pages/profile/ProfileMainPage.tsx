@@ -16,6 +16,7 @@ import AgentGroupsManagement from "./AgentGroupsManagement";
 import EventLogs from "./EventLogs";
 import EventDebugger from "./EventDebugger";
 import ModManagementPage from "../mod-management/ModManagementPage";
+import NetworkImportExport from "./NetworkImportExport";
 
 /**
  * Profile main page - handles all profile-related features
