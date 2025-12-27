@@ -136,7 +136,7 @@ async def async_launch_network(
         else:
             logger.info("Running network indefinitely (Ctrl+C to stop)")
             try:
-                while network.is_running:
+                while network.is_running or network._restarting:
                     await asyncio.sleep(1)
             except KeyboardInterrupt:
                 logger.info("Received keyboard interrupt")

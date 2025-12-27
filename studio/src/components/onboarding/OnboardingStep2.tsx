@@ -79,16 +79,19 @@ const OnboardingStep2: React.FC<OnboardingStep2Props> = ({ onNext, onBack }) => 
 
         if (result.success && Array.isArray(result.templates)) {
           // Map API response to Template interface
-          const mappedTemplates: Template[] = result.templates.map((item: any) => ({
-            id: item.name || item.id,
-            name: item.name,
-            description: item.description || "",
-            icon: item.icon || "",
-            agentCount: item.agentCount || item.agent_count || 0,
-            mods: item.mods || [],
-            setupTime: item.setupTime || item.setup_time || t('step2.setupTime.quick'),
-            agents: item.agents || [],
-          }));
+          // Filter out default_network as it's not a proper onboarding template
+          const mappedTemplates: Template[] = result.templates
+            .filter((item: any) => item.name !== 'default_network')
+            .map((item: any) => ({
+              id: item.name || item.id,
+              name: item.name,
+              description: item.description || "",
+              icon: item.icon || "",
+              agentCount: item.agentCount || item.agent_count || 0,
+              mods: item.mods || [],
+              setupTime: item.setupTime || item.setup_time || t('step2.setupTime.quick'),
+              agents: item.agents || [],
+            }));
           setTemplates(mappedTemplates);
         } else {
           throw new Error("Invalid response format");

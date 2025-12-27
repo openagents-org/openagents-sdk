@@ -103,6 +103,7 @@ class AgentNetwork:
 
         # Network state
         self.is_running = False
+        self._restarting = False  # Flag to indicate restart in progress
         self.start_time: Optional[float] = None
 
         # Dynamic mod registry
@@ -1081,6 +1082,7 @@ class AgentNetwork:
             bool: True if restart successful, False otherwise
         """
         logger.info("Starting network restart...")
+        self._restarting = True
 
         try:
             # Step 1: Shutdown current network
@@ -1088,6 +1090,7 @@ class AgentNetwork:
             shutdown_success = await self.shutdown()
             if not shutdown_success:
                 logger.error("Failed to shutdown network")
+                self._restarting = False
                 return False
 
             # Step 2: Apply new configuration
@@ -1185,13 +1188,16 @@ class AgentNetwork:
             init_success = await self.initialize()
             if not init_success:
                 logger.error("Failed to initialize network")
+                self._restarting = False
                 return False
 
             logger.info(f"✅ Network restart completed successfully: {self.network_name}")
+            self._restarting = False
             return True
 
         except Exception as e:
             logger.error(f"❌ Network restart failed: {e}", exc_info=True)
+            self._restarting = False
             return False
 
     def _load_config_from_file(self) -> Optional[NetworkConfig]:
