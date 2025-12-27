@@ -12,7 +12,6 @@ import {
   ManualNetworkConnection,
   fetchNetworkById,
   connectViaNetworkId,
-  getCurrentNetworkHealth,
 } from "@/services/networkService";
 import { ConnectionStatusEnum } from "@/types/connection";
 import { useNavigate, useSearchParams } from "react-router-dom";

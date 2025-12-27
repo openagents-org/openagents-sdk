@@ -49,7 +49,7 @@ const ImportDropzone: React.FC<ImportDropzoneProps> = ({
       setError(null);
       onFileSelected(zipFile);
     },
-    [onFileSelected, disabled]
+    [onFileSelected, disabled, t]
   );
 
   const handleFileInput = useCallback(
@@ -66,7 +66,7 @@ const ImportDropzone: React.FC<ImportDropzoneProps> = ({
       setError(null);
       onFileSelected(file);
     },
-    [onFileSelected]
+    [onFileSelected, t]
   );
 
   return (

@@ -16,7 +16,7 @@ import AgentGroupsManagement from "./AgentGroupsManagement";
 import EventLogs from "./EventLogs";
 import EventDebugger from "./EventDebugger";
 import ModManagementPage from "../mod-management/ModManagementPage";
-import NetworkImportExport from "./NetworkImportExport";
+// NetworkImportExport component available for future use
 
 /**
  * Profile main page - handles all profile-related features
@@ -83,8 +83,10 @@ const ProfileMainPage: React.FC = () => {
  */
 const ProfileDashboard: React.FC = () => {
   const { t } = useTranslation('profile');
-  const navigate = useNavigate();
-  const { isAdmin } = useIsAdmin();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _navigate = useNavigate();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { isAdmin: _isAdmin } = useIsAdmin();
   const {
     loading,
     error,

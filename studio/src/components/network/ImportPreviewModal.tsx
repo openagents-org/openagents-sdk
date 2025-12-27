@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ImportMode, ImportPreview, ImportValidationResult } from "@/types/networkManagement";
+import { ImportMode, ImportValidationResult } from "@/types/networkManagement";
 
 interface ImportPreviewModalProps {
   isOpen: boolean;

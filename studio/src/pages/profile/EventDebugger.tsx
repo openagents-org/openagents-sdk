@@ -22,7 +22,7 @@ const EventDebugger: React.FC = () => {
   const [payloadError, setPayloadError] = useState<string | null>(null);
 
   // Validate and parse JSON payload
-  const validatePayload = (jsonString: string): any | null => {
+  const validatePayload = useCallback((jsonString: string): any | null => {
     if (!jsonString.trim()) {
       return {};
     }
@@ -34,7 +34,7 @@ const EventDebugger: React.FC = () => {
       setPayloadError(t('eventDebugger.invalidJson', { error: e.message }));
       return null;
     }
-  };
+  }, [t]);
 
   // Clear response and errors
   const clearResponse = () => {
@@ -159,7 +159,7 @@ const EventDebugger: React.FC = () => {
     } finally {
       setIsSending(false);
     }
-  }, [connector, isConnected, eventName, payload, agentName, destinationId, t]);
+  }, [connector, isConnected, eventName, payload, agentName, destinationId, t, validatePayload]);
 
   // Keyboard shortcut support
   useEffect(() => {

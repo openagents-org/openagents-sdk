@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
-import { getCurrentNetworkHealth } from "@/services/networkService";
 import OnboardingStep1 from "@/components/onboarding/OnboardingStep1";
 import OnboardingStep2 from "@/components/onboarding/OnboardingStep2";
 import OnboardingStep3 from "@/components/onboarding/OnboardingStep3";
@@ -30,7 +29,8 @@ const OnboardingPage: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [adminPassword, setAdminPassword] = useState("");
-  const [modelConfig, setModelConfig] = useState<ModelConfig | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_modelConfig, setModelConfig] = useState<ModelConfig | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploymentProgress, setDeploymentProgress] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
@@ -137,24 +137,6 @@ const OnboardingPage: React.FC = () => {
       console.error("Deployment failed:", error);
       setIsDeploying(false);
       // TODO: Show error to user
-    }
-  };
-
-  const markOnboardingComplete = async () => {
-    if (!selectedNetwork) return;
-
-    const protocol = selectedNetwork.useHttps ? "https" : "http";
-    const baseUrl = `${protocol}://${selectedNetwork.host}:${selectedNetwork.port}`;
-
-    try {
-      await fetch(`${baseUrl}/api/onboarding/complete`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-    } catch (error) {
-      console.error("Failed to mark onboarding complete:", error);
     }
   };
 
