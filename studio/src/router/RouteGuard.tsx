@@ -206,6 +206,16 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     return <>{children}</>
   }
 
+  // Handle /onboarding path access control
+  if (currentPath === "/onboarding") {
+    if (!selectedNetwork) {
+      console.log("🔄 Onboarding accessed without network, redirecting to /")
+      return <Navigate to="/" replace />
+    }
+    // Has network selection, allow access to onboarding
+    return <>{children}</>
+  }
+
   // Handle /agent-setup path access control
   if (currentPath === "/agent-setup") {
     if (!selectedNetwork) {
@@ -213,6 +223,20 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
       return <Navigate to="/" replace />
     }
     // Has network selection, allow access to agent-setup
+    return <>{children}</>
+  }
+
+  // Handle /admin-login path access control
+  if (currentPath === "/admin-login") {
+    // Check for pending connection in location state (passed from ManualNetwork)
+    const locationState = location.state as { pendingConnection?: unknown } | null
+    const hasPendingConnection = !!locationState?.pendingConnection
+
+    if (!selectedNetwork && !hasPendingConnection) {
+      console.log("🔄 Admin login accessed without network, redirecting to /")
+      return <Navigate to="/" replace />
+    }
+    // Has network selection or pending connection, allow access to admin-login
     return <>{children}</>
   }
 

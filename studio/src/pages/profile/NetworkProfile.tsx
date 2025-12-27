@@ -6,13 +6,11 @@ import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/layout/ui/button';
 import { Input } from '@/components/layout/ui/input';
 import { Textarea } from '@/components/layout/ui/textarea';
-import { Switch, SwitchWrapper } from '@/components/layout/ui/switch';
 import { Badge } from '@/components/layout/ui/badge';
 import { AlertCircle, CheckCircle2, X, Upload, Loader2 } from 'lucide-react';
 import { uploadNetworkIcon } from '@/services/networkService';
 
 interface NetworkProfileData {
-  discoverable: boolean;
   name: string;
   description: string;
   icon: string;
@@ -46,7 +44,6 @@ const NetworkProfile: React.FC = () => {
   };
 
   const [formData, setFormData] = useState<NetworkProfileData>({
-    discoverable: true,
     name: '',
     description: '',
     icon: '',
@@ -89,7 +86,6 @@ const NetworkProfile: React.FC = () => {
           console.log('✅ Found profile data:', profile);
           setFormData(prev => ({
             ...prev,
-            discoverable: profile.discoverable ?? prev.discoverable,
             name: profile.name || prev.name,
             description: profile.description || prev.description,
             icon: profile.icon || prev.icon,
@@ -220,7 +216,6 @@ const NetworkProfile: React.FC = () => {
       // All fields are Optional, but we send all current values
       // Empty strings for optional URL fields (icon, website) should be omitted or null
       const profilePayload: any = {
-        discoverable: formData.discoverable,
         name: formData.name.trim(),
         description: formData.description.trim(),
         country: formData.country.trim(),
@@ -262,7 +257,6 @@ const NetworkProfile: React.FC = () => {
             if (profile) {
               setFormData(prev => ({
                 ...prev,
-                discoverable: profile.discoverable ?? prev.discoverable,
                 name: profile.name || prev.name,
                 description: profile.description || prev.description,
                 icon: profile.icon || prev.icon,
@@ -366,27 +360,6 @@ const NetworkProfile: React.FC = () => {
           </h2>
 
           <div className="space-y-6">
-            {/* Discoverable */}
-            <div className="flex items-center justify-between py-2">
-              <div className="flex-1">
-                <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                  {t('profile.discoverable')}
-                </label>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                  {t('profile.discoverableDesc')}
-                </p>
-              </div>
-              <div className="ml-4">
-                <SwitchWrapper>
-                  <Switch
-                    checked={formData.discoverable}
-                    onCheckedChange={(checked) => handleInputChange('discoverable', checked)}
-                    size="lg"
-                  />
-                </SwitchWrapper>
-              </div>
-            </div>
-
             {/* Name */}
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -450,18 +423,18 @@ const NetworkProfile: React.FC = () => {
                   {isUploadingIcon ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Uploading...
+                      {t('profile.uploading')}
                     </>
                   ) : (
                     <>
                       <Upload className="w-4 h-4 mr-2" />
-                      Upload
+                      {t('profile.upload')}
                     </>
                   )}
                 </Button>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Enter a URL or upload an image (max 5MB). Uploaded images will be saved to the network's assets folder.
+                {t('profile.iconHint')}
               </p>
               {formData.icon && (
                 <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 inline-block">
@@ -539,7 +512,7 @@ const NetworkProfile: React.FC = () => {
                 size="lg"
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Add
+                {t('profile.tags.add')}
               </Button>
             </div>
 
@@ -601,7 +574,7 @@ const NetworkProfile: React.FC = () => {
                 size="lg"
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Add
+                {t('profile.categories.add')}
               </Button>
             </div>
 

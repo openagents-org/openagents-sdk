@@ -10,6 +10,8 @@ import AgentGroupsManagement from "@/pages/profile/AgentGroupsManagement";
 import EventLogs from "@/pages/profile/EventLogs";
 import EventDebugger from "@/pages/profile/EventDebugger";
 import ModManagementPage from "@/pages/mod-management/ModManagementPage";
+import AddModPage from "@/pages/mod-management/AddModPage";
+import NetworkImportExport from "@/pages/profile/NetworkImportExport";
 import TransportConfig from "./TransportConfig";
 import ConnectionGuide from "./ConnectionGuide";
 import NetworkPublishPage from "./NetworkPublish";
@@ -18,6 +20,7 @@ import NetworkPublishPage from "./NetworkPublish";
 import LLMLogsMainPage from "@/pages/llmlogs/LLMLogsMainPage";
 import ServiceAgentsMainPage from "@/pages/serviceagents/ServiceAgentsMainPage";
 import EventsMainPage from "@/pages/events/EventsMainPage";
+import DefaultModelsPage from "./DefaultModelsPage";
 
 /**
  * AdminMainPage - Main router for admin pages
@@ -37,16 +40,18 @@ const AdminMainPage: React.FC = () => {
         <Route path="network" element={<NetworkProfile />} />
         <Route path="transports" element={<TransportConfig />} />
         <Route path="publish" element={<NetworkPublishPage />} />
-        <Route path="import-export" element={<ImportExportPlaceholder />} />
+        <Route path="import-export" element={<NetworkImportExport />} />
         
         {/* Agent Management */}
         <Route path="agents" element={<AgentManagement />} />
         <Route path="groups" element={<AgentGroupsManagement />} />
         <Route path="service-agents/*" element={<ServiceAgentsMainPage />} />
+        <Route path="default-models" element={<DefaultModelsPage />} />
         <Route path="connect" element={<ConnectionGuide />} />
 
         {/* Modules */}
         <Route path="mods" element={<ModManagementPage />} />
+        <Route path="mods/add" element={<AddModPage />} />
 
         {/* Monitoring */}
         <Route path="events" element={<EventLogs />} />
@@ -56,19 +61,6 @@ const AdminMainPage: React.FC = () => {
         <Route path="event-explorer/*" element={<EventsMainPage />} />
       </Routes>
     </AdminRouteGuard>
-  );
-};
-
-const ImportExportPlaceholder: React.FC = () => {
-  return (
-    <div className="p-6 h-full overflow-y-auto dark:bg-gray-800">
-      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-        Import / Export
-      </h1>
-      <p className="text-gray-600 dark:text-gray-400">
-        Network import/export functionality coming soon...
-      </p>
-    </div>
   );
 };
 

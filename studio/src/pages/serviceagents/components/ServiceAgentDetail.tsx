@@ -4,6 +4,13 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import Editor from "@monaco-editor/react";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/layout/ui/select';
+import {
   getAgentStatus,
   getAgentLogs,
   getAgentSource,
@@ -806,18 +813,22 @@ const ServiceAgentDetail: React.FC = () => {
                     </label>
 
                     {/* Log level filter */}
-                    <select
+                    <Select
                       value={logLevelFilter}
-                      onChange={(e) =>
-                        setLogLevelFilter(e.target.value as "ALL" | "INFO" | "WARN" | "ERROR")
+                      onValueChange={(value) =>
+                        setLogLevelFilter(value as "ALL" | "INFO" | "WARN" | "ERROR")
                       }
-                      className="rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="ALL">{t('detail.logs.allLevels')}</option>
-                      <option value="INFO">INFO</option>
-                      <option value="WARN">WARN</option>
-                      <option value="ERROR">ERROR</option>
-                    </select>
+                      <SelectTrigger size="sm" className="rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">{t('detail.logs.allLevels')}</SelectItem>
+                        <SelectItem value="INFO">INFO</SelectItem>
+                        <SelectItem value="WARN">WARN</SelectItem>
+                        <SelectItem value="ERROR">ERROR</SelectItem>
+                      </SelectContent>
+                    </Select>
 
                     {/* Clear logs button */}
                     <button

@@ -17,6 +17,7 @@ import {
   Search,
   Monitor,
   Bug,
+  Cpu,
 } from "lucide-react";
 
 const AdminSidebar: React.FC = () => {
@@ -67,8 +68,14 @@ const AdminSidebar: React.FC = () => {
           icon: ArrowLeftRight,
         },
         {
+          id: "mods",
+          label: t("sidebar.items.modManagement"),
+          path: "/admin/mods",
+          icon: Settings,
+        },
+        {
           id: "publish",
-          label: "Publish Network",
+          label: t("sidebar.items.publishNetwork"),
           path: "/admin/publish",
           icon: (
             <svg
@@ -105,6 +112,12 @@ const AdminSidebar: React.FC = () => {
                 path: "/admin/service-agents",
                 icon: Server,
               },
+              {
+                id: "default-models",
+                label: t("sidebar.items.defaultModels"),
+                path: "/admin/default-models",
+                icon: Cpu,
+              },
             ]
           : []),
         {
@@ -124,17 +137,6 @@ const AdminSidebar: React.FC = () => {
           label: t("sidebar.items.connectionGuide"),
           path: "/admin/connect",
           icon: Link2,
-        },
-      ],
-    },
-    {
-      title: t("sidebar.sections.modules"),
-      items: [
-        {
-          id: "mods",
-          label: t("sidebar.items.modManagement"),
-          path: "/admin/mods",
-          icon: Settings,
         },
       ],
     },
@@ -168,26 +170,6 @@ const AdminSidebar: React.FC = () => {
           label: t("sidebar.items.eventDebugger"),
           path: "/admin/debugger",
           icon: Bug,
-        },
-        {
-          id: "event-explorer",
-          label: "Event Explorer",
-          path: "/admin/event-explorer",
-          icon: (
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-              />
-            </svg>
-          ),
         },
       ],
     },

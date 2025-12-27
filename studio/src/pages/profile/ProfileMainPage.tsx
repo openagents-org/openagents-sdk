@@ -1,7 +1,8 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import { useProfileData } from "./hooks/useProfileData";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Button } from "@/components/layout/ui/button";
 
 // Components (to be created)
@@ -37,7 +38,7 @@ const ProfileMainPage: React.FC = () => {
               {t('profile.editProfile')}
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              Profile editing form coming soon...
+              {t('comingSoon.profileEditingForm')}
             </p>
           </div>
         }
@@ -52,7 +53,7 @@ const ProfileMainPage: React.FC = () => {
               {t('profile.securitySettings')}
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              Security configuration panel coming soon...
+              {t('comingSoon.securityConfigPanel')}
             </p>
           </div>
         }
@@ -63,7 +64,6 @@ const ProfileMainPage: React.FC = () => {
       <Route path="network-profile" element={<NetworkProfile />} />
       <Route path="agent-groups" element={<AgentGroupsManagement />} />
       <Route path="mod-management" element={<ModManagementPage />} />
-      <Route path="network-import-export" element={<NetworkImportExport />} />
 
 
       {/* Event Logs subpage */}
@@ -82,6 +82,8 @@ const ProfileMainPage: React.FC = () => {
  */
 const ProfileDashboard: React.FC = () => {
   const { t } = useTranslation('profile');
+  const navigate = useNavigate();
+  const { isAdmin } = useIsAdmin();
   const {
     loading,
     error,
@@ -100,7 +102,7 @@ const ProfileDashboard: React.FC = () => {
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <span className="ml-3 text-gray-600 dark:text-gray-400">
-            Loading profile data...
+            {t('comingSoon.loadingProfileData')}
           </span>
         </div>
       </div>
@@ -120,7 +122,7 @@ const ProfileDashboard: React.FC = () => {
             </div>
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
-                Failed to load profile data
+                {t('comingSoon.failedToLoadProfileData')}
               </h3>
               <p className="mt-1 text-sm text-red-700 dark:text-red-300">
                 {error}
@@ -131,7 +133,7 @@ const ProfileDashboard: React.FC = () => {
                 size="sm"
                 className="mt-2"
               >
-                Try Again
+                {t('comingSoon.tryAgain')}
               </Button>
             </div>
           </div>

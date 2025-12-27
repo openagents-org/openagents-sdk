@@ -88,8 +88,10 @@ class AgentNetwork:
         self.agent_manager = None
         if self.workspace_manager:
             from openagents.core.agent_manager import AgentManager
-            
+
             self.agent_manager = AgentManager(self.workspace_manager.workspace_path)
+            # Set network reference for agent unregistration on stop
+            self.agent_manager.set_network(self)
 
         # Create topology
         topology_mode = (
@@ -651,6 +653,7 @@ class AgentNetwork:
             "network_id": self.network_id,
             "network_uuid": self.network_uuid,
             "network_name": self.network_name,
+            "initialized": getattr(self.config, 'initialized', False),
             "is_running": self.is_running,
             "uptime_seconds": uptime,
             "agent_count": len(agent_registry),
@@ -692,6 +695,57 @@ class AgentNetwork:
             stats["network_profile"] = network_profile_data
 
         return stats
+
+    def save_config(self) -> bool:
+        """Save the current network configuration to the config file.
+
+        This method persists changes made to the network configuration back to
+        the YAML file. It preserves the existing YAML structure and comments
+        while updating specific fields.
+
+        Returns:
+            bool: True if config was saved successfully, False otherwise
+        """
+        if not self.config_path:
+            logger.warning("Cannot save config: no config_path set")
+            return False
+
+        try:
+            # Load existing YAML to preserve structure and comments
+            with open(self.config_path, 'r') as f:
+                config_dict = yaml.safe_load(f)
+
+            if not config_dict:
+                config_dict = {}
+
+            if 'network' not in config_dict:
+                config_dict['network'] = {}
+
+            # Update the network section with current config values
+            config_dict['network']['initialized'] = self.config.initialized
+
+            # Update admin group password if it exists
+            if 'admin' in self.config.agent_groups:
+                if 'agent_groups' not in config_dict['network']:
+                    config_dict['network']['agent_groups'] = {}
+                if 'admin' not in config_dict['network']['agent_groups']:
+                    config_dict['network']['agent_groups']['admin'] = {
+                        'description': 'Administrator agents with full permissions',
+                        'metadata': {'permissions': ['all']}
+                    }
+                config_dict['network']['agent_groups']['admin']['password_hash'] = \
+                    self.config.agent_groups['admin'].password_hash
+
+            # Write back to file
+            with open(self.config_path, 'w') as f:
+                yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
+            logger.info(f"Network configuration saved to {self.config_path}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to save network configuration: {e}")
+            return False
 
     async def process_external_event(self, event: Event) -> EventResponse:
         """Handle incoming transport messages.
@@ -1080,6 +1134,37 @@ class AgentNetwork:
                 if reloaded_config:
                     self.config = reloaded_config
                     self.network_name = reloaded_config.name
+
+                    # Reload mods from the reloaded config
+                    if reloaded_config.mods:
+                        logger.info(f"Loading {len(reloaded_config.mods)} mods from reloaded config...")
+                        try:
+                            from openagents.utils.mod_loaders import load_network_mods
+
+                            # Convert ModConfig objects to dictionaries
+                            mod_configs = []
+                            for mod_config in reloaded_config.mods:
+                                if hasattr(mod_config, "model_dump"):
+                                    mod_configs.append(mod_config.model_dump())
+                                elif hasattr(mod_config, "dict"):
+                                    mod_configs.append(mod_config.dict())
+                                else:
+                                    mod_configs.append(mod_config)
+
+                            mods = load_network_mods(mod_configs)
+
+                            # Clear existing mods and register new ones
+                            self.mods.clear()
+                            for mod_name, mod_instance in mods.items():
+                                mod_instance.bind_network(self)
+                                self.mods[mod_name] = mod_instance
+                                logger.info(f"Registered mod: {mod_name}")
+
+                            logger.info(f"Successfully loaded {len(mods)} mods from reloaded config")
+
+                        except Exception as e:
+                            logger.error(f"Failed to load mods from reloaded config: {e}")
+                            # Continue with restart even if mod loading fails
                 else:
                     logger.warning("Could not reload config from file, using existing config")
 
