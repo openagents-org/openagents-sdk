@@ -87,12 +87,12 @@ export default function ManualNetwork() {
       setSavedAgentName(agentName);
 
       // If no URL parameter but saved connection exists, set to quick-connect tab
-      if (!urlNetworkId) {
+      if (!urlNetworkIdRaw) {
         setActiveTab(QUICK_CONNECT_TAB);
       }
     } else {
       // No URL parameter and no saved connection, default to host-port
-      if (!urlNetworkId) {
+      if (!urlNetworkIdRaw) {
         setActiveTab(HOST_PORT_TAB);
       }
     }
@@ -106,7 +106,7 @@ export default function ManualNetwork() {
       key: NETWORK_ID_TAB,
       label: t('manualNetwork.tabs.networkId')
     };
-    if (urlNetworkId) {
+    if (urlNetworkIdRaw) {
       tabList.unshift(NetworkIdTab);
     } else {
       tabList.push(NetworkIdTab);
