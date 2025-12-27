@@ -306,6 +306,7 @@ class AgentRunner(ABC):
             model_name = auto_config.get("model_name")
             provider_name = auto_config.get("provider")
             api_key = auto_config.get("api_key")
+            base_url = auto_config.get("base_url")
 
             if not model_name:
                 raise ValueError(
@@ -313,15 +314,18 @@ class AgentRunner(ABC):
                     "Please configure the default model in the network settings."
                 )
 
-            logger.info(f"Resolved 'auto' model to: provider={provider_name}, model={model_name}")
+            # Use base_url from auto config, fallback to agent_config.api_base
+            effective_api_base = base_url or agent_config.api_base
+
+            logger.info(f"Resolved 'auto' model to: provider={provider_name}, model={model_name}, base_url={effective_api_base}")
 
             provider = determine_provider(
-                provider_name, model_name, agent_config.api_base
+                provider_name, model_name, effective_api_base
             )
             model_provider = create_model_provider(
                 provider=provider,
                 model_name=model_name,
-                api_base=agent_config.api_base,
+                api_base=effective_api_base,
                 api_key=api_key or agent_config.api_key,
             )
         else:

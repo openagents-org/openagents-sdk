@@ -88,8 +88,10 @@ class AgentNetwork:
         self.agent_manager = None
         if self.workspace_manager:
             from openagents.core.agent_manager import AgentManager
-            
+
             self.agent_manager = AgentManager(self.workspace_manager.workspace_path)
+            # Set network reference for agent unregistration on stop
+            self.agent_manager.set_network(self)
 
         # Create topology
         topology_mode = (

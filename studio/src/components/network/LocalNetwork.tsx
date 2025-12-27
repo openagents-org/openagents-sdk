@@ -55,12 +55,23 @@ const LocalNetworkShow = React.memo(
               {t('localNetwork.runningOn', { host, port })}
             </p>
           </div>
-          <button
-            onClick={() => handleConnect()}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-          >
-            {t('localNetwork.connect')}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => handleConnect()}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+            >
+              {t('localNetwork.connect')}
+            </button>
+            <button
+              onClick={() => {
+                handleNetworkSelected(localNetwork);
+                navigate('/admin');
+              }}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+            >
+              {t('localNetwork.manageNetwork')}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -69,6 +80,8 @@ const LocalNetworkShow = React.memo(
 
 const LocalNetwork: React.FC = () => {
   const { t } = useTranslation('auth');
+  const navigate = useNavigate();
+  const { handleNetworkSelected } = useAuthStore();
   const [localNetwork, setLocalNetwork] = useState<NetworkConnection | null>(
     null
   );
@@ -80,6 +93,24 @@ const LocalNetwork: React.FC = () => {
       try {
         const local = await detectLocalNetwork();
         setLocalNetwork(local);
+
+        // If network detected, check if it's initialized
+        // If not initialized, auto-connect and redirect to onboarding
+        if (local) {
+          try {
+            const healthResult = await getCurrentNetworkHealth(local);
+            const isInitialized = healthResult.data?.data?.initialized === true;
+
+            if (!isInitialized) {
+              // Auto-connect to the network and redirect to onboarding
+              handleNetworkSelected(local);
+              navigate("/onboarding", { replace: true });
+              return;
+            }
+          } catch (error) {
+            console.error("Error checking network health:", error);
+          }
+        }
       } catch (error) {
         console.error("Error detecting local network:", error);
       } finally {
@@ -88,7 +119,7 @@ const LocalNetwork: React.FC = () => {
     };
 
     checkLocal();
-  }, []);
+  }, [handleNetworkSelected, navigate]);
 
   return (
     <div className="mb-8">

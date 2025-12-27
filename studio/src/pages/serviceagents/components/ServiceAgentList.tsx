@@ -14,7 +14,20 @@ import {
 } from "@/services/serviceAgentsApi";
 import { Button } from "@/components/layout/ui/button";
 import { Badge } from "@/components/layout/ui/badge";
-import { AlertCircle, RefreshCw, FileText, Eye, Play, Square, Loader2, Settings, Plus, Trash2, Save, ChevronDown, ChevronUp, Cpu, ChevronRight } from "lucide-react";
+import { AlertCircle, RefreshCw, FileText, Eye, EyeOff, Play, Square, Loader2, Settings, Plus, Trash2, Save, ChevronDown, ChevronUp, Cpu, ChevronRight } from "lucide-react";
+
+// Helper to check if a variable name is sensitive (should be masked)
+const isSensitiveVariable = (name: string): boolean => {
+  const sensitivePatterns = ['KEY', 'SECRET', 'TOKEN', 'PASSWORD', 'CREDENTIAL', 'AUTH'];
+  const upperName = name.toUpperCase();
+  return sensitivePatterns.some(pattern => upperName.includes(pattern));
+};
+
+// Helper to mask a value
+const maskValue = (value: string): string => {
+  if (!value || value.length <= 8) return '••••••••';
+  return value.substring(0, 4) + '••••••••' + value.substring(value.length - 4);
+};
 
 /**
  * Service Agent List Component
@@ -37,6 +50,7 @@ const ServiceAgentList: React.FC = () => {
   const [globalEnvFetched, setGlobalEnvFetched] = useState(false);
   const [newGlobalEnvName, setNewGlobalEnvName] = useState("");
   const [newGlobalEnvValue, setNewGlobalEnvValue] = useState("");
+  const [visibleSensitiveVars, setVisibleSensitiveVars] = useState<Set<string>>(new Set());
 
   // Fetch agents
   const fetchAgents = useCallback(async () => {
@@ -110,6 +124,19 @@ const ServiceAgentList: React.FC = () => {
   // Handle updating global env var value
   const handleUpdateGlobalEnvVar = (name: string, value: string) => {
     setGlobalEnvVars({ ...globalEnvVars, [name]: value });
+  };
+
+  // Toggle visibility of sensitive variable
+  const toggleSensitiveVarVisibility = (name: string) => {
+    setVisibleSensitiveVars(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(name)) {
+        newSet.delete(name);
+      } else {
+        newSet.add(name);
+      }
+      return newSet;
+    });
   };
 
   // Handle saving global env vars
@@ -367,31 +394,49 @@ const ServiceAgentList: React.FC = () => {
                       {t('list.globalEnv.empty')}
                     </p>
                   ) : (
-                    Object.entries(globalEnvVars).map(([name, value]) => (
-                      <div key={name} className="flex items-center space-x-2">
-                        <input
-                          type="text"
-                          value={name}
-                          disabled
-                          className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm"
-                        />
-                        <input
-                          type="text"
-                          value={value}
-                          onChange={(e) => handleUpdateGlobalEnvVar(name, e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteGlobalEnvVar(name)}
-                          className="px-2 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))
+                    Object.entries(globalEnvVars).map(([name, value]) => {
+                      const isSensitive = isSensitiveVariable(name);
+                      const isVisible = visibleSensitiveVars.has(name);
+                      const displayValue = isSensitive && !isVisible ? maskValue(value) : value;
+
+                      return (
+                        <div key={name} className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            value={name}
+                            disabled
+                            className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm"
+                          />
+                          <div className="flex-1 relative">
+                            <input
+                              type={isSensitive && !isVisible ? "password" : "text"}
+                              value={isSensitive && !isVisible ? value : value}
+                              onChange={(e) => handleUpdateGlobalEnvVar(name, e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+                              placeholder={isSensitive && !isVisible ? displayValue : ""}
+                            />
+                            {isSensitive && (
+                              <button
+                                type="button"
+                                onClick={() => toggleSensitiveVarVisibility(name)}
+                                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                              >
+                                {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </button>
+                            )}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteGlobalEnvVar(name)}
+                            className="px-2 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
 

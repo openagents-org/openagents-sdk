@@ -148,6 +148,11 @@ class HttpTransport(Transport):
         self.app.router.add_post("/api/network/initialize/template", self.initialize_network_with_template)
         self.app.router.add_post("/api/network/initialize/model-config", self.initialize_model_config)
         self.app.router.add_get("/api/templates", self.list_templates)
+
+        # Admin default model configuration endpoints
+        self.app.router.add_get("/api/admin/default-model", self.get_default_model)
+        self.app.router.add_post("/api/admin/default-model", self.save_default_model)
+        self.app.router.add_delete("/api/admin/default-model", self.delete_default_model)
         # LLM Logs API endpoints
         self.app.router.add_get("/api/agents/service/{agent_id}/llm-logs", self.get_llm_logs)
         self.app.router.add_get("/api/agents/service/{agent_id}/llm-logs/{log_id}", self.get_llm_log_entry)
@@ -363,6 +368,14 @@ class HttpTransport(Transport):
     async def root_handler(self, request):
         """Handle requests to root path with a welcome page."""
         logger.debug("HTTP root path requested")
+
+        # If studio is enabled and network is not initialized, redirect to onboarding
+        if self._serve_studio and self.network_instance:
+            try:
+                if not self.network_instance.config.initialized:
+                    raise web.HTTPFound('/studio/onboarding')
+            except AttributeError:
+                pass  # Config might not have initialized attribute
 
         # Try to get network stats for the welcome page
         try:
@@ -3499,6 +3512,194 @@ class HttpTransport(Transport):
             logger.error(f"Failed to initialize model config: {e}", exc_info=True)
             return web.json_response(
                 {"success": False, "message": f"Failed to initialize model config: {str(e)}"},
+                status=500
+            )
+
+    async def get_default_model(self, request):
+        """Get the current default LLM model configuration.
+
+        Returns:
+            JSON response with current model config
+        """
+        try:
+            if not self.network_instance:
+                return web.json_response(
+                    {"success": False, "error_message": "Network instance not available"},
+                    status=500
+                )
+
+            if not hasattr(self.network_instance, "agent_manager") or not self.network_instance.agent_manager:
+                return web.json_response(
+                    {"success": False, "error_message": "Agent manager not available"},
+                    status=503
+                )
+
+            agent_manager = self.network_instance.agent_manager
+            env_vars = agent_manager.get_global_env_vars()
+
+            provider = env_vars.get("DEFAULT_LLM_PROVIDER", "")
+            model_name = env_vars.get("DEFAULT_LLM_MODEL_NAME", "")
+            api_key = env_vars.get("DEFAULT_LLM_API_KEY", "")
+            base_url = env_vars.get("DEFAULT_LLM_BASE_URL", "")
+
+            return web.json_response({
+                "success": True,
+                "config": {
+                    "provider": provider,
+                    "model_name": model_name,
+                    "api_key": api_key,
+                    "base_url": base_url
+                }
+            })
+
+        except Exception as e:
+            logger.error(f"Failed to get default model config: {e}", exc_info=True)
+            return web.json_response(
+                {"success": False, "error_message": f"Failed to get default model config: {str(e)}"},
+                status=500
+            )
+
+    async def save_default_model(self, request):
+        """Save the default LLM model configuration.
+
+        Request body:
+            {
+                "provider": "openai",
+                "model_name": "gpt-4",
+                "api_key": "sk-...",
+                "base_url": "https://..." (optional)
+            }
+
+        Returns:
+            JSON response with success status
+        """
+        try:
+            if not self.network_instance:
+                return web.json_response(
+                    {"success": False, "error_message": "Network instance not available"},
+                    status=500
+                )
+
+            if not hasattr(self.network_instance, "agent_manager") or not self.network_instance.agent_manager:
+                return web.json_response(
+                    {"success": False, "error_message": "Agent manager not available"},
+                    status=503
+                )
+
+            # Parse request body
+            try:
+                data = await request.json()
+            except json.JSONDecodeError:
+                return web.json_response(
+                    {"success": False, "error_message": "Invalid JSON in request body"},
+                    status=400
+                )
+
+            provider = data.get("provider")
+            model_name = data.get("model_name")
+            api_key = data.get("api_key")
+            base_url = data.get("base_url")
+
+            if not provider:
+                return web.json_response(
+                    {"success": False, "error_message": "provider is required"},
+                    status=400
+                )
+
+            # Build environment variables
+            env_vars = {}
+
+            if provider:
+                env_vars["DEFAULT_LLM_PROVIDER"] = provider
+
+            if model_name:
+                env_vars["DEFAULT_LLM_MODEL_NAME"] = model_name
+
+            if api_key:
+                env_vars["DEFAULT_LLM_API_KEY"] = api_key
+
+            if base_url:
+                env_vars["DEFAULT_LLM_BASE_URL"] = base_url
+
+            # Get existing global env vars and merge
+            agent_manager = self.network_instance.agent_manager
+            existing_env = agent_manager.get_global_env_vars()
+            existing_env.update(env_vars)
+
+            # Save merged env vars
+            result = agent_manager.set_global_env_vars(existing_env)
+
+            if not result.get("success"):
+                return web.json_response(
+                    {"success": False, "error_message": result.get("message", "Failed to save model config")},
+                    status=500
+                )
+
+            logger.info(f"Default model config saved: provider={provider}, model={model_name}")
+            return web.json_response({
+                "success": True,
+                "message": "Model configuration saved successfully",
+                "config": {
+                    "provider": provider,
+                    "model_name": model_name,
+                    "api_key_set": bool(api_key),
+                    "base_url": base_url or ""
+                }
+            })
+
+        except Exception as e:
+            logger.error(f"Failed to save default model config: {e}", exc_info=True)
+            return web.json_response(
+                {"success": False, "error_message": f"Failed to save default model config: {str(e)}"},
+                status=500
+            )
+
+    async def delete_default_model(self, request):
+        """Delete/clear the default LLM model configuration.
+
+        Returns:
+            JSON response with success status
+        """
+        try:
+            if not self.network_instance:
+                return web.json_response(
+                    {"success": False, "error_message": "Network instance not available"},
+                    status=500
+                )
+
+            if not hasattr(self.network_instance, "agent_manager") or not self.network_instance.agent_manager:
+                return web.json_response(
+                    {"success": False, "error_message": "Agent manager not available"},
+                    status=503
+                )
+
+            agent_manager = self.network_instance.agent_manager
+            existing_env = agent_manager.get_global_env_vars()
+
+            # Remove default model keys
+            keys_to_remove = ["DEFAULT_LLM_PROVIDER", "DEFAULT_LLM_MODEL_NAME", "DEFAULT_LLM_API_KEY", "DEFAULT_LLM_BASE_URL"]
+            for key in keys_to_remove:
+                existing_env.pop(key, None)
+
+            # Save updated env vars
+            result = agent_manager.set_global_env_vars(existing_env)
+
+            if not result.get("success"):
+                return web.json_response(
+                    {"success": False, "error_message": result.get("message", "Failed to clear model config")},
+                    status=500
+                )
+
+            logger.info("Default model config cleared")
+            return web.json_response({
+                "success": True,
+                "message": "Model configuration cleared successfully"
+            })
+
+        except Exception as e:
+            logger.error(f"Failed to clear default model config: {e}", exc_info=True)
+            return web.json_response(
+                {"success": False, "error_message": f"Failed to clear default model config: {str(e)}"},
                 status=500
             )
 

@@ -15,6 +15,7 @@ class LLMProviderType(str, Enum):
     OPENAI = "openai"
     AZURE = "azure"
     CLAUDE = "claude"
+    ANTHROPIC = "anthropic"  # Alias for claude
     BEDROCK = "bedrock"
     GEMINI = "gemini"
     DEEPSEEK = "deepseek"
@@ -25,6 +26,9 @@ class LLMProviderType(str, Enum):
     TOGETHER = "together"
     PERPLEXITY = "perplexity"
     GROQ = "groq"
+    OPENROUTER = "openrouter"
+    CUSTOM = "custom"  # Custom OpenAI-compatible endpoint
+    OPENAI_COMPATIBLE = "openai-compatible"  # Alias for custom
 
 
 # Model provider configurations
@@ -42,7 +46,7 @@ MODEL_CONFIGS: Dict[str, Dict[str, Any]] = {
         "models": ["gpt-4", "gpt-4-turbo", "gpt-35-turbo"],
         "API_KEY_ENV_VAR": "AZURE_OPENAI_API_KEY",
     },
-    # Anthropic Claude
+    # Anthropic Claude (supports both "claude" and "anthropic" as provider IDs)
     "claude": {
         "provider": "anthropic",
         "models": [
@@ -53,14 +57,28 @@ MODEL_CONFIGS: Dict[str, Dict[str, Any]] = {
         ],
         "API_KEY_ENV_VAR": "ANTHROPIC_API_KEY",
     },
+    "anthropic": {
+        "provider": "anthropic",
+        "models": [
+            "claude-opus-4-5-20251124",
+            "claude-sonnet-4-5-20250514",
+            "claude-haiku-4-5-20251015",
+            "claude-sonnet-4-20250514",
+        ],
+        "API_KEY_ENV_VAR": "ANTHROPIC_API_KEY",
+    },
     # AWS Bedrock
     "bedrock": {
         "provider": "bedrock",
         "models": [
+            "us.anthropic.claude-sonnet-4-5-20250514-v1:0",
+            "us.anthropic.claude-haiku-4-5-20250514-v1:0",
+            "anthropic.claude-3-5-sonnet-20241022-v2:0",
+            "anthropic.claude-3-5-haiku-20241022-v1:0",
+            "anthropic.claude-3-opus-20240229-v1:0",
             "anthropic.claude-3-sonnet-20240229-v1:0",
-            "anthropic.claude-3-haiku-20240307-v1:0",
         ],
-        "API_KEY_ENV_VAR": "BEDROCK_API_KEY",
+        "API_KEY_ENV_VAR": "AWS_ACCESS_KEY_ID",
     },
     # Google Gemini (free tier: 20-25 req/day as of Dec 2025)
     "gemini": {
@@ -147,6 +165,25 @@ MODEL_CONFIGS: Dict[str, Dict[str, Any]] = {
         "API_KEY_ENV_VAR": "GROQ_API_KEY",
         "free_tier": True,
     },
+    # OpenRouter (aggregator for multiple models)
+    "openrouter": {
+        "provider": "generic",
+        "api_base": "https://openrouter.ai/api/v1",
+        "models": [],  # User specifies model name (e.g., "anthropic/claude-3-opus")
+        "API_KEY_ENV_VAR": "OPENROUTER_API_KEY",
+    },
+    # Custom OpenAI-compatible endpoint (e.g., Ollama, vLLM, local models)
+    "custom": {
+        "provider": "generic",
+        "models": [],  # User specifies model name
+        "API_KEY_ENV_VAR": "CUSTOM_API_KEY",
+    },
+    # Alias for custom OpenAI-compatible (used by frontend)
+    "openai-compatible": {
+        "provider": "generic",
+        "models": [],  # User specifies model name
+        "API_KEY_ENV_VAR": "CUSTOM_API_KEY",
+    },
 }
 
 
@@ -226,17 +263,19 @@ def resolve_auto_model_config() -> Dict[str, Optional[str]]:
 
     When an agent specifies model_name="auto", this function resolves the
     actual model configuration from the following environment variables:
-    - DEFAULT_LLM_PROVIDER: The provider name (e.g., "openai", "claude")
+    - DEFAULT_LLM_PROVIDER: The provider name (e.g., "openai", "claude", "custom")
     - DEFAULT_LLM_MODEL_NAME: The model name (e.g., "gpt-4o", "claude-3-5-sonnet")
     - DEFAULT_LLM_API_KEY: The API key for the provider
+    - DEFAULT_LLM_BASE_URL: The base URL for custom OpenAI-compatible endpoints
 
     Returns:
-        Dictionary with 'provider', 'model_name', and 'api_key' resolved from env vars
+        Dictionary with 'provider', 'model_name', 'api_key', and 'base_url' resolved from env vars
     """
     return {
         "provider": os.getenv("DEFAULT_LLM_PROVIDER"),
         "model_name": os.getenv("DEFAULT_LLM_MODEL_NAME"),
         "api_key": os.getenv("DEFAULT_LLM_API_KEY"),
+        "base_url": os.getenv("DEFAULT_LLM_BASE_URL"),
     }
 
 
@@ -357,12 +396,23 @@ def create_model_provider(
         return OpenAIProvider(
             model_name=model_name, api_base=api_base, api_key=api_key, **kwargs
         )
-    elif provider == "claude":
+    elif provider == "claude" or provider == "anthropic":
         return AnthropicProvider(model_name=model_name, api_key=api_key, **kwargs)
     elif provider == "bedrock":
         return BedrockProvider(model_name=model_name, **kwargs)
     elif provider == "gemini":
         return GeminiProvider(model_name=model_name, api_key=api_key, **kwargs)
+    elif provider == "custom" or provider == "openai-compatible":
+        # Custom OpenAI-compatible endpoint requires api_base
+        if not api_base:
+            raise ValueError(
+                "API base URL is required for custom OpenAI-compatible provider. "
+                "Please provide the base_url parameter (e.g., http://localhost:11434/v1 for Ollama)."
+            )
+
+        return SimpleGenericProvider(
+            model_name=model_name, api_base=api_base, api_key=api_key, **kwargs
+        )
     elif provider in [
         "deepseek",
         "qwen",
@@ -372,6 +422,7 @@ def create_model_provider(
         "together",
         "perplexity",
         "groq",
+        "openrouter",
     ]:
         # Use predefined API base if not provided
         if not api_base and provider in MODEL_CONFIGS:

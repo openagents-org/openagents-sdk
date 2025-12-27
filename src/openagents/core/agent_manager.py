@@ -69,7 +69,18 @@ class AgentManager:
         self.is_running = False
         self._monitor_task: Optional[asyncio.Task] = None
 
+        # Reference to network for agent unregistration on stop
+        self._network = None
+
         logger.info(f"AgentManager initialized for workspace: {self.workspace_path}")
+
+    def set_network(self, network) -> None:
+        """Set the network reference for agent unregistration.
+
+        Args:
+            network: The network instance
+        """
+        self._network = network
     
     async def start(self) -> bool:
         """Start the agent manager.
@@ -472,6 +483,15 @@ class AgentManager:
                     except asyncio.CancelledError:
                         pass
             
+            # Unregister agent from network to allow clean restart
+            if self._network:
+                try:
+                    await self._network.unregister_agent(agent_id)
+                    logger.info(f"Unregistered agent '{agent_id}' from network")
+                except Exception as unreg_err:
+                    # Log but don't fail - agent might not have been registered
+                    logger.debug(f"Could not unregister agent '{agent_id}': {unreg_err}")
+
             # Close log file
             if agent_info.log_file_handle:
                 try:
@@ -482,7 +502,7 @@ class AgentManager:
                 except:
                     pass
                 agent_info.log_file_handle = None
-            
+
             agent_info.status = "stopped"
             agent_info.pid = None
             agent_info.process = None

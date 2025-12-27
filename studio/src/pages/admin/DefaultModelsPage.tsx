@@ -84,6 +84,20 @@ const MODEL_PROVIDERS: ProviderInfo[] = [
     apiKeyName: "AZURE_OPENAI_API_KEY",
   },
   {
+    id: "bedrock",
+    name: "Amazon Bedrock",
+    models: [
+      "us.anthropic.claude-sonnet-4-5-20250514-v1:0",
+      "us.anthropic.claude-haiku-4-5-20250514-v1:0",
+      "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      "anthropic.claude-3-5-haiku-20241022-v1:0",
+      "anthropic.claude-3-opus-20240229-v1:0",
+      "anthropic.claude-3-sonnet-20240229-v1:0",
+    ],
+    apiKeyUrl: "https://console.aws.amazon.com/bedrock/",
+    apiKeyName: "AWS_ACCESS_KEY_ID",
+  },
+  {
     id: "openrouter",
     name: "OpenRouter",
     models: [],
