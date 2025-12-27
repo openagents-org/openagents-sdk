@@ -138,6 +138,7 @@ async def orchestrate_agent(
         model_name = auto_config.get("model_name")
         provider_name = auto_config.get("provider")
         api_key = auto_config.get("api_key")
+        base_url = auto_config.get("base_url")
 
         if not model_name:
             raise ValueError(
@@ -147,13 +148,16 @@ async def orchestrate_agent(
 
         logger.info(f"Resolved 'auto' model to: provider={provider_name}, model={model_name}")
 
+        # Use base_url from auto config, fallback to agent_config.api_base
+        effective_base_url = base_url or agent_config.api_base
+
         provider = determine_provider(
-            provider_name, model_name, agent_config.api_base
+            provider_name, model_name, effective_base_url
         )
         model_provider = create_model_provider(
             provider=provider,
             model_name=model_name,
-            api_base=agent_config.api_base,
+            api_base=effective_base_url,
             api_key=api_key or agent_config.api_key,
         )
     else:

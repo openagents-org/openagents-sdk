@@ -127,17 +127,14 @@ const AdminLoginPage: React.FC = () => {
         console.warn("Failed to unregister after verification:", unregError);
       }
 
-      // Store the admin group in authStore
+      // Store the complete admin auth state BEFORE navigation
+      // All three must be set before navigate() to avoid RouteGuard redirecting to /agent-setup
       setPasswordHash(hashedPassword);
       setAgentGroup("admin");
+      setAgentName(ADMIN_AGENT_NAME);
 
-      // Navigate first, then set agentName to avoid RouteGuard redirect
+      // Navigate after auth state is complete
       navigate("/admin/dashboard", { replace: true });
-
-      // Set agentName after navigation to avoid triggering redirects
-      requestAnimationFrame(() => {
-        setAgentName(ADMIN_AGENT_NAME);
-      });
     } catch (error) {
       console.error("Failed to verify admin credentials:", error);
       setPasswordError(t("agentSetup.errors.adminConnectionFailed"));

@@ -111,11 +111,6 @@ const MODEL_PROVIDERS: ProviderInfo[] = [
     requiresBaseUrl: true,
     apiKeyName: "CUSTOM_API_KEY",
   },
-  {
-    id: "custom",
-    name: "Custom",
-    models: [],
-  },
 ];
 
 const DefaultModelsPage: React.FC = () => {

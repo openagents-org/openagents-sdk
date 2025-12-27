@@ -14,13 +14,20 @@ interface OnboardingStepModelConfigProps {
 }
 
 const MODEL_PROVIDERS = [
+  // Free tier providers
+  { id: "groq", name: "Groq", models: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "qwen/qwen3-32b", "deepseek-r1-distill-llama-70b"], free: true },
+  { id: "gemini", name: "Google Gemini", models: ["gemini-3-flash", "gemini-3-pro", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"], free: true },
+  { id: "mistral", name: "Mistral", models: ["mistral-large-latest", "mistral-small-latest", "codestral-latest"], free: true },
+  // Paid providers
   { id: "openai", name: "OpenAI", models: ["gpt-5.2", "gpt-5.2-pro", "gpt-5.1", "gpt-5-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini", "o4-mini", "o3-mini"] },
   { id: "anthropic", name: "Anthropic", models: ["claude-opus-4-5-20251124", "claude-sonnet-4-5-20250514", "claude-haiku-4-5-20251015", "claude-sonnet-4-20250514"] },
-  { id: "bedrock", name: "Amazon Bedrock", models: ["us.anthropic.claude-sonnet-4-5-20250514-v1:0", "us.anthropic.claude-haiku-4-5-20250514-v1:0", "anthropic.claude-3-5-sonnet-20241022-v2:0", "anthropic.claude-3-5-haiku-20241022-v1:0", "anthropic.claude-3-opus-20240229-v1:0"] },
-  { id: "google", name: "Google", models: ["gemini-3-flash", "gemini-3-pro", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"] },
   { id: "deepseek", name: "DeepSeek", models: ["deepseek-chat", "deepseek-reasoner"] },
+  { id: "grok", name: "Grok (xAI)", models: ["grok-3", "grok-3-mini", "grok-2"] },
+  { id: "qwen", name: "Qwen (Alibaba)", models: ["qwen-turbo", "qwen-plus", "qwen-max"] },
+  { id: "azure", name: "Azure OpenAI", models: ["gpt-4.1", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini"] },
+  { id: "bedrock", name: "Amazon Bedrock", models: ["us.anthropic.claude-sonnet-4-5-20250514-v1:0", "us.anthropic.claude-haiku-4-5-20250514-v1:0", "anthropic.claude-3-5-sonnet-20241022-v2:0", "anthropic.claude-3-5-haiku-20241022-v1:0", "anthropic.claude-3-opus-20240229-v1:0"] },
   { id: "openrouter", name: "OpenRouter", models: [] },
-  { id: "custom", name: "Custom", models: [] },
+  { id: "openai-compatible", name: "Custom OpenAI Compatible", models: [] },
 ];
 
 const OnboardingStepModelConfig: React.FC<OnboardingStepModelConfigProps> = ({ onNext, onBack }) => {

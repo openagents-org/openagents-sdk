@@ -37,13 +37,24 @@ MODEL_CONFIGS: Dict[str, Dict[str, Any]] = {
     # OpenAI models
     "openai": {
         "provider": "openai",
-        "models": ["gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"],
+        "models": [
+            "gpt-5.2",
+            "gpt-5.2-pro",
+            "gpt-5.1",
+            "gpt-5-mini",
+            "gpt-4.1",
+            "gpt-4.1-mini",
+            "gpt-4o",
+            "gpt-4o-mini",
+            "o4-mini",
+            "o3-mini",
+        ],
         "API_KEY_ENV_VAR": "OPENAI_API_KEY",
     },
     # Azure OpenAI
     "azure": {
         "provider": "openai",
-        "models": ["gpt-4", "gpt-4-turbo", "gpt-35-turbo"],
+        "models": ["gpt-4.1", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini"],
         "API_KEY_ENV_VAR": "AZURE_OPENAI_API_KEY",
     },
     # Anthropic Claude (supports both "claude" and "anthropic" as provider IDs)
@@ -84,10 +95,11 @@ MODEL_CONFIGS: Dict[str, Dict[str, Any]] = {
     "gemini": {
         "provider": "gemini",
         "models": [
-            "gemini-2.0-flash",    # Latest
-            "gemini-2.5-flash",    # Newer
-            "gemini-1.5-flash",    # Stable
-            "gemini-1.5-pro",      # Higher quality
+            "gemini-3-flash",
+            "gemini-3-pro",
+            "gemini-2.5-flash",
+            "gemini-2.5-pro",
+            "gemini-2.0-flash",
         ],
         "API_KEY_ENV_VAR": "GEMINI_API_KEY",
         "free_tier": True,
@@ -110,7 +122,7 @@ MODEL_CONFIGS: Dict[str, Dict[str, Any]] = {
     "grok": {
         "provider": "generic",
         "api_base": "https://api.x.ai/v1",
-        "models": ["grok-beta"],
+        "models": ["grok-3", "grok-3-mini", "grok-2"],
         "API_KEY_ENV_VAR": "XAI_API_KEY",
     },
     # Mistral AI (free tier: 1B tokens/month)

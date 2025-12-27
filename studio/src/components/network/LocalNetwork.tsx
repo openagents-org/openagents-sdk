@@ -64,8 +64,12 @@ const LocalNetworkShow = React.memo(
             </button>
             <button
               onClick={() => {
-                handleNetworkSelected(localNetwork);
-                navigate('/admin');
+                // Navigate to admin login page with connection info in state
+                // Don't call handleNetworkSelected here to avoid triggering redirects
+                navigate('/admin-login', {
+                  state: { pendingConnection: localNetwork },
+                  replace: true
+                });
               }}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
             >

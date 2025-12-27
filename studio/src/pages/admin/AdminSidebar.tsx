@@ -24,7 +24,11 @@ const AdminSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation("admin");
-  const { isAdmin } = useIsAdmin();
+  const { isAdmin, isLoading } = useIsAdmin();
+
+  // Show admin-only items while loading (user reached admin page, likely is admin)
+  // or when confirmed as admin
+  const showAdminItems = isLoading || isAdmin;
 
   const isActive = (path: string) => {
     const currentPath = location.pathname;
@@ -104,7 +108,7 @@ const AdminSidebar: React.FC = () => {
     {
       title: t("sidebar.sections.agents"),
       items: [
-        ...(isAdmin
+        ...(showAdminItems
           ? [
               {
                 id: "service-agents",
@@ -155,7 +159,7 @@ const AdminSidebar: React.FC = () => {
           path: "/admin/event-explorer",
           icon: Search,
         },
-        ...(isAdmin
+        ...(showAdminItems
           ? [
               {
                 id: "llm-logs",
