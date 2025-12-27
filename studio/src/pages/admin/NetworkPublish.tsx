@@ -133,6 +133,10 @@ const NetworkPublishPage: React.FC = () => {
   const [publishingStatus, setPublishingStatus] = useState<PublishingStatus>({ isPublished: false, loading: false });
   const [currentNetworkUuid, setCurrentNetworkUuid] = useState<string | null>(null);
 
+  // OpenAgents OAuth state
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const authPopupRef = React.useRef<Window | null>(null);
+
   // Check if current host:port is already published
   const existingNetwork = React.useMemo(() => {
     if (!apiKeyValidation?.publishedNetworks || !networkHost || !networkPort) {
@@ -242,6 +246,115 @@ const NetworkPublishPage: React.FC = () => {
     }
     prevApiKeyRef.current = apiKey;
   }, [apiKey, apiKeyValidation?.isValid]);
+
+  // OpenAgents authentication popup handler
+  const handleOpenAgentsAuth = useCallback(() => {
+    if (isAuthenticating) return;
+
+    setIsAuthenticating(true);
+
+    // Open popup to OpenAgents login/callback page
+    const width = 500;
+    const height = 650;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+
+    const popup = window.open(
+      'https://openagents.org/auth/studio',
+      'openagents-auth',
+      `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
+    );
+
+    authPopupRef.current = popup;
+
+    // Poll to check if popup is closed
+    const pollTimer = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(pollTimer);
+        setIsAuthenticating(false);
+        authPopupRef.current = null;
+      }
+    }, 500);
+
+    // Cleanup after 5 minutes max
+    setTimeout(() => {
+      clearInterval(pollTimer);
+      if (authPopupRef.current && !authPopupRef.current.closed) {
+        authPopupRef.current.close();
+      }
+      setIsAuthenticating(false);
+      authPopupRef.current = null;
+    }, 5 * 60 * 1000);
+  }, [isAuthenticating]);
+
+  // Listen for postMessage from OpenAgents auth popup
+  useEffect(() => {
+    const handleAuthMessage = async (event: MessageEvent) => {
+      // Verify origin
+      if (event.origin !== 'https://openagents.org') return;
+
+      // Check message type
+      if (event.data?.type === 'openagents-auth-success') {
+        const { api_key, org_id, org_name, user_email } = event.data.payload || {};
+
+        if (api_key && org_id) {
+          // Auto-fill the form
+          setApiKey(api_key);
+          setOrganization(org_name || org_id);
+          setOrganizationId(org_id);
+
+          // Set validation result
+          setApiKeyValidation({
+            isValid: true,
+            organizationId: org_id,
+            organizationName: org_name || org_id,
+            publishedNetworks: [], // Will be fetched on next validation
+          });
+
+          toast.success(t("publish.auth.success", "Successfully authenticated with OpenAgents!"));
+
+          // Fetch published networks for this org
+          try {
+            const response = await fetch(`${OPENAGENTS_API_BASE}/networks/private`, {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${api_key}`,
+              },
+              signal: AbortSignal.timeout(10000),
+            });
+            if (response.ok) {
+              const result = await response.json();
+              if (result.code === 200 && result.data?.networks) {
+                setApiKeyValidation(prev => prev ? {
+                  ...prev,
+                  publishedNetworks: result.data.networks,
+                } : null);
+              }
+            }
+          } catch (error) {
+            console.log("Failed to fetch published networks:", error);
+          }
+        }
+
+        // Close popup
+        if (authPopupRef.current && !authPopupRef.current.closed) {
+          authPopupRef.current.close();
+        }
+        setIsAuthenticating(false);
+        authPopupRef.current = null;
+      } else if (event.data?.type === 'openagents-auth-error') {
+        toast.error(event.data.message || t("publish.auth.error", "Authentication failed"));
+        setIsAuthenticating(false);
+        if (authPopupRef.current && !authPopupRef.current.closed) {
+          authPopupRef.current.close();
+        }
+        authPopupRef.current = null;
+      }
+    };
+
+    window.addEventListener('message', handleAuthMessage);
+    return () => window.removeEventListener('message', handleAuthMessage);
+  }, [t]);
 
   // Check relay status from Python backend on mount and when network changes
   const checkRelayStatus = useCallback(async () => {
@@ -496,8 +609,14 @@ const NetworkPublishPage: React.FC = () => {
         validationHost = relayUrl.host;
         validationPort = relayUrl.port ? parseInt(relayUrl.port, 10) : (relayUrl.protocol === 'https:' ? 443 : 80);
       } else {
-        const protocol = selectedNetwork?.useHttps ? "https" : "http";
-        healthUrl = `${protocol}://${networkHost}:${port}/api/health`;
+        // Use HTTPS for standard HTTPS ports (443, 8443) or if explicitly configured
+        const isHttpsPort = port === 443 || port === 8443;
+        const useHttps = isHttpsPort || selectedNetwork?.useHttps;
+        const protocol = useHttps ? "https" : "http";
+        // For port 443, don't include the port in the URL (it's the default for HTTPS)
+        healthUrl = port === 443
+          ? `${protocol}://${networkHost}/api/health`
+          : `${protocol}://${networkHost}:${port}/api/health`;
         validationHost = networkHost;
         validationPort = port;
       }
@@ -547,6 +666,12 @@ const NetworkPublishPage: React.FC = () => {
       // Step 2: Server-side validation to verify PUBLIC accessibility
       // When using relay, the relay URL is already public, so we validate against that
       if (apiKeyValidation?.isValid && organizationId) {
+        // Determine if HTTPS should be used for server-side validation
+        const isHttpsPortForValidation = validationPort === 443 || validationPort === 8443;
+        const useHttpsForValidation = isUsingRelay
+          ? relayConnection!.relay_url!.startsWith('https')
+          : (isHttpsPortForValidation || selectedNetwork?.useHttps);
+
         // Call the validate-public endpoint with API key to verify public accessibility from server
         const validateResponse = await fetch(`${OPENAGENTS_API_BASE}/networks/validate-public`, {
           method: "POST",
@@ -559,6 +684,7 @@ const NetworkPublishPage: React.FC = () => {
             network_host: validationHost,
             network_port: validationPort.toString(),
             org: organizationId,
+            use_https: useHttpsForValidation ? "true" : "false",
             ...(isUsingRelay ? { relay_url: relayConnection!.relay_url! } : {}),
           }),
           signal: AbortSignal.timeout(25000),
@@ -796,6 +922,66 @@ const NetworkPublishPage: React.FC = () => {
             {t("publish.apiKey.title", "Authentication")}
           </h2>
           <div className="space-y-4">
+            {/* Quick Auth Button */}
+            {!apiKeyValidation?.isValid && (
+              <div className="pb-4 border-b border-gray-200 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={handleOpenAgentsAuth}
+                  disabled={isAuthenticating}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {isAuthenticating ? (
+                    <>
+                      <svg
+                        className="animate-spin h-5 w-5 text-white"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                      {t("publish.auth.authenticating", "Authenticating...")}
+                    </>
+                  ) : (
+                    <>
+                      <img
+                        src="https://openagents.org/images/logos/openagents_logo_trans_white.png"
+                        alt="OpenAgents"
+                        className="h-5 w-5 object-contain"
+                      />
+                      {t("publish.auth.button", "Authenticate with OpenAgents")}
+                    </>
+                  )}
+                </button>
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
+                  {t("publish.auth.description", "Sign in to OpenAgents to automatically get your API credentials")}
+                </p>
+
+                <div className="relative mt-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                  </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                      {t("publish.auth.or", "or enter API key manually")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* API Key Input */}
             <div>
               <label

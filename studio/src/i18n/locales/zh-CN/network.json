@@ -44,6 +44,9 @@
         "uploading": "上传中...",
         "website": "网站 URL",
         "country": "国家/地区",
+        "selectCountry": "选择国家/地区...",
+        "searchCountry": "搜索国家/地区...",
+        "noCountryFound": "未找到国家/地区。",
         "tags": {
             "title": "标签",
             "placeholder": "输入标签并回车",

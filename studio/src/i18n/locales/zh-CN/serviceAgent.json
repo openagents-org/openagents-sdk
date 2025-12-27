@@ -116,6 +116,8 @@
             "count": "{{count}} 条日志",
             "allLevels": "所有级别",
             "autoScroll": "自动滚动",
+            "copy": "复制",
+            "copied": "已复制!",
             "clear": "清除",
             "noLogs": "暂无日志"
         },

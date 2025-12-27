@@ -142,7 +142,8 @@
       "eventLogs": "Event Logs",
       "eventExplorer": "Event Explorer",
       "llmLogs": "LLM Logs",
-      "eventDebugger": "Event Debugger"
+      "eventDebugger": "Event Debugger",
+      "readme": "README"
     }
   },
   "transports": {
@@ -515,6 +516,35 @@
     "saving": "Saving...",
     "saveSuccess": "Configuration saved successfully",
     "saveFailed": "Failed to save configuration",
-    "clearFailed": "Failed to clear configuration"
+    "clearFailed": "Failed to clear configuration",
+    "testButton": "Test",
+    "testing": "Testing...",
+    "testFailed": "Failed to test model configuration",
+    "testResults": "Test Results",
+    "inferenceStatus": "Model Inference",
+    "toolUseStatus": "Tool Use Support",
+    "working": "Working",
+    "notWorking": "Not Working",
+    "supported": "Supported",
+    "notDetected": "Not Detected",
+    "modelResponse": "Model Response"
+  },
+  "readme": {
+    "title": "Network README",
+    "subtitle": "Edit the README documentation for your network. This content is displayed to agents connecting via MCP.",
+    "status": "Current Status",
+    "configured": "README configured",
+    "notConfigured": "No README configured",
+    "characters": "characters",
+    "label": "README Content (Markdown)",
+    "placeholder": "# My Network\n\nDescribe your network here...\n\n## Available Services\n\n- Service 1\n- Service 2\n\n## Usage Instructions\n\nExplain how to use your network...",
+    "hint": "Supports Markdown formatting. This content is used as MCP instructions when external agents connect.",
+    "info": "The README is shown to external agents when they connect via MCP. It helps them understand what your network offers and how to interact with it.",
+    "saveButton": "Save",
+    "clearButton": "Clear",
+    "resetButton": "Reset",
+    "saving": "Saving...",
+    "saveSuccess": "README saved successfully",
+    "saveFailed": "Failed to save README"
   }
 }

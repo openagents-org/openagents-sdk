@@ -44,6 +44,9 @@
         "uploading": "Uploading...",
         "website": "Website URL",
         "country": "Country",
+        "selectCountry": "Select a country...",
+        "searchCountry": "Search country...",
+        "noCountryFound": "No country found.",
         "tags": {
             "title": "Tags",
             "placeholder": "Enter a tag and press Enter",

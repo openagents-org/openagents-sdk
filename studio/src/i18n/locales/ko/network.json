@@ -31,6 +31,9 @@
         "iconHint": "URL을 입력하거나 이미지를 업로드하세요 (최대 5MB). 업로드된 이미지는 네트워크의 자산 폴더에 저장됩니다.",
         "upload": "업로드",
         "uploading": "업로드 중...",
+        "selectCountry": "국가 선택...",
+        "searchCountry": "국가 검색...",
+        "noCountryFound": "국가를 찾을 수 없습니다.",
         "tags": {
             "add": "추가"
         },

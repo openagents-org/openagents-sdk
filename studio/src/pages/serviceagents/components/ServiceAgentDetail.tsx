@@ -43,6 +43,7 @@ const ServiceAgentDetail: React.FC = () => {
     "ALL" | "INFO" | "WARN" | "ERROR"
   >("ALL");
   const [autoScroll, setAutoScroll] = useState(true);
+  const [copiedLogs, setCopiedLogs] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const logsContainerRef = useRef<HTMLDivElement>(null);
 
@@ -377,6 +378,25 @@ const ServiceAgentDetail: React.FC = () => {
     // eslint-disable-next-line no-control-regex
     return text.replace(/\x1B\[[0-9;]*[A-Za-z]|\x1B\].*?\x07|\[([0-9;]*)m/g, '');
   };
+
+  // Copy logs to clipboard
+  const handleCopyLogs = useCallback(async () => {
+    const logsText = filteredLogs
+      .map((log) => {
+        const level = log.level ? `[${log.level}]` : '';
+        const message = stripAnsiCodes(log.message);
+        return level ? `${level} ${message}` : message;
+      })
+      .join('\n');
+
+    try {
+      await navigator.clipboard.writeText(logsText);
+      setCopiedLogs(true);
+      setTimeout(() => setCopiedLogs(false), 2000);
+    } catch (err) {
+      toast.error('Failed to copy logs to clipboard');
+    }
+  }, [filteredLogs]);
 
   // Get log level color
   const getLogLevelColor = (level: string) => {
@@ -829,6 +849,15 @@ const ServiceAgentDetail: React.FC = () => {
                         <SelectItem value="ERROR">ERROR</SelectItem>
                       </SelectContent>
                     </Select>
+
+                    {/* Copy logs button */}
+                    <button
+                      onClick={handleCopyLogs}
+                      disabled={filteredLogs.length === 0}
+                      className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {copiedLogs ? t('detail.logs.copied') : t('detail.logs.copy')}
+                    </button>
 
                     {/* Clear logs button */}
                     <button

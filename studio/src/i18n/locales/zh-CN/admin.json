@@ -141,7 +141,8 @@
       "eventLogs": "事件日志",
       "eventExplorer": "事件浏览器",
       "llmLogs": "LLM 日志",
-      "eventDebugger": "事件调试器"
+      "eventDebugger": "事件调试器",
+      "readme": "README"
     }
   },
   "transports": {
@@ -502,6 +503,35 @@
     "saving": "保存中...",
     "saveSuccess": "配置保存成功",
     "saveFailed": "保存配置失败",
-    "clearFailed": "清除配置失败"
+    "clearFailed": "清除配置失败",
+    "testButton": "测试",
+    "testing": "测试中...",
+    "testFailed": "模型配置测试失败",
+    "testResults": "测试结果",
+    "inferenceStatus": "模型推理",
+    "toolUseStatus": "工具调用支持",
+    "working": "正常",
+    "notWorking": "不可用",
+    "supported": "支持",
+    "notDetected": "未检测到",
+    "modelResponse": "模型响应"
+  },
+  "readme": {
+    "title": "网络 README",
+    "subtitle": "编辑网络的 README 文档。此内容将显示给通过 MCP 连接的代理。",
+    "status": "当前状态",
+    "configured": "README 已配置",
+    "notConfigured": "未配置 README",
+    "characters": "个字符",
+    "label": "README 内容 (Markdown)",
+    "placeholder": "# 我的网络\n\n在此描述您的网络...\n\n## 可用服务\n\n- 服务 1\n- 服务 2\n\n## 使用说明\n\n说明如何使用您的网络...",
+    "hint": "支持 Markdown 格式。此内容在外部代理通过 MCP 连接时用作说明。",
+    "info": "README 会在外部代理通过 MCP 连接时显示。它帮助他们了解您的网络提供什么以及如何与之交互。",
+    "saveButton": "保存",
+    "clearButton": "清除",
+    "resetButton": "重置",
+    "saving": "保存中...",
+    "saveSuccess": "README 保存成功",
+    "saveFailed": "保存 README 失败"
   }
 }

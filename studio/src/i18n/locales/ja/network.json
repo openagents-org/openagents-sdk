@@ -31,6 +31,9 @@
         "iconHint": "URL を入力するか、画像をアップロードしてください（最大 5MB）。アップロードされた画像はネットワークのアセットフォルダに保存されます。",
         "upload": "アップロード",
         "uploading": "アップロード中...",
+        "selectCountry": "国を選択...",
+        "searchCountry": "国を検索...",
+        "noCountryFound": "国が見つかりません。",
         "tags": {
             "add": "追加"
         },

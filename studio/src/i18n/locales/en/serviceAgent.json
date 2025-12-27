@@ -116,6 +116,8 @@
             "count": "{{count}} logs",
             "allLevels": "All Levels",
             "autoScroll": "Auto-scroll",
+            "copy": "Copy",
+            "copied": "Copied!",
             "clear": "Clear",
             "noLogs": "No logs available"
         },

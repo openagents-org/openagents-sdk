@@ -66,6 +66,12 @@ const AdminSidebar: React.FC = () => {
           icon: Globe,
         },
         {
+          id: "readme",
+          label: t("sidebar.items.readme"),
+          path: "/admin/readme",
+          icon: FileText,
+        },
+        {
           id: "transports",
           label: t("sidebar.items.transports"),
           path: "/admin/transports",

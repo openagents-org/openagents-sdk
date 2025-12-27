@@ -8,6 +8,7 @@ import {
   Users,
   LayoutDashboard,
   Globe,
+  CloudUpload,
 } from "lucide-react";
 import {
   Avatar,
@@ -191,6 +192,17 @@ export function SidebarPrimary() {
         active: isRouteActive("/admin/agents"),
         className:
           "border-white bg-teal-500 hover:bg-teal-600 text-white hover:text-white",
+        index: currentIndex++,
+      });
+
+      // Add Publish Network quick access
+      items.push({
+        icon: CloudUpload,
+        label: t("navigation.publishNetwork") || "Publish Network",
+        href: "/admin/publish",
+        active: isRouteActive("/admin/publish"),
+        className:
+          "border-white bg-orange-500 hover:bg-orange-600 text-white hover:text-white",
         index: currentIndex++,
       });
 

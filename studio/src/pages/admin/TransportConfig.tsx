@@ -34,6 +34,8 @@ import {
   Trash2,
   Server,
   AlertTriangle,
+  LayoutDashboard,
+  Blocks,
 } from "lucide-react"
 
 interface TransportConfig {
@@ -467,24 +469,27 @@ const TransportConfigPage: React.FC = () => {
                       )}
                     </div>
 
-                    {/* HTTP Features */}
+                    {/* HTTP Features - Services served by this transport */}
                     {transport.type === "http" &&
                       (transport.serveMcp || transport.serveStudio) && (
-                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700/50">
-                          {transport.serveMcp && (
-                            <Badge variant="info" appearance="light" size="sm">
-                              MCP
-                            </Badge>
-                          )}
-                          {transport.serveStudio && (
-                            <Badge
-                              variant="secondary"
-                              appearance="light"
-                              size="sm"
-                            >
-                              Studio
-                            </Badge>
-                          )}
+                        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700/50">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-medium uppercase tracking-wide">
+                            Serving
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {transport.serveMcp && (
+                              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md">
+                                <Blocks className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                <span className="text-xs font-medium text-blue-700 dark:text-blue-300">MCP Server</span>
+                              </div>
+                            )}
+                            {transport.serveStudio && (
+                              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-md">
+                                <LayoutDashboard className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                                <span className="text-xs font-medium text-purple-700 dark:text-purple-300">Studio UI</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                   </div>

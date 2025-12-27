@@ -15,6 +15,7 @@ import NetworkImportExport from "@/pages/profile/NetworkImportExport";
 import TransportConfig from "./TransportConfig";
 import ConnectionGuide from "./ConnectionGuide";
 import NetworkPublishPage from "./NetworkPublish";
+import NetworkReadme from "./NetworkReadme";
 
 // Admin-only pages
 import LLMLogsMainPage from "@/pages/llmlogs/LLMLogsMainPage";
@@ -38,6 +39,7 @@ const AdminMainPage: React.FC = () => {
         
         {/* Network Management */}
         <Route path="network" element={<NetworkProfile />} />
+        <Route path="readme" element={<NetworkReadme />} />
         <Route path="transports" element={<TransportConfig />} />
         <Route path="publish" element={<NetworkPublishPage />} />
         <Route path="import-export" element={<NetworkImportExport />} />

@@ -153,6 +153,7 @@ class HttpTransport(Transport):
         self.app.router.add_get("/api/admin/default-model", self.get_default_model)
         self.app.router.add_post("/api/admin/default-model", self.save_default_model)
         self.app.router.add_delete("/api/admin/default-model", self.delete_default_model)
+        self.app.router.add_post("/api/admin/default-model/test", self.test_default_model)
         # LLM Logs API endpoints
         self.app.router.add_get("/api/agents/service/{agent_id}/llm-logs", self.get_llm_logs)
         self.app.router.add_get("/api/agents/service/{agent_id}/llm-logs/{log_id}", self.get_llm_log_entry)
@@ -3700,6 +3701,167 @@ class HttpTransport(Transport):
             logger.error(f"Failed to clear default model config: {e}", exc_info=True)
             return web.json_response(
                 {"success": False, "error_message": f"Failed to clear default model config: {str(e)}"},
+                status=500
+            )
+
+    async def test_default_model(self, request):
+        """Test the default LLM model configuration with a simple inference query.
+
+        Request body:
+            {
+                "provider": "openai",
+                "model_name": "gpt-4",
+                "api_key": "sk-...",
+                "base_url": "https://..." (optional)
+            }
+
+        Returns:
+            JSON response with test results including:
+            - success: whether the test was successful
+            - inference_works: whether basic inference completed
+            - supports_tool_use: whether the model supports tool calling
+            - response: the model's response text
+            - error_message: error details if failed
+        """
+        try:
+            # Parse request body
+            try:
+                data = await request.json()
+            except json.JSONDecodeError:
+                return web.json_response(
+                    {"success": False, "error_message": "Invalid JSON in request body"},
+                    status=400
+                )
+
+            provider = data.get("provider")
+            model_name = data.get("model_name")
+            api_key = data.get("api_key")
+            base_url = data.get("base_url")
+
+            if not provider:
+                return web.json_response(
+                    {"success": False, "error_message": "provider is required"},
+                    status=400
+                )
+
+            if not model_name:
+                return web.json_response(
+                    {"success": False, "error_message": "model_name is required"},
+                    status=400
+                )
+
+            if not api_key:
+                return web.json_response(
+                    {"success": False, "error_message": "api_key is required"},
+                    status=400
+                )
+
+            # Import the model provider creation function
+            from openagents.config.llm_configs import create_model_provider, MODEL_CONFIGS
+
+            # Determine the effective provider and api_base
+            effective_provider = provider
+            effective_api_base = base_url
+
+            # For providers that have predefined API bases, use them
+            if not effective_api_base and provider in MODEL_CONFIGS:
+                effective_api_base = MODEL_CONFIGS[provider].get("api_base")
+
+            # Test 1: Basic inference test
+            inference_works = False
+            inference_response = None
+            inference_error = None
+
+            try:
+                model_provider = create_model_provider(
+                    provider=effective_provider,
+                    model_name=model_name,
+                    api_base=effective_api_base,
+                    api_key=api_key
+                )
+
+                # Simple test message
+                test_messages = [
+                    {"role": "user", "content": "Say 'Hello, OpenAgents!' and nothing else."}
+                ]
+
+                result = await model_provider.chat_completion(messages=test_messages)
+                inference_response = result.get("content", "")
+                inference_works = True
+                logger.info(f"Model inference test passed for {provider}/{model_name}")
+
+            except Exception as e:
+                inference_error = str(e)
+                logger.warning(f"Model inference test failed for {provider}/{model_name}: {e}")
+
+            # Test 2: Tool use support test (only if basic inference works)
+            supports_tool_use = False
+            tool_use_response = None
+            tool_use_error = None
+
+            if inference_works:
+                try:
+                    # Define a simple test tool
+                    test_tool = {
+                        "name": "get_current_time",
+                        "description": "Get the current time",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {},
+                            "required": []
+                        }
+                    }
+
+                    # Test message that should trigger tool use
+                    tool_test_messages = [
+                        {"role": "user", "content": "What time is it? Use the get_current_time tool."}
+                    ]
+
+                    result = await model_provider.chat_completion(
+                        messages=tool_test_messages,
+                        tools=[test_tool]
+                    )
+
+                    # Check if tool calls were made
+                    tool_calls = result.get("tool_calls", [])
+                    if tool_calls and len(tool_calls) > 0:
+                        supports_tool_use = True
+                        tool_use_response = f"Tool call detected: {tool_calls[0].get('name', 'unknown')}"
+                        logger.info(f"Tool use test passed for {provider}/{model_name}")
+                    else:
+                        # Model responded but didn't use tools - might still support them
+                        # Check if response mentions the tool or time
+                        content = result.get("content", "")
+                        tool_use_response = content[:200] if content else "No tool call made"
+                        logger.info(f"Tool use test: model responded without using tools for {provider}/{model_name}")
+
+                except Exception as e:
+                    tool_use_error = str(e)
+                    # Some models might not support tool use at all
+                    logger.info(f"Tool use test failed for {provider}/{model_name}: {e}")
+
+            # Build response
+            response_data = {
+                "success": inference_works,
+                "inference_works": inference_works,
+                "supports_tool_use": supports_tool_use,
+            }
+
+            if inference_works:
+                response_data["response"] = inference_response
+                response_data["tool_use_response"] = tool_use_response
+            else:
+                response_data["error_message"] = inference_error or "Unknown error during inference test"
+
+            if tool_use_error and not supports_tool_use:
+                response_data["tool_use_error"] = tool_use_error
+
+            return web.json_response(response_data)
+
+        except Exception as e:
+            logger.error(f"Failed to test model config: {e}", exc_info=True)
+            return web.json_response(
+                {"success": False, "error_message": f"Failed to test model config: {str(e)}"},
                 status=500
             )
 

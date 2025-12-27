@@ -82,7 +82,7 @@ const ModManagementPage: React.FC = () => {
         source_id: agentName || 'system',
         destination_id: 'system:system',
         payload: {
-          mod_id: modId,
+          mod_path: modPath,
         },
       });
 
@@ -230,61 +230,58 @@ const ModManagementPage: React.FC = () => {
             </div>
 
             {(staticMods.length > 0 || dynamicMods.length > 0) ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="divide-y divide-gray-200 dark:divide-gray-700">
                 {/* Static Mods */}
                 {staticMods.map((mod, index) => {
                   const isLoading = loadingMod === mod.name;
                   return (
                     <div
                       key={mod.name || index}
-                      className={`p-3 rounded-lg border ${
-                        mod.enabled
-                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                          : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'
-                      }`}
+                      className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         {mod.enabled ? (
-                          <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                          <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
                         ) : (
-                          <XCircle className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                          <XCircle className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                         )}
-                        <span className={`font-medium truncate flex-1 ${
-                          mod.enabled
-                            ? 'text-gray-900 dark:text-gray-100'
-                            : 'text-gray-500 dark:text-gray-400'
-                        }`}>
-                          {mod.name.split('.').pop() || mod.name}
-                        </span>
-                        <Badge variant="secondary" appearance="light" size="sm" className="flex-shrink-0">
-                          {t('modManagement.modTypes.static', 'Static')}
-                        </Badge>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`font-medium truncate ${
+                              mod.enabled
+                                ? 'text-gray-900 dark:text-gray-100'
+                                : 'text-gray-500 dark:text-gray-400'
+                            }`}>
+                              {mod.name.split('.').pop() || mod.name}
+                            </span>
+                            <Badge variant="secondary" appearance="light" size="sm" className="flex-shrink-0">
+                              {t('modManagement.modTypes.static', 'Static')}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate mt-0.5">
+                            {mod.name}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate mt-1 pl-6">
-                        {mod.name}
-                      </div>
-                      {/* Action buttons */}
-                      <div className="flex items-center gap-2 mt-3 pl-6">
-                        <Button
-                          variant={mod.enabled ? "outline" : "primary"}
-                          size="sm"
-                          onClick={() => handleToggleMod(mod.name, mod.enabled)}
-                          disabled={isLoading || loadingMod !== null}
-                          className="flex-1"
-                        >
-                          {isLoading ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <>
-                              <Power className="w-3.5 h-3.5 mr-1" />
-                              {mod.enabled
-                                ? t('modManagement.actions.disable', 'Disable')
-                                : t('modManagement.actions.enable', 'Enable')
-                              }
-                            </>
-                          )}
-                        </Button>
-                      </div>
+                      <Button
+                        variant={mod.enabled ? "outline" : "primary"}
+                        size="sm"
+                        onClick={() => handleToggleMod(mod.name, mod.enabled)}
+                        disabled={isLoading || loadingMod !== null}
+                        className="flex-shrink-0 ml-4"
+                      >
+                        {isLoading ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <>
+                            <Power className="w-3.5 h-3.5 mr-1" />
+                            {mod.enabled
+                              ? t('modManagement.actions.disable', 'Disable')
+                              : t('modManagement.actions.enable', 'Enable')
+                            }
+                          </>
+                        )}
+                      </Button>
                     </div>
                   );
                 })}
@@ -294,39 +291,40 @@ const ModManagementPage: React.FC = () => {
                   return (
                     <div
                       key={mod.mod_id}
-                      className="p-3 rounded-lg border bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+                      className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
                     >
-                      <div className="flex items-center gap-2">
-                        <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                        <span className="font-medium truncate flex-1 text-gray-900 dark:text-gray-100">
-                          {mod.mod_path.split('.').pop() || mod.mod_path}
-                        </span>
-                        <Badge variant="info" appearance="light" size="sm" className="flex-shrink-0">
-                          {t('modManagement.enabledMods.dynamic', 'Dynamic')}
-                        </Badge>
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <Zap className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium truncate text-gray-900 dark:text-gray-100">
+                              {mod.mod_path.split('.').pop() || mod.mod_path}
+                            </span>
+                            <Badge variant="info" appearance="light" size="sm" className="flex-shrink-0">
+                              {t('modManagement.enabledMods.dynamic', 'Dynamic')}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate mt-0.5">
+                            {mod.mod_path}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate mt-1 pl-6">
-                        {mod.mod_path}
-                      </div>
-                      {/* Action buttons */}
-                      <div className="flex items-center gap-2 mt-3 pl-6">
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleUnloadMod(mod.mod_id, mod.mod_path)}
-                          disabled={isLoading || loadingMod !== null}
-                          className="flex-1"
-                        >
-                          {isLoading ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <>
-                              <Trash2 className="w-3.5 h-3.5 mr-1" />
-                              {t('modManagement.actions.remove', 'Remove')}
-                            </>
-                          )}
-                        </Button>
-                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleUnloadMod(mod.mod_id, mod.mod_path)}
+                        disabled={isLoading || loadingMod !== null}
+                        className="flex-shrink-0 ml-4"
+                      >
+                        {isLoading ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <>
+                            <Trash2 className="w-3.5 h-3.5 mr-1" />
+                            {t('modManagement.actions.remove', 'Remove')}
+                          </>
+                        )}
+                      </Button>
                     </div>
                   );
                 })}

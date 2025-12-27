@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Eye, EyeOff, ChevronDown, Save, Check, AlertCircle, ExternalLink, Key, Server } from "lucide-react";
+import { Eye, EyeOff, ChevronDown, Save, Check, AlertCircle, ExternalLink, Key, Server, Play, Wrench, X } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { networkFetch } from "@/utils/httpClient";
 
@@ -129,6 +129,16 @@ const DefaultModelsPage: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    inference_works: boolean;
+    supports_tool_use: boolean;
+    response?: string;
+    tool_use_response?: string;
+    error_message?: string;
+    tool_use_error?: string;
+  } | null>(null);
 
   const selectedProvider = MODEL_PROVIDERS.find((p) => p.id === provider);
   const hasModels = selectedProvider && selectedProvider.models.length > 0;
@@ -266,12 +276,54 @@ const DefaultModelsPage: React.FC = () => {
     }
   };
 
+  const handleTest = async () => {
+    if (!selectedNetwork) return;
+
+    setIsTesting(true);
+    setTestResult(null);
+
+    try {
+      const response = await networkFetch(
+        selectedNetwork.host,
+        selectedNetwork.port,
+        "/api/admin/default-model/test",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            provider,
+            model_name: modelName,
+            api_key: apiKey,
+            ...(requiresBaseUrl && baseUrl ? { base_url: baseUrl } : {}),
+          }),
+          useHttps: selectedNetwork.useHttps,
+        }
+      );
+
+      const data = await response.json();
+      setTestResult(data);
+    } catch (error) {
+      console.error("Failed to test model config:", error);
+      setTestResult({
+        success: false,
+        inference_works: false,
+        supports_tool_use: false,
+        error_message: t("defaultModels.testFailed"),
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
   const handleProviderChange = (providerId: string) => {
     setProvider(providerId);
     setModelName("");
     setBaseUrl("");
     setUseCustomModel(false);
     setProviderDropdownOpen(false);
+    setTestResult(null);
   };
 
   if (isLoading) {
@@ -283,7 +335,7 @@ const DefaultModelsPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-6">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
@@ -547,6 +599,81 @@ const DefaultModelsPage: React.FC = () => {
         </div>
 
         {/* Save status */}
+        {/* Test Results */}
+        {testResult && (
+          <div className={`p-4 rounded-lg border ${
+            testResult.success
+              ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+              : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+          }`}>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className={`font-medium ${
+                testResult.success
+                  ? "text-green-800 dark:text-green-200"
+                  : "text-red-800 dark:text-red-200"
+              }`}>
+                {t("defaultModels.testResults")}
+              </h4>
+              <button
+                onClick={() => setTestResult(null)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {testResult.error_message && !testResult.success && (
+              <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400 mb-3">
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>{testResult.error_message}</span>
+              </div>
+            )}
+
+            {testResult.success && (
+              <div className="space-y-3">
+                {/* Inference Status */}
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    testResult.inference_works ? "bg-green-500" : "bg-red-500"
+                  }`} />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    {t("defaultModels.inferenceStatus")}:{" "}
+                    <span className={testResult.inference_works ? "text-green-600 dark:text-green-400 font-medium" : "text-red-600 dark:text-red-400 font-medium"}>
+                      {testResult.inference_works ? t("defaultModels.working") : t("defaultModels.notWorking")}
+                    </span>
+                  </span>
+                </div>
+
+                {/* Tool Use Status */}
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    testResult.supports_tool_use ? "bg-green-500" : "bg-yellow-500"
+                  }`} />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    <Wrench className="w-3.5 h-3.5 inline mr-1" />
+                    {t("defaultModels.toolUseStatus")}:{" "}
+                    <span className={testResult.supports_tool_use ? "text-green-600 dark:text-green-400 font-medium" : "text-yellow-600 dark:text-yellow-400 font-medium"}>
+                      {testResult.supports_tool_use ? t("defaultModels.supported") : t("defaultModels.notDetected")}
+                    </span>
+                  </span>
+                </div>
+
+                {/* Model Response Preview */}
+                {testResult.response && (
+                  <div className="mt-2 p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t("defaultModels.modelResponse")}:</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 font-mono">
+                      {testResult.response.length > 100
+                        ? testResult.response.substring(0, 100) + "..."
+                        : testResult.response}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {saveSuccess && (
           <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
             <Check className="w-4 h-4" />
@@ -566,15 +693,33 @@ const DefaultModelsPage: React.FC = () => {
           <button
             type="button"
             onClick={handleClear}
-            disabled={isSaving}
+            disabled={isSaving || isTesting}
             className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg transition-colors disabled:opacity-50"
           >
             {t("defaultModels.clearButton")}
           </button>
           <button
             type="button"
+            onClick={handleTest}
+            disabled={!isConfigured || isTesting || isSaving}
+            className="px-4 py-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 border border-indigo-300 dark:border-indigo-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isTesting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
+                <span>{t("defaultModels.testing")}</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4" />
+                <span>{t("defaultModels.testButton")}</span>
+              </>
+            )}
+          </button>
+          <button
+            type="button"
             onClick={handleSave}
-            disabled={!isConfigured || isSaving}
+            disabled={!isConfigured || isSaving || isTesting}
             className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
           >
             {isSaving ? (
