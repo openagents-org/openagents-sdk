@@ -414,7 +414,7 @@ const AgentNamePicker: React.FC = () => {
           </div>
           {selectedNetwork && (
             <div className="text-base font-semibold text-gray-800 dark:text-gray-100">
-              {selectedNetwork.host}:{selectedNetwork.port}
+              {selectedNetwork.networkId || `${selectedNetwork.host}:${selectedNetwork.port}`}
             </div>
           )}
         </div>

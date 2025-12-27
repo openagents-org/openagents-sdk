@@ -25,6 +25,16 @@ const HOST_PORT_TAB = "host-port";
 const NETWORK_ID_TAB = "network-id";
 const QUICK_CONNECT_TAB = "quick-connect";
 
+// Parse network ID from various formats (plain ID or openagents://NETWORK-ID)
+const parseNetworkId = (input: string): string => {
+  const trimmed = input.trim();
+  // Handle openagents:// URL format
+  if (trimmed.toLowerCase().startsWith("openagents://")) {
+    return trimmed.slice("openagents://".length);
+  }
+  return trimmed;
+};
+
 type ConnectionTab = typeof HOST_PORT_TAB | typeof NETWORK_ID_TAB | typeof QUICK_CONNECT_TAB;
 
 export default function ManualNetwork() {
@@ -50,12 +60,13 @@ export default function ManualNetwork() {
 
   const loadSavedInfoAndSetTab = useCallback(() => {
     // Check for network-id in URL parameters first
-    const urlNetworkId = searchParams.get("network-id");
+    const urlNetworkIdRaw = searchParams.get("network-id");
     const tabList = []
 
-    if (urlNetworkId) {
+    if (urlNetworkIdRaw) {
       // If network_id exists in URL, set to network-id tab and populate the field
-      setNetworkId(urlNetworkId);
+      // Parse to handle openagents:// URL format
+      setNetworkId(parseNetworkId(urlNetworkIdRaw));
       setActiveTab(NETWORK_ID_TAB);
     }
 
@@ -217,10 +228,12 @@ export default function ManualNetwork() {
   const handleNetworkIdConnect = async () => {
     setIsLoadingConnection(true);
     try {
-      console.log(`🔍 Fetching network information for ID: ${networkId}`);
+      // Parse to handle openagents:// URL format
+      const parsedNetworkId = parseNetworkId(networkId);
+      console.log(`🔍 Fetching network information for ID: ${parsedNetworkId}`);
 
       // First verify the network exists and is accessible
-      const networkResult = await fetchNetworkById(networkId);
+      const networkResult = await fetchNetworkById(parsedNetworkId);
 
       if (!networkResult.success) {
         toast.error(`Failed to fetch network: ${networkResult.error}`);
@@ -232,8 +245,8 @@ export default function ManualNetwork() {
 
       // Use connectViaNetworkId which routes through network.openagents.org/{networkId}
       // This handles both direct connections and relay-based tunneling
-      console.log(`🔗 Connecting via network ID: ${networkId}`);
-      const connection = await connectViaNetworkId(networkId);
+      console.log(`🔗 Connecting via network ID: ${parsedNetworkId}`);
+      const connection = await connectViaNetworkId(parsedNetworkId);
 
       if (connection.status === ConnectionStatusEnum.CONNECTED) {
         // Save the network ID for future reference
