@@ -51,11 +51,18 @@
       "eventExplorerDesc": "Search and browse events",
       "llmLogsDesc": "View LLM request logs"
     },
+    "defaultLLM": {
+      "title": "Default LLM",
+      "configure": "Configure",
+      "notConfigured": "Not configured",
+      "apiKeySet": "API Key Set"
+    },
     "serviceAgents": {
       "title": "Service Agents",
       "viewAll": "View All",
       "startAll": "Start All",
       "stopAll": "Stop All",
+      "noAgents": "No service agents",
       "allRunning": "All agents are already running",
       "allStopped": "All agents are already stopped",
       "startAllSuccess": "Successfully started {{count}} agent(s)",

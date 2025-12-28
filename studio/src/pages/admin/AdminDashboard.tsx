@@ -36,9 +36,19 @@ import {
   Play,
   Square,
   Loader2,
+  Cpu,
+  Pencil,
 } from "lucide-react";
 import { lookupNetworkPublication } from "@/services/networkService";
 import { getServiceAgents, startServiceAgent, stopServiceAgent, type ServiceAgent } from "@/services/serviceAgentsApi";
+import { networkFetch } from "@/utils/httpClient";
+
+interface DefaultModelConfig {
+  provider: string;
+  model_name: string;
+  api_key?: string;
+  base_url?: string;
+}
 
 interface DashboardStats {
   totalAgents: number;
@@ -93,6 +103,7 @@ const AdminDashboard: React.FC = () => {
   const [networkUuid, setNetworkUuid] = useState<string | null>(null);
   const [serviceAgents, setServiceAgents] = useState<ServiceAgent[]>([]);
   const [bulkActionLoading, setBulkActionLoading] = useState<'startAll' | 'stopAll' | null>(null);
+  const [defaultModelConfig, setDefaultModelConfig] = useState<DefaultModelConfig | null>(null);
 
   // Check if user has seen the tour
   useEffect(() => {
@@ -226,6 +237,33 @@ const AdminDashboard: React.FC = () => {
         // Don't show toast for service agents error - it's not critical
         setServiceAgents([]);
       }
+
+      // Fetch default model config
+      if (selectedNetwork) {
+        try {
+          const response = await networkFetch(
+            selectedNetwork.host,
+            selectedNetwork.port,
+            "/api/admin/default-model",
+            {
+              method: "GET",
+              headers: { "Content-Type": "application/json" },
+              useHttps: selectedNetwork.useHttps,
+            }
+          );
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.config) {
+              setDefaultModelConfig(data.config);
+            } else {
+              setDefaultModelConfig(null);
+            }
+          }
+        } catch (modelConfigError) {
+          console.error("Failed to fetch default model config:", modelConfigError);
+          setDefaultModelConfig(null);
+        }
+      }
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
       toast.error("Failed to load dashboard data");
@@ -233,7 +271,7 @@ const AdminDashboard: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [connector]);
+  }, [connector, selectedNetwork]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -651,9 +689,53 @@ const AdminDashboard: React.FC = () => {
           </Card>
         )}
 
-        {/* Service Agents Status Panel */}
-        {serviceAgents.length > 0 && (
-          <Card className="mb-4 border-gray-200 dark:border-gray-700">
+        {/* Default LLM and Service Agents Panels - Side by Side */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          {/* Default LLM Panel */}
+          <Card className="border-gray-200 dark:border-gray-700">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Cpu className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {t('dashboard.defaultLLM.title')}
+                  </span>
+                </div>
+                <button
+                  onClick={() => navigate("/admin/default-models")}
+                  className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                >
+                  <Pencil className="w-3 h-3" />
+                  {t('dashboard.defaultLLM.configure')}
+                </button>
+              </div>
+              {defaultModelConfig && defaultModelConfig.provider && defaultModelConfig.model_name ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {defaultModelConfig.provider}
+                    </span>
+                    <span className="text-gray-400 dark:text-gray-500">/</span>
+                    <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                      {defaultModelConfig.model_name}
+                    </span>
+                  </div>
+                  {defaultModelConfig.api_key && (
+                    <Badge variant="secondary" appearance="light" size="sm" className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                      {t('dashboard.defaultLLM.apiKeySet')}
+                    </Badge>
+                  )}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500 dark:text-gray-400 italic">
+                  {t('dashboard.defaultLLM.notConfigured')}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Service Agents Status Panel */}
+          <Card className="border-gray-200 dark:border-gray-700">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
@@ -661,44 +743,50 @@ const AdminDashboard: React.FC = () => {
                   <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     {t('dashboard.serviceAgents.title')}
                   </span>
-                  <Badge
-                    variant="secondary"
-                    appearance="light"
-                    size="sm"
-                  >
-                    {serviceAgents.filter(a => a.status === 'running').length}/{serviceAgents.length}
-                  </Badge>
+                  {serviceAgents.length > 0 && (
+                    <Badge
+                      variant="secondary"
+                      appearance="light"
+                      size="sm"
+                    >
+                      {serviceAgents.filter(a => a.status === 'running').length}/{serviceAgents.length}
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* Start All Button */}
-                  <button
-                    onClick={handleStartAllAgents}
-                    disabled={bulkActionLoading !== null || serviceAgents.every(a => a.status === 'running')}
-                    className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={t('dashboard.serviceAgents.startAll')}
-                  >
-                    {bulkActionLoading === 'startAll' ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <Play className="w-3 h-3" />
-                    )}
-                    {t('dashboard.serviceAgents.startAll')}
-                  </button>
-                  {/* Stop All Button */}
-                  <button
-                    onClick={handleStopAllAgents}
-                    disabled={bulkActionLoading !== null || serviceAgents.every(a => a.status !== 'running')}
-                    className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={t('dashboard.serviceAgents.stopAll')}
-                  >
-                    {bulkActionLoading === 'stopAll' ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <Square className="w-3 h-3" />
-                    )}
-                    {t('dashboard.serviceAgents.stopAll')}
-                  </button>
-                  <div className="h-4 w-px bg-gray-300 dark:bg-gray-600" />
+                  {serviceAgents.length > 0 && (
+                    <>
+                      {/* Start All Button */}
+                      <button
+                        onClick={handleStartAllAgents}
+                        disabled={bulkActionLoading !== null || serviceAgents.every(a => a.status === 'running')}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={t('dashboard.serviceAgents.startAll')}
+                      >
+                        {bulkActionLoading === 'startAll' ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Play className="w-3 h-3" />
+                        )}
+                        {t('dashboard.serviceAgents.startAll')}
+                      </button>
+                      {/* Stop All Button */}
+                      <button
+                        onClick={handleStopAllAgents}
+                        disabled={bulkActionLoading !== null || serviceAgents.every(a => a.status !== 'running')}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={t('dashboard.serviceAgents.stopAll')}
+                      >
+                        {bulkActionLoading === 'stopAll' ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Square className="w-3 h-3" />
+                        )}
+                        {t('dashboard.serviceAgents.stopAll')}
+                      </button>
+                      <div className="h-4 w-px bg-gray-300 dark:bg-gray-600" />
+                    </>
+                  )}
                   <button
                     onClick={() => navigate("/admin/service-agents")}
                     className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
@@ -707,37 +795,43 @@ const AdminDashboard: React.FC = () => {
                   </button>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {serviceAgents.map((agent) => (
-                  <button
-                    key={agent.agent_id}
-                    onClick={() => navigate(`/admin/service-agents/${agent.agent_id}`)}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-                      agent.status === 'running'
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
-                        : agent.status === 'error'
-                        ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50'
-                        : agent.status === 'starting' || agent.status === 'stopping'
-                        ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    <div className={`w-1.5 h-1.5 rounded-full ${
-                      agent.status === 'running'
-                        ? 'bg-green-500 animate-pulse'
-                        : agent.status === 'error'
-                        ? 'bg-red-500'
-                        : agent.status === 'starting' || agent.status === 'stopping'
-                        ? 'bg-yellow-500 animate-pulse'
-                        : 'bg-gray-400'
-                    }`} />
-                    {agent.agent_id}
-                  </button>
-                ))}
-              </div>
+              {serviceAgents.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {serviceAgents.map((agent) => (
+                    <button
+                      key={agent.agent_id}
+                      onClick={() => navigate(`/admin/service-agents/${agent.agent_id}`)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                        agent.status === 'running'
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
+                          : agent.status === 'error'
+                          ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50'
+                          : agent.status === 'starting' || agent.status === 'stopping'
+                          ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      <div className={`w-1.5 h-1.5 rounded-full ${
+                        agent.status === 'running'
+                          ? 'bg-green-500 animate-pulse'
+                          : agent.status === 'error'
+                          ? 'bg-red-500'
+                          : agent.status === 'starting' || agent.status === 'stopping'
+                          ? 'bg-yellow-500 animate-pulse'
+                          : 'bg-gray-400'
+                      }`} />
+                      {agent.agent_id}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500 dark:text-gray-400 italic">
+                  {t('dashboard.serviceAgents.noAgents')}
+                </div>
+              )}
             </CardContent>
           </Card>
-        )}
+        </div>
 
         {/* Quick Actions - 4 essential actions */}
         <div className="mb-4" data-tour="quick-actions">
