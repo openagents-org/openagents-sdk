@@ -124,6 +124,7 @@
       "network": "网络",
       "agents": "代理",
       "modules": "模块",
+      "networkAsService": "网络即服务",
       "monitoring": "监控"
     },
     "items": {
@@ -142,7 +143,8 @@
       "eventExplorer": "事件浏览器",
       "llmLogs": "LLM 日志",
       "eventDebugger": "事件调试器",
-      "readme": "README"
+      "readme": "README",
+      "exportedTools": "导出的工具"
     }
   },
   "transports": {
@@ -533,5 +535,45 @@
     "saving": "保存中...",
     "saveSuccess": "README 保存成功",
     "saveFailed": "保存 README 失败"
+  },
+  "exportedTools": {
+    "title": "导出的工具",
+    "subtitle": "管理通过 MCP 协议向外部代理公开的工具",
+    "refresh": "刷新",
+    "fetchFailed": "获取工具失败",
+    "mcpProtocol": "MCP 协议",
+    "enabled": "已启用",
+    "disabled": "已禁用",
+    "authentication": "认证",
+    "protected": "已保护",
+    "public": "公开",
+    "authConfigured": "已配置 Bearer 令牌认证",
+    "noAuthConfigured": "无需认证",
+    "searchPlaceholder": "搜索工具...",
+    "totalTools": "{{count}} 个工具",
+    "excludedTools": "{{count}} 个已排除",
+    "mcpNotEnabled": "MCP 协议未启用",
+    "mcpNotEnabledDesc": "请在传输协议配置中启用 MCP 协议以向外部代理公开工具。",
+    "noTools": "没有可用的工具",
+    "noToolsDesc": "当前没有可导出的工具。",
+    "noToolsFound": "未找到工具",
+    "tryDifferentSearch": "请尝试其他搜索词。",
+    "excluded": "已排除",
+    "noDescription": "暂无描述",
+    "enableTool": "启用工具",
+    "disableTool": "禁用工具",
+    "toolEnabled": "工具 '{{name}}' 已启用",
+    "toolDisabled": "工具 '{{name}}' 已禁用",
+    "updateFailed": "更新工具配置失败",
+    "description": "描述",
+    "inputSchema": "输入模式",
+    "source": "来源",
+    "sourceUnknown": "未知",
+    "sourceWorkspace": "工作区",
+    "sourceEvent": "事件",
+    "fromMod": "来自模块: {{mod}}",
+    "fromWorkspace": "来自 workspace/tools 文件夹的自定义工具",
+    "fromEvent": "来自 workspace/events 文件夹的事件工具",
+    "info": "禁用的工具将不会对通过 MCP 连接的外部代理可用。更改会立即生效。"
   }
 }

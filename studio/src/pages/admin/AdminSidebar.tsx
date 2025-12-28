@@ -18,6 +18,7 @@ import {
   Monitor,
   Bug,
   Cpu,
+  Wrench,
 } from "lucide-react";
 
 const AdminSidebar: React.FC = () => {
@@ -147,6 +148,17 @@ const AdminSidebar: React.FC = () => {
           label: t("sidebar.items.connectionGuide"),
           path: "/admin/connect",
           icon: Link2,
+        },
+      ],
+    },
+    {
+      title: t("sidebar.sections.networkAsService"),
+      items: [
+        {
+          id: "exported-tools",
+          label: t("sidebar.items.exportedTools"),
+          path: "/admin/exported-tools",
+          icon: Wrench,
         },
       ],
     },

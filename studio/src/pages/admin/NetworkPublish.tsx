@@ -137,6 +137,12 @@ const NetworkPublishPage: React.FC = () => {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const authPopupRef = React.useRef<Window | null>(null);
 
+  // Authenticated user state (before org selection)
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [userOrganizations, setUserOrganizations] = useState<Array<{ id: string; name: string; role: string }>>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>("");
+  const [isFetchingApiKey, setIsFetchingApiKey] = useState(false);
+
   // Check if current host:port is already published
   const existingNetwork = React.useMemo(() => {
     if (!apiKeyValidation?.publishedNetworks || !networkHost || !networkPort) {
@@ -287,6 +293,75 @@ const NetworkPublishPage: React.FC = () => {
     }, 5 * 60 * 1000);
   }, [isAuthenticating]);
 
+  // Fetch API key for selected organization
+  const fetchApiKeyForOrg = useCallback(async (orgId: string, token: string) => {
+    setIsFetchingApiKey(true);
+    try {
+      const response = await fetch(`${OPENAGENTS_API_BASE}/orgs/publishing-credentials?org_id=${encodeURIComponent(orgId)}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.code === 200 && result.data) {
+        const { api_key, org_id, org_name } = result.data;
+
+        // Auto-fill the form
+        setApiKey(api_key);
+        setOrganization(org_name || org_id);
+        setOrganizationId(org_id);
+
+        // Set validation result
+        setApiKeyValidation({
+          isValid: true,
+          organizationId: org_id,
+          organizationName: org_name || org_id,
+          publishedNetworks: [],
+        });
+
+        // Clear the auth state since we're now authenticated
+        setAuthToken(null);
+        setUserOrganizations([]);
+        setSelectedOrgId("");
+
+        toast.success(t("publish.auth.success", "Successfully authenticated with OpenAgents!"));
+
+        // Fetch published networks for this org
+        try {
+          const networksResponse = await fetch(`${OPENAGENTS_API_BASE}/networks/private`, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${api_key}`,
+            },
+            signal: AbortSignal.timeout(10000),
+          });
+          if (networksResponse.ok) {
+            const networksResult = await networksResponse.json();
+            if (networksResult.code === 200 && networksResult.data?.networks) {
+              setApiKeyValidation(prev => prev ? {
+                ...prev,
+                publishedNetworks: networksResult.data.networks,
+              } : null);
+            }
+          }
+        } catch (error) {
+          console.log("Failed to fetch published networks:", error);
+        }
+      } else {
+        throw new Error(result.message || "Failed to get API key");
+      }
+    } catch (error) {
+      console.error("Error fetching API key:", error);
+      toast.error(t("publish.auth.error", "Failed to get API key for organization"));
+    } finally {
+      setIsFetchingApiKey(false);
+    }
+  }, [t]);
+
   // Listen for postMessage from OpenAgents auth popup
   useEffect(() => {
     const handleAuthMessage = async (event: MessageEvent) => {
@@ -295,44 +370,19 @@ const NetworkPublishPage: React.FC = () => {
 
       // Check message type
       if (event.data?.type === 'openagents-auth-success') {
-        const { api_key, org_id, org_name, user_email } = event.data.payload || {};
+        const { organizations, token, user_email } = event.data.payload || {};
 
-        if (api_key && org_id) {
-          // Auto-fill the form
-          setApiKey(api_key);
-          setOrganization(org_name || org_id);
-          setOrganizationId(org_id);
+        if (organizations && organizations.length > 0 && token) {
+          // Store token and organizations for selection
+          setAuthToken(token);
+          setUserOrganizations(organizations);
 
-          // Set validation result
-          setApiKeyValidation({
-            isValid: true,
-            organizationId: org_id,
-            organizationName: org_name || org_id,
-            publishedNetworks: [], // Will be fetched on next validation
-          });
-
-          toast.success(t("publish.auth.success", "Successfully authenticated with OpenAgents!"));
-
-          // Fetch published networks for this org
-          try {
-            const response = await fetch(`${OPENAGENTS_API_BASE}/networks/private`, {
-              method: "GET",
-              headers: {
-                Authorization: `Bearer ${api_key}`,
-              },
-              signal: AbortSignal.timeout(10000),
-            });
-            if (response.ok) {
-              const result = await response.json();
-              if (result.code === 200 && result.data?.networks) {
-                setApiKeyValidation(prev => prev ? {
-                  ...prev,
-                  publishedNetworks: result.data.networks,
-                } : null);
-              }
-            }
-          } catch (error) {
-            console.log("Failed to fetch published networks:", error);
+          // If only one org, auto-select it
+          if (organizations.length === 1) {
+            await fetchApiKeyForOrg(organizations[0].id, token);
+          } else {
+            // Multiple orgs - show selector
+            toast.info(t("publish.auth.selectOrg", "Please select an organization to continue"));
           }
         }
 
@@ -354,7 +404,7 @@ const NetworkPublishPage: React.FC = () => {
 
     window.addEventListener('message', handleAuthMessage);
     return () => window.removeEventListener('message', handleAuthMessage);
-  }, [t]);
+  }, [t, fetchApiKeyForOrg]);
 
   // Check relay status from Python backend on mount and when network changes
   const checkRelayStatus = useCallback(async () => {
@@ -923,7 +973,7 @@ const NetworkPublishPage: React.FC = () => {
           </h2>
           <div className="space-y-4">
             {/* Quick Auth Button */}
-            {!apiKeyValidation?.isValid && (
+            {!apiKeyValidation?.isValid && !userOrganizations.length && (
               <div className="pb-4 border-b border-gray-200 dark:border-gray-700">
                 <button
                   type="button"
@@ -979,6 +1029,83 @@ const NetworkPublishPage: React.FC = () => {
                     </span>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Organization Selector - shown after authentication if user has multiple orgs */}
+            {!apiKeyValidation?.isValid && userOrganizations.length > 0 && authToken && (
+              <div className="pb-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg mb-4">
+                  <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="font-medium">{t("publish.auth.authenticated", "Authenticated successfully!")}</span>
+                  </div>
+                </div>
+
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t("publish.auth.selectOrgLabel", "Select Organization")}
+                </label>
+                <div className="space-y-2">
+                  {userOrganizations.map((org) => (
+                    <button
+                      key={org.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedOrgId(org.id);
+                        if (authToken) {
+                          fetchApiKeyForOrg(org.id, authToken);
+                        }
+                      }}
+                      disabled={isFetchingApiKey}
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border transition-all ${
+                        selectedOrgId === org.id
+                          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                          : "border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-700"
+                      } ${isFetchingApiKey ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold">
+                          {(org.name || org.id).charAt(0).toUpperCase()}
+                        </div>
+                        <div className="text-left">
+                          <div className="font-medium text-gray-900 dark:text-gray-100">
+                            {org.name || org.id}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {org.role} · {org.id}
+                          </div>
+                        </div>
+                      </div>
+                      {isFetchingApiKey && selectedOrgId === org.id ? (
+                        <svg className="animate-spin h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  {t("publish.auth.selectOrgHelp", "Select the organization you want to publish your network under")}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthToken(null);
+                    setUserOrganizations([]);
+                    setSelectedOrgId("");
+                  }}
+                  className="mt-3 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                >
+                  {t("publish.auth.useAnotherAccount", "Use a different account")}
+                </button>
               </div>
             )}
 

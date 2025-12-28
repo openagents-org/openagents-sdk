@@ -107,6 +107,7 @@
       "network": "ネットワーク",
       "agents": "エージェント",
       "modules": "モジュール",
+      "networkAsService": "サービスとしてのネットワーク",
       "monitoring": "モニタリング"
     },
     "items": {
@@ -123,7 +124,8 @@
       "llmLogs": "LLM ログ",
       "eventDebugger": "イベントデバッガー",
       "publishNetwork": "ネットワークを公開",
-      "readme": "README"
+      "readme": "README",
+      "exportedTools": "エクスポートされたツール"
     }
   },
   "transports": {
@@ -487,5 +489,45 @@
     "saving": "保存中...",
     "saveSuccess": "READMEを保存しました",
     "saveFailed": "READMEの保存に失敗しました"
+  },
+  "exportedTools": {
+    "title": "エクスポートされたツール",
+    "subtitle": "MCPプロトコル経由で外部エージェントに公開するツールを管理",
+    "refresh": "更新",
+    "fetchFailed": "ツールの取得に失敗しました",
+    "mcpProtocol": "MCPプロトコル",
+    "enabled": "有効",
+    "disabled": "無効",
+    "authentication": "認証",
+    "protected": "保護済み",
+    "public": "公開",
+    "authConfigured": "Bearerトークン認証が設定されています",
+    "noAuthConfigured": "認証は不要です",
+    "searchPlaceholder": "ツールを検索...",
+    "totalTools": "{{count}} ツール",
+    "excludedTools": "{{count}} 除外",
+    "mcpNotEnabled": "MCPプロトコルが有効ではありません",
+    "mcpNotEnabledDesc": "外部エージェントにツールを公開するには、トランスポート設定でMCPプロトコルを有効にしてください。",
+    "noTools": "利用可能なツールがありません",
+    "noToolsDesc": "現在エクスポート可能なツールはありません。",
+    "noToolsFound": "ツールが見つかりません",
+    "tryDifferentSearch": "別の検索ワードをお試しください。",
+    "excluded": "除外",
+    "noDescription": "説明がありません",
+    "enableTool": "ツールを有効化",
+    "disableTool": "ツールを無効化",
+    "toolEnabled": "ツール '{{name}}' を有効にしました",
+    "toolDisabled": "ツール '{{name}}' を無効にしました",
+    "updateFailed": "ツール設定の更新に失敗しました",
+    "description": "説明",
+    "inputSchema": "入力スキーマ",
+    "source": "ソース",
+    "sourceUnknown": "不明",
+    "sourceWorkspace": "ワークスペース",
+    "sourceEvent": "イベント",
+    "fromMod": "モジュール: {{mod}}",
+    "fromWorkspace": "workspace/toolsフォルダのカスタムツール",
+    "fromEvent": "workspace/eventsフォルダのイベントベースツール",
+    "info": "無効にしたツールは、MCP経由で接続する外部エージェントには利用できなくなります。変更は即座に反映されます。"
   }
 }

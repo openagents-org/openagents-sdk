@@ -125,6 +125,7 @@
       "network": "NETWORK",
       "agents": "AGENTS",
       "modules": "MODULES",
+      "networkAsService": "NETWORK AS SERVICE",
       "monitoring": "MONITORING"
     },
     "items": {
@@ -143,7 +144,8 @@
       "eventExplorer": "Event Explorer",
       "llmLogs": "LLM Logs",
       "eventDebugger": "Event Debugger",
-      "readme": "README"
+      "readme": "README",
+      "exportedTools": "Exported Tools"
     }
   },
   "transports": {
@@ -233,6 +235,14 @@
       "validated": "API key validated successfully!",
       "validSuccess": "API key validated successfully",
       "organization": "Organization:"
+    },
+    "auth": {
+      "button": "Authenticate with OpenAgents",
+      "authenticating": "Authenticating...",
+      "description": "Sign in to OpenAgents to automatically get your API credentials",
+      "or": "or enter API key manually",
+      "success": "Successfully authenticated with OpenAgents!",
+      "error": "Authentication failed"
     },
     "form": {
       "title": "Network Configuration",
@@ -546,5 +556,45 @@
     "saving": "Saving...",
     "saveSuccess": "README saved successfully",
     "saveFailed": "Failed to save README"
+  },
+  "exportedTools": {
+    "title": "Exported Tools",
+    "subtitle": "Manage tools exposed to external agents via MCP protocol",
+    "refresh": "Refresh",
+    "fetchFailed": "Failed to fetch tools",
+    "mcpProtocol": "MCP Protocol",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "authentication": "Authentication",
+    "protected": "Protected",
+    "public": "Public",
+    "authConfigured": "Bearer token authentication configured",
+    "noAuthConfigured": "No authentication required",
+    "searchPlaceholder": "Search tools...",
+    "totalTools": "{{count}} tools",
+    "excludedTools": "{{count}} excluded",
+    "mcpNotEnabled": "MCP Protocol Not Enabled",
+    "mcpNotEnabledDesc": "Enable MCP protocol in transport configuration to expose tools to external agents.",
+    "noTools": "No Tools Available",
+    "noToolsDesc": "No tools are currently available for export.",
+    "noToolsFound": "No Tools Found",
+    "tryDifferentSearch": "Try a different search term.",
+    "excluded": "Excluded",
+    "noDescription": "No description available",
+    "enableTool": "Enable tool",
+    "disableTool": "Disable tool",
+    "toolEnabled": "Tool '{{name}}' enabled",
+    "toolDisabled": "Tool '{{name}}' disabled",
+    "updateFailed": "Failed to update tool configuration",
+    "description": "Description",
+    "inputSchema": "Input Schema",
+    "source": "Source",
+    "sourceUnknown": "Unknown",
+    "sourceWorkspace": "Workspace",
+    "sourceEvent": "Event",
+    "fromMod": "From mod: {{mod}}",
+    "fromWorkspace": "Custom tool from workspace/tools folder",
+    "fromEvent": "Event-based tool from workspace/events folder",
+    "info": "Disabled tools will not be available to external agents connecting via MCP. Changes take effect immediately."
   }
 }

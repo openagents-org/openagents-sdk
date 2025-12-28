@@ -427,15 +427,17 @@ class NetworkToolCollector:
         self,
         exposed_tools: Optional[List[str]] = None,
         excluded_tools: Optional[List[str]] = None,
+        include_source: bool = True,
     ) -> List[Dict[str, Any]]:
         """Convert filtered AgentTools to MCP tool format.
 
         Args:
             exposed_tools: Whitelist of tool names to include
             excluded_tools: Blacklist of tool names to exclude
+            include_source: Whether to include the source field (for admin UI)
 
         Returns:
-            List of filtered tools in MCP format (name, description, inputSchema)
+            List of filtered tools in MCP format (name, description, inputSchema, source)
         """
         filtered = self.filter_tools(exposed_tools, excluded_tools)
         mcp_tools = []
@@ -445,5 +447,7 @@ class NetworkToolCollector:
                 "description": tool.description or f"Tool: {tool.name}",
                 "inputSchema": tool.input_schema or {"type": "object", "properties": {}},
             }
+            if include_source:
+                mcp_tool["source"] = self._tool_sources.get(tool.name, "unknown")
             mcp_tools.append(mcp_tool)
         return mcp_tools

@@ -16,6 +16,7 @@ import TransportConfig from "./TransportConfig";
 import ConnectionGuide from "./ConnectionGuide";
 import NetworkPublishPage from "./NetworkPublish";
 import NetworkReadme from "./NetworkReadme";
+import ExportedTools from "./ExportedTools";
 
 // Admin-only pages
 import LLMLogsMainPage from "@/pages/llmlogs/LLMLogsMainPage";
@@ -50,6 +51,9 @@ const AdminMainPage: React.FC = () => {
         <Route path="service-agents/*" element={<ServiceAgentsMainPage />} />
         <Route path="default-models" element={<DefaultModelsPage />} />
         <Route path="connect" element={<ConnectionGuide />} />
+
+        {/* Network as Service */}
+        <Route path="exported-tools" element={<ExportedTools />} />
 
         {/* Modules */}
         <Route path="mods" element={<ModManagementPage />} />

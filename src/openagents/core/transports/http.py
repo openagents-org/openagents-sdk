@@ -422,12 +422,12 @@ class HttpTransport(Transport):
             except (AttributeError, TypeError):
                 network_profile = {}
 
-        website = network_profile.get("website", "https://openagents.org")
-        tags = network_profile.get("tags", [])
+        website = network_profile.get("website") or "https://openagents.org"
+        tags = network_profile.get("tags") or []
 
         # Validate and escape additional fields for security
         # Validate website URL - only allow http/https schemes to prevent javascript: or data: injection
-        if not website.startswith(('http://', 'https://')):
+        if not website or not website.startswith(('http://', 'https://')):
             website = "https://openagents.org"
         website_escaped = html.escape(website)
 
@@ -2605,12 +2605,29 @@ class HttpTransport(Transport):
             return web.Response(status=200, text="Session terminated")
         return web.Response(status=404, text="Session not found")
 
+    def _get_external_access_config(self):
+        """Get external_access configuration for tool filtering."""
+        # Try network_context first
+        if self.network_context:
+            return getattr(self.network_context, 'external_access', None)
+        # Fallback to network_instance.config
+        if self.network_instance:
+            config = getattr(self.network_instance, 'config', None)
+            if config:
+                return getattr(config, 'external_access', None)
+        return None
+
     async def _handle_mcp_tools_list(self, request: web.Request) -> web.Response:
         """Handle tools list request (debugging endpoint)."""
         if not self._mcp_tool_collector:
             return web.json_response({"tools": [], "error": "Tool collector not initialized"})
 
-        tools = self._mcp_tool_collector.to_mcp_tools_filtered(None, None)
+        # Apply external_access filtering
+        external_access = self._get_external_access_config()
+        exposed_tools = external_access.exposed_tools if external_access else None
+        excluded_tools = external_access.excluded_tools if external_access else None
+
+        tools = self._mcp_tool_collector.to_mcp_tools_filtered(exposed_tools, excluded_tools)
         return web.json_response({"tools": tools})
 
     async def _mcp_send_sse_event(self, response: web.StreamResponse, data: Dict[str, Any]):
@@ -2686,8 +2703,13 @@ class HttpTransport(Transport):
         if not self._mcp_tool_collector:
             return self._mcp_jsonrpc_result(request_id, {"tools": []})
 
+        # Apply external_access filtering
+        external_access = self._get_external_access_config()
+        exposed_tools = external_access.exposed_tools if external_access else None
+        excluded_tools = external_access.excluded_tools if external_access else None
+
         tools = []
-        for tool_dict in self._mcp_tool_collector.to_mcp_tools_filtered(None, None):
+        for tool_dict in self._mcp_tool_collector.to_mcp_tools_filtered(exposed_tools, excluded_tools):
             tools.append({
                 "name": tool_dict["name"],
                 "description": tool_dict["description"],

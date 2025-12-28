@@ -695,6 +695,14 @@ class AgentNetwork:
         if network_profile_data:
             stats["network_profile"] = network_profile_data
 
+        # Include external_access config if available
+        if hasattr(self.config, "external_access") and self.config.external_access:
+            ext_access = self.config.external_access
+            if hasattr(ext_access, "model_dump"):
+                stats["external_access"] = ext_access.model_dump(mode="json", exclude_none=False)
+            elif isinstance(ext_access, dict):
+                stats["external_access"] = ext_access
+
         return stats
 
     def save_config(self) -> bool:
