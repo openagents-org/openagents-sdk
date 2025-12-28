@@ -36,6 +36,13 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
         
+    - name: Test a2a
+      env:
+        PYTHONHASHSEED: "0"
+        GRPC_ENABLE_FORK_SUPPORT: "1"
+        GRPC_POLL_STRATEGY: "poll"
+      run: pytest --tb=short -v tests/a2a
+
     - name: Test agents
       env:
         PYTHONHASHSEED: "0"
