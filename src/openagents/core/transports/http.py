@@ -2618,16 +2618,18 @@ class HttpTransport(Transport):
         return None
 
     async def _handle_mcp_tools_list(self, request: web.Request) -> web.Response:
-        """Handle tools list request (debugging endpoint)."""
+        """Handle tools list request (admin UI endpoint).
+
+        This endpoint returns ALL tools without filtering so admin UI
+        can display and manage them. MCP clients use the JSON-RPC endpoint
+        which applies external_access filtering.
+        """
         if not self._mcp_tool_collector:
             return web.json_response({"tools": [], "error": "Tool collector not initialized"})
 
-        # Apply external_access filtering
-        external_access = self._get_external_access_config()
-        exposed_tools = external_access.exposed_tools if external_access else None
-        excluded_tools = external_access.excluded_tools if external_access else None
-
-        tools = self._mcp_tool_collector.to_mcp_tools_filtered(exposed_tools, excluded_tools)
+        # Return all tools without filtering for admin UI
+        # Include source information for display
+        tools = self._mcp_tool_collector.to_mcp_tools_filtered(None, None, include_source=True)
         return web.json_response({"tools": tools})
 
     async def _mcp_send_sse_event(self, response: web.StreamResponse, data: Dict[str, Any]):
