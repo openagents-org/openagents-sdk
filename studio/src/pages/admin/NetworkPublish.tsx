@@ -370,7 +370,7 @@ const NetworkPublishPage: React.FC = () => {
 
       // Check message type
       if (event.data?.type === 'openagents-auth-success') {
-        const { organizations, token, user_email } = event.data.payload || {};
+        const { organizations, token } = event.data.payload || {};
 
         if (organizations && organizations.length > 0 && token) {
           // Store token and organizations for selection
