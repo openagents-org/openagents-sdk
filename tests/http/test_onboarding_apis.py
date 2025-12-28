@@ -62,7 +62,7 @@ def create_minimal_network_config(workspace_dir: Path) -> Path:
             "requires_password": False,
             "agent_groups": {},
             "mods": [],
-            # initialized is NOT set - this is a fresh network
+            "initialized": False,  # Fresh network needs onboarding
         },
         "log_level": "DEBUG",
         "data_dir": str(workspace_dir / "data"),
