@@ -121,7 +121,7 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
   // Determine if current route should hide the secondary sidebar (content sidebar)
   const shouldHideSecondarySidebar =
     location.pathname.startsWith("/agentworld") ||
-    location.pathname.startsWith("/admin");
+    location.pathname.startsWith("/admin") 
 
   // Determine if breadcrumbs should be hidden (only for agentworld)
   const shouldHideBreadcrumbs = location.pathname.startsWith("/agentworld");
@@ -163,7 +163,7 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
                     <Menu className="w-6 h-6" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-[85%] max-w-[400px] p-0">
+                <SheetContent side="left" className="w-[85%] max-w-[400px] p-0 border-e-0">
                   <LayoutProvider>
                     <div className="flex-1 flex flex-col overflow-hidden">
                       <SidebarSecondary />

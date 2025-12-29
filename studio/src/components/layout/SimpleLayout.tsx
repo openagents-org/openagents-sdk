@@ -68,7 +68,7 @@ const SimpleLayoutContent: React.FC<SimpleLayoutProps> = ({ children }) => {
   }, [location.pathname, isMobile]);
 
   // If admin route, use LayoutProvider and include SidebarSecondary
-  if (isAdminRoute && context) {
+  // if (isAdminRoute && context) {
     return (
       <LayoutProvider>
         <div className="h-screen w-screen flex overflow-hidden bg-[#F4F4F5] dark:bg-gray-800 text-gray-900 dark:text-gray-100">
@@ -108,29 +108,31 @@ const SimpleLayoutContent: React.FC<SimpleLayoutProps> = ({ children }) => {
         </div>
       </LayoutProvider>
     );
-  }
+  // }
 
   // Non-admin route: keep original layout
-  return (
-    <div className="h-screen w-screen flex overflow-hidden bg-[#F4F4F5] dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-      {shouldShowSidebar && <Sidebar />}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto">
-          {children ? children : <Outlet />}
-        </div>
-      </div>
-    </div>
-  );
+  // return (
+  //   <div className="h-screen w-screen flex overflow-hidden bg-[#F4F4F5] dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+  //     {shouldShowSidebar && <Sidebar />}
+  //     <div className="flex-1 flex flex-col overflow-hidden">
+  //       <div className="flex-1 overflow-auto">
+  //         {children ? children : <Outlet />}
+  //       </div>
+  //     </div>
+  //   </div>
+  // );
 };
 
 // Component for admin route content area with SidebarSecondary
 const AdminContentArea: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { isSidebarOpen } = useLayout();
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith("/admin");
 
   return (
     <>
       {/* Secondary Sidebar */}
-      {isSidebarOpen && (
+      {isSidebarOpen && isAdminRoute && (
         <div
           className="hidden md:block flex-shrink-0 rounded-xl overflow-hidden"
           style={{

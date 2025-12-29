@@ -1,9 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Menu } from "lucide-react";
+import { useIsMobile } from "@/hooks/useMediaQuery";
+import ProfileSidebar from "./ProfileSidebar";
 import { useProfileData } from "./hooks/useProfileData";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
-import { Button } from "@/components/layout/ui/button";
+import { cn } from "@/lib/utils";
 
 // Components (to be created)
 import NetworkInfoCard from "./components/NetworkInfoCard";
@@ -19,13 +25,152 @@ import ModManagementPage from "../mod-management/ModManagementPage";
 // NetworkImportExport component available for future use
 
 /**
+ * Profile Tab Navigation Component
+ */
+const ProfileTabNavigation: React.FC = () => {
+  const { t } = useTranslation("profile");
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const isActive = (path: string) => {
+    const currentPath = location.pathname;
+    if (path === "/profile") {
+      return currentPath === path || currentPath === path + "/";
+    }
+    return currentPath.startsWith(path);
+  };
+
+  const navItems = [
+    {
+      id: "profile",
+      label: t("profile.sidebar.networkStatus"),
+      path: "/profile",
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: "event_logs",
+      label: t("profile.sidebar.eventLogs"),
+      path: "/profile/event-logs",
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: "event_debugger",
+      label: t("profile.sidebar.eventDebugger"),
+      path: "/profile/event-debugger",
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+          />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+          />
+        </svg>
+      ),
+    },
+  ];
+
+  return (
+    <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      <div className="flex items-center space-x-1 px-4">
+        {navItems.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => navigate(item.path)}
+            className={cn(
+              "flex items-center space-x-2 px-4 py-3 text-sm font-medium transition-colors border-b-2",
+              isActive(item.path)
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600"
+            )}
+          >
+            {item.icon}
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/**
  * Profile main page - handles all profile-related features
+ * Contains sidebar and main content area
  */
 const ProfileMainPage: React.FC = () => {
   const { t } = useTranslation('profile');
+  const isMobile = useIsMobile();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const location = useLocation();
+
+  // Close drawer when route changes on mobile
+  React.useEffect(() => {
+    if (isMobile) {
+      setIsDrawerOpen(false);
+    }
+  }, [location.pathname, isMobile]);
+
+  // Sidebar content component
+  const SidebarContent = () => (
+    <div className="lg:rounded-s-xl bg-white dark:bg-gray-800 overflow-hidden border-r border-gray-200 dark:border-gray-700 flex flex-col w-full h-full">
+      <ScrollArea className="shrink-0 flex-1 mt-0 mb-2.5 h-full">
+        <div className="h-full">
+          <ProfileSidebar />
+        </div>
+      </ScrollArea>
+    </div>
+  );
+
   return (
-    <div className="h-full dark:bg-gray-800">
-    <Routes>
+    <div className="h-full flex overflow-hidden dark:bg-gray-800 relative">
+      
+
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-gray-800">
+        {/* Tab Navigation */}
+        <ProfileTabNavigation />
+        <Routes>
 
       {/* Default profile view */}
       <Route index element={<ProfileDashboard />} />
@@ -73,7 +218,8 @@ const ProfileMainPage: React.FC = () => {
       {/* Event Debugger subpage */}
       <Route path="event-debugger" element={<EventDebugger />} />
 
-    </Routes>
+        </Routes>
+      </div>
     </div>
   );
 };
@@ -176,6 +322,7 @@ const ProfileDashboard: React.FC = () => {
             disabled={loading}
             variant="outline"
             size="sm"
+            className="bg-white dark:bg-gray-800"
           >
             <svg
               className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}

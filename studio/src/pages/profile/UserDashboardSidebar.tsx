@@ -35,9 +35,10 @@ const UserDashboardSidebar: React.FC = () => {
         keys.add(pluginKey);
       }
     });
-    // Always include PROFILE and README
+    // Always include PROFILE, README, and USER_DASHBOARD
     keys.add(PLUGIN_NAME_ENUM.PROFILE);
     keys.add(PLUGIN_NAME_ENUM.README);
+    keys.add(PLUGIN_NAME_ENUM.USER_DASHBOARD);
     return keys;
   }, [enabledModules]);
 
@@ -47,8 +48,6 @@ const UserDashboardSidebar: React.FC = () => {
       .filter((route) => {
         const navConfig = route.navigationConfig;
         if (!navConfig || navConfig.group !== "primary") return false;
-        // Exclude USER_DASHBOARD and README from primary routes display
-        if (navConfig.key === PLUGIN_NAME_ENUM.USER_DASHBOARD || navConfig.key === PLUGIN_NAME_ENUM.README) return false;
         // Show if plugin is enabled
         return enabledPluginKeys.has(navConfig.key);
       })
@@ -83,6 +82,7 @@ const UserDashboardSidebar: React.FC = () => {
       [PLUGIN_NAME_ENUM.AGENTWORLD]: tLayout("navigation.agentWorld"),
       [PLUGIN_NAME_ENUM.PROFILE]: tLayout("navigation.profile"),
       [PLUGIN_NAME_ENUM.README]: tLayout("navigation.readme"),
+      [PLUGIN_NAME_ENUM.USER_DASHBOARD]: tLayout("navigation.userDashboard"),
       [PLUGIN_NAME_ENUM.MOD_MANAGEMENT]: tLayout("navigation.modManagement"),
     };
     return labelMap[key] || key;

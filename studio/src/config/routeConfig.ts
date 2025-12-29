@@ -583,7 +583,7 @@ export const dynamicRouteConfig: RouteConfig[] = [
       label: "README",
       icon: "Readme",
       visible: true,
-      order: 3.5,
+      order: 0.5,
       group: "primary",
     },
   },
