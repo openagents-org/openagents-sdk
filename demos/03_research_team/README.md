@@ -80,9 +80,9 @@ openagents network start network.yaml
 In separate terminals:
 
 ```bash
-openagents launch-agent agents/router.yaml
-openagents launch-agent agents/web_searcher.yaml
-openagents launch-agent agents/analyst.yaml
+openagents agent start agents/router.yaml
+openagents agent start agents/web_searcher.yaml
+openagents agent start agents/analyst.yaml
 ```
 
 ### 3. Connect via Studio

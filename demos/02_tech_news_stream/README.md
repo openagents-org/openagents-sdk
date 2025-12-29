@@ -46,8 +46,8 @@ openagents network start network.yaml
 In separate terminals:
 
 ```bash
-openagents launch-agent agents/news_hunter.yaml
-openagents launch-agent agents/commentator.yaml
+openagents agent start agents/news_hunter.yaml
+openagents agent start agents/commentator.yaml
 ```
 
 ### 3. Connect and Interact
