@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useThemeStore } from "@/stores/themeStore";
 import YjsCollaborativeEditor from "./YjsCollaborativeEditor";
 
 const DocumentEditor: React.FC = () => {
+  const { t } = useTranslation('documents');
   const { documentId } = useParams<{ documentId: string }>();
   const navigate = useNavigate();
   const { theme } = useThemeStore();
@@ -114,7 +116,7 @@ const DocumentEditor: React.FC = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className={theme === "dark" ? "text-gray-400" : "text-gray-600"}>
-            Loading document...
+            {t('view.loadingDocuments')}
           </p>
         </div>
       </div>
@@ -149,7 +151,7 @@ const DocumentEditor: React.FC = () => {
               theme === "dark" ? "text-gray-200" : "text-gray-800"
             }`}
           >
-            Failed to Load Document
+            {t('view.connectionError')}
           </h3>
           <p
             className={`${
@@ -162,7 +164,7 @@ const DocumentEditor: React.FC = () => {
             onClick={handleBack}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Back to Document List
+            {t('view.backToList')}
           </button>
         </div>
       </div>
@@ -220,7 +222,7 @@ const DocumentEditor: React.FC = () => {
                 theme === "dark" ? "text-gray-400" : "text-gray-600"
               }`}
             >
-              Created by {document.creator_agent_id || document.creator}
+              {t('list.createdBy', { user: document.creator_agent_id || document.creator })}
             </div>
           </div>
         </div>
@@ -234,7 +236,7 @@ const DocumentEditor: React.FC = () => {
                   theme === "dark" ? "text-gray-400" : "text-gray-600"
                 }`}
               >
-                Online:
+                {t('status.online')}:
               </div>
               <div className="flex -space-x-2">
                 {document.active_users.slice(0, 5).map((userId: string) => (

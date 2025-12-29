@@ -32,26 +32,27 @@ export function HeaderBreadcrumbs() {
     const pathname = location.pathname
     const items: Array<{ label: string; href: string; isActive: boolean }> = []
 
-    // Translation mapping for navigation labels
-    const getTranslatedLabel = (key: PLUGIN_NAME_ENUM): string => {
-      const labelMap: Partial<Record<PLUGIN_NAME_ENUM, string>> = {
-        [PLUGIN_NAME_ENUM.MESSAGING]: t("navigation.messages"),
-        [PLUGIN_NAME_ENUM.FEED]: t("navigation.infoFeed"),
-        [PLUGIN_NAME_ENUM.PROJECT]: t("navigation.projects"),
-        [PLUGIN_NAME_ENUM.FORUM]: t("navigation.forum"),
-        [PLUGIN_NAME_ENUM.ARTIFACT]: t("navigation.artifact"),
-        [PLUGIN_NAME_ENUM.WIKI]: t("navigation.wiki"),
-        [PLUGIN_NAME_ENUM.DOCUMENTS]: t("navigation.documents"),
-        [PLUGIN_NAME_ENUM.AGENTWORLD]: t("navigation.agentWorld"),
-        [PLUGIN_NAME_ENUM.PROFILE]: t("navigation.profile"),
-        [PLUGIN_NAME_ENUM.README]: t("navigation.readme"),
-        [PLUGIN_NAME_ENUM.MOD_MANAGEMENT]: t("navigation.modManagement"),
-        [PLUGIN_NAME_ENUM.SERVICE_AGENTS]: t("navigation.serviceAgents"),
-        [PLUGIN_NAME_ENUM.LLM_LOGS]: t("navigation.llmLogs"),
-        [PLUGIN_NAME_ENUM.ADMIN]: t("navigation.admin"),
-      }
-      return labelMap[key] || key
-    }
+        // Translation mapping for navigation labels
+        const getTranslatedLabel = (key: PLUGIN_NAME_ENUM): string => {
+          const labelMap: Partial<Record<PLUGIN_NAME_ENUM, string>> = {
+            [PLUGIN_NAME_ENUM.MESSAGING]: t("navigation.messages"),
+            [PLUGIN_NAME_ENUM.FEED]: t("navigation.infoFeed"),
+            [PLUGIN_NAME_ENUM.PROJECT]: t("navigation.projects"),
+            [PLUGIN_NAME_ENUM.FORUM]: t("navigation.forum"),
+            [PLUGIN_NAME_ENUM.ARTIFACT]: t("navigation.artifact"),
+            [PLUGIN_NAME_ENUM.WIKI]: t("navigation.wiki"),
+            [PLUGIN_NAME_ENUM.DOCUMENTS]: t("navigation.documents"),
+            [PLUGIN_NAME_ENUM.AGENTWORLD]: t("navigation.agentWorld"),
+            [PLUGIN_NAME_ENUM.PROFILE]: t("navigation.profile"),
+            [PLUGIN_NAME_ENUM.README]: t("navigation.readme"),
+            [PLUGIN_NAME_ENUM.MOD_MANAGEMENT]: t("navigation.modManagement"),
+            [PLUGIN_NAME_ENUM.SERVICE_AGENTS]: t("navigation.serviceAgents"),
+            [PLUGIN_NAME_ENUM.LLM_LOGS]: t("navigation.llmLogs"),
+            [PLUGIN_NAME_ENUM.ADMIN]: t("navigation.admin"),
+            [PLUGIN_NAME_ENUM.USER_DASHBOARD]: t("navigation.userDashboard", { defaultValue: "User Dashboard" }),
+          }
+          return labelMap[key] || key
+        }
 
     // Get all routes
     const primaryRoutes = getNavigationRoutesByGroup("primary")
@@ -158,9 +159,13 @@ export function HeaderBreadcrumbs() {
         const segmentPath = "/" + segments.slice(0, index + 1).join("/")
         const decodedSegment = decodeURIComponent(segment)
         
-        // Translate admin route segments
+        // Translate common route segments
         let label = decodedSegment
-        if (isAdminRoute) {
+        
+        // Handle user-dashboard route
+        if (decodedSegment === "user-dashboard") {
+          label = t("navigation.userDashboard", { defaultValue: "User Dashboard" })
+        } else if (isAdminRoute) {
           // Map admin route paths to translation keys
           const adminRouteMap: Record<string, string> = {
             "dashboard": "sidebar.items.dashboard",

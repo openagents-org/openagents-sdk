@@ -379,7 +379,8 @@ const ExportedTools: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("exportedTools.searchPlaceholder")}
-              className="pl-10"
+              className="pl-10 h-11"
+              variant="lg"
             />
           </div>
           <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">

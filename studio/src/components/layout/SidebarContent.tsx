@@ -7,6 +7,7 @@ import DocumentsSidebar from "@/pages/documents/DocumentsSidebar"
 import ForumSidebar from "@/pages/forum/ForumSidebar"
 import WikiSidebar from "@/pages/wiki/WikiSidebar"
 import ProfileSidebar from "@/pages/profile/ProfileSidebar"
+import UserDashboardSidebar from "@/pages/profile/UserDashboardSidebar"
 import ProjectSidebar from "@/pages/project/ProjectSidebar"
 import FeedSidebar from "@/pages/feed/FeedSidebar"
 import ArtifactSidebar from "@/pages/artifact/ArtifactSidebar"
@@ -99,6 +100,10 @@ const SidebarContent: React.FC = () => {
 
     if (pathname.startsWith("/admin")) {
       return <AdminSidebar />
+    }
+
+    if (pathname.startsWith("/user-dashboard")) {
+      return <UserDashboardSidebar />
     }
 
     if (pathname.startsWith("/profile")) {

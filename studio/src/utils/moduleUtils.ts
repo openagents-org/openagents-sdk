@@ -102,40 +102,14 @@ export const updateRouteVisibilityFromModules = (
 }
 
 /**
- * Get default route (first enabled module)
+ * Get default route - always returns user dashboard as the landing page
  */
 export const getDefaultRoute = (
   enabledModules: string[],
   hasReadme: boolean = false
 ): string => {
-  // If README content is available, prioritize the readme page
-  if (hasReadme) {
-    return "/readme"
-  }
-
-  if (enabledModules.length === 0) {
-    // If no modules enabled, fallback to profile
-    return "/profile"
-  }
-
-  // Sort modules by priority
-  const priorityOrder = [
-    "messaging",
-    "documents",
-    "forum",
-    "artifact",
-    "wiki",
-    "feed",
-  ]
-
-  for (const priority of priorityOrder) {
-    if (enabledModules.includes(priority)) {
-      return `/${priority}`
-    }
-  }
-
-  // If no matching priority module, return first available
-  return `/${enabledModules[0]}`
+  // Always redirect to user dashboard as the default landing page
+  return "/user-dashboard"
 }
 
 /**

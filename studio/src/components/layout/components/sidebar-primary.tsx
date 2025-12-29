@@ -131,6 +131,7 @@ export function SidebarPrimary() {
         [PLUGIN_NAME_ENUM.SERVICE_AGENTS]: t("navigation.serviceAgents"),
         [PLUGIN_NAME_ENUM.LLM_LOGS]: t("navigation.llmLogs"),
         [PLUGIN_NAME_ENUM.ADMIN]: t("navigation.admin"),
+        [PLUGIN_NAME_ENUM.USER_DASHBOARD]: t("navigation.userDashboard", { defaultValue: "User Dashboard" }),
       };
       return labelMap[key] || key;
     };
@@ -227,6 +228,19 @@ export function SidebarPrimary() {
       return items;
     }
 
+    // Normal mode: Add User Dashboard at the top for non-admin users
+    if (!isAdmin) {
+      items.push({
+        icon: NavigationIcons.Dashboard as React.ComponentType,
+        label: getTranslatedLabel(PLUGIN_NAME_ENUM.USER_DASHBOARD),
+        href: "/user-dashboard",
+        active: isRouteActive("/user-dashboard"),
+        className:
+          "border-white bg-amber-500 hover:bg-amber-600 text-white hover:text-white",
+        index: currentIndex++,
+      });
+    }
+
     // Normal mode: Add README icon at the top if exists
     if (readmeRoute) {
       const route = readmeRoute.path.replace("/*", "");
@@ -275,6 +289,7 @@ export function SidebarPrimary() {
     location.pathname,
     t,
     isAdminRoute,
+    isAdmin,
   ]);
 
   // Handle navigation click

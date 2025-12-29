@@ -55,6 +55,7 @@ export function SidebarHeader() {
       [PLUGIN_NAME_ENUM.MOD_MANAGEMENT]: t("navigation.modManagement"),
       [PLUGIN_NAME_ENUM.SERVICE_AGENTS]: t("navigation.serviceAgents"),
       [PLUGIN_NAME_ENUM.LLM_LOGS]: t("navigation.llmLogs"),
+      [PLUGIN_NAME_ENUM.USER_DASHBOARD]: t("navigation.userDashboard", { defaultValue: "User Dashboard" }),
     };
     return labelMap[key] || key;
   };
@@ -152,6 +153,18 @@ export function SidebarHeader() {
 
     let currentIndex = 0;
 
+    // Add User Dashboard at the top for non-admin users (same as SidebarPrimary)
+    if (!isAdmin) {
+      items.push({
+        icon: NavigationIcons.Dashboard as React.ComponentType,
+        name: getTranslatedLabel(PLUGIN_NAME_ENUM.USER_DASHBOARD),
+        color: "bg-amber-500 text-white",
+        route: "/user-dashboard",
+        active: isRouteActive("/user-dashboard"),
+      });
+      currentIndex++;
+    }
+
     // Add README icon at the top if exists (same as SidebarPrimary)
     if (readmeRoute) {
       const route = readmeRoute.path.replace("/*", "");
@@ -218,7 +231,7 @@ export function SidebarHeader() {
 
     return items;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readmeRoute, otherPrimaryRoutes, secondaryRoutes, location.pathname, t]);
+  }, [readmeRoute, otherPrimaryRoutes, secondaryRoutes, location.pathname, t, isAdmin]);
 
   // Find current active menu item from menuItems to ensure consistency
   const currentMenuItem = useMemo(() => {
