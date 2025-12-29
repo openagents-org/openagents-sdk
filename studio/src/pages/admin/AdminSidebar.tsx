@@ -143,12 +143,6 @@ const AdminSidebar: React.FC = () => {
           path: "/admin/groups",
           icon: UserCog,
         },
-        {
-          id: "connect",
-          label: t("sidebar.items.connectionGuide"),
-          path: "/admin/connect",
-          icon: Link2,
-        },
       ],
     },
     {
@@ -159,6 +153,12 @@ const AdminSidebar: React.FC = () => {
           label: t("sidebar.items.exportedTools"),
           path: "/admin/exported-tools",
           icon: Wrench,
+        },
+        {
+          id: "connect",
+          label: t("sidebar.items.connectionGuide"),
+          path: "/admin/connect",
+          icon: Link2,
         },
       ],
     },
