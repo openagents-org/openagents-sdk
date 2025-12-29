@@ -6,6 +6,9 @@
     "refresh": "Refresh",
     "refreshing": "Refreshing...",
     "networkInfo": "Network",
+    "networkStatus": {
+      "title": "Network Status"
+    },
     "stats": {
       "agents": "Agents",
       "online": "online",
@@ -478,7 +481,28 @@
     "response": "Response",
     "timestamp": "Timestamp",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "columns": {
+      "direction": "Direction",
+      "eventName": "Event Name",
+      "source": "Source",
+      "destination": "Destination",
+      "time": "Time",
+      "status": "Status",
+      "sent": "Sent",
+      "received": "Received",
+      "success": "Success",
+      "failed": "Failed",
+      "method": "Method",
+      "endpoint": "Endpoint",
+      "statusCode": "Status",
+      "host": "Host",
+      "duration": "Duration",
+      "actions": "Actions"
+    },
+    "eventDetail": "Event Details",
+    "httpDetail": "HTTP Request Details",
+    "close": "Close"
   },
   "eventDebugger": {
     "title": "Event Debugger",

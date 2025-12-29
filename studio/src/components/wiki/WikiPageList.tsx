@@ -1,23 +1,35 @@
-import React, { useState, useEffect, useContext } from "react";
-import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
-import { useWikiStore } from "@/stores/wikiStore";
-import { useRecentPagesStore } from "@/stores/recentPagesStore";
-import WikiCreateModal from "./components/WikiCreateModal";
-import MarkdownRenderer from "@/components/common/MarkdownRenderer";
-import { formatDateTime } from "@/utils/utils";
-import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
+import React, { useState, useEffect, useContext } from "react"
+import { useTranslation } from "react-i18next"
+import { useNavigate } from "react-router-dom"
+import { useWikiStore } from "@/stores/wikiStore"
+import { useRecentPagesStore } from "@/stores/recentPagesStore"
+import WikiCreateModal from "./components/WikiCreateModal"
+import MarkdownRenderer from "@/components/common/MarkdownRenderer"
+import { formatDateTime } from "@/utils/utils"
+import { OpenAgentsContext } from "@/context/OpenAgentsProvider"
+import { Button } from "@/components/layout/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardHeading,
+  CardTitle,
+  CardToolbar,
+} from "@/components/layout/ui/card"
+import { Plus, RefreshCw, Clock, Search } from "lucide-react"
+import { Input } from "@/components/layout/ui/input"
 
 const WikiPageList: React.FC = () => {
-  const { t } = useTranslation('wiki');
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const navigate = useNavigate();
+  const { t } = useTranslation("wiki")
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const navigate = useNavigate()
 
-  const context = useContext(OpenAgentsContext);
-  const openAgentsService = context?.connector;
-  const isConnected = context?.isConnected;
-  const { addRecentPage } = useRecentPagesStore();
+  const context = useContext(OpenAgentsContext)
+  const openAgentsService = context?.connector
+  const isConnected = context?.isConnected
+  const { addRecentPage } = useRecentPagesStore()
 
   const {
     pages,
@@ -29,54 +41,54 @@ const WikiPageList: React.FC = () => {
     searchPages,
     setupEventListeners,
     cleanupEventListeners,
-  } = useWikiStore();
+  } = useWikiStore()
 
   // Set connection
   useEffect(() => {
     if (openAgentsService) {
-      setConnection(openAgentsService);
+      setConnection(openAgentsService)
     }
-  }, [openAgentsService, setConnection]);
+  }, [openAgentsService, setConnection])
 
   // Load pages (wait for connection to be established)
   useEffect(() => {
     if (openAgentsService && isConnected) {
-      console.log("WikiPageList: Connection ready, loading pages");
-      loadPages();
-      loadProposals();
+      console.log("WikiPageList: Connection ready, loading pages")
+      loadPages()
+      loadProposals()
     }
-  }, [openAgentsService, isConnected, loadPages, loadProposals]);
+  }, [openAgentsService, isConnected, loadPages, loadProposals])
 
   // Set up wiki event listeners
   useEffect(() => {
     if (openAgentsService) {
-      console.log("WikiPageList: Setting up wiki event listeners");
-      setupEventListeners();
+      console.log("WikiPageList: Setting up wiki event listeners")
+      setupEventListeners()
 
       return () => {
-        console.log("WikiPageList: Cleaning up wiki event listeners");
-        cleanupEventListeners();
-      };
+        console.log("WikiPageList: Cleaning up wiki event listeners")
+        cleanupEventListeners()
+      }
     }
-  }, [openAgentsService, setupEventListeners, cleanupEventListeners]);
+  }, [openAgentsService, setupEventListeners, cleanupEventListeners])
 
   // Handle search
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      searchPages(searchQuery);
-    }, 300);
+      searchPages(searchQuery)
+    }, 300)
 
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery, searchPages]);
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery, searchPages])
 
   const handlePageClick = (pagePath: string) => {
     // First find the corresponding page object
-    const page = pages.find((p) => p.page_path === pagePath);
+    const page = pages.find((p) => p.page_path === pagePath)
 
     // If page found, record to recent pages
     if (page) {
-      console.log("WikiPageList: Adding page to recent pages:", page.title);
-      addRecentPage(page);
+      console.log("WikiPageList: Adding page to recent pages:", page.title)
+      addRecentPage(page)
     }
 
     console.log(
@@ -84,9 +96,9 @@ const WikiPageList: React.FC = () => {
       pagePath,
       "URL:",
       `/wiki/detail/${encodeURIComponent(pagePath)}`
-    );
-    navigate(`/wiki/detail/${encodeURIComponent(pagePath)}`);
-  };
+    )
+    navigate(`/wiki/detail/${encodeURIComponent(pagePath)}`)
+  }
 
   // if (pagesLoading && pages.length === 0) {
   //   return (
@@ -125,169 +137,141 @@ const WikiPageList: React.FC = () => {
             onClick={loadPages}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
-            {t('list.tryAgain')}
+            {t("list.tryAgain")}
           </button>
         </div>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-800">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {t('list.title')}
-          </h1>
-          <p className="text-sm mt-1 text-gray-600 dark:text-gray-400">
-            {t('list.pagesAvailable', { count: pages.length })}
-          </p>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          {/* Pending proposals button */}
-          {proposals.filter((p) => p.status === "pending").length > 0 && (
-            <button
-              onClick={() => navigate("/wiki/proposals")}
-              className="flex items-center space-x-2 px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+    <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-900 p-6">
+      <Card variant="default" className="flex-1 flex flex-col">
+        <CardHeader>
+          <CardHeading>
+            <CardTitle>{t("list.title")}</CardTitle>
+            <CardDescription>
+              {t("list.pagesAvailable", { count: pages.length })}
+            </CardDescription>
+          </CardHeading>
+          <CardToolbar>
+            {/* Pending proposals button */}
+            {proposals.filter((p) => p.status === "pending").length > 0 && (
+              <Button
+                onClick={() => navigate("/wiki/proposals")}
+                variant="outline"
+                size="sm"
+                className="bg-yellow-500 text-white hover:bg-yellow-600"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span>
-                {t('list.proposals', { count: proposals.filter((p) => p.status === "pending").length })}
-              </span>
-            </button>
-          )}
-
-          {/* Create page button */}
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            <span>{t('list.newPage')}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Search bar */}
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-        <div className="relative">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('list.searchPlaceholder')}
-            className="w-full pl-10 pr-4 py-2 rounded-lg border bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
-          />
-          <svg
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-        </div>
-      </div>
-
-      {/* Page list */}
-      <div className="flex-1 overflow-y-hidden py-6 dark:border-gray-700 bg-white dark:bg-gray-800">
-        {pages.length === 0 ? (
-          <div className="text-center py-12 h-full flex flex-col items-center justify-center">
-            <div className="mb-4 text-gray-500 dark:text-gray-400">
-              <svg
-                className="w-16 h-16 mx-auto"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium mb-2 text-gray-700 dark:text-gray-300">
-              {searchQuery ? t('list.noPagesFound') : t('list.noPages')}
-            </h3>
-            <p className="mb-4 text-gray-600 dark:text-gray-400">
-              {searchQuery
-                ? t('list.noPagesFoundSearch')
-                : t('list.createFirst')}
-            </p>
-            {!searchQuery && (
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                {t('list.createFirstButton')}
-              </button>
+                <Clock className="w-4 h-4 mr-1" />
+                {t("list.proposals", {
+                  count: proposals.filter((p) => p.status === "pending").length,
+                })}
+              </Button>
             )}
+            <Button onClick={loadPages} variant="outline" size="sm">
+              <RefreshCw className="w-4 h-4 mr-1" />
+              {t("list.refresh")}
+            </Button>
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              variant="outline"
+              size="sm"
+              className="bg-blue-500 text-white"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              {t("list.newPage")}
+            </Button>
+          </CardToolbar>
+        </CardHeader>
+        <CardContent className="flex-1 overflow-auto">
+          {/* Search bar */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
+            <Input
+              type="text"
+              variant="lg"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t("list.searchPlaceholder")}
+              className="pl-10"
+            />
           </div>
-        ) : (
-          <div className="h-full px-6 overflow-y-auto space-y-4">
-            {pages.map((page) => (
-              <div
-                key={page.page_path}
-                onClick={() => handlePageClick(page.page_path)}
-                className="p-4 rounded-lg border cursor-pointer transition-all hover:shadow-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 hover:border-gray-300 dark:hover:border-gray-600"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold mb-2 line-clamp-2 text-gray-900 dark:text-gray-100">
-                      {page.title || t('list.untitled')}
-                    </h3>
-                    <div className="text-sm mb-3 line-clamp-3 text-gray-600 dark:text-gray-400 wiki-list-preview">
-                      <MarkdownRenderer
-                        content={page.wiki_content || t('list.noContent')}
-                        className="prose-sm max-w-none"
-                      />
-                    </div>
-                    <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
-                      <span>{page.page_path || t('list.unknownPath')}</span>
-                      <span>{t('list.by', { user: page.creator_id || t('list.unknownCreator') })}</span>
-                      <span>{t('list.version', { version: page.version || 1 })}</span>
-                      <span>{formatDateTime(page.last_modified)}</span>
+
+          {/* Page list */}
+          {pages.length === 0 ? (
+            <div className="text-center py-12 h-full flex flex-col items-center justify-center">
+              <div className="mb-4 text-gray-500 dark:text-gray-400">
+                <svg
+                  className="w-16 h-16 mx-auto"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium mb-2 text-gray-700 dark:text-gray-300">
+                {searchQuery ? t("list.noPagesFound") : t("list.noPages")}
+              </h3>
+              <p className="mb-4 text-gray-600 dark:text-gray-400">
+                {searchQuery
+                  ? t("list.noPagesFoundSearch")
+                  : t("list.createFirst")}
+              </p>
+              {!searchQuery && (
+                <Button
+                  onClick={() => setShowCreateModal(true)}
+                  variant="primary"
+                >
+                  {t("list.createFirstButton")}
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {pages.map((page) => (
+                <div
+                  key={page.page_path}
+                  onClick={() => handlePageClick(page.page_path)}
+                  className="p-4 rounded-lg border cursor-pointer transition-all hover:shadow-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 hover:border-gray-300 dark:hover:border-gray-600"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold mb-2 line-clamp-2 text-gray-900 dark:text-gray-100">
+                        {page.title || t("list.untitled")}
+                      </h3>
+                      <div className="text-sm mb-3 line-clamp-3 text-gray-600 dark:text-gray-400 wiki-list-preview">
+                        <MarkdownRenderer
+                          content={page.wiki_content || t("list.noContent")}
+                          className="prose-sm max-w-none"
+                        />
+                      </div>
+                      <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
+                        <span>{page.page_path || t("list.unknownPath")}</span>
+                        <span>
+                          {t("list.by", {
+                            user: page.creator_id || t("list.unknownCreator"),
+                          })}
+                        </span>
+                        <span>
+                          {t("list.version", { version: page.version || 1 })}
+                        </span>
+                        <span>{formatDateTime(page.last_modified)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Create page modal */}
       <WikiCreateModal
@@ -295,7 +279,7 @@ const WikiPageList: React.FC = () => {
         onClose={() => setShowCreateModal(false)}
       />
     </div>
-  );
-};
+  )
+}
 
-export default WikiPageList;
+export default WikiPageList

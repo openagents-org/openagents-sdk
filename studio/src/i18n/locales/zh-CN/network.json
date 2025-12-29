@@ -81,9 +81,12 @@
         "kicking": "踢出中...",
         "table": {
             "id": "智能体 ID",
+            "group": "分组",
             "status": "状态",
             "actions": "操作"
         },
+        "statusOnline": "在线",
+        "statusOffline": "离线",
         "kickConfirm": {
             "title": "踢出智能体",
             "message": "确定要踢出智能体 \"{{name}}\" 吗? 这将断开其与网络的连接。",

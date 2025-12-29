@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import DashboardTour from "@/components/admin/DashboardTour";
 import { Button } from "@/components/layout/ui/button";
 import { Badge } from "@/components/layout/ui/badge";
-import { Card, CardContent, CardDescription } from "@/components/layout/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardHeading, CardTitle, CardToolbar } from "@/components/layout/ui/card";
 import { ScrollArea } from "@/components/layout/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/layout/ui/dialog";
 import {
@@ -538,8 +538,18 @@ const AdminDashboard: React.FC = () => {
 
         {/* Network Status Panel - Compact inline design */}
         {selectedNetwork && (
-          <Card className="mb-4 border-gray-200 dark:border-gray-700">
-            <CardContent className="p-4 space-y-3">
+          <Card variant="default" className="mb-4">
+            <CardHeader>
+              <CardHeading>
+                <CardTitle>{t('dashboard.networkStatus.title')}</CardTitle>
+              </CardHeading>
+              <CardToolbar>
+                <Button variant="ghost" size="icon" onClick={fetchDashboardData} disabled={refreshing}>
+                  <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+                </Button>
+              </CardToolbar>
+            </CardHeader>
+            <CardContent className="space-y-3">
               <div className="flex flex-wrap items-center gap-3">
                 {/* Connection Status */}
                 <div className="flex items-center gap-2">
@@ -692,23 +702,26 @@ const AdminDashboard: React.FC = () => {
         {/* Default LLM and Service Agents Panels - Side by Side */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           {/* Default LLM Panel */}
-          <Card className="border-gray-200 dark:border-gray-700">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
+          <Card variant="default">
+            <CardHeader>
+              <CardHeading>
+                <CardTitle className="flex items-center gap-2">
                   <Cpu className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {t('dashboard.defaultLLM.title')}
-                  </span>
-                </div>
-                <button
+                  {t('dashboard.defaultLLM.title')}
+                </CardTitle>
+              </CardHeading>
+              <CardToolbar>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => navigate("/admin/default-models")}
-                  className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
                 >
-                  <Pencil className="w-3 h-3" />
+                  <Pencil className="w-3 h-3 mr-1" />
                   {t('dashboard.defaultLLM.configure')}
-                </button>
-              </div>
+                </Button>
+              </CardToolbar>
+            </CardHeader>
+            <CardContent>
               {defaultModelConfig && defaultModelConfig.provider && defaultModelConfig.model_name ? (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -735,66 +748,66 @@ const AdminDashboard: React.FC = () => {
           </Card>
 
           {/* Service Agents Status Panel */}
-          <Card className="border-gray-200 dark:border-gray-700">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
+          <Card variant="default">
+            <CardHeader>
+              <CardHeading>
+                <CardTitle className="flex items-center gap-2">
                   <Server className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {t('dashboard.serviceAgents.title')}
-                  </span>
+                  {t('dashboard.serviceAgents.title')}
                   {serviceAgents.length > 0 && (
-                    <Badge
-                      variant="secondary"
-                      appearance="light"
-                      size="sm"
-                    >
+                    <Badge variant="secondary" appearance="light" size="sm">
                       {serviceAgents.filter(a => a.status === 'running').length}/{serviceAgents.length}
                     </Badge>
                   )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {serviceAgents.length > 0 && (
-                    <>
-                      {/* Start All Button */}
-                      <button
-                        onClick={handleStartAllAgents}
-                        disabled={bulkActionLoading !== null || serviceAgents.every(a => a.status === 'running')}
-                        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={t('dashboard.serviceAgents.startAll')}
-                      >
-                        {bulkActionLoading === 'startAll' ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <Play className="w-3 h-3" />
-                        )}
-                        {t('dashboard.serviceAgents.startAll')}
-                      </button>
-                      {/* Stop All Button */}
-                      <button
-                        onClick={handleStopAllAgents}
-                        disabled={bulkActionLoading !== null || serviceAgents.every(a => a.status !== 'running')}
-                        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={t('dashboard.serviceAgents.stopAll')}
-                      >
-                        {bulkActionLoading === 'stopAll' ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <Square className="w-3 h-3" />
-                        )}
-                        {t('dashboard.serviceAgents.stopAll')}
-                      </button>
-                      <div className="h-4 w-px bg-gray-300 dark:bg-gray-600" />
-                    </>
-                  )}
-                  <button
-                    onClick={() => navigate("/admin/service-agents")}
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-                  >
-                    {t('dashboard.serviceAgents.viewAll')}
-                  </button>
-                </div>
-              </div>
+                </CardTitle>
+              </CardHeading>
+              <CardToolbar>
+                {serviceAgents.length > 0 && (
+                  <>
+                    {/* Start All Button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleStartAllAgents}
+                      disabled={bulkActionLoading !== null || serviceAgents.every(a => a.status === 'running')}
+                      className="text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30"
+                      title={t('dashboard.serviceAgents.startAll')}
+                    >
+                      {bulkActionLoading === 'startAll' ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : (
+                        <Play className="w-3 h-3 mr-1" />
+                      )}
+                      {t('dashboard.serviceAgents.startAll')}
+                    </Button>
+                    {/* Stop All Button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleStopAllAgents}
+                      disabled={bulkActionLoading !== null || serviceAgents.every(a => a.status !== 'running')}
+                      className="text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30"
+                      title={t('dashboard.serviceAgents.stopAll')}
+                    >
+                      {bulkActionLoading === 'stopAll' ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : (
+                        <Square className="w-3 h-3 mr-1" />
+                      )}
+                      {t('dashboard.serviceAgents.stopAll')}
+                    </Button>
+                  </>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/admin/service-agents")}
+                >
+                  {t('dashboard.serviceAgents.viewAll')}
+                </Button>
+              </CardToolbar>
+            </CardHeader>
+            <CardContent>
               {serviceAgents.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {serviceAgents.map((agent) => (

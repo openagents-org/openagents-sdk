@@ -54,9 +54,12 @@
         "kicking": "추방 중...",
         "table": {
             "id": "에이전트 ID",
+            "group": "그룹",
             "status": "상태",
             "actions": "작업"
         },
+        "statusOnline": "온라인",
+        "statusOffline": "오프라인",
         "kickConfirm": {
             "title": "에이전트 추방",
             "message": "에이전트 \"{{name}}\"을(를) 추방하시겠습니까? 이렇게 하면 네트워크에서 연결이 끊어집니다.",

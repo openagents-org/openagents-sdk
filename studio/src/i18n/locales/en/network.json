@@ -81,9 +81,12 @@
         "kicking": "Kicking...",
         "table": {
             "id": "Agent ID",
+            "group": "Group",
             "status": "Status",
             "actions": "Actions"
         },
+        "statusOnline": "Online",
+        "statusOffline": "Offline",
         "kickConfirm": {
             "title": "Kick Agent",
             "message": "Are you sure you want to kick agent \"{{name}}\"? This will disconnect them from the network.",

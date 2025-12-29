@@ -4,12 +4,12 @@ import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/stores/authStore";
 import { dynamicRouteConfig, NavigationIcons } from "@/config/routeConfig";
 import { PLUGIN_NAME_ENUM } from "@/types/plugins";
-import { Card, CardContent, CardDescription, CardHeader, CardToolbar, CardTitle } from "@/components/layout/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardHeading, CardToolbar, CardTitle } from "@/components/layout/ui/card";
 import { ScrollArea } from "@/components/layout/ui/scroll-area";
 import { Button } from "@/components/layout/ui/button";
 import { Badge } from "@/components/layout/ui/badge";
 import { EmptyState } from "@/components/layout/ui/empty-state";
-import { RefreshCw, Users, MessageCircle, Clock, Globe, ArrowLeftRight, Package } from "lucide-react";
+import { RefreshCw, Users, Package } from "lucide-react";
 import { useProfileData } from "./hooks/useProfileData";
 
 // Module name to plugin enum mapping (same as in moduleUtils)
@@ -166,60 +166,62 @@ const UserDashboard: React.FC = () => {
     <ScrollArea className="h-full">
       <div className="p-4">
         {/* Header with Stats Tags - using standardized CardHeader/CardToolbar */}
-        <Card className="mb-4 border-0">
+        <Card variant="default" className="mb-4">
           <CardHeader>
-            <div className="flex items-center justify-between w-full gap-4">
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Stats Tags */}
+            <CardHeading>
+              <CardTitle className="flex items-center gap-2">
+                {t('dashboard.title', { defaultValue: '用户面板' })}
                 <Badge
                   variant="info"
                   appearance="light"
-                  size="md"
-                  shape="default"
+                  size="sm"
                 >
                   <Users className="w-3 h-3 mr-1" />
-                  {enabledModulesCount} {t('dashboard.modules.enabled', { defaultValue: '模块已启用' })}
+                  {enabledModulesCount} {t('dashboard.modules.enabled', { defaultValue: '模块' })}
                 </Badge>
                 <Badge
                   variant={isConnected ? "success" : "destructive"}
                   appearance="light"
-                  size="md"
-                  shape="default"
+                  size="sm"
                 >
                   <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"} mr-1`} />
                   {isConnected ? t('profile.status.connected') : t('profile.status.disconnected')}
                 </Badge>
-                {formattedLastUpdated && (
-                  <Badge
-                    variant="info"
-                    appearance="light"
-                    size="md"
-                    shape="default"
-                  >
-                    <Clock className="w-3 h-3 mr-1" />
-                    {t('profile.lastUpdated')}: {formattedLastUpdated}
-                  </Badge>
-                )}
-              </div>
-              <CardToolbar>
-                <Button
-                  onClick={refresh}
-                  disabled={loading}
-                  variant="outline"
-                  size="sm"
-                >
-                  <RefreshCw className={`w-3 h-3 mr-1.5 ${loading ? "animate-spin" : ""}`} />
-                  {loading ? t('profile.refreshing') : t('profile.refresh')}
-                </Button>
-              </CardToolbar>
-            </div>
+              </CardTitle>
+              {formattedLastUpdated && (
+                <CardDescription>
+                  {t('profile.lastUpdated')}: {formattedLastUpdated}
+                </CardDescription>
+              )}
+            </CardHeading>
+            <CardToolbar>
+              <Button
+                onClick={refresh}
+                disabled={loading}
+                variant="outline"
+                size="sm"
+              >
+                <RefreshCw className={`w-3 h-3 mr-1.5 ${loading ? "animate-spin" : ""}`} />
+                {loading ? t('profile.refreshing') : t('profile.refresh')}
+              </Button>
+            </CardToolbar>
           </CardHeader>
         </Card>
 
         {/* Network Status Panel - matching AdminDashboard style */}
         {selectedNetwork && (
-          <Card className="mb-4">
-            <CardContent className="p-4 space-y-3">
+          <Card variant="default" className="mb-4">
+            <CardHeader>
+              <CardHeading>
+                <CardTitle>{t('dashboard.networkStatus.title', { defaultValue: '网络状态' })}</CardTitle>
+              </CardHeading>
+              <CardToolbar>
+                <Button variant="ghost" size="icon" onClick={refresh} disabled={loading}>
+                  <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+                </Button>
+              </CardToolbar>
+            </CardHeader>
+            <CardContent className="space-y-3">
               <div className="flex flex-wrap items-center gap-3">
                 {/* Connection Status */}
                 <div className="flex items-center gap-2">

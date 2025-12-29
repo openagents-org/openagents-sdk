@@ -1,10 +1,21 @@
-import React, { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { DocumentsViewProps } from "../../types";
-import { useThemeStore } from "@/stores/themeStore";
-import { useDocumentStore } from "@/stores/documentStore";
-import DocumentList from "./DocumentList";
-import CreateDocumentModal from "./CreateDocumentModal";
+import React, { useState } from "react"
+import { useTranslation } from "react-i18next"
+import { DocumentsViewProps } from "../../types"
+import { useThemeStore } from "@/stores/themeStore"
+import { useDocumentStore } from "@/stores/documentStore"
+import DocumentList from "./DocumentList"
+import CreateDocumentModal from "./CreateDocumentModal"
+import { Button } from "@/components/layout/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardHeading,
+  CardTitle,
+  CardToolbar,
+} from "@/components/layout/ui/card"
+import { Plus } from "lucide-react"
 
 const DocumentsView: React.FC<DocumentsViewProps> = ({
   onBackClick,
@@ -14,58 +25,50 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   onDocumentSelect: sharedOnDocumentSelect,
   onDocumentsChange: sharedOnDocumentsChange,
 }) => {
-  const { t } = useTranslation('documents');
+  const { t } = useTranslation("documents")
   // Use theme from store
-  const { theme: currentTheme } = useThemeStore();
+  const { theme: currentTheme } = useThemeStore()
 
   // Use document store
-  const {
-    documents: storeDocuments,
-    createDocument,
-  } = useDocumentStore();
+  const { documents: storeDocuments, createDocument } = useDocumentStore()
 
-  const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
-  const [isLoading] = useState(false);
-  const [error] = useState<string | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<string | null>(null)
+  const [isLoading] = useState(false)
+  const [error] = useState<string | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
 
   // Use shared state if available, otherwise use store state
-  const effectiveDocuments = sharedDocuments || storeDocuments;
-  const effectiveSelectedDocument =
-    sharedSelectedDocumentId || selectedDocument;
+  const effectiveDocuments = sharedDocuments || storeDocuments
+  const effectiveSelectedDocument = sharedSelectedDocumentId || selectedDocument
 
-
-  const handleCreateDocument = async (
-    name: string,
-    content: string
-  ) => {
+  const handleCreateDocument = async (name: string, content: string) => {
     try {
-      const documentId = await createDocument(name, content);
-      console.log("📄 Document created:", documentId);
+      const documentId = await createDocument(name, content)
+      console.log("📄 Document created:", documentId)
 
-      setShowCreateModal(false);
+      setShowCreateModal(false)
     } catch (err) {
-      console.error("Failed to create document:", err);
+      console.error("Failed to create document:", err)
     }
-  };
+  }
 
   const handleDocumentSelect = (documentId: string) => {
     // Use shared handler if available, otherwise local state
     if (sharedOnDocumentSelect) {
-      sharedOnDocumentSelect(documentId);
+      sharedOnDocumentSelect(documentId)
     } else {
-      setSelectedDocument(documentId);
+      setSelectedDocument(documentId)
     }
-  };
+  }
 
   const handleBackToList = () => {
     // Use shared handler if available, otherwise local state
     if (sharedOnDocumentSelect) {
-      sharedOnDocumentSelect(null);
+      sharedOnDocumentSelect(null)
     } else {
-      setSelectedDocument(null);
+      setSelectedDocument(null)
     }
-  };
+  }
 
   if (isLoading) {
     return (
@@ -77,11 +80,11 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
               currentTheme === "dark" ? "text-gray-400" : "text-gray-600"
             }`}
           >
-            {t('view.loadingDocuments')}
+            {t("view.loadingDocuments")}
           </p>
         </div>
       </div>
-    );
+    )
   }
 
   if (error) {
@@ -108,7 +111,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
               currentTheme === "dark" ? "text-gray-200" : "text-gray-800"
             }`}
           >
-            {t('view.connectionError')}
+            {t("view.connectionError")}
           </h3>
           <p
             className={`${
@@ -121,79 +124,62 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
             onClick={onBackClick}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            {t('view.backToChat')}
+            {t("view.backToChat")}
           </button>
         </div>
       </div>
-    );
+    )
   }
 
   if (effectiveSelectedDocument) {
     return (
       <div className="p-6">
         <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-          {t('view.documentDetails')}
+          {t("view.documentDetails")}
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          {t('view.documentId', { id: effectiveSelectedDocument })}
+          {t("view.documentId", { id: effectiveSelectedDocument })}
         </p>
         <button
           onClick={handleBackToList}
           className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          {t('view.backToList')}
+          {t("view.backToList")}
         </button>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-gray-800">
-      {/* Header */}
-      <div
-        className={`border-b ${
-          currentTheme === "dark" ? "border-gray-700" : "border-gray-200"
-        } p-6`}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col">
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
-              {t('view.sharedDocuments')}
-            </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {t('view.collaborativeEditingHint')}
-            </p>
-          </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+    <div className="h-full flex flex-col bg-white dark:bg-gray-900 p-6">
+      <Card variant="default" className="flex-1 flex flex-col">
+        <CardHeader>
+          <CardHeading>
+            <CardTitle>{t("view.sharedDocuments")}</CardTitle>
+            <CardDescription>
+              {t("view.collaborativeEditingHint")}
+            </CardDescription>
+          </CardHeading>
+          <CardToolbar>
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              variant="outline"
+              size="sm"
+              className="bg-blue-500 text-white"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            <span>{t('view.newDocument')}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Document List */}
-      <div className="flex-1 overflow-hidden">
-        <DocumentList
-          documents={effectiveDocuments}
-          currentTheme={currentTheme}
-          onDocumentSelect={handleDocumentSelect}
-        />
-      </div>
+              <Plus className="w-4 h-4 mr-1" />
+              {t("view.newDocument")}
+            </Button>
+          </CardToolbar>
+        </CardHeader>
+        <CardContent className="flex-1 overflow-hidden">
+          <DocumentList
+            documents={effectiveDocuments}
+            currentTheme={currentTheme}
+            onDocumentSelect={handleDocumentSelect}
+          />
+        </CardContent>
+      </Card>
 
       {/* Create Document Modal */}
       {showCreateModal && (
@@ -205,7 +191,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
         />
       )}
     </div>
-  );
-};
+  )
+}
 
-export default DocumentsView;
+export default DocumentsView
