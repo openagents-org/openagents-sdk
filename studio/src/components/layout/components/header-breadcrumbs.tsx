@@ -24,6 +24,7 @@ export function HeaderBreadcrumbs() {
   const navigate = useNavigate()
   const { t } = useTranslation("layout")
   const { t: tAdmin } = useTranslation("admin")
+  const { t: tProfile } = useTranslation("profile")
   const { isAdmin } = useIsAdmin()
   const { confirm } = useConfirm()
 
@@ -133,7 +134,7 @@ export function HeaderBreadcrumbs() {
         })
       }
 
-      // Handle sub-routes (e.g., /wiki/detail/xxx)
+      // Handle sub-routes (e.g., /wiki/detail/xxx, /profile/event-debugger)
       if (pathname !== routePath && pathname.startsWith(routePath)) {
         const subPath = pathname.replace(routePath, "")
         const segments = subPath.split("/").filter(Boolean)
@@ -144,8 +145,43 @@ export function HeaderBreadcrumbs() {
             const segmentPath = `${routePath}/${segments
               .slice(0, index + 1)
               .join("/")}`
+            const decodedSegment = decodeURIComponent(segment)
+            
+            // Translate sub-route segments based on parent route
+            let label = decodedSegment
+            
+            // Handle profile route sub-routes
+            if (routePath === "/profile") {
+              // Map profile sub-routes to translation keys
+              const profileRouteMap: Record<string, string> = {
+                "event-debugger": "profile.sidebar.eventDebugger",
+                "event-logs": "profile.sidebar.eventLogs",
+                "event-explorer": "profile.sidebar.eventExplorer",
+                "agent-management": "profile.sidebar.agentManagement",
+                "network-profile": "profile.sidebar.networkProfile",
+                "agent-groups": "profile.sidebar.agentGroups",
+              }
+              
+              const translationKey = profileRouteMap[decodedSegment]
+              if (translationKey) {
+                const profileTranslated = tProfile(translationKey, { defaultValue: null })
+                if (profileTranslated && profileTranslated !== translationKey) {
+                  label = profileTranslated
+                }
+              }
+              
+              // If not found in map, try direct lookup with sidebar prefix
+              if (label === decodedSegment) {
+                const profileSidebarKey = `profile.sidebar.${decodedSegment}`
+                const profileTranslated = tProfile(profileSidebarKey, { defaultValue: null })
+                if (profileTranslated && profileTranslated !== profileSidebarKey) {
+                  label = profileTranslated
+                }
+              }
+            }
+            
             items.push({
-              label: decodeURIComponent(segment),
+              label,
               href: segmentPath,
               isActive: index === segments.length - 1,
             })
@@ -226,7 +262,7 @@ export function HeaderBreadcrumbs() {
     }
 
     return items
-  }, [location.pathname, t, tAdmin, isAdmin])
+  }, [location.pathname, t, tAdmin, tProfile, isAdmin])
 
   const handleBreadcrumbClick = (
     href: string,

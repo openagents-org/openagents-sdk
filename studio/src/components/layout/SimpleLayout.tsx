@@ -54,11 +54,11 @@ const SimpleLayoutContent: React.FC<SimpleLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Check if current route is admin route
-  const isAdminRoute = location.pathname.startsWith("/admin");
+  // Check if current route is admin-login (should not show any sidebar)
+  const isAdminLoginPage = location.pathname === "/admin-login";
 
-  // Only show Sidebar if we have network/agent and context is available
-  const shouldShowSidebar = selectedNetwork && agentName && context;
+  // Only show Sidebar if we have network/agent and context is available, and not on admin-login page
+  const shouldShowSidebar = selectedNetwork && agentName && context && !isAdminLoginPage;
 
   // Close drawer when route changes on mobile
   React.useEffect(() => {
@@ -127,7 +127,9 @@ const SimpleLayoutContent: React.FC<SimpleLayoutProps> = ({ children }) => {
 const AdminContentArea: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { isSidebarOpen } = useLayout();
   const location = useLocation();
-  const isAdminRoute = location.pathname.startsWith("/admin");
+  // Exclude /admin-login from showing sidebar
+  const isAdminRoute = location.pathname.startsWith("/admin") && 
+                       !location.pathname.startsWith("/admin-login");
 
   return (
     <>
