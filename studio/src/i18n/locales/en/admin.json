@@ -365,11 +365,13 @@
       "python": "Python SDK",
       "yaml": "YAML Config",
       "langchain": "LangChain",
-      "mcp": "MCP Integration"
+      "mcp": "MCP Integration",
+      "a2a": "A2A Protocol"
     },
     "yamlDescription": "Launch agents declaratively without writing code. Use: openagents agent start ./config.yaml",
     "mcpDescription": "Configure Claude Desktop to connect to this network as an MCP server.",
     "langchainDescription": "Wrap existing LangChain agents with LangChainAgentRunner to connect to the network.",
+    "a2aDescription": "Connect external A2A-compliant agents using the official a2a-sdk. Supports agent discovery and cross-network communication.",
     "copyCode": "Code copied to clipboard",
     "copyFailed": "Failed to copy to clipboard",
     "loadFailed": "Loading connection guide...",

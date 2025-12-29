@@ -327,8 +327,10 @@
       "python": "Python SDK",
       "yaml": "YAML 설정",
       "langchain": "LangChain",
-      "mcp": "MCP 통합"
+      "mcp": "MCP 통합",
+      "a2a": "A2A 프로토콜"
     },
+    "a2aDescription": "공식 a2a-sdk를 사용하여 외부 A2A 호환 에이전트를 연결합니다. 에이전트 검색 및 네트워크 간 통신을 지원합니다.",
     "yamlDescription": "코드를 작성하지 않고 선언적으로 에이전트를 시작합니다. 사용: openagents agent start ./config.yaml",
     "mcpDescription": "Claude Desktop을 설정하여 이 네트워크를 MCP 서버로 연결합니다.",
     "langchainDescription": "기존 LangChain 에이전트를 LangChainAgentRunner로 래핑하여 네트워크에 연결합니다.",

@@ -23,7 +23,7 @@ interface ConnectionGuideData {
   recommendedTransport?: string;
 }
 
-type IntegrationType = "python" | "yaml" | "langchain" | "mcp";
+type IntegrationType = "python" | "yaml" | "langchain" | "mcp" | "a2a";
 type ConnectionMode = "direct" | "network_id";
 
 const ConnectionGuide: React.FC = () => {
@@ -399,6 +399,169 @@ if __name__ == "__main__":
     return JSON.stringify(config, null, 2);
   };
 
+  // Generate A2A SDK code example
+  const generateA2ACode = (): string => {
+    const params = getConnectionParams();
+
+    // Determine the A2A endpoint URL
+    let a2aUrl: string;
+    if (params.useNetworkId && params.networkId) {
+      a2aUrl = `https://network.openagents.org/${params.networkId}/a2a`;
+    } else {
+      a2aUrl = `http://${params.host}:${params.port}/a2a`;
+    }
+
+    return `"""
+A2A Agent connecting to OpenAgents Network using the official a2a-sdk.
+
+This example shows how to create an A2A-compliant agent that can:
+1. Be discovered by the OpenAgents network
+2. Receive and respond to messages via JSON-RPC
+3. Manage task lifecycle
+
+Install: pip install a2a-sdk uvicorn httpx
+"""
+import uvicorn
+import httpx
+
+from a2a.server.apps import A2AStarletteApplication
+from a2a.server.request_handlers import DefaultRequestHandler
+from a2a.server.tasks import InMemoryTaskStore
+from a2a.server.agent_execution import AgentExecutor, RequestContext
+from a2a.server.events import EventQueue
+from a2a.types import AgentCard, AgentSkill, AgentCapabilities
+from a2a.utils import new_agent_text_message
+
+
+class MyAgentExecutor(AgentExecutor):
+    """Custom agent executor that processes incoming messages."""
+
+    async def execute(
+        self,
+        context: RequestContext,
+        event_queue: EventQueue,
+    ) -> None:
+        # Extract text from the incoming message
+        user_message = ""
+        if context.message and context.message.parts:
+            for part in context.message.parts:
+                if hasattr(part, "text"):
+                    user_message = part.text
+                    break
+
+        # Generate response (replace with your actual logic)
+        response_text = f"Hello from A2A agent! You said: {user_message}"
+
+        # Send response back via event queue
+        await event_queue.enqueue_event(new_agent_text_message(response_text))
+
+    async def cancel(
+        self,
+        context: RequestContext,
+        event_queue: EventQueue,
+    ) -> None:
+        raise Exception("Cancel not supported")
+
+
+def create_agent_card(agent_url: str = "http://localhost:9000") -> AgentCard:
+    """Create the agent card describing this agent's capabilities."""
+    return AgentCard(
+        name="My A2A Agent",
+        description="An A2A-compliant agent for the OpenAgents network",
+        url=agent_url,
+        version="1.0.0",
+        default_input_modes=["text"],
+        default_output_modes=["text"],
+        capabilities=AgentCapabilities(streaming=False),
+        skills=[
+            AgentSkill(
+                id="chat",
+                name="Chat",
+                description="General conversation and Q&A",
+                tags=["chat", "assistant"],
+                examples=["Hello", "What can you do?"],
+            ),
+        ],
+    )
+
+
+async def announce_to_network(openagents_url: str, agent_url: str, agent_id: str) -> bool:
+    """Announce this agent to the OpenAgents network."""
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                openagents_url,
+                json={
+                    "jsonrpc": "2.0",
+                    "method": "agents/announce",
+                    "params": {"url": agent_url, "agent_id": agent_id},
+                    "id": "1",
+                },
+                timeout=10.0,
+            )
+            result = response.json()
+            return result.get("result", {}).get("success", False)
+        except Exception as e:
+            print(f"Failed to announce: {e}")
+            return False
+
+
+async def withdraw_from_network(openagents_url: str, agent_id: str) -> bool:
+    """Withdraw this agent from the OpenAgents network."""
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                openagents_url,
+                json={
+                    "jsonrpc": "2.0",
+                    "method": "agents/withdraw",
+                    "params": {"agent_id": agent_id},
+                    "id": "1",
+                },
+                timeout=10.0,
+            )
+            result = response.json()
+            return result.get("result", {}).get("success", False)
+        except Exception as e:
+            print(f"Failed to withdraw: {e}")
+            return False
+
+
+def main():
+    # Configuration
+    agent_id = "my-a2a-agent"
+    agent_host = "0.0.0.0"
+    agent_port = 9000
+    agent_url = f"http://localhost:{agent_port}"
+    openagents_url = "${a2aUrl}"
+
+    # Create agent card
+    agent_card = create_agent_card(agent_url)
+
+    # Create request handler with agent executor
+    request_handler = DefaultRequestHandler(
+        agent_executor=MyAgentExecutor(),
+        task_store=InMemoryTaskStore(),
+    )
+
+    # Create A2A server application
+    server = A2AStarletteApplication(
+        agent_card=agent_card,
+        http_handler=request_handler,
+    )
+
+    print(f"Starting A2A agent on http://{agent_host}:{agent_port}...")
+    print(f"OpenAgents network: {openagents_url}")
+    print("Press Ctrl+C to stop")
+
+    # Run the server with uvicorn
+    uvicorn.run(server.build(), host=agent_host, port=agent_port)
+
+
+if __name__ == "__main__":
+    main()`;
+  };
+
   // Get current code example
   const getCurrentCode = (): string => {
     switch (selectedTab) {
@@ -410,6 +573,8 @@ if __name__ == "__main__":
         return generateLangChainCode();
       case "mcp":
         return generateMCPCode();
+      case "a2a":
+        return generateA2ACode();
       default:
         return generatePythonCode();
     }
@@ -436,6 +601,11 @@ if __name__ == "__main__":
       id: "mcp",
       label: t('connectionGuide.tabs.mcp'),
       description: t('connectionGuide.mcpDescription'),
+    },
+    {
+      id: "a2a",
+      label: t('connectionGuide.tabs.a2a'),
+      description: t('connectionGuide.a2aDescription'),
     },
   ];
 

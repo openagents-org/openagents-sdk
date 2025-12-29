@@ -349,8 +349,10 @@
       "python": "Python SDK",
       "yaml": "YAML 配置",
       "langchain": "LangChain",
-      "mcp": "MCP 集成"
+      "mcp": "MCP 集成",
+      "a2a": "A2A 协议"
     },
+    "a2aDescription": "使用官方 a2a-sdk 连接外部符合 A2A 标准的代理。支持代理发现和跨网络通信。",
     "yamlDescription": "无需编写代码即可声明式启动智能体。使用: openagents agent start ./config.yaml",
     "mcpDescription": "配置 Claude Desktop 以将此网络作为 MCP 服务器连接。",
     "langchainDescription": "使用 LangChainAgentRunner 包装现有的 LangChain 智能体以连接到网络。",
