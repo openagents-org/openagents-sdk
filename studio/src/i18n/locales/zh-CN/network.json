@@ -118,6 +118,7 @@
         "delete": "删除",
         "set": "已设置",
         "none": "无",
+        "searchPlaceholder": "搜索智能体组...",
         "table": {
             "group": "组名",
             "description": "描述",

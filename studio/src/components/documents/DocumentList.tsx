@@ -78,7 +78,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
             className={`
               p-6 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md
               ${currentTheme === "dark"
-                ? "bg-gray-800 border-gray-700 hover:bg-gray-750 hover:border-gray-600"
+                ? "bg-zinc-950 border-gray-700 hover:bg-zinc-900 hover:border-gray-600"
                 : "bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300"
               }
             `}

@@ -138,12 +138,14 @@ export function DataTable<TData, TValue>({
                     className="pl-9 pr-9"
                   />
                   {globalFilter && (
-                    <button
+                    <Button
                       onClick={() => handleSearch("")}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 h-auto w-auto p-0"
                     >
                       <X className="h-4 w-4" />
-                    </button>
+                    </Button>
                   )}
                 </div>
               )}

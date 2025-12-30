@@ -1,7 +1,7 @@
-import React from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import { Button } from "@/components/layout/ui/button";
+import React from "react"
+import { useNavigate, useLocation } from "react-router-dom"
+import { useTranslation } from "react-i18next"
+import { Button } from "@/components/layout/ui/button"
 import {
   LayoutDashboard,
   Globe,
@@ -18,30 +18,30 @@ import {
   Bug,
   Cpu,
   Wrench,
-} from "lucide-react";
+} from "lucide-react"
 
 const AdminSidebar: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { t } = useTranslation("admin");
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { t } = useTranslation("admin")
 
   // Always show all admin items in admin sidebar
   // Since user has already accessed admin area, they should have admin privileges
   // This prevents menu flickering during loading states
 
   const isActive = (path: string) => {
-    const currentPath = location.pathname;
+    const currentPath = location.pathname
     // Exact match for dashboard
     if (path === "/admin/dashboard") {
       return (
         currentPath === "/admin" ||
         currentPath === "/admin/" ||
         currentPath === "/admin/dashboard"
-      );
+      )
     }
     // For other paths, check if current path starts with the path
-    return currentPath === path || currentPath.startsWith(path + "/");
-  };
+    return currentPath === path || currentPath.startsWith(path + "/")
+  }
 
   const navSections = [
     {
@@ -185,7 +185,7 @@ const AdminSidebar: React.FC = () => {
         },
       ],
     },
-  ];
+  ]
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
@@ -218,34 +218,39 @@ const AdminSidebar: React.FC = () => {
               {/* Section Items */}
               <div className="space-y-0.5">
                 {section.items.map((item) => {
-                  const active = isActive(item.path);
+                  const active = isActive(item.path)
                   // Check if icon is a React element (JSX) or a component
-                  const isJsxElement = React.isValidElement(item.icon);
-                  const IconComponent = item.icon as React.ComponentType<{ className?: string }>;
+                  const isJsxElement = React.isValidElement(item.icon)
+                  const IconComponent = item.icon as React.ComponentType<{
+                    className?: string
+                  }>
                   return (
                     <Button
                       key={item.id}
                       variant={active ? "secondary" : "ghost"}
                       mode="default"
-                      style={{ justifyContent: 'flex-start' }}
+                      style={{ justifyContent: "flex-start" }}
                       className={`
                         w-full h-9 px-4
-                        ${active
-                          ? "bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-300"
-                          : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                        ${
+                          active
+                            ? "bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-300"
+                            : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                         }
                         transition-colors duration-150
                       `}
                       onClick={() => navigate(item.path)}
                     >
                       {isJsxElement ? (
-                        <span className="flex-shrink-0 mr-3">{item.icon as React.ReactNode}</span>
+                        <span className="flex-shrink-0 mr-3">
+                          {item.icon as React.ReactNode}
+                        </span>
                       ) : (
                         <IconComponent className="w-5 h-5 flex-shrink-0 mr-3" />
                       )}
                       <span className="text-left">{item.label}</span>
                     </Button>
-                  );
+                  )
                 })}
               </div>
             </div>
@@ -253,7 +258,7 @@ const AdminSidebar: React.FC = () => {
         ))}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default AdminSidebar;
+export default AdminSidebar

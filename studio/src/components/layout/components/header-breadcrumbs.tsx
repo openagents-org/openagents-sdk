@@ -306,7 +306,7 @@ export function HeaderBreadcrumbs() {
   }
 
   return (
-    <div className="flex flex-row items-center gap-2 h-[var(--header-height)] px-4 lg:px-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+    <div className="flex flex-row items-center gap-2 h-[var(--header-height)] px-4 lg:px-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-zinc-950">
       {!isMobile && !isSidebarOpen && (
         <Button
           mode="icon"

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useWikiStore } from "@/stores/wikiStore";
@@ -18,7 +18,7 @@ import {
   CardToolbar,
 } from "@/components/layout/ui/card";
 import { EmptyState } from "@/components/layout/ui/empty-state";
-import { Plus, RefreshCw, Clock, Search, FileText } from "lucide-react";
+import { Plus, RefreshCw, Clock, Search, FileText, History } from "lucide-react";
 import { Input } from "@/components/layout/ui/input";
 
 const WikiPageList: React.FC = () => {
@@ -30,7 +30,7 @@ const WikiPageList: React.FC = () => {
   const context = useContext(OpenAgentsContext);
   const openAgentsService = context?.connector;
   const isConnected = context?.isConnected;
-  const { addRecentPage } = useRecentPagesStore();
+  const { recentPages: recentPagesData, addRecentPage } = useRecentPagesStore();
 
   const {
     pages,
@@ -81,6 +81,34 @@ const WikiPageList: React.FC = () => {
 
     return () => clearTimeout(timeoutId);
   }, [searchQuery, searchPages]);
+
+  // Get recently visited pages
+  const recentPages = useMemo(() => {
+    const currentPagePaths = new Set(pages.map((p) => p.page_path));
+    const validRecentPages = recentPagesData.filter((recentPage) =>
+      currentPagePaths.has(recentPage.page_path)
+    );
+
+    // Convert recent page data to WikiPage format
+    const recentWikiPages = validRecentPages.map((recentPage) => {
+      const fullPageData = pages.find(
+        (p) => p.page_path === recentPage.page_path
+      );
+      return (
+        fullPageData || {
+          page_path: recentPage.page_path,
+          title: recentPage.title,
+          last_modified: recentPage.visited_at / 1000,
+          wiki_content: recentPage.preview_content || "",
+          creator_id: "unknown",
+          created_at: recentPage.visited_at / 1000,
+          version: 1,
+        }
+      );
+    });
+
+    return recentWikiPages;
+  }, [recentPagesData, pages]);
 
   const handlePageClick = (pagePath: string) => {
     // First find the corresponding page object
@@ -146,8 +174,8 @@ const WikiPageList: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-900 p-6">
-      <Card variant="default" className="flex-1 flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden bg-white dark:bg-gray-800">
+      <Card variant="default" className="h-full flex flex-col border-0 rounded-none shadow-none">
         <CardHeader>
           <CardHeading>
             <CardTitle>{t("list.title")}</CardTitle>
@@ -160,26 +188,26 @@ const WikiPageList: React.FC = () => {
             {proposals.filter((p) => p.status === "pending").length > 0 && (
               <Button
                 onClick={() => navigate("/wiki/proposals")}
-                size="sm"
+                size="md"
                 className="bg-yellow-500 text-white hover:bg-yellow-600 shadow-xs shadow-black/5"
               >
-                <Clock className="w-4 h-4 mr-1" />
+                <Clock className="w-4 h-4 mr-1.5" />
                 {t("list.proposals", {
                   count: proposals.filter((p) => p.status === "pending").length,
                 })}
               </Button>
             )}
-            <Button onClick={loadPages} variant="outline" size="sm">
-              <RefreshCw className="w-4 h-4 mr-1" />
+            <Button onClick={loadPages} variant="outline" size="md">
+              <RefreshCw className="w-4 h-4 mr-1.5" />
               {t("list.refresh")}
             </Button>
-            <Button onClick={() => setShowCreateModal(true)} size="sm">
-              <Plus className="w-4 h-4 mr-1" />
+            <Button onClick={() => setShowCreateModal(true)} variant="primary" size="md">
+              <Plus className="w-4 h-4 mr-1.5" />
               {t("list.newPage")}
             </Button>
           </CardToolbar>
         </CardHeader>
-        <CardContent className="flex-1 overflow-auto">
+        <CardContent className="flex-1 overflow-hidden flex flex-col">
           {/* Search bar */}
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
@@ -193,8 +221,47 @@ const WikiPageList: React.FC = () => {
             />
           </div>
 
+          {/* Recent Pages Section */}
+          {recentPages.length > 0 && (
+            <Card variant="default" className="border border-gray-200 dark:border-gray-700 mb-4">
+              <CardHeader>
+                <CardHeading>
+                  <CardTitle className="text-base">
+                    最近访问
+                  </CardTitle>
+                </CardHeading>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2">
+                  {recentPages.map((page) => (
+                    <button
+                      key={page.page_path}
+                      onClick={() => handlePageClick(page.page_path)}
+                      className="text-left p-2 rounded-md border bg-white dark:bg-zinc-950 border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 group"
+                    >
+                      <div className="flex items-start justify-between gap-1.5">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-gray-900 dark:text-gray-100 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                            {page.title || t("list.untitled")}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="inline-flex items-center text-xs text-gray-500 dark:text-gray-400">
+                              <History className="w-3 h-3 mr-0.5" />
+                              {formatDateTime(page.last_modified)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Page list */}
-          {pages.length === 0 ? (
+          <div className="flex-1 overflow-auto">
+            {pages.length === 0 ? (
             <EmptyState
               icon={<FileText className="w-16 h-16" />}
               title={searchQuery ? t("list.noPagesFound") : t("list.noPages")}
@@ -221,7 +288,7 @@ const WikiPageList: React.FC = () => {
                 <div
                   key={page.page_path}
                   onClick={() => handlePageClick(page.page_path)}
-                  className="p-4 rounded-lg border cursor-pointer transition-all hover:shadow-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 hover:border-gray-300 dark:hover:border-gray-600"
+                  className="p-4 rounded-lg border cursor-pointer transition-all hover:shadow-lg bg-white dark:bg-zinc-950 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-zinc-900 hover:border-gray-300 dark:hover:border-gray-600"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -252,6 +319,7 @@ const WikiPageList: React.FC = () => {
               ))}
             </div>
           )}
+          </div>
         </CardContent>
       </Card>
 

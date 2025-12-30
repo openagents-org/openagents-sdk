@@ -7,6 +7,24 @@ import { useAuthStore } from "@/stores/authStore"
 import { useConfirm } from "@/context/ConfirmContext"
 import { Button } from "@/components/layout/ui/button"
 import { Badge } from "@/components/layout/ui/badge"
+import { Input, InputGroup, InputAddon } from "@/components/layout/ui/input"
+import { Label } from "@/components/layout/ui/label"
+import { Textarea } from "@/components/layout/ui/textarea"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardHeading,
+  CardTitle,
+} from "@/components/layout/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/layout/ui/dialog"
 import { DataTable } from "@/components/layout/ui/data-table"
 import {
   Select,
@@ -23,6 +41,9 @@ import {
   Star,
   Check,
   X,
+  Tag,
+  Lock,
+  Shield,
 } from "lucide-react"
 
 interface AgentGroupInfo {
@@ -495,19 +516,21 @@ const AgentGroupsManagement: React.FC = () => {
       },
       {
         accessorKey: "has_password",
-        header: t("groups.table.password"),
+        header: () => (
+          <div className="text-center">{t("groups.table.password")}</div>
+        ),
         cell: ({ row }) => {
           const group = row.original
           return group.has_password ? (
-            <span className="inline-flex items-center text-green-600 dark:text-green-400">
+            <div className="flex justify-center items-center text-green-600 dark:text-green-400">
               <Check className="w-4 h-4 mr-1" />
               {t("groups.set")}
-            </span>
+            </div>
           ) : (
-            <span className="inline-flex items-center text-gray-400">
+            <div className="flex justify-center items-center text-gray-400">
               <X className="w-4 h-4 mr-1" />
               {t("groups.none")}
-            </span>
+            </div>
           )
         },
       },
@@ -584,7 +607,7 @@ const AgentGroupsManagement: React.FC = () => {
   }
 
   return (
-    <div className="p-6 dark:bg-gray-800 h-full min-h-screen overflow-y-auto">
+    <div className="p-6 dark:bg-zinc-950 h-full min-h-screen overflow-y-auto">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
@@ -619,65 +642,77 @@ const AgentGroupsManagement: React.FC = () => {
       )}
 
       {/* Network Settings */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          {t("groups.networkSettings")}
-        </h2>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                {t("groups.defaultGroup")}
-              </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {t("groups.defaultGroupDesc")}
-              </p>
+      <Card variant="default" className="mb-6">
+        <CardHeader>
+          <CardHeading>
+            <CardTitle>{t("groups.networkSettings")}</CardTitle>
+          </CardHeading>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Default Group Setting */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+              <div className="space-y-1.5">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  {t("groups.defaultGroup")}
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                  {t("groups.defaultGroupDesc")}
+                </p>
+              </div>
+              <div className="flex items-start md:justify-end">
+                <Select value={defaultGroup} onValueChange={setDefaultGroup}>
+                  <SelectTrigger size="lg" className="w-full md:w-[240px]">
+                    <Users className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups.map((group) => (
+                      <SelectItem key={group.name} value={group.name}>
+                        {group.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <Select value={defaultGroup} onValueChange={setDefaultGroup}>
-              <SelectTrigger size="lg" className="w-[180px]">
-                <Users className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {groups.map((group) => (
-                  <SelectItem key={group.name} value={group.name}>
-                    {group.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                {t("groups.requirePassword")}
-              </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {t("groups.requirePasswordDesc")}
-              </p>
+
+            {/* Require Password Setting */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start pt-2">
+              <div className="space-y-1.5">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  {t("groups.requirePassword")}
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                  {t("groups.requirePasswordDesc")}
+                </p>
+              </div>
+              <div className="flex items-start md:justify-end">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={requiresPassword}
+                    onChange={(e) => setRequiresPassword(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={requiresPassword}
-                onChange={(e) => setRequiresPassword(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-            </label>
+
+            {/* Save Button */}
+            <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+              <Button
+                onClick={handleSaveNetworkSettings}
+                disabled={savingSettings}
+                variant="primary"
+              >
+                {savingSettings ? t("groups.saving") : t("groups.saveSettings")}
+              </Button>
+            </div>
           </div>
-          <div className="flex justify-end">
-            <Button
-              onClick={handleSaveNetworkSettings}
-              disabled={savingSettings}
-              variant="primary"
-              size="sm"
-            >
-              {savingSettings ? t("groups.saving") : t("groups.saveSettings")}
-            </Button>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Agent Groups Table */}
       <DataTable
@@ -693,7 +728,7 @@ const AgentGroupsManagement: React.FC = () => {
         emptyIcon={<Users className="w-12 h-12 text-gray-400" />}
         onRowClick={handleRowClick}
         toolbar={
-          <Button onClick={openCreateModal} size="sm">
+          <Button onClick={openCreateModal} variant="primary">
             <Plus className="w-4 h-4 mr-2" />
             {t("groups.create")}
           </Button>
@@ -800,248 +835,253 @@ const AgentGroupsManagement: React.FC = () => {
         )}
 
       {/* Create Group Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                  {t("groups.modal.createTitle")}
-                </h2>
-                <Button
-                  onClick={() => setShowCreateModal(false)}
-                  variant="ghost"
-                  size="sm"
-                >
-                  <X className="w-5 h-5" />
-                </Button>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t("groups.modal.name")} *
-                  </label>
-                  <input
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t("groups.modal.createTitle")}</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="group-name">{t("groups.modal.name")} *</Label>
+                <InputGroup>
+                  <InputAddon mode="icon">
+                    <Tag size={16} />
+                  </InputAddon>
+                  <Input
+                    id="group-name"
                     type="text"
                     value={formData.name}
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
                     }
-                    className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder={t("groups.modal.namePlaceholder")}
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t("groups.modal.description")}
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    rows={3}
-                    className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                    placeholder={t("groups.modal.descriptionPlaceholder")}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t("groups.modal.password")}
-                  </label>
-                  <input
+                </InputGroup>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="group-description">
+                  {t("groups.modal.description")}
+                </Label>
+                <Textarea
+                  id="group-description"
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  rows={3}
+                  placeholder={t("groups.modal.descriptionPlaceholder")}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="group-password">
+                  {t("groups.modal.password")}
+                </Label>
+                <InputGroup>
+                  <InputAddon mode="icon">
+                    <Lock size={16} />
+                  </InputAddon>
+                  <Input
+                    id="group-password"
                     type="password"
                     value={formData.password}
                     onChange={(e) =>
                       setFormData({ ...formData, password: e.target.value })
                     }
-                    className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="••••••••"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t("groups.modal.permissions")}
-                  </label>
-                  <input
+                </InputGroup>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="group-permissions">
+                  {t("groups.modal.permissions")}
+                </Label>
+                <InputGroup>
+                  <InputAddon mode="icon">
+                    <Shield size={16} />
+                  </InputAddon>
+                  <Input
+                    id="group-permissions"
                     type="text"
                     value={formData.permissions}
                     onChange={(e) =>
                       setFormData({ ...formData, permissions: e.target.value })
                     }
-                    className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder={t("groups.modal.permissionsPlaceholder")}
                   />
-                </div>
-                <div className="flex items-center justify-end gap-3 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
-                  <Button
-                    onClick={() => setShowCreateModal(false)}
-                    variant="outline"
-                  >
-                    {t("groups.modal.cancel")}
-                  </Button>
-                  <Button onClick={handleCreateGroup}>
-                    {t("groups.modal.create")}
-                  </Button>
-                </div>
+                </InputGroup>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </DialogBody>
+          <DialogFooter>
+            <Button onClick={() => setShowCreateModal(false)} variant="outline">
+              {t("groups.modal.cancel")}
+            </Button>
+            <Button onClick={handleCreateGroup} variant="primary">
+              {t("groups.modal.create")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Group Modal */}
-      {showEditModal && editingGroup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                  {t("groups.modal.editTitle", { name: editingGroup.name })}
-                </h2>
-                <Button
-                  onClick={() => {
-                    setShowEditModal(false)
-                    setEditingGroup(null)
-                  }}
-                  variant="ghost"
-                  size="sm"
-                >
-                  <X className="w-5 h-5" />
-                </Button>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t("groups.modal.name")}
-                  </label>
-                  <input
+      <Dialog
+        open={showEditModal}
+        onOpenChange={(open) => {
+          setShowEditModal(open)
+          if (!open) setEditingGroup(null)
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {t("groups.modal.editTitle", { name: editingGroup?.name })}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-group-name">
+                  {t("groups.modal.name")}
+                </Label>
+                <InputGroup>
+                  <InputAddon mode="icon">
+                    <Tag size={16} />
+                  </InputAddon>
+                  <Input
+                    id="edit-group-name"
                     type="text"
                     value={formData.name}
                     disabled
-                    className="w-full p-3 rounded-lg border bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                   />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {t("groups.modal.nameCannotChange")}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t("groups.modal.description")}
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    rows={3}
-                    className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                    placeholder={t("groups.modal.descriptionPlaceholder")}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t("groups.modal.permissions")}
-                  </label>
-                  <input
+                </InputGroup>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {t("groups.modal.nameCannotChange")}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-group-description">
+                  {t("groups.modal.description")}
+                </Label>
+                <Textarea
+                  id="edit-group-description"
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  rows={3}
+                  placeholder={t("groups.modal.descriptionPlaceholder")}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-group-permissions">
+                  {t("groups.modal.permissions")}
+                </Label>
+                <InputGroup>
+                  <InputAddon mode="icon">
+                    <Shield size={16} />
+                  </InputAddon>
+                  <Input
+                    id="edit-group-permissions"
                     type="text"
                     value={formData.permissions}
                     onChange={(e) =>
                       setFormData({ ...formData, permissions: e.target.value })
                     }
-                    className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder={t("groups.modal.permissionsPlaceholder")}
                   />
-                </div>
-                <div className="flex items-center justify-end gap-3 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
-                  <Button
-                    onClick={() => {
-                      setShowEditModal(false)
-                      setEditingGroup(null)
-                    }}
-                    variant="outline"
-                  >
-                    {t("groups.modal.cancel")}
-                  </Button>
-                  <Button onClick={handleUpdateGroup}>
-                    {t("groups.modal.update")}
-                  </Button>
-                </div>
+                </InputGroup>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setShowEditModal(false)
+                setEditingGroup(null)
+              }}
+              variant="outline"
+            >
+              {t("groups.modal.cancel")}
+            </Button>
+            <Button onClick={handleUpdateGroup} variant="primary">
+              {t("groups.modal.update")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Change Password Modal */}
-      {showChangePasswordModal && changingPasswordGroup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                  {t("groups.changePassword.modal.title", {
-                    group: changingPasswordGroup,
-                  })}
-                </h2>
-                <Button
-                  onClick={() => {
-                    setShowChangePasswordModal(false)
-                    setChangingPasswordGroup(null)
-                    setNewPassword("")
-                  }}
-                  variant="ghost"
-                  size="sm"
-                >
-                  <X className="w-5 h-5" />
-                </Button>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t("groups.changePassword.modal.newPasswordLabel")}
-                  </label>
-                  <input
+      <Dialog
+        open={showChangePasswordModal}
+        onOpenChange={(open) => {
+          setShowChangePasswordModal(open)
+          if (!open) {
+            setChangingPasswordGroup(null)
+            setNewPassword("")
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {t("groups.changePassword.modal.title", {
+                group: changingPasswordGroup,
+              })}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">
+                  {t("groups.changePassword.modal.newPasswordLabel")}
+                </Label>
+                <InputGroup>
+                  <InputAddon mode="icon">
+                    <Lock size={16} />
+                  </InputAddon>
+                  <Input
+                    id="new-password"
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full p-3 rounded-lg border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder={t(
                       "groups.changePassword.modal.newPasswordPlaceholder"
                     )}
                     disabled={changingPassword}
                   />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {t("groups.changePassword.modal.passwordHint")}
-                  </p>
-                </div>
-                <div className="flex items-center justify-end gap-3 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
-                  <Button
-                    onClick={() => {
-                      setShowChangePasswordModal(false)
-                      setChangingPasswordGroup(null)
-                      setNewPassword("")
-                    }}
-                    disabled={changingPassword}
-                    variant="outline"
-                  >
-                    {t("groups.changePassword.modal.cancel")}
-                  </Button>
-                  <Button
-                    onClick={handleChangePassword}
-                    disabled={changingPassword || !newPassword.trim()}
-                    className="bg-amber-600 hover:bg-amber-700"
-                  >
-                    {changingPassword
-                      ? t("groups.changePassword.modal.changing")
-                      : t("groups.changePassword.modal.confirm")}
-                  </Button>
-                </div>
+                </InputGroup>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {t("groups.changePassword.modal.passwordHint")}
+                </p>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setShowChangePasswordModal(false)
+                setChangingPasswordGroup(null)
+                setNewPassword("")
+              }}
+              disabled={changingPassword}
+              variant="outline"
+            >
+              {t("groups.changePassword.modal.cancel")}
+            </Button>
+            <Button
+              onClick={handleChangePassword}
+              disabled={changingPassword || !newPassword.trim()}
+              variant="primary"
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              {changingPassword
+                ? t("groups.changePassword.modal.changing")
+                : t("groups.changePassword.modal.confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

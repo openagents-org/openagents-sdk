@@ -1,25 +1,31 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import { Button } from "@/components/layout/ui/button";
-import { Badge } from "@/components/layout/ui/badge";
-import { Users, MessageCircle, Clock, HelpCircle, RefreshCw } from "lucide-react";
+import React from "react"
+import { useNavigate } from "react-router-dom"
+import { useTranslation } from "react-i18next"
+import { Button } from "@/components/layout/ui/button"
+import { Badge } from "@/components/layout/ui/badge"
+import {
+  Users,
+  MessageCircle,
+  Clock,
+  HelpCircle,
+  RefreshCw,
+} from "lucide-react"
 
 interface DashboardStats {
-  totalAgents: number;
-  onlineAgents: number;
-  activeChannels: number;
-  totalChannels: number;
-  uptime: string;
-  eventsPerMinute: number;
-  totalGroups: number;
+  totalAgents: number
+  onlineAgents: number
+  activeChannels: number
+  totalChannels: number
+  uptime: string
+  eventsPerMinute: number
+  totalGroups: number
 }
 
 interface DashboardToolbarProps {
-  stats: DashboardStats;
-  refreshing: boolean;
-  onRefresh: () => void;
-  onStartTour: () => void;
+  stats: DashboardStats
+  refreshing: boolean
+  onRefresh: () => void
+  onStartTour: () => void
 }
 
 const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
@@ -28,8 +34,8 @@ const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
   onRefresh,
   onStartTour,
 }) => {
-  const { t } = useTranslation("admin");
-  const navigate = useNavigate();
+  const { t } = useTranslation("admin")
+  const navigate = useNavigate()
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -39,26 +45,26 @@ const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
           <Badge
             variant="info"
             appearance="light"
-            size="sm"
             shape="default"
             className="cursor-pointer"
             onClick={() => navigate("/admin/agents")}
           >
             <Users className="w-3 h-3 mr-1" />
-            {stats.onlineAgents}/{stats.totalAgents} {t("dashboard.stats.agents")}
+            {stats.onlineAgents}/{stats.totalAgents}{" "}
+            {t("dashboard.stats.agents")}
           </Badge>
           <Badge
             variant="success"
             appearance="light"
-            size="sm"
             shape="default"
             className="cursor-pointer"
             onClick={() => navigate("/admin/events")}
           >
             <MessageCircle className="w-3 h-3 mr-1" />
-            {stats.activeChannels}/{stats.totalChannels} {t("dashboard.stats.channels")}
+            {stats.activeChannels}/{stats.totalChannels}{" "}
+            {t("dashboard.stats.channels")}
           </Badge>
-          <Badge variant="info" appearance="light" size="sm" shape="default">
+          <Badge variant="info" appearance="light" shape="default">
             <Clock className="w-3 h-3 mr-1" />
             {stats.uptime}
           </Badge>
@@ -69,19 +75,20 @@ const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
         <Button
           onClick={onStartTour}
           variant="outline"
-          size="sm"
           title={t("dashboard.quickActions.startTour")}
         >
           <HelpCircle className="w-3 h-3 mr-1.5" />
           {t("dashboard.quickActions.startTour")}
         </Button>
-        <Button onClick={onRefresh} disabled={refreshing} variant="outline" size="sm">
-          <RefreshCw className={`w-3 h-3 mr-1.5 ${refreshing ? "animate-spin" : ""}`} />
+        <Button onClick={onRefresh} disabled={refreshing} variant="outline">
+          <RefreshCw
+            className={`w-3 h-3 mr-1.5 ${refreshing ? "animate-spin" : ""}`}
+          />
           {refreshing ? t("dashboard.refreshing") : t("dashboard.refresh")}
         </Button>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default DashboardToolbar;
+export default DashboardToolbar

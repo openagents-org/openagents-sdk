@@ -12,7 +12,15 @@ import type { LLMLogEntry } from "@/types/llmLogs"
 import { DataTable } from "@/components/layout/ui/data-table"
 import { Button } from "@/components/layout/ui/button"
 import { Input } from "@/components/layout/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardHeading, CardTitle, CardToolbar } from "@/components/layout/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardHeading,
+  CardTitle,
+  CardToolbar,
+} from "@/components/layout/ui/card"
 import { Badge } from "@/components/layout/ui/badge"
 import {
   Select,
@@ -202,9 +210,7 @@ const LLMLogsView: React.FC = () => {
       },
       {
         id: "actions",
-        header: () => (
-          <div className="text-center">{t("table.actions")}</div>
-        ),
+        header: () => <div className="text-center">{t("table.actions")}</div>,
         cell: ({ row }) => (
           <div className="text-center">
             <Button
@@ -225,7 +231,7 @@ const LLMLogsView: React.FC = () => {
   )
 
   return (
-    <div className="h-full p-6 bg-gray-50 dark:bg-gray-900 overflow-auto">
+    <div className="h-full p-6 bg-gray-50 dark:bg-zinc-950 overflow-auto">
       <Card variant="default" className="h-full flex flex-col">
         <CardHeader>
           <CardHeading>
@@ -247,291 +253,300 @@ const LLMLogsView: React.FC = () => {
               variant="outline"
               size="sm"
             >
-              <RefreshCw className={`w-4 h-4 mr-1 ${logsLoading ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`w-4 h-4 mr-1 ${logsLoading ? "animate-spin" : ""}`}
+              />
               {t("header.refresh")}
             </Button>
           </CardToolbar>
         </CardHeader>
         <CardContent className="flex-1 overflow-auto space-y-4">
-        {/* Stats Cards */}
-        {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
-            <Card className="border-gray-200 dark:border-gray-700">
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <Hash className="w-3.5 h-3.5 text-gray-400" />
-                  <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">
-                    {t("stats.totalCalls")}
-                  </span>
-                </div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {stats.total_calls}
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-gray-200 dark:border-gray-700">
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <Zap className="w-3.5 h-3.5 text-blue-500" />
-                  <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">
-                    {t("stats.totalTokens")}
-                  </span>
-                </div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {stats.total_tokens.toLocaleString()}
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-gray-200 dark:border-gray-700">
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <MessageSquare className="w-3.5 h-3.5 text-green-500" />
-                  <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">
-                    {t("stats.promptTokens")}
-                  </span>
-                </div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {stats.total_prompt_tokens.toLocaleString()}
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-gray-200 dark:border-gray-700">
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <MessageSquare className="w-3.5 h-3.5 text-purple-500" />
-                  <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">
-                    {t("stats.completionTokens")}
-                  </span>
-                </div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {stats.total_completion_tokens.toLocaleString()}
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-gray-200 dark:border-gray-700">
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <Clock className="w-3.5 h-3.5 text-orange-500" />
-                  <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">
-                    {t("stats.avgLatency")}
-                  </span>
-                </div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {formatLatency(stats.average_latency_ms)}
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-gray-200 dark:border-gray-700">
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-500" />
-                  <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">
-                    {t("stats.errors")}
-                  </span>
-                </div>
-                <div className="text-lg font-semibold text-red-600 dark:text-red-400">
-                  {stats.error_count}
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-gray-200 dark:border-gray-700">
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <Cpu className="w-3.5 h-3.5 text-indigo-500" />
-                  <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">
-                    {t("stats.models")}
-                  </span>
-                </div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {Object.keys(stats.models || {}).length}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Filters */}
-        <Card className="mb-6 border-gray-200 dark:border-gray-700">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                <Filter className="w-4 h-4" />
-                {filtersExpanded
-                  ? t("filters.expanded")
-                  : t("filters.expandHint")}
-              </div>
-              <Button
-                onClick={() => setFiltersExpanded((prev) => !prev)}
-                variant="ghost"
-                size="sm"
-              >
-                {filtersExpanded ? t("filters.hide") : t("filters.show")}
-                {filtersExpanded ? (
-                  <ChevronUp className="w-4 h-4 ml-1" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 ml-1" />
-                )}
-              </Button>
+          {/* Stats Cards */}
+          {stats && (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+              <Card className="border-gray-200 dark:border-gray-700">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Hash className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">
+                      {t("stats.totalCalls")}
+                    </span>
+                  </div>
+                  <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {stats.total_calls}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-gray-200 dark:border-gray-700">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Zap className="w-3.5 h-3.5 text-blue-500" />
+                    <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">
+                      {t("stats.totalTokens")}
+                    </span>
+                  </div>
+                  <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {stats.total_tokens.toLocaleString()}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-gray-200 dark:border-gray-700">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <MessageSquare className="w-3.5 h-3.5 text-green-500" />
+                    <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">
+                      {t("stats.promptTokens")}
+                    </span>
+                  </div>
+                  <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {stats.total_prompt_tokens.toLocaleString()}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-gray-200 dark:border-gray-700">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <MessageSquare className="w-3.5 h-3.5 text-purple-500" />
+                    <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">
+                      {t("stats.completionTokens")}
+                    </span>
+                  </div>
+                  <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {stats.total_completion_tokens.toLocaleString()}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-gray-200 dark:border-gray-700">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Clock className="w-3.5 h-3.5 text-orange-500" />
+                    <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">
+                      {t("stats.avgLatency")}
+                    </span>
+                  </div>
+                  <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {formatLatency(stats.average_latency_ms)}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-gray-200 dark:border-gray-700">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <AlertCircle className="w-3.5 h-3.5 text-red-500" />
+                    <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">
+                      {t("stats.errors")}
+                    </span>
+                  </div>
+                  <div className="text-lg font-semibold text-red-600 dark:text-red-400">
+                    {stats.error_count}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-gray-200 dark:border-gray-700">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Cpu className="w-3.5 h-3.5 text-indigo-500" />
+                    <span className="text-xs text-gray-500 dark:text-gray-400 uppercase">
+                      {t("stats.models")}
+                    </span>
+                  </div>
+                  <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {Object.keys(stats.models || {}).length}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
+          )}
 
-            {filtersExpanded && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-1.5">
-                      {t("filters.search")}
-                    </label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <Input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder={t("filters.searchPlaceholder")}
-                        variant="lg"
-                        className="pl-9"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-1.5">
-                      {t("filters.model")}
-                    </label>
-                    <Select value={modelFilter} onValueChange={setModelFilter}>
-                      <SelectTrigger size="lg">
-                        <Cpu className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
-                        <SelectValue placeholder={t("filters.allModels")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">
-                          {t("filters.allModels")}
-                        </SelectItem>
-                        {availableModels.map((model) => (
-                          <SelectItem key={model} value={model}>
-                            {model}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-1.5">
-                      {t("filters.startDate")}
-                    </label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <Input
-                        type="text"
-                        lang="en"
-                        placeholder="YYYY-MM-DD"
-                        onFocus={(e) => {
-                          e.target.type = "date"
-                          e.target.showPicker?.()
-                        }}
-                        onBlur={(e) => {
-                          if (!e.target.value) {
-                            e.target.type = "text"
-                          }
-                        }}
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        variant="lg"
-                        className="pl-9"
-                        title={t("filters.startDateTitle")}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-1.5">
-                      {t("filters.errorFilter")}
-                    </label>
-                    <Select
-                      value={hasErrorFilter}
-                      onValueChange={setHasErrorFilter}
-                    >
-                      <SelectTrigger size="lg">
-                        <AlertCircle className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
-                        <SelectValue placeholder={t("filters.all")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t("filters.all")}</SelectItem>
-                        <SelectItem value="true">
-                          {t("filters.errorsOnly")}
-                        </SelectItem>
-                        <SelectItem value="false">
-                          {t("filters.successOnly")}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+          {/* Filters */}
+          <Card className="mb-6 border-gray-200 dark:border-gray-700">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                  <Filter className="w-4 h-4" />
+                  {filtersExpanded
+                    ? t("filters.expanded")
+                    : t("filters.expandHint")}
                 </div>
-
-                <div className="flex items-center justify-between pt-2">
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {Object.keys(filters).length > 0 || searchQuery
-                      ? t("filters.applied")
-                      : t("filters.notApplied")}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      onClick={handleApplyFilters}
-                      variant="primary"
-                      size="sm"
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      {t("actions.applyFilters")}
-                    </Button>
-                    <Button
-                      onClick={handleResetFilters}
-                      variant="outline"
-                      size="sm"
-                    >
-                      {t("actions.resetFilters")}
-                    </Button>
-                  </div>
-                </div>
+                <Button
+                  onClick={() => setFiltersExpanded((prev) => !prev)}
+                  variant="ghost"
+                  size="sm"
+                >
+                  {filtersExpanded ? t("filters.hide") : t("filters.show")}
+                  {filtersExpanded ? (
+                    <ChevronUp className="w-4 h-4 ml-1" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 ml-1" />
+                  )}
+                </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
 
-        {/* Error Message */}
-        {logsError && (
-          <Card className="mb-4 border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10">
-            <CardContent className="p-3 flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-600 dark:text-red-400">
-                {logsError}
-              </p>
+              {filtersExpanded && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-1.5">
+                        {t("filters.search")}
+                      </label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Input
+                          type="text"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder={t("filters.searchPlaceholder")}
+                          variant="lg"
+                          className="pl-9"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-1.5">
+                        {t("filters.model")}
+                      </label>
+                      <Select
+                        value={modelFilter}
+                        onValueChange={setModelFilter}
+                      >
+                        <SelectTrigger size="lg">
+                          <Cpu className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
+                          <SelectValue placeholder={t("filters.allModels")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">
+                            {t("filters.allModels")}
+                          </SelectItem>
+                          {availableModels.map((model) => (
+                            <SelectItem key={model} value={model}>
+                              {model}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-1.5">
+                        {t("filters.startDate")}
+                      </label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Input
+                          type="text"
+                          lang="en"
+                          placeholder="YYYY-MM-DD"
+                          onFocus={(e) => {
+                            e.target.type = "date"
+                            e.target.showPicker?.()
+                          }}
+                          onBlur={(e) => {
+                            if (!e.target.value) {
+                              e.target.type = "text"
+                            }
+                          }}
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                          variant="lg"
+                          className="pl-9"
+                          title={t("filters.startDateTitle")}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-1.5">
+                        {t("filters.errorFilter")}
+                      </label>
+                      <Select
+                        value={hasErrorFilter}
+                        onValueChange={setHasErrorFilter}
+                      >
+                        <SelectTrigger size="lg">
+                          <AlertCircle className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
+                          <SelectValue placeholder={t("filters.all")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">
+                            {t("filters.all")}
+                          </SelectItem>
+                          <SelectItem value="true">
+                            {t("filters.errorsOnly")}
+                          </SelectItem>
+                          <SelectItem value="false">
+                            {t("filters.successOnly")}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {Object.keys(filters).length > 0 || searchQuery
+                        ? t("filters.applied")
+                        : t("filters.notApplied")}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={handleApplyFilters}
+                        variant="primary"
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        {t("actions.applyFilters")}
+                      </Button>
+                      <Button
+                        onClick={handleResetFilters}
+                        variant="outline"
+                        size="sm"
+                      >
+                        {t("actions.resetFilters")}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
-        )}
 
-        {/* Logs Table */}
-        <DataTable
-          columns={columns}
-          data={logs}
-          loading={logsLoading}
-          searchable={false}
-          pagination={true}
-          pageSize={20}
-          emptyMessage={t("list.noLogs")}
-          emptyIcon={<MessageSquare className="w-12 h-12 text-gray-400" />}
-          onRowClick={(row) => setSelectedLog(row)}
-          toolbar={
-            <Button
-              onClick={() => refreshLogs()}
-              disabled={logsLoading}
-              variant="outline"
-              size="sm"
-            >
-              <RefreshCw
-                className={`w-4 h-4 mr-1.5 ${logsLoading ? "animate-spin" : ""}`}
-              />
-              {t("actions.refresh")}
-            </Button>
-          }
-        />
+          {/* Error Message */}
+          {logsError && (
+            <Card className="mb-4 border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10">
+              <CardContent className="p-3 flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-600 dark:text-red-400">
+                  {logsError}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Logs Table */}
+          <DataTable
+            columns={columns}
+            data={logs}
+            loading={logsLoading}
+            searchable={false}
+            pagination={true}
+            pageSize={20}
+            emptyMessage={t("list.noLogs")}
+            emptyIcon={<MessageSquare className="w-12 h-12 text-gray-400" />}
+            onRowClick={(row) => setSelectedLog(row)}
+            toolbar={
+              <Button
+                onClick={() => refreshLogs()}
+                disabled={logsLoading}
+                variant="outline"
+                size="sm"
+              >
+                <RefreshCw
+                  className={`w-4 h-4 mr-1.5 ${
+                    logsLoading ? "animate-spin" : ""
+                  }`}
+                />
+                {t("actions.refresh")}
+              </Button>
+            }
+          />
         </CardContent>
       </Card>
 

@@ -116,7 +116,7 @@ const WikiCreateModal: React.FC<WikiCreateModalProps> = ({
         </DialogBody>
 
         <DialogFooter>
-          <Button type="button" onClick={onClose} size="sm" variant="outline">
+          <Button type="button" onClick={onClose} variant="outline">
             {t("createModal.cancel")}
           </Button>
           <Button
@@ -124,7 +124,6 @@ const WikiCreateModal: React.FC<WikiCreateModalProps> = ({
             form="wiki-form"
             disabled={!pagePath.trim() || !title.trim() || !content.trim()}
             variant="primary"
-            className="bg-blue-500 text-white"
           >
             {t("createModal.create")}
           </Button>

@@ -671,7 +671,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 overflow-y-auto p-4 scroll-smooth bg-white dark:bg-slate-800">
+      <div className="flex-1 overflow-y-auto p-4 scroll-smooth bg-white dark:bg-zinc-950">
         <style>{MESSAGE_DISPLAY_STYLES}</style>
         <div className="flex items-center justify-center h-48 text-center text-base text-slate-500 dark:text-slate-400">
           <div>
@@ -694,7 +694,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
       buildThreadStructureForThreadMessages(threadMessages)
 
     return (
-      <div className="flex-1 overflow-y-auto p-4 scroll-smooth bg-white dark:bg-slate-800">
+      <div className="flex-1 overflow-y-auto p-4 scroll-smooth bg-white dark:bg-zinc-950">
         <style>{MESSAGE_DISPLAY_STYLES}</style>
         {rootMessageIds.map((messageId, index) =>
           renderThreadMessage(messageId, structure, 0, index)
@@ -709,7 +709,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
     if (renderMode === "flat") {
       // Flat mode: simply display all messages in chronological order
       return (
-        <div className="flex-1 overflow-y-auto p-4 scroll-smooth bg-white dark:bg-slate-800">
+        <div className="flex-1 overflow-y-auto p-4 scroll-smooth bg-white dark:bg-zinc-950">
           <style>{MESSAGE_DISPLAY_STYLES}</style>
           {unifiedMessages.map((message, index) =>
             renderUnifiedMessage(message, 0, undefined, index)
@@ -722,7 +722,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
       const messageTree = buildMessageTree(unifiedMessages)
 
       return (
-        <div className="flex-1 overflow-y-auto p-4 scroll-smooth bg-white dark:bg-slate-800">
+        <div className="flex-1 overflow-y-auto p-4 scroll-smooth bg-white dark:bg-zinc-950">
           <style>{MESSAGE_DISPLAY_STYLES}</style>
           {messageTree.map((node, index) =>
             renderUnifiedMessage(node.message, 0, node.children, index)

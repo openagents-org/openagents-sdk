@@ -1,43 +1,43 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useTranslation } from "react-i18next";
+import React, { useState, useEffect, useCallback } from "react"
+import { useTranslation } from "react-i18next"
 import {
   getSavedAgentNameForNetwork,
   saveAgentNameForNetwork,
-} from "@/utils/cookies";
+} from "@/utils/cookies"
 import {
   generateRandomAgentName,
   isValidName,
   getAvatarInitials,
-} from "@/utils/utils";
-import { useAuthStore } from "@/stores/authStore";
-import { useNavigate } from "react-router-dom";
-import { hashPassword } from "@/utils/passwordHash";
-import { networkFetch } from "@/utils/httpClient";
-import LanguageSwitcher from "@/components/common/LanguageSwitcher";
-import { Button } from "@/components/layout/ui/button";
-import { Input, InputGroup, InputAddon } from "@/components/layout/ui/input";
-import { Label } from "@/components/layout/ui/label";
+} from "@/utils/utils"
+import { useAuthStore } from "@/stores/authStore"
+import { useNavigate } from "react-router-dom"
+import { hashPassword } from "@/utils/passwordHash"
+import { networkFetch } from "@/utils/httpClient"
+import LanguageSwitcher from "@/components/common/LanguageSwitcher"
+import { Button } from "@/components/layout/ui/button"
+import { Input, InputGroup, InputAddon } from "@/components/layout/ui/input"
+import { Label } from "@/components/layout/ui/label"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/layout/ui/select';
-import { Loader2, RefreshCw, ArrowLeft, User, Lock, Users } from "lucide-react";
+} from "@/components/layout/ui/select"
+import { Loader2, RefreshCw, ArrowLeft, User, Lock, Users } from "lucide-react"
 
 // Interface for group configuration from /api/health
 interface GroupConfig {
-  name: string;
-  description?: string;
-  has_password: boolean;
-  agent_count?: number;
-  metadata?: Record<string, any>;
+  name: string
+  description?: string
+  has_password: boolean
+  agent_count?: number
+  metadata?: Record<string, any>
 }
 
 const AgentNamePicker: React.FC = () => {
-  const { t } = useTranslation("auth");
-  const navigate = useNavigate();
+  const { t } = useTranslation("auth")
+  const navigate = useNavigate()
   const {
     selectedNetwork,
     setAgentName,
@@ -45,57 +45,57 @@ const AgentNamePicker: React.FC = () => {
     clearNetwork,
     setPasswordHash,
     setAgentGroup,
-  } = useAuthStore();
+  } = useAuthStore()
 
-  const [pageAgentName, setPageAgentName] = useState<string | null>(null);
-  const [savedAgentName, setSavedAgentName] = useState<string | null>(null);
-  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [pageAgentName, setPageAgentName] = useState<string | null>(null)
+  const [savedAgentName, setSavedAgentName] = useState<string | null>(null)
+  const [isVerifying, setIsVerifying] = useState<boolean>(false)
 
   // Admin mode state (separate from group selection)
-  const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
-  const [adminPassword, setAdminPassword] = useState<string>("");
-  const [passwordError, setPasswordError] = useState<string>("");
+  const [isAdminMode, setIsAdminMode] = useState<boolean>(false)
+  const [adminPassword, setAdminPassword] = useState<string>("")
+  const [passwordError, setPasswordError] = useState<string>("")
 
   // Group selection state
-  const [availableGroups, setAvailableGroups] = useState<GroupConfig[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-  const [defaultGroup, setDefaultGroup] = useState<string>("guest");
-  const [isLoadingGroups, setIsLoadingGroups] = useState<boolean>(true);
-  const [showAdminButton, setShowAdminButton] = useState<boolean>(false);
+  const [availableGroups, setAvailableGroups] = useState<GroupConfig[]>([])
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
+  const [defaultGroup, setDefaultGroup] = useState<string>("guest")
+  const [isLoadingGroups, setIsLoadingGroups] = useState<boolean>(true)
+  const [showAdminButton, setShowAdminButton] = useState<boolean>(false)
 
   // Password for selected group (non-admin groups that require password)
-  const [groupPassword, setGroupPassword] = useState<string>("");
+  const [groupPassword, setGroupPassword] = useState<string>("")
 
   // Check if current agent name is reserved
-  const isReservedAgentName = pageAgentName?.trim().toLowerCase() === "admin";
+  const isReservedAgentName = pageAgentName?.trim().toLowerCase() === "admin"
 
   const handleRandomize = useCallback(() => {
-    setPageAgentName(generateRandomAgentName());
-  }, [setPageAgentName]);
+    setPageAgentName(generateRandomAgentName())
+  }, [setPageAgentName])
 
   // Load saved agent name
   useEffect(() => {
-    if (!selectedNetwork) return;
+    if (!selectedNetwork) return
     const savedName = getSavedAgentNameForNetwork(
       selectedNetwork.host,
       selectedNetwork.port
-    );
+    )
 
     // Ignore "admin" as it's a reserved name
     if (savedName && savedName.toLowerCase() !== "admin") {
-      setSavedAgentName(savedName);
-      setPageAgentName(savedName);
+      setSavedAgentName(savedName)
+      setPageAgentName(savedName)
     } else {
-      handleRandomize();
+      handleRandomize()
     }
-  }, [selectedNetwork, handleRandomize, setPageAgentName]);
+  }, [selectedNetwork, handleRandomize, setPageAgentName])
 
   // Fetch network configuration and available groups
   useEffect(() => {
     const fetchNetworkConfig = async () => {
-      if (!selectedNetwork) return;
+      if (!selectedNetwork) return
 
-      setIsLoadingGroups(true);
+      setIsLoadingGroups(true)
       try {
         const response = await networkFetch(
           selectedNetwork.host,
@@ -109,27 +109,26 @@ const AgentNamePicker: React.FC = () => {
             useHttps: selectedNetwork.useHttps,
             networkId: selectedNetwork.networkId,
           }
-        );
+        )
 
         if (response.ok) {
-          const healthData = await response.json();
+          const healthData = await response.json()
 
           // Extract group configuration
-          const groupConfig: GroupConfig[] =
-            healthData.data?.group_config || [];
+          const groupConfig: GroupConfig[] = healthData.data?.group_config || []
           const defaultGroupName =
-            healthData.data?.default_agent_group || "guest";
+            healthData.data?.default_agent_group || "guest"
 
           // Check if admin group exists
           const hasAdminGroup =
             Array.isArray(groupConfig) &&
-            groupConfig.some((group) => group.name === "admin");
-          setShowAdminButton(hasAdminGroup);
+            groupConfig.some((group) => group.name === "admin")
+          setShowAdminButton(hasAdminGroup)
 
           // Filter out admin group from available groups for dropdown
           const nonAdminGroups = groupConfig.filter(
             (group) => group.name !== "admin"
-          );
+          )
 
           // If no non-admin groups are configured, create a default fallback group
           if (nonAdminGroups.length === 0) {
@@ -137,68 +136,68 @@ const AgentNamePicker: React.FC = () => {
               name: defaultGroupName,
               description: t("agentSetup.defaultAgentGroup"),
               has_password: false,
-            };
-            setAvailableGroups([fallbackGroup]);
+            }
+            setAvailableGroups([fallbackGroup])
           } else {
-            setAvailableGroups(nonAdminGroups);
+            setAvailableGroups(nonAdminGroups)
           }
 
-          setDefaultGroup(defaultGroupName);
+          setDefaultGroup(defaultGroupName)
 
           // Pre-select the default group (if it's not admin)
           const defaultToSelect =
             defaultGroupName !== "admin"
               ? defaultGroupName
-              : nonAdminGroups[0]?.name || "guest";
-          setSelectedGroup(defaultToSelect);
+              : nonAdminGroups[0]?.name || "guest"
+          setSelectedGroup(defaultToSelect)
 
-          console.log("Available groups (excluding admin):", nonAdminGroups);
-          console.log("Default group:", defaultGroupName);
-          console.log("Has admin group:", hasAdminGroup);
+          console.log("Available groups (excluding admin):", nonAdminGroups)
+          console.log("Default group:", defaultGroupName)
+          console.log("Has admin group:", hasAdminGroup)
         }
       } catch (error) {
-        console.error("Failed to fetch network config:", error);
+        console.error("Failed to fetch network config:", error)
         // On error, provide a default fallback group so users can still connect
-        const fallbackGroupName = "guest";
+        const fallbackGroupName = "guest"
         const fallbackGroup: GroupConfig = {
           name: fallbackGroupName,
           description: t("agentSetup.defaultAgentGroup"),
           has_password: false,
-        };
-        setAvailableGroups([fallbackGroup]);
-        setSelectedGroup(fallbackGroupName);
+        }
+        setAvailableGroups([fallbackGroup])
+        setSelectedGroup(fallbackGroupName)
       } finally {
-        setIsLoadingGroups(false);
+        setIsLoadingGroups(false)
       }
-    };
+    }
 
-    fetchNetworkConfig();
-  }, [selectedNetwork, t]);
+    fetchNetworkConfig()
+  }, [selectedNetwork, t])
 
   // Get the selected group's configuration
   const selectedGroupConfig = availableGroups.find(
     (g) => g.name === selectedGroup
-  );
+  )
 
   // Determine if password is required based on selected group
   const selectedGroupRequiresPassword =
-    selectedGroupConfig?.has_password ?? false;
+    selectedGroupConfig?.has_password ?? false
 
   const onBack = useCallback(() => {
-    clearAgentName();
-    clearNetwork();
-  }, [clearAgentName, clearNetwork]);
+    clearAgentName()
+    clearNetwork()
+  }, [clearAgentName, clearNetwork])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     // Use the page agent name for both regular and admin mode
-    const agentNameTrimmed = pageAgentName?.trim();
-    if (!agentNameTrimmed || !selectedNetwork) return;
+    const agentNameTrimmed = pageAgentName?.trim()
+    if (!agentNameTrimmed || !selectedNetwork) return
 
     // Validate password requirements
     if (isAdminMode && !adminPassword.trim()) {
-      setPasswordError(t("agentSetup.errors.adminPasswordRequired"));
-      return;
+      setPasswordError(t("agentSetup.errors.adminPasswordRequired"))
+      return
     }
 
     if (
@@ -208,31 +207,31 @@ const AgentNamePicker: React.FC = () => {
     ) {
       setPasswordError(
         t("agentSetup.errors.passwordRequired", { group: selectedGroup })
-      );
-      return;
+      )
+      return
     }
 
-    setIsVerifying(true);
-    setPasswordError("");
+    setIsVerifying(true)
+    setPasswordError("")
 
     try {
-      let passwordHash: string | null = null;
-      let targetGroup = selectedGroup;
+      let passwordHash: string | null = null
+      let targetGroup = selectedGroup
 
       if (isAdminMode) {
         // Hash the password for admin group
-        passwordHash = await hashPassword(adminPassword);
-        targetGroup = "admin";
-        console.log(`Connecting to admin group with password`);
+        passwordHash = await hashPassword(adminPassword)
+        targetGroup = "admin"
+        console.log(`Connecting to admin group with password`)
       } else if (selectedGroupRequiresPassword && groupPassword.trim()) {
         // Hash the password for selected group
-        passwordHash = await hashPassword(groupPassword);
-        console.log(`Connecting to group '${selectedGroup}' with password`);
+        passwordHash = await hashPassword(groupPassword)
+        console.log(`Connecting to group '${selectedGroup}' with password`)
       } else {
         // No password needed for this group
         console.log(
           `Connecting to group '${selectedGroup}' (no password required)`
-        );
+        )
       }
 
       // Verify credentials by attempting registration
@@ -258,15 +257,15 @@ const AgentNamePicker: React.FC = () => {
           useHttps: selectedNetwork.useHttps,
           networkId: selectedNetwork.networkId,
         }
-      );
+      )
 
-      const verifyData = await verifyResponse.json();
+      const verifyData = await verifyResponse.json()
 
       if (!verifyData.success) {
         // Registration failed
         const errorMessage =
-          verifyData.error_message || t("agentSetup.errors.connectionFailed");
-        console.error("Failed to connect:", errorMessage);
+          verifyData.error_message || t("agentSetup.errors.connectionFailed")
+        console.error("Failed to connect:", errorMessage)
 
         if (isAdminMode) {
           setPasswordError(
@@ -274,20 +273,20 @@ const AgentNamePicker: React.FC = () => {
               errorMessage.includes("credentials")
               ? t("agentSetup.errors.invalidAdminPassword")
               : errorMessage
-          );
+          )
         } else if (selectedGroupRequiresPassword) {
           setPasswordError(
             errorMessage.includes("password") ||
               errorMessage.includes("credentials")
               ? t("agentSetup.errors.invalidPassword", { group: selectedGroup })
               : errorMessage
-          );
+          )
         } else {
-          setPasswordError(errorMessage);
+          setPasswordError(errorMessage)
         }
 
-        setIsVerifying(false);
-        return;
+        setIsVerifying(false)
+        return
       }
 
       // Registration succeeded - unregister to let the main app re-register
@@ -308,72 +307,72 @@ const AgentNamePicker: React.FC = () => {
             useHttps: selectedNetwork.useHttps,
             networkId: selectedNetwork.networkId,
           }
-        );
+        )
       } catch (unregError) {
         // Ignore unregister errors - not critical
-        console.warn("Failed to unregister after verification:", unregError);
+        console.warn("Failed to unregister after verification:", unregError)
       }
 
       // Proceed with connection
-      proceedWithConnection(passwordHash, isAdminMode ? "admin" : targetGroup);
+      proceedWithConnection(passwordHash, isAdminMode ? "admin" : targetGroup)
     } catch (error) {
-      console.error("Failed to verify credentials:", error);
+      console.error("Failed to verify credentials:", error)
       if (isAdminMode) {
-        setPasswordError(t("agentSetup.errors.adminConnectionFailed"));
+        setPasswordError(t("agentSetup.errors.adminConnectionFailed"))
       } else {
-        setPasswordError(t("agentSetup.errors.connectionFailed"));
+        setPasswordError(t("agentSetup.errors.connectionFailed"))
       }
-      setIsVerifying(false);
+      setIsVerifying(false)
     }
-  };
+  }
 
   const proceedWithConnection = (
     hash: string | null,
     targetGroup: string | null
   ) => {
     // Use the page agent name for all cases
-    const agentNameTrimmed = pageAgentName?.trim();
-    if (!agentNameTrimmed || !selectedNetwork) return;
+    const agentNameTrimmed = pageAgentName?.trim()
+    if (!agentNameTrimmed || !selectedNetwork) return
 
     // Save the agent name for this network
     saveAgentNameForNetwork(
       selectedNetwork.host,
       selectedNetwork.port,
       agentNameTrimmed
-    );
+    )
 
     // Store the password hash and group in authStore
-    setPasswordHash(hash);
-    setAgentGroup(targetGroup);
-    setAgentName(agentNameTrimmed);
+    setPasswordHash(hash)
+    setAgentGroup(targetGroup)
+    setAgentName(agentNameTrimmed)
 
     // Navigate based on user type
     if (targetGroup === "admin") {
       // Admin users go directly to admin dashboard
-      navigate("/admin/dashboard", { replace: true });
+      navigate("/admin/dashboard", { replace: true })
     } else {
       // Regular users go to root - RouteGuard will redirect to the appropriate default route
       // after modules are loaded (which determines if README or messaging is the default)
-      navigate("/");
+      navigate("/")
     }
-  };
+  }
 
   const handleAdminLogin = () => {
     // Navigate to dedicated admin login page
-    navigate("/admin-login");
-  };
+    navigate("/admin-login")
+  }
 
   const handleExitAdminMode = () => {
-    setIsAdminMode(false);
-    setAdminPassword("");
-    setPasswordError("");
+    setIsAdminMode(false)
+    setAdminPassword("")
+    setPasswordError("")
     // Restore to saved name or generate random name
     if (savedAgentName) {
-      setPageAgentName(savedAgentName);
+      setPageAgentName(savedAgentName)
     } else {
-      handleRandomize();
+      handleRandomize()
     }
-  };
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-indigo-400 to-purple-500 dark:from-blue-800 dark:to-violet-800">
@@ -381,11 +380,13 @@ const AgentNamePicker: React.FC = () => {
         {/* Header */}
         <div className="mb-6 flex items-center gap-4">
           {/* Avatar */}
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md border-2 border-white dark:border-gray-800 flex-shrink-0 ${
-            isAdminMode
-              ? "bg-gradient-to-br from-amber-500 to-orange-600"
-              : "bg-gradient-to-br from-blue-500 to-purple-600"
-          }`}>
+          <div
+            className={`w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md border-2 border-white dark:border-gray-800 flex-shrink-0 ${
+              isAdminMode
+                ? "bg-gradient-to-br from-amber-500 to-orange-600"
+                : "bg-gradient-to-br from-blue-500 to-purple-600"
+            }`}
+          >
             {getAvatarInitials(pageAgentName)}
           </div>
           <div className="flex-1 text-left">
@@ -415,7 +416,8 @@ const AgentNamePicker: React.FC = () => {
           </div>
           {selectedNetwork && (
             <div className="text-base font-semibold text-gray-800 dark:text-gray-100">
-              {selectedNetwork.networkId || `${selectedNetwork.host}:${selectedNetwork.port}`}
+              {selectedNetwork.networkId ||
+                `${selectedNetwork.host}:${selectedNetwork.port}`}
             </div>
           )}
         </div>
@@ -437,9 +439,7 @@ const AgentNamePicker: React.FC = () => {
           {/* Agent Name Input - Hidden in Admin Mode */}
           {!isAdminMode && (
             <div className="space-y-2 text-left">
-              <Label htmlFor="agentName">
-                {t("agentSetup.agentName")}
-              </Label>
+              <Label htmlFor="agentName">{t("agentSetup.agentName")}</Label>
               <div className="flex gap-3">
                 <InputGroup className="flex-1">
                   <InputAddon mode="icon" variant="lg">
@@ -455,13 +455,16 @@ const AgentNamePicker: React.FC = () => {
                     maxLength={32}
                     autoComplete="off"
                     aria-invalid={isReservedAgentName}
-                    className={isReservedAgentName ? "border-red-500 dark:border-red-400" : ""}
+                    className={
+                      isReservedAgentName
+                        ? "border-red-500 dark:border-red-400"
+                        : ""
+                    }
                   />
                 </InputGroup>
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
                   onClick={handleRandomize}
                 >
                   <RefreshCw className="w-4 h-4 mr-1.5" />
@@ -471,7 +474,6 @@ const AgentNamePicker: React.FC = () => {
                   <Button
                     type="button"
                     variant="primary"
-                    size="sm"
                     onClick={() => setPageAgentName(savedAgentName)}
                   >
                     {t("agentSetup.buttons.usePrevious", {
@@ -502,7 +504,8 @@ const AgentNamePicker: React.FC = () => {
 
               <div className="space-y-2 text-left">
                 <Label htmlFor="adminPassword">
-                  {t("agentSetup.adminPassword")} <span className="text-red-500 ml-1">*</span>
+                  {t("agentSetup.adminPassword")}{" "}
+                  <span className="text-red-500 ml-1">*</span>
                 </Label>
                 <InputGroup>
                   <InputAddon mode="icon" variant="lg">
@@ -514,10 +517,12 @@ const AgentNamePicker: React.FC = () => {
                     variant="lg"
                     value={adminPassword}
                     onChange={(e) => {
-                      setAdminPassword(e.target.value);
-                      setPasswordError("");
+                      setAdminPassword(e.target.value)
+                      setPasswordError("")
                     }}
-                    className={passwordError ? "border-red-500 dark:border-red-400" : ""}
+                    className={
+                      passwordError ? "border-red-500 dark:border-red-400" : ""
+                    }
                     placeholder={t("agentSetup.adminPasswordPlaceholder")}
                     autoComplete="off"
                     required
@@ -537,7 +542,6 @@ const AgentNamePicker: React.FC = () => {
                   <Button
                     type="button"
                     variant="ghost"
-                    size="sm"
                     onClick={handleExitAdminMode}
                   >
                     <ArrowLeft className="w-4 h-4 mr-1.5" />
@@ -553,9 +557,7 @@ const AgentNamePicker: React.FC = () => {
             <>
               {/* Agent Group Selection */}
               <div className="space-y-2 text-left">
-                <Label htmlFor="agentGroup">
-                  {t("agentSetup.agentGroup")}
-                </Label>
+                <Label htmlFor="agentGroup">{t("agentSetup.agentGroup")}</Label>
                 {isLoadingGroups ? (
                   <div className="w-full px-4 py-3 border border-gray-300 dark:border-gray-500 rounded-lg bg-gray-50 dark:bg-gray-600 text-sm text-gray-500 dark:text-gray-400">
                     {t("agentSetup.loadingGroups")}
@@ -568,9 +570,9 @@ const AgentNamePicker: React.FC = () => {
                     <Select
                       value={selectedGroup || ""}
                       onValueChange={(value) => {
-                        setSelectedGroup(value);
-                        setGroupPassword("");
-                        setPasswordError("");
+                        setSelectedGroup(value)
+                        setGroupPassword("")
+                        setPasswordError("")
                       }}
                     >
                       <SelectTrigger size="lg" className="rounded-l-none">
@@ -596,7 +598,8 @@ const AgentNamePicker: React.FC = () => {
               {selectedGroupRequiresPassword && (
                 <div className="space-y-2 text-left">
                   <Label htmlFor="groupPassword">
-                    {t("agentSetup.password")} <span className="text-red-500 ml-1">*</span>
+                    {t("agentSetup.password")}{" "}
+                    <span className="text-red-500 ml-1">*</span>
                   </Label>
                   <InputGroup>
                     <InputAddon mode="icon" variant="lg">
@@ -608,10 +611,14 @@ const AgentNamePicker: React.FC = () => {
                       variant="lg"
                       value={groupPassword}
                       onChange={(e) => {
-                        setGroupPassword(e.target.value);
-                        setPasswordError("");
+                        setGroupPassword(e.target.value)
+                        setPasswordError("")
                       }}
-                      className={passwordError ? "border-red-500 dark:border-red-400" : ""}
+                      className={
+                        passwordError
+                          ? "border-red-500 dark:border-red-400"
+                          : ""
+                      }
                       placeholder={t("agentSetup.passwordPlaceholder", {
                         group: selectedGroup,
                       })}
@@ -659,7 +666,6 @@ const AgentNamePicker: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              size="sm"
               onClick={onBack}
               disabled={isVerifying}
               className="flex-1"
@@ -670,7 +676,6 @@ const AgentNamePicker: React.FC = () => {
             <Button
               type="submit"
               variant="primary"
-              size="sm"
               disabled={
                 isVerifying ||
                 isLoadingGroups ||
@@ -726,7 +731,6 @@ const AgentNamePicker: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              size="sm"
               onClick={handleAdminLogin}
               disabled={isVerifying}
               className="w-full px-6 py-3 border-2 border-blue-500 bg-transparent text-blue-600 dark:text-blue-400 rounded-lg text-base font-semibold cursor-pointer transition-all duration-150 hover:bg-blue-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
@@ -737,7 +741,7 @@ const AgentNamePicker: React.FC = () => {
         )}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default AgentNamePicker;
+export default AgentNamePicker

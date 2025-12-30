@@ -260,9 +260,8 @@ const AgentManagement: React.FC = () => {
                   handleKickAgent(agent.agent_id)
                 }}
                 disabled={isKicking || !canKick}
-                variant="ghost"
+                variant="destructive"
                 size="sm"
-                className="text-red-500"
               >
                 {isKicking ? (
                   <>
@@ -289,7 +288,7 @@ const AgentManagement: React.FC = () => {
   const onlineAgents = agents.filter((a) => a.status === "online").length
 
   return (
-    <div className="p-6 dark:bg-gray-900 h-full min-h-screen overflow-y-auto">
+    <div className="p-6 dark:bg-zinc-950 h-full min-h-screen overflow-y-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -316,7 +315,7 @@ const AgentManagement: React.FC = () => {
 
       {/* Stats */}
       <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-zinc-900 overflow-hidden shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
               {t("agents.total")}
@@ -326,7 +325,7 @@ const AgentManagement: React.FC = () => {
             </dd>
           </div>
         </div>
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-zinc-900 overflow-hidden shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
               {t("agents.online")}

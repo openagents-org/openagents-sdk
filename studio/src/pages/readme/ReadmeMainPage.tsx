@@ -1,104 +1,179 @@
-import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
-import { useLocation } from "react-router-dom";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Menu, FileText } from "lucide-react";
-import { useIsMobile } from "@/hooks/useMediaQuery";
-import { useOpenAgents } from "@/context/OpenAgentsProvider";
-import { useReadmeStore } from "@/stores/readmeStore";
-import ReadmeSidebar from "./ReadmeSidebar";
-import MarkdownRenderer from "@/components/common/MarkdownRenderer";
-import { EmptyState } from "@/components/layout/ui/empty-state";
+import React, { useState, useEffect } from "react"
+import { useTranslation } from "react-i18next"
+import { FileText, ChevronDown, ChevronUp, List } from "lucide-react"
+import { useOpenAgents } from "@/context/OpenAgentsProvider"
+import { useReadmeStore, HeadingItem } from "@/stores/readmeStore"
+import MarkdownRenderer from "@/components/common/MarkdownRenderer"
+import { EmptyState } from "@/components/layout/ui/empty-state"
+import { Button } from "@/components/layout/ui/button"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardHeading,
+  CardTitle,
+} from "@/components/layout/ui/card"
 
 /**
  * README Main Page - Displays README content fetched from /api/health
- * Contains sidebar and main content area
+ * Simplified layout with integrated table of contents
  */
 const ReadmeMainPage: React.FC = () => {
-  const isMobile = useIsMobile();
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const location = useLocation();
-  const { t } = useTranslation('readme');
-  const { connector } = useOpenAgents();
-  const [readmeContent, setReadmeContent] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const setStoreContent = useReadmeStore((state) => state.setContent);
-
-  // Close drawer when route changes on mobile
-  React.useEffect(() => {
-    if (isMobile) {
-      setIsDrawerOpen(false);
-    }
-  }, [location.pathname, isMobile]);
-
-  // Sidebar content component
-  const SidebarContent = () => (
-    <div className="lg:rounded-s-xl bg-white dark:bg-gray-800 overflow-hidden border-r border-gray-200 dark:border-gray-700 flex flex-col w-full h-full">
-      <ScrollArea className="shrink-0 flex-1 mt-0 mb-2.5 h-full">
-        <div className="h-full">
-          <ReadmeSidebar />
-        </div>
-      </ScrollArea>
-    </div>
-  );
+  const { t } = useTranslation("readme")
+  const { connector } = useOpenAgents()
+  const [readmeContent, setReadmeContent] = useState<string>("")
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
+  const [tocExpanded, setTocExpanded] = useState<boolean>(true)
+  const setStoreContent = useReadmeStore((state) => state.setContent)
+  const headings = useReadmeStore((state) => state.headings)
 
   useEffect(() => {
     const fetchReadme = async () => {
       if (!connector) {
-        setError(t('error.notConnected'));
-        setLoading(false);
-        return;
+        setError(t("error.notConnected"))
+        setLoading(false)
+        return
       }
 
       try {
-        setLoading(true);
-        setError(null);
+        setLoading(true)
+        setError(null)
 
-        const healthData = await connector.getNetworkHealth();
+        const healthData = await connector.getNetworkHealth()
 
         // Get readme field from healthData
         // readme may be in network_profile.readme or directly in healthData.readme
         const readme =
-          healthData?.network_profile?.readme || healthData?.readme || "";
+          healthData?.network_profile?.readme || healthData?.readme || ""
 
         if (readme) {
-          setReadmeContent(readme);
-          setStoreContent(readme);
+          setReadmeContent(readme)
+          setStoreContent(readme)
         } else {
-          setReadmeContent("");
-          setStoreContent("");
+          setReadmeContent("")
+          setStoreContent("")
         }
       } catch (err) {
-        console.error("Failed to fetch README:", err);
-        setError(err instanceof Error ? err.message : t('error.default'));
-        setReadmeContent("");
-        setStoreContent("");
+        console.error("Failed to fetch README:", err)
+        setError(err instanceof Error ? err.message : t("error.default"))
+        setReadmeContent("")
+        setStoreContent("")
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchReadme();
-  }, [connector, setStoreContent, t]);
+    fetchReadme()
+  }, [connector, setStoreContent, t])
+
+  // Handle heading click to scroll to section
+  const handleHeadingClick = (id: string) => {
+    const element = document.getElementById(id)
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
+  }
+
+  // Calculate indentation based on heading level
+  const getIndentClass = (level: number): string => {
+    switch (level) {
+      case 1:
+        return "pl-0"
+      case 2:
+        return "pl-3"
+      case 3:
+        return "pl-6"
+      case 4:
+        return "pl-9"
+      case 5:
+        return "pl-12"
+      case 6:
+        return "pl-14"
+      default:
+        return "pl-0"
+    }
+  }
+
+  // Get font styling based on heading level
+  const getFontClass = (level: number): string => {
+    switch (level) {
+      case 1:
+        return "font-semibold text-gray-900 dark:text-gray-100"
+      case 2:
+        return "font-medium text-gray-800 dark:text-gray-200"
+      default:
+        return "text-gray-600 dark:text-gray-400"
+    }
+  }
+
+  // Table of Contents Component
+  const TableOfContents = () => {
+    if (headings.length === 0) return null
+
+    return (
+      <Card variant="default" className="mb-6">
+        <CardHeader>
+          <CardHeading>
+            <CardTitle className="flex items-center gap-2">
+              <List className="w-4 h-4" />
+              {t("sidebar.title")}
+            </CardTitle>
+          </CardHeading>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setTocExpanded(!tocExpanded)}
+            className="ml-auto"
+          >
+            {tocExpanded ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </Button>
+        </CardHeader>
+        {tocExpanded && (
+          <CardContent>
+            <nav className="space-y-1">
+              {headings.map((heading: HeadingItem, index: number) => (
+                <button
+                  key={`${heading.id}-${index}`}
+                  onClick={() => handleHeadingClick(heading.id)}
+                  className={`
+                    w-full text-left py-1.5 px-2 rounded-md text-sm
+                    hover:bg-gray-100 dark:hover:bg-zinc-900
+                    transition-colors duration-150
+                    ${getIndentClass(heading.level)}
+                    ${getFontClass(heading.level)}
+                  `}
+                  title={heading.text}
+                >
+                  <span className="block truncate">{heading.text}</span>
+                </button>
+              ))}
+            </nav>
+          </CardContent>
+        )}
+      </Card>
+    )
+  }
 
   // Loading state component
   const LoadingState = () => (
-    <div className="p-6 dark:bg-gray-800 h-full">
+    <div className="p-6 dark:bg-zinc-950 h-full">
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         <span className="ml-3 text-gray-600 dark:text-gray-400">
-          {t('loading')}
+          {t("loading")}
         </span>
       </div>
     </div>
-  );
+  )
 
   // Error state component
   const ErrorState = () => (
-    <div className="p-6 dark:bg-gray-900 h-full flex items-center justify-center">
+    <div className="p-6 dark:bg-zinc-950 h-full flex items-center justify-center">
       <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
         <div className="flex items-center justify-center">
           <div className="flex-shrink-0">
@@ -116,7 +191,7 @@ const ReadmeMainPage: React.FC = () => {
           </div>
           <div className="ml-3 text-center">
             <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
-              {t('error.title')}
+              {t("error.title")}
             </h3>
             <p className="mt-1 text-sm text-red-700 dark:text-red-300">
               {error}
@@ -125,48 +200,51 @@ const ReadmeMainPage: React.FC = () => {
         </div>
       </div>
     </div>
-  );
+  )
 
   // Empty content state component
   const ReadmeEmptyState = () => (
-    <div className="h-full flex items-center justify-center dark:bg-gray-800 p-6">
+    <div className="h-full flex items-center justify-center dark:bg-zinc-950 p-6">
       <EmptyState
         variant="minimal"
         icon={<FileText className="w-12 h-12" />}
-        title={t('empty.title')}
-        description={t('empty.description')}
+        title={t("empty.title")}
+        description={t("empty.description")}
       />
     </div>
-  );
+  )
 
   // Main content component
   const MainContent = () => {
     if (loading) {
-      return <LoadingState />;
+      return <LoadingState />
     }
 
     if (error) {
-      return <ErrorState />;
+      return <ErrorState />
     }
 
     if (!readmeContent) {
-      return <ReadmeEmptyState />;
+      return <ReadmeEmptyState />
     }
 
     return (
-      <div className="p-6 dark:bg-gray-800 h-full min-h-screen overflow-y-auto">
+      <div className="p-6 dark:bg-zinc-950 h-full min-h-screen overflow-y-auto">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            {t('title')}
+            {t("title")}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            {t('subtitle')}
+            {t("subtitle")}
           </p>
         </div>
 
+        {/* Table of Contents */}
+        <TableOfContents />
+
         {/* Markdown Content */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-zinc-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <MarkdownRenderer
             content={readmeContent}
             className="prose prose-gray dark:prose-invert max-w-none"
@@ -174,48 +252,14 @@ const ReadmeMainPage: React.FC = () => {
           />
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   return (
-    <div className="h-full flex overflow-hidden dark:bg-gray-800 relative">
-      {/* Mobile menu button */}
-      {isMobile && (
-        <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-          <SheetTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="fixed top-4 left-4 z-30 md:hidden"
-              aria-label="Open menu"
-            >
-              <Menu className="w-6 h-6" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-[85%] max-w-[400px] p-0">
-            <SidebarContent />
-          </SheetContent>
-        </Sheet>
-      )}
-
-      {/* Desktop Sidebar */}
-      {!isMobile && (
-        <div 
-          className="hidden md:block flex-shrink-0"
-          style={{
-            width: "calc(var(--sidebar-width) - var(--sidebar-collapsed-width))",
-          }}
-        >
-          <SidebarContent />
-        </div>
-      )}
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-gray-800">
-        <MainContent />
-      </div>
+    <div className="h-full flex flex-col overflow-hidden bg-white dark:bg-zinc-950">
+      <MainContent />
     </div>
-  );
-};
+  )
+}
 
-export default ReadmeMainPage;
+export default ReadmeMainPage

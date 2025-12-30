@@ -27,7 +27,7 @@ const MessagingMainPage: React.FC = () => {
 
   // Sidebar content component
   const SidebarContent = () => (
-    <div className=" bg-white dark:bg-gray-800 overflow-hidden border-r border-gray-200 dark:border-gray-700 flex flex-col w-full h-full">
+    <div className=" bg-white dark:bg-zinc-950 overflow-hidden border-r border-gray-200 dark:border-gray-700 flex flex-col w-full h-full">
       <ScrollArea className="shrink-0 flex-1 mt-0 mb-2.5 h-full">
         <div className="h-full">
           <MessagingSidebar />
@@ -37,7 +37,7 @@ const MessagingMainPage: React.FC = () => {
   );
 
   return (
-    <div className="h-full flex overflow-hidden dark:bg-gray-800 relative">
+    <div className="h-full flex overflow-hidden dark:bg-zinc-950 relative">
       {/* Mobile menu button */}
       {isMobile && (
         <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
@@ -70,7 +70,7 @@ const MessagingMainPage: React.FC = () => {
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-gray-800">
+      <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-zinc-950">
         <Routes>
           {/* Project private chat room independent route */}
           <Route

@@ -118,6 +118,7 @@
         "delete": "Delete",
         "set": "Set",
         "none": "None",
+        "searchPlaceholder": "Search groups...",
         "table": {
             "group": "Group",
             "description": "Description",
