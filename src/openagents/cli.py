@@ -125,11 +125,18 @@ def initialize_workspace(workspace_path: Path) -> Path:
         # First, try to get the network.yaml template from package resources
         template_files = files("openagents.templates.default_network")
 
-        # Copy the main network.yaml template
+        # Copy the main network.yaml template and inject version
         network_yaml_content = (template_files / "network.yaml").read_text()
+
+        # Inject created_by_version into the network config
+        from openagents import __version__
+        config_dict = yaml.safe_load(network_yaml_content)
+        if 'network' in config_dict:
+            config_dict['network']['created_by_version'] = __version__
+
         with open(config_path, 'w') as f:
-            f.write(network_yaml_content)
-        logging.info(f"Created network.yaml in workspace")
+            yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        logging.info(f"Created network.yaml in workspace with version {__version__}")
 
         # Copy README.md if it exists
         try:
@@ -179,8 +186,15 @@ def initialize_workspace(workspace_path: Path) -> Path:
         # Try templates directory first (package mode)
         template_path = script_dir / "templates" / "default_network" / "network.yaml"
         if template_path.exists():
-            shutil.copy2(template_path, config_path)
-            logging.info(f"Copied network.yaml from templates to workspace")
+            # Copy and inject version
+            from openagents import __version__
+            with open(template_path, 'r') as f:
+                config_dict = yaml.safe_load(f)
+            if 'network' in config_dict:
+                config_dict['network']['created_by_version'] = __version__
+            with open(config_path, 'w') as f:
+                yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+            logging.info(f"Copied network.yaml from templates to workspace with version {__version__}")
 
             # Copy README.md if it exists
             readme_path = script_dir / "templates" / "default_network" / "README.md"
@@ -227,11 +241,22 @@ def initialize_workspace(workspace_path: Path) -> Path:
                 )
 
             # Copy all files from default network to the new workspace
+            from openagents import __version__
             for item in default_network_path.iterdir():
                 if item.is_file():
                     dest_path = workspace_path / item.name
-                    shutil.copy2(item, dest_path)
-                    logging.info(f"Copied {item.name} to workspace")
+                    # Special handling for network.yaml to inject version
+                    if item.name == "network.yaml":
+                        with open(item, 'r') as f:
+                            config_dict = yaml.safe_load(f)
+                        if 'network' in config_dict:
+                            config_dict['network']['created_by_version'] = __version__
+                        with open(dest_path, 'w') as f:
+                            yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+                        logging.info(f"Copied network.yaml to workspace with version {__version__}")
+                    else:
+                        shutil.copy2(item, dest_path)
+                        logging.info(f"Copied {item.name} to workspace")
                 elif item.is_dir():
                     dest_dir = workspace_path / item.name
                     shutil.copytree(item, dest_dir, dirs_exist_ok=True)

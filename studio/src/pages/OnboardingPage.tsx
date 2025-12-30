@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
+import { hashPassword } from "@/utils/passwordHash";
 import OnboardingStep1 from "@/components/onboarding/OnboardingStep1";
 import OnboardingStep2 from "@/components/onboarding/OnboardingStep2";
 import OnboardingStep3 from "@/components/onboarding/OnboardingStep3";
@@ -25,9 +26,11 @@ export interface Template {
   agents: string[];
 }
 
+const ADMIN_AGENT_NAME = "admin";
+
 const OnboardingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { selectedNetwork } = useAuthStore();
+  const { selectedNetwork, setAgentName, setPasswordHash, setAgentGroup } = useAuthStore();
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [adminPassword, setAdminPassword] = useState("");
@@ -135,6 +138,12 @@ const OnboardingPage: React.FC = () => {
 
       setIsDeploying(false);
       setIsComplete(true);
+
+      // Set auth state for admin access
+      const hashedPassword = await hashPassword(adminPassword);
+      setPasswordHash(hashedPassword);
+      setAgentGroup("admin");
+      setAgentName(ADMIN_AGENT_NAME);
 
       // Auto-redirect to admin dashboard after a brief moment
       await new Promise((resolve) => setTimeout(resolve, 1000));
