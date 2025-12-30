@@ -354,7 +354,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             {!isDMChat && onReply && (
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
                 className="w-8 h-8 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
                 onClick={() =>
                   onReply(
@@ -370,7 +370,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             )}
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
               className="w-8 h-8 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
               onClick={(event) => handleReactionPickerToggle(messageId, event)}
               title="Add reaction"
@@ -379,7 +379,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             </Button>
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
               className="w-8 h-8 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
               onClick={() =>
                 onQuote(messageId, messageProps.content, messageProps.senderId)
@@ -551,7 +551,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             {!isDMChat && onReply && (
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
                 className="w-8 h-8 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
                 onClick={() =>
                   onReply(message.id, message.content, message.senderId)
@@ -565,7 +565,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             {!disableReactions && (
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
                 className="w-8 h-8 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
                 onClick={(event) =>
                   handleReactionPickerToggle(message.id, event)
@@ -579,7 +579,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
             {!disableQuotes && (
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
                 className="w-8 h-8 text-slate-500 hover:bg-slate-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200"
                 onClick={() =>
                   onQuote(message.id, message.content, message.senderId)

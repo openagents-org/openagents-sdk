@@ -403,7 +403,7 @@ const AgentNamePicker: React.FC = () => {
             showFullName={false}
             variant="minimal"
             align="right"
-            size="md"
+            size="sm"
             direction="down"
           />
         </div>
@@ -461,7 +461,7 @@ const AgentNamePicker: React.FC = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  size="lg"
+                  size="sm"
                   onClick={handleRandomize}
                 >
                   <RefreshCw className="w-4 h-4 mr-1.5" />
@@ -471,7 +471,7 @@ const AgentNamePicker: React.FC = () => {
                   <Button
                     type="button"
                     variant="primary"
-                    size="lg"
+                    size="sm"
                     onClick={() => setPageAgentName(savedAgentName)}
                   >
                     {t("agentSetup.buttons.usePrevious", {
@@ -537,7 +537,7 @@ const AgentNamePicker: React.FC = () => {
                   <Button
                     type="button"
                     variant="ghost"
-                    size="md"
+                    size="sm"
                     onClick={handleExitAdminMode}
                   >
                     <ArrowLeft className="w-4 h-4 mr-1.5" />
@@ -659,7 +659,7 @@ const AgentNamePicker: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              size="lg"
+              size="sm"
               onClick={onBack}
               disabled={isVerifying}
               className="flex-1"
@@ -670,7 +670,7 @@ const AgentNamePicker: React.FC = () => {
             <Button
               type="submit"
               variant="primary"
-              size="lg"
+              size="sm"
               disabled={
                 isVerifying ||
                 isLoadingGroups ||
@@ -726,7 +726,7 @@ const AgentNamePicker: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              size="lg"
+              size="sm"
               onClick={handleAdminLogin}
               disabled={isVerifying}
               className="w-full px-6 py-3 border-2 border-blue-500 bg-transparent text-blue-600 dark:text-blue-400 rounded-lg text-base font-semibold cursor-pointer transition-all duration-150 hover:bg-blue-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"

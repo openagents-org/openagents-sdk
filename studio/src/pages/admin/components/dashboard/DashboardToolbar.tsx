@@ -39,7 +39,7 @@ const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
           <Badge
             variant="info"
             appearance="light"
-            size="md"
+            size="sm"
             shape="default"
             className="cursor-pointer"
             onClick={() => navigate("/admin/agents")}
@@ -50,7 +50,7 @@ const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
           <Badge
             variant="success"
             appearance="light"
-            size="md"
+            size="sm"
             shape="default"
             className="cursor-pointer"
             onClick={() => navigate("/admin/events")}
@@ -58,7 +58,7 @@ const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
             <MessageCircle className="w-3 h-3 mr-1" />
             {stats.activeChannels}/{stats.totalChannels} {t("dashboard.stats.channels")}
           </Badge>
-          <Badge variant="info" appearance="light" size="md" shape="default">
+          <Badge variant="info" appearance="light" size="sm" shape="default">
             <Clock className="w-3 h-3 mr-1" />
             {stats.uptime}
           </Badge>

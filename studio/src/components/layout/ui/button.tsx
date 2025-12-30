@@ -350,7 +350,7 @@ const buttonVariants = cva(
     defaultVariants: {
       variant: 'primary',
       mode: 'default',
-      size: 'md',
+      size: 'sm',
       shape: 'default',
       appearance: 'default',
     },

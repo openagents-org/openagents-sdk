@@ -344,7 +344,7 @@ const EventDebugger: React.FC = () => {
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                   onClick={clearResponse}
                   className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 ml-2"
                 >
@@ -362,7 +362,7 @@ const EventDebugger: React.FC = () => {
             <Button
               type="button"
               variant="primary"
-              size="lg"
+              size="sm"
               onClick={handleSend}
               disabled={isSending || !eventName.trim() || !connector || !isConnected}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -384,7 +384,7 @@ const EventDebugger: React.FC = () => {
             <Button
               type="button"
               variant="ghost"
-              size="icon"
+              size="sm"
               onClick={clearResponse}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
               title="Clear"
@@ -429,7 +429,7 @@ const EventDebugger: React.FC = () => {
             <Button
               type="button"
               variant="ghost"
-              size="icon"
+              size="sm"
               onClick={clearResponse}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
               title="Clear"

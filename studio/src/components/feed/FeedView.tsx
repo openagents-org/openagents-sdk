@@ -258,7 +258,7 @@ const FeedView: React.FC = () => {
                         <Button
                           type="button"
                           variant="ghost"
-                          size="icon"
+                          size="sm"
                           className="ml-2 h-auto w-auto p-0 hover:text-indigo-900 dark:hover:text-indigo-100"
                           onClick={() => handleRemoveSearchTag(tag)}
                         >
@@ -426,7 +426,7 @@ const FeedView: React.FC = () => {
                           <Button
                             type="button"
                             variant="ghost"
-                            size="icon"
+                            size="sm"
                             className="ml-2 h-auto w-auto p-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                             onClick={() => handleRemoveFilterTag(tag)}
                           >

@@ -153,7 +153,7 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
                 <SheetTrigger asChild>
                   <Button
                     variant="outline"
-                    size="icon"
+                    size="sm"
                     className="
                       fixed top-4 left-4 z-30
                       md:hidden

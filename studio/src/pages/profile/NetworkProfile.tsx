@@ -758,7 +758,7 @@ const NetworkProfile: React.FC = () => {
                 type="button"
                 onClick={handleAddTag}
                 variant="primary"
-                size="lg"
+                size="sm"
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {t('profile.tags.add')}
@@ -773,14 +773,14 @@ const NetworkProfile: React.FC = () => {
                     key={index}
                     variant="primary"
                     appearance="light"
-                    size="md"
+                    size="sm"
                     className="inline-flex items-center gap-1"
                   >
                     {tag}
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon"
+                      size="sm"
                       onClick={() => handleRemoveTag(tag)}
                       className="ml-2 h-auto w-auto p-0 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
                     >
@@ -820,7 +820,7 @@ const NetworkProfile: React.FC = () => {
                 type="button"
                 onClick={handleAddCategory}
                 variant="primary"
-                size="lg"
+                size="sm"
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {t('profile.categories.add')}
@@ -835,14 +835,14 @@ const NetworkProfile: React.FC = () => {
                     key={index}
                     variant="info"
                     appearance="light"
-                    size="md"
+                    size="sm"
                     className="inline-flex items-center gap-1"
                   >
                     {category}
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon"
+                      size="sm"
                       onClick={() => handleRemoveCategory(category)}
                       className="ml-2 h-auto w-auto p-0 text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200"
                     >

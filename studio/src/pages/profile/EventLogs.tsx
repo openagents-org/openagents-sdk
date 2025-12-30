@@ -454,7 +454,7 @@ const EventLogs: React.FC = () => {
               <Button
                 onClick={() => setSelectedLog(null)}
                 variant="ghost"
-                size="icon"
+                size="sm"
               >
                 <X className="w-5 h-5" />
               </Button>

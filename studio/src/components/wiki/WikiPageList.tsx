@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useContext } from "react"
-import { useTranslation } from "react-i18next"
-import { useNavigate } from "react-router-dom"
-import { useWikiStore } from "@/stores/wikiStore"
-import { useRecentPagesStore } from "@/stores/recentPagesStore"
-import WikiCreateModal from "./components/WikiCreateModal"
-import MarkdownRenderer from "@/components/common/MarkdownRenderer"
-import { formatDateTime } from "@/utils/utils"
-import { OpenAgentsContext } from "@/context/OpenAgentsProvider"
-import { Button } from "@/components/layout/ui/button"
+import React, { useState, useEffect, useContext } from "react";
+import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { useWikiStore } from "@/stores/wikiStore";
+import { useRecentPagesStore } from "@/stores/recentPagesStore";
+import WikiCreateModal from "./components/WikiCreateModal";
+import MarkdownRenderer from "@/components/common/MarkdownRenderer";
+import { formatDateTime } from "@/utils/utils";
+import { OpenAgentsContext } from "@/context/OpenAgentsProvider";
+import { Button } from "@/components/layout/ui/button";
 import {
   Card,
   CardContent,
@@ -16,21 +16,21 @@ import {
   CardHeading,
   CardTitle,
   CardToolbar,
-} from "@/components/layout/ui/card"
-import { EmptyState } from "@/components/layout/ui/empty-state"
-import { Plus, RefreshCw, Clock, Search, FileText } from "lucide-react"
-import { Input } from "@/components/layout/ui/input"
+} from "@/components/layout/ui/card";
+import { EmptyState } from "@/components/layout/ui/empty-state";
+import { Plus, RefreshCw, Clock, Search, FileText } from "lucide-react";
+import { Input } from "@/components/layout/ui/input";
 
 const WikiPageList: React.FC = () => {
-  const { t } = useTranslation("wiki")
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
-  const navigate = useNavigate()
+  const { t } = useTranslation("wiki");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
 
-  const context = useContext(OpenAgentsContext)
-  const openAgentsService = context?.connector
-  const isConnected = context?.isConnected
-  const { addRecentPage } = useRecentPagesStore()
+  const context = useContext(OpenAgentsContext);
+  const openAgentsService = context?.connector;
+  const isConnected = context?.isConnected;
+  const { addRecentPage } = useRecentPagesStore();
 
   const {
     pages,
@@ -42,54 +42,54 @@ const WikiPageList: React.FC = () => {
     searchPages,
     setupEventListeners,
     cleanupEventListeners,
-  } = useWikiStore()
+  } = useWikiStore();
 
   // Set connection
   useEffect(() => {
     if (openAgentsService) {
-      setConnection(openAgentsService)
+      setConnection(openAgentsService);
     }
-  }, [openAgentsService, setConnection])
+  }, [openAgentsService, setConnection]);
 
   // Load pages (wait for connection to be established)
   useEffect(() => {
     if (openAgentsService && isConnected) {
-      console.log("WikiPageList: Connection ready, loading pages")
-      loadPages()
-      loadProposals()
+      console.log("WikiPageList: Connection ready, loading pages");
+      loadPages();
+      loadProposals();
     }
-  }, [openAgentsService, isConnected, loadPages, loadProposals])
+  }, [openAgentsService, isConnected, loadPages, loadProposals]);
 
   // Set up wiki event listeners
   useEffect(() => {
     if (openAgentsService) {
-      console.log("WikiPageList: Setting up wiki event listeners")
-      setupEventListeners()
+      console.log("WikiPageList: Setting up wiki event listeners");
+      setupEventListeners();
 
       return () => {
-        console.log("WikiPageList: Cleaning up wiki event listeners")
-        cleanupEventListeners()
-      }
+        console.log("WikiPageList: Cleaning up wiki event listeners");
+        cleanupEventListeners();
+      };
     }
-  }, [openAgentsService, setupEventListeners, cleanupEventListeners])
+  }, [openAgentsService, setupEventListeners, cleanupEventListeners]);
 
   // Handle search
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      searchPages(searchQuery)
-    }, 300)
+      searchPages(searchQuery);
+    }, 300);
 
-    return () => clearTimeout(timeoutId)
-  }, [searchQuery, searchPages])
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, searchPages]);
 
   const handlePageClick = (pagePath: string) => {
     // First find the corresponding page object
-    const page = pages.find((p) => p.page_path === pagePath)
+    const page = pages.find((p) => p.page_path === pagePath);
 
     // If page found, record to recent pages
     if (page) {
-      console.log("WikiPageList: Adding page to recent pages:", page.title)
-      addRecentPage(page)
+      console.log("WikiPageList: Adding page to recent pages:", page.title);
+      addRecentPage(page);
     }
 
     console.log(
@@ -97,9 +97,9 @@ const WikiPageList: React.FC = () => {
       pagePath,
       "URL:",
       `/wiki/detail/${encodeURIComponent(pagePath)}`
-    )
-    navigate(`/wiki/detail/${encodeURIComponent(pagePath)}`)
-  }
+    );
+    navigate(`/wiki/detail/${encodeURIComponent(pagePath)}`);
+  };
 
   // if (pagesLoading && pages.length === 0) {
   //   return (
@@ -142,7 +142,7 @@ const WikiPageList: React.FC = () => {
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -169,15 +169,11 @@ const WikiPageList: React.FC = () => {
                 })}
               </Button>
             )}
-            <Button onClick={loadPages} variant="outline" size="md">
+            <Button onClick={loadPages} variant="outline" size="sm">
               <RefreshCw className="w-4 h-4 mr-1" />
               {t("list.refresh")}
             </Button>
-            <Button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-blue-500 text-white"
-              size="md"
-            >
+            <Button onClick={() => setShowCreateModal(true)} size="sm">
               <Plus className="w-4 h-4 mr-1" />
               {t("list.newPage")}
             </Button>
@@ -211,7 +207,7 @@ const WikiPageList: React.FC = () => {
                 !searchQuery ? (
                   <Button
                     onClick={() => setShowCreateModal(true)}
-                    size="lg"
+                    size="sm"
                     className="bg-blue-500 text-white"
                   >
                     {t("list.createFirstButton")}
@@ -265,7 +261,7 @@ const WikiPageList: React.FC = () => {
         onClose={() => setShowCreateModal(false)}
       />
     </div>
-  )
-}
+  );
+};
 
-export default WikiPageList
+export default WikiPageList;

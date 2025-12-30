@@ -82,7 +82,7 @@ const NetworkStatusPanel: React.FC<NetworkStatusPanelProps> = ({
           <CardTitle>{t("dashboard.networkStatus.title")}</CardTitle>
         </CardHeading>
         <CardToolbar>
-          <Button variant="ghost" size="icon" onClick={onRefresh} disabled={refreshing}>
+          <Button variant="ghost" size="sm" onClick={onRefresh} disabled={refreshing}>
             <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
           </Button>
         </CardToolbar>

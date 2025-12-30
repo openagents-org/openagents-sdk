@@ -579,7 +579,7 @@ const OpenAgentsDocumentEditor: React.FC<OpenAgentsDocumentEditorProps> = ({
               }}
               disabled={isSaving || !hasUnsavedChanges}
               variant="ghost"
-              size="icon"
+              size="sm"
               className={`p-1 ${
                 hasUnsavedChanges && !isSaving
                   ? currentTheme === 'dark' 

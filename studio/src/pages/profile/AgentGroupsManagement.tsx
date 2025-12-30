@@ -811,7 +811,7 @@ const AgentGroupsManagement: React.FC = () => {
                 <Button
                   onClick={() => setShowCreateModal(false)}
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                 >
                   <X className="w-5 h-5" />
                 </Button>
@@ -905,7 +905,7 @@ const AgentGroupsManagement: React.FC = () => {
                     setEditingGroup(null)
                   }}
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                 >
                   <X className="w-5 h-5" />
                 </Button>
@@ -991,7 +991,7 @@ const AgentGroupsManagement: React.FC = () => {
                     setNewPassword("")
                   }}
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                 >
                   <X className="w-5 h-5" />
                 </Button>

@@ -166,7 +166,7 @@ const UserDashboard: React.FC = () => {
     <ScrollArea className="h-full">
       <div className="p-4">
         {/* Header with Stats Tags - using standardized CardHeader/CardToolbar */}
-        <Card variant="default" className="mb-4">
+        <Card className="mb-4">
           <CardHeader>
             <CardHeading>
               <CardTitle className="flex items-center gap-2">
@@ -216,7 +216,7 @@ const UserDashboard: React.FC = () => {
                 <CardTitle>{t('dashboard.networkStatus.title', { defaultValue: '网络状态' })}</CardTitle>
               </CardHeading>
               <CardToolbar>
-                <Button variant="ghost" size="icon" onClick={refresh} disabled={loading}>
+                <Button variant="ghost" size="sm" onClick={refresh} disabled={loading}>
                   <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
                 </Button>
               </CardToolbar>

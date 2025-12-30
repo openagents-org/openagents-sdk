@@ -185,7 +185,7 @@ const ReadmeMainPage: React.FC = () => {
           <SheetTrigger asChild>
             <Button
               variant="outline"
-              size="icon"
+              size="sm"
               className="fixed top-4 left-4 z-30 md:hidden"
               aria-label="Open menu"
             >

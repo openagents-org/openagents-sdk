@@ -906,7 +906,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             {onCancelReply && (
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
                 className={`cancel-reply ${currentTheme === "dark" ? "dark" : ""}`}
                 onClick={onCancelReply}
                 aria-label={t('input.cancel')}
@@ -932,7 +932,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             {onCancelQuote && (
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
                 className={`cancel-quote ${currentTheme === "dark" ? "dark" : ""}`}
                 onClick={onCancelQuote}
                 aria-label={t('input.cancel')}
@@ -960,7 +960,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             <Button
               type="button"
               variant="ghost"
-              size="icon"
+              size="sm"
               onClick={() => setPendingAttachment(null)}
               className={`remove-attachment ${currentTheme}`}
               title="Remove attachment"
@@ -1015,7 +1015,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon"
+                size="sm"
                 className={`action-button ${currentTheme}`}
                 onClick={handleFileUpload}
                 disabled={disabled}
@@ -1029,7 +1029,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon"
+                size="sm"
                 className={`action-button ${currentTheme}`}
                 disabled={disabled}
                 title="Add emoji"
@@ -1042,7 +1042,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             <Button
               type="submit"
               variant="primary"
-              size="icon"
+              size="sm"
               className="send-button"
               disabled={!message.trim() || disabled}
               title="Send message"
