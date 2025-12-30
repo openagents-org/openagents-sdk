@@ -35,6 +35,8 @@ def hash_password(password: str) -> str:
 
 def create_minimal_network_config(workspace_dir: Path) -> Path:
     """Create a minimal network config for testing."""
+    from openagents import __version__
+
     config = {
         "network": {
             "name": "TestNetwork",
@@ -63,6 +65,7 @@ def create_minimal_network_config(workspace_dir: Path) -> Path:
             "agent_groups": {},
             "mods": [],
             "initialized": False,  # Fresh network needs onboarding
+            "created_by_version": __version__,  # Mark as new config (not legacy)
         },
         "log_level": "DEBUG",
         "data_dir": str(workspace_dir / "data"),
