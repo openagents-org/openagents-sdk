@@ -68,22 +68,64 @@ def setup_logging(level: str = "INFO", verbose: bool = False) -> None:
     global VERBOSE_MODE
     VERBOSE_MODE = verbose
 
+    import sys
+
     from rich.logging import RichHandler
+
+    # Fix Windows console encoding for emoji/unicode support
+    # This prevents UnicodeEncodeError on Windows with non-UTF-8 locales (e.g., GBK)
+    if sys.platform == "win32":
+        import io
+
+        # Reconfigure stdout/stderr to use UTF-8 with error replacement
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        else:
+            sys.stdout = io.TextIOWrapper(
+                sys.stdout.buffer, encoding="utf-8", errors="replace"
+            )
+
+        if hasattr(sys.stderr, "reconfigure"):
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+        else:
+            sys.stderr = io.TextIOWrapper(
+                sys.stderr.buffer, encoding="utf-8", errors="replace"
+            )
 
     numeric_level = getattr(logging, level.upper(), None)
     if not isinstance(numeric_level, int):
         raise ValueError(f"Invalid log level: {level}")
 
-    # Configure logging with Rich handler
+    # Configure logging with Rich handler (file handler added later when workspace is known)
     logging.basicConfig(
         level=numeric_level,
         format="%(message)s",
         datefmt="[%X]",
         handlers=[
             RichHandler(console=console, rich_tracebacks=True, show_path=verbose),
-            logging.FileHandler("openagents.log")
         ]
     )
+
+
+def configure_workspace_logging(workspace_path: Path) -> None:
+    """Configure file logging to the workspace directory.
+
+    This should be called once the workspace path is known to save logs
+    to the workspace folder.
+
+    Args:
+        workspace_path: Path to the workspace directory
+    """
+    # Create a file handler for the workspace
+    log_file = workspace_path / "openagents.log"
+    file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    file_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+
+    # Add to root logger
+    root_logger = logging.getLogger()
+    root_logger.addHandler(file_handler)
+
+    logging.info(f"Logging to file: {log_file}")
 
     # Suppress noisy websockets connection logs in studio mode
     logging.getLogger("websockets.server").setLevel(logging.WARNING)
@@ -2185,6 +2227,10 @@ def agent_start(
             if network_id is not None:
                 connection_override["network_id"] = network_id
 
+            # Configure file logging to the agent config directory
+            config_dir = Path(config).parent.resolve()
+            configure_workspace_logging(config_dir)
+
             # Load agent using AgentRunner.from_yaml with overrides
             agent = AgentRunner.from_yaml(config, agent_id_override=agent_id, connection_override=connection_override if connection_override else None)
             progress.update(task, description=f"[green]✅ Loaded agent '{agent.agent_id}'")
@@ -2299,7 +2345,10 @@ def agents_start(
     if not folder_path.is_dir():
         console.print(f"[red]❌ Path is not a directory: {folder}[/red]")
         raise typer.Exit(1)
-    
+
+    # Configure file logging to the agents folder
+    configure_workspace_logging(folder_path.resolve())
+
     console.print(Panel.fit(
         f"[bold blue]🚀🚀 Starting Multiple Agents[/bold blue]\n"
         f"📁 Directory: [code]{folder_path.resolve()}[/code]\n"
