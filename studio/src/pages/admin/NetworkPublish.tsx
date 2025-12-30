@@ -3,6 +3,9 @@ import { useOpenAgents } from "@/context/OpenAgentsProvider"
 import { useAuthStore } from "@/stores/authStore"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
+import { Label } from "@/components/layout/ui/label"
+import { Input, InputGroup, InputAddon } from "@/components/layout/ui/input"
+import { Key, Globe, Server, Hash, Building2, Network } from "lucide-react"
 
 // Relay connection info from Python backend
 interface RelayConnection {
@@ -1110,23 +1113,24 @@ const NetworkPublishPage: React.FC = () => {
             )}
 
             {/* API Key Input */}
-            <div>
-              <label
-                htmlFor="apiKey"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
+            <div className="space-y-2">
+              <Label htmlFor="apiKey">
                 {t("publish.apiKey.label", "API Key")} *
-              </label>
-              <div className="mt-1 flex gap-2">
-                <input
-                  type="password"
-                  id="apiKey"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={t("publish.apiKey.placeholder", "oa-xxxxxxxxxxxxxxxx")}
-                  disabled={apiKeyValidation?.isValid}
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
+              </Label>
+              <div className="flex gap-2">
+                <InputGroup className="flex-1">
+                  <InputAddon mode="icon">
+                    <Key size={16} />
+                  </InputAddon>
+                  <Input
+                    type="password"
+                    id="apiKey"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder={t("publish.apiKey.placeholder", "oa-xxxxxxxxxxxxxxxx")}
+                    disabled={apiKeyValidation?.isValid}
+                  />
+                </InputGroup>
                 {apiKeyValidation?.isValid ? (
                   <button
                     type="button"
@@ -1350,25 +1354,26 @@ const NetworkPublishPage: React.FC = () => {
           </h2>
           <div className="space-y-6">
             {/* Network ID */}
-            <div>
-              <label
-                htmlFor="networkId"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
+            <div className="space-y-2">
+              <Label htmlFor="networkId">
                 {t("publish.form.networkId", "Network ID")} *
-              </label>
-              <input
-                type="text"
-                id="networkId"
-                value={networkId}
-                onChange={(e) => setNetworkId(e.target.value)}
-                placeholder={t(
-                  "publish.form.networkIdPlaceholder",
-                  "e.g., my-awesome-network"
-                )}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              </Label>
+              <InputGroup>
+                <InputAddon mode="icon">
+                  <Hash size={16} />
+                </InputAddon>
+                <Input
+                  type="text"
+                  id="networkId"
+                  value={networkId}
+                  onChange={(e) => setNetworkId(e.target.value)}
+                  placeholder={t(
+                    "publish.form.networkIdPlaceholder",
+                    "e.g., my-awesome-network"
+                  )}
+                />
+              </InputGroup>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 {t(
                   "publish.form.networkIdHelp",
                   "Unique identifier for your network (min 7 characters)"
@@ -1377,25 +1382,26 @@ const NetworkPublishPage: React.FC = () => {
             </div>
 
             {/* Network Name */}
-            <div>
-              <label
-                htmlFor="networkName"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
+            <div className="space-y-2">
+              <Label htmlFor="networkName">
                 {t("publish.form.networkName", "Network Name")}
-              </label>
-              <input
-                type="text"
-                id="networkName"
-                value={networkName}
-                onChange={(e) => setNetworkName(e.target.value)}
-                placeholder={t(
-                  "publish.form.networkNamePlaceholder",
-                  "e.g., My Awesome Network"
-                )}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              </Label>
+              <InputGroup>
+                <InputAddon mode="icon">
+                  <Network size={16} />
+                </InputAddon>
+                <Input
+                  type="text"
+                  id="networkName"
+                  value={networkName}
+                  onChange={(e) => setNetworkName(e.target.value)}
+                  placeholder={t(
+                    "publish.form.networkNamePlaceholder",
+                    "e.g., My Awesome Network"
+                  )}
+                />
+              </InputGroup>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 {t(
                   "publish.form.networkNameHelp",
                   "Display name for your network (optional, auto-detected from health endpoint)"
@@ -1404,25 +1410,24 @@ const NetworkPublishPage: React.FC = () => {
             </div>
 
             {/* Organization */}
-            <div>
-              <label
-                htmlFor="organization"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
+            <div className="space-y-2">
+              <Label htmlFor="organization">
                 {t("publish.form.organization", "Organization")} *
-              </label>
-              <input
-                type="text"
-                id="organization"
-                value={organization}
-                onChange={(e) => setOrganization(e.target.value)}
-                placeholder={t("publish.form.organizationPlaceholder", "e.g., openagents")}
-                disabled={apiKeyValidation?.isValid}
-                className={`mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  apiKeyValidation?.isValid ? "opacity-50 cursor-not-allowed" : ""
-                }`}
-              />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              </Label>
+              <InputGroup>
+                <InputAddon mode="icon">
+                  <Building2 size={16} />
+                </InputAddon>
+                <Input
+                  type="text"
+                  id="organization"
+                  value={organization}
+                  onChange={(e) => setOrganization(e.target.value)}
+                  placeholder={t("publish.form.organizationPlaceholder", "e.g., openagents")}
+                  disabled={apiKeyValidation?.isValid}
+                />
+              </InputGroup>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 {apiKeyValidation?.isValid
                   ? t("publish.form.organizationFromApiKey", "Organization is determined by your API key")
                   : t("publish.form.organizationHelp", "Your organization identifier on OpenAgents")}
@@ -1431,27 +1436,26 @@ const NetworkPublishPage: React.FC = () => {
 
             {/* Host and Port */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label
-                  htmlFor="networkHost"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
+              <div className="space-y-2">
+                <Label htmlFor="networkHost">
                   {t("publish.form.host", "Host")} *
-                </label>
-                <input
-                  type="text"
-                  id="networkHost"
-                  value={networkHost}
-                  onChange={(e) => setNetworkHost(e.target.value)}
-                  placeholder={t("publish.form.hostPlaceholder", "e.g., mynetwork.example.com")}
-                  className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    hostValidation && !hostValidation.valid
-                      ? "border-red-300 dark:border-red-600"
-                      : "border-gray-300 dark:border-gray-600"
-                  }`}
-                />
+                </Label>
+                <InputGroup>
+                  <InputAddon mode="icon">
+                    <Globe size={16} />
+                  </InputAddon>
+                  <Input
+                    type="text"
+                    id="networkHost"
+                    value={networkHost}
+                    onChange={(e) => setNetworkHost(e.target.value)}
+                    placeholder={t("publish.form.hostPlaceholder", "e.g., mynetwork.example.com")}
+                    aria-invalid={hostValidation && !hostValidation.valid}
+                    className={hostValidation && !hostValidation.valid ? "border-red-500 dark:border-red-400" : ""}
+                  />
+                </InputGroup>
                 {hostValidation && !hostValidation.valid && (
-                  <p className="mt-1 text-xs text-red-500 dark:text-red-400">
+                  <p className="text-xs text-red-500 dark:text-red-400">
                     {hostValidation.reason === "localhost_not_allowed" &&
                       t("publish.errors.localhostNotAllowed", "localhost and local addresses are not allowed. Use a public domain or IP.")}
                     {hostValidation.reason === "private_ip_not_allowed" &&
@@ -1463,23 +1467,24 @@ const NetworkPublishPage: React.FC = () => {
                   </p>
                 )}
               </div>
-              <div>
-                <label
-                  htmlFor="networkPort"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
+              <div className="space-y-2">
+                <Label htmlFor="networkPort">
                   {t("publish.form.port", "Port")} *
-                </label>
-                <input
-                  type="number"
-                  id="networkPort"
-                  value={networkPort}
-                  onChange={(e) => setNetworkPort(e.target.value)}
-                  placeholder="8700"
-                  min={1}
-                  max={65535}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
+                </Label>
+                <InputGroup>
+                  <InputAddon mode="icon">
+                    <Server size={16} />
+                  </InputAddon>
+                  <Input
+                    type="number"
+                    id="networkPort"
+                    value={networkPort}
+                    onChange={(e) => setNetworkPort(e.target.value)}
+                    placeholder="8700"
+                    min={1}
+                    max={65535}
+                  />
+                </InputGroup>
               </div>
             </div>
 

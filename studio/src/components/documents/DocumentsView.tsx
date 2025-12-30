@@ -163,9 +163,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           <CardToolbar>
             <Button
               onClick={() => setShowCreateModal(true)}
-              variant="outline"
+              variant="primary"
               size="sm"
-              className="bg-blue-500 text-white"
             >
               <Plus className="w-4 h-4 mr-1" />
               {t("view.newDocument")}

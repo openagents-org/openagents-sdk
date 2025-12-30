@@ -15,7 +15,8 @@ import { hashPassword } from "@/utils/passwordHash";
 import { networkFetch } from "@/utils/httpClient";
 import LanguageSwitcher from "@/components/common/LanguageSwitcher";
 import { Button } from "@/components/layout/ui/button";
-import { Input } from "@/components/layout/ui/input";
+import { Input, InputGroup, InputAddon } from "@/components/layout/ui/input";
+import { Label } from "@/components/layout/ui/label";
 import {
   Select,
   SelectContent,
@@ -23,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/layout/ui/select';
-import { Loader2, RefreshCw, ArrowLeft } from "lucide-react";
+import { Loader2, RefreshCw, ArrowLeft, User, Lock, Users } from "lucide-react";
 
 // Interface for group configuration from /api/health
 interface GroupConfig {
@@ -435,33 +436,32 @@ const AgentNamePicker: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Agent Name Input - Hidden in Admin Mode */}
           {!isAdminMode && (
-            <div className="text-left">
-              <label
-                htmlFor="agentName"
-                className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300"
-              >
+            <div className="space-y-2 text-left">
+              <Label htmlFor="agentName">
                 {t("agentSetup.agentName")}
-              </label>
+              </Label>
               <div className="flex gap-3">
-                <Input
-                  id="agentName"
-                  type="text"
-                  variant="lg"
-                  value={pageAgentName || ""}
-                  onChange={(e) => setPageAgentName(e.target.value)}
-                  placeholder={t("agentSetup.agentNamePlaceholder")}
-                  maxLength={32}
-                  autoComplete="off"
-                  className={`text-sm w-full px-4 py-0 border-1 rounded-lg transition-all duration-150 focus:outline-none focus:ring-3 bg-white text-gray-800 dark:bg-gray-600 dark:text-gray-50 ${
-                    isReservedAgentName
-                      ? "border-red-500 focus:border-red-500 focus:ring-red-500/10 dark:border-red-400 dark:focus:border-red-400 dark:focus:ring-red-400/10"
-                      : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/10 dark:border-gray-500 dark:focus:border-blue-400 dark:focus:ring-blue-400/10"
-                  }`}
-                />
+                <InputGroup className="flex-1">
+                  <InputAddon mode="icon" variant="lg">
+                    <User size={16} />
+                  </InputAddon>
+                  <Input
+                    id="agentName"
+                    type="text"
+                    variant="lg"
+                    value={pageAgentName || ""}
+                    onChange={(e) => setPageAgentName(e.target.value)}
+                    placeholder={t("agentSetup.agentNamePlaceholder")}
+                    maxLength={32}
+                    autoComplete="off"
+                    aria-invalid={isReservedAgentName}
+                    className={isReservedAgentName ? "border-red-500 dark:border-red-400" : ""}
+                  />
+                </InputGroup>
                 <Button
                   type="button"
                   variant="outline"
-                  size="md"
+                  size="lg"
                   onClick={handleRandomize}
                 >
                   <RefreshCw className="w-4 h-4 mr-1.5" />
@@ -471,9 +471,8 @@ const AgentNamePicker: React.FC = () => {
                   <Button
                     type="button"
                     variant="primary"
-                    size="md"
+                    size="lg"
                     onClick={() => setPageAgentName(savedAgentName)}
-                    className="px-3 py-2 rounded-md text-sm cursor-pointer transition-all duration-150 bg-blue-500 text-white border-none hover:bg-blue-600"
                   >
                     {t("agentSetup.buttons.usePrevious", {
                       name: savedAgentName,
@@ -483,7 +482,7 @@ const AgentNamePicker: React.FC = () => {
               </div>
               {/* Reserved name error */}
               {isReservedAgentName && (
-                <div className="text-red-500 dark:text-red-400 text-sm mt-2">
+                <div className="text-red-500 dark:text-red-400 text-sm">
                   {t("agentSetup.errors.reservedName", { name: "admin" })}
                 </div>
               )}
@@ -494,43 +493,41 @@ const AgentNamePicker: React.FC = () => {
           {isAdminMode && (
             <>
               {/* Fixed Admin Name Display */}
-              <div className="text-left">
-                <label
-                  className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300"
-                >
-                  {t("agentSetup.agentName")}
-                </label>
+              <div className="space-y-2 text-left">
+                <Label>{t("agentSetup.agentName")}</Label>
                 <div className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-base font-medium text-gray-800 dark:text-gray-100">
                   admin
                 </div>
               </div>
 
-              <div className="text-left">
-                <label
-                  htmlFor="adminPassword"
-                  className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300"
-                >
-                  {t("agentSetup.adminPassword")}{" "}
-                  <span className="text-red-500 ml-1">*</span>
-                </label>
-                <Input
-                  id="adminPassword"
-                  type="password"
-                  variant="lg"
-                  value={adminPassword}
-                  onChange={(e) => {
-                    setAdminPassword(e.target.value);
-                    setPasswordError("");
-                  }}
-                  className={passwordError ? "border-red-500 dark:border-red-400" : ""}
-                  placeholder={t("agentSetup.adminPasswordPlaceholder")}
-                  autoComplete="off"
-                  required
-                />
+              <div className="space-y-2 text-left">
+                <Label htmlFor="adminPassword">
+                  {t("agentSetup.adminPassword")} <span className="text-red-500 ml-1">*</span>
+                </Label>
+                <InputGroup>
+                  <InputAddon mode="icon" variant="lg">
+                    <Lock size={16} />
+                  </InputAddon>
+                  <Input
+                    id="adminPassword"
+                    type="password"
+                    variant="lg"
+                    value={adminPassword}
+                    onChange={(e) => {
+                      setAdminPassword(e.target.value);
+                      setPasswordError("");
+                    }}
+                    className={passwordError ? "border-red-500 dark:border-red-400" : ""}
+                    placeholder={t("agentSetup.adminPasswordPlaceholder")}
+                    autoComplete="off"
+                    required
+                    aria-invalid={!!passwordError}
+                  />
+                </InputGroup>
 
                 {/* Password Error */}
                 {passwordError && (
-                  <div className="text-red-500 dark:text-red-400 text-sm mt-2">
+                  <div className="text-red-500 dark:text-red-400 text-sm">
                     {passwordError}
                   </div>
                 )}
@@ -555,73 +552,77 @@ const AgentNamePicker: React.FC = () => {
           {!isAdminMode && (
             <>
               {/* Agent Group Selection */}
-              <div className="text-left">
-                <label
-                  htmlFor="agentGroup"
-                  className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300"
-                >
+              <div className="space-y-2 text-left">
+                <Label htmlFor="agentGroup">
                   {t("agentSetup.agentGroup")}
-                </label>
+                </Label>
                 {isLoadingGroups ? (
                   <div className="w-full px-4 py-3 border border-gray-300 dark:border-gray-500 rounded-lg bg-gray-50 dark:bg-gray-600 text-sm text-gray-500 dark:text-gray-400">
                     {t("agentSetup.loadingGroups")}
                   </div>
                 ) : (
-                  <Select
-                    value={selectedGroup || ""}
-                    onValueChange={(value) => {
-                      setSelectedGroup(value);
-                      setGroupPassword("");
-                      setPasswordError("");
-                    }}
-                  >
-                    <SelectTrigger size="lg" className="w-full px-4 py-3 border border-gray-300 dark:border-gray-500 rounded-lg text-base transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-50">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableGroups.map((group) => (
-                        <SelectItem key={group.name} value={group.name}>
-                          {group.has_password ? "🔒 " : ""}
-                          {group.name}
-                          {group.name === defaultGroup
-                            ? ` (${t("agentSetup.default")})`
-                            : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <InputGroup>
+                    <InputAddon mode="icon" variant="lg">
+                      <Users size={16} />
+                    </InputAddon>
+                    <Select
+                      value={selectedGroup || ""}
+                      onValueChange={(value) => {
+                        setSelectedGroup(value);
+                        setGroupPassword("");
+                        setPasswordError("");
+                      }}
+                    >
+                      <SelectTrigger size="lg" className="rounded-l-none">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableGroups.map((group) => (
+                          <SelectItem key={group.name} value={group.name}>
+                            {group.has_password ? "🔒 " : ""}
+                            {group.name}
+                            {group.name === defaultGroup
+                              ? ` (${t("agentSetup.default")})`
+                              : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </InputGroup>
                 )}
               </div>
 
               {/* Password Input - Only show if selected group requires password */}
               {selectedGroupRequiresPassword && (
-                <div className="text-left">
-                  <label
-                    htmlFor="groupPassword"
-                    className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300"
-                  >
-                    {t("agentSetup.password")}{" "}
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <Input
-                    id="groupPassword"
-                    type="password"
-                    variant="lg"
-                    value={groupPassword}
-                    onChange={(e) => {
-                      setGroupPassword(e.target.value);
-                      setPasswordError("");
-                    }}
-                    className={passwordError ? "border-red-500 dark:border-red-400" : ""}
-                    placeholder={t("agentSetup.passwordPlaceholder", {
-                      group: selectedGroup,
-                    })}
-                    autoComplete="off"
-                  />
+                <div className="space-y-2 text-left">
+                  <Label htmlFor="groupPassword">
+                    {t("agentSetup.password")} <span className="text-red-500 ml-1">*</span>
+                  </Label>
+                  <InputGroup>
+                    <InputAddon mode="icon" variant="lg">
+                      <Lock size={16} />
+                    </InputAddon>
+                    <Input
+                      id="groupPassword"
+                      type="password"
+                      variant="lg"
+                      value={groupPassword}
+                      onChange={(e) => {
+                        setGroupPassword(e.target.value);
+                        setPasswordError("");
+                      }}
+                      className={passwordError ? "border-red-500 dark:border-red-400" : ""}
+                      placeholder={t("agentSetup.passwordPlaceholder", {
+                        group: selectedGroup,
+                      })}
+                      autoComplete="off"
+                      aria-invalid={!!passwordError}
+                    />
+                  </InputGroup>
 
                   {/* Password Error */}
                   {passwordError && (
-                    <div className="text-red-500 dark:text-red-400 text-sm mt-2">
+                    <div className="text-red-500 dark:text-red-400 text-sm">
                       {passwordError}
                     </div>
                   )}

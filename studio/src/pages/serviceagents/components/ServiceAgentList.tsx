@@ -16,7 +16,15 @@ import {
 import { DataTable } from "@/components/layout/ui/data-table"
 import { Button } from "@/components/layout/ui/button"
 import { Badge } from "@/components/layout/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardHeading, CardTitle, CardToolbar } from "@/components/layout/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardHeading,
+  CardTitle,
+  CardToolbar,
+} from "@/components/layout/ui/card"
 import {
   AlertCircle,
   RefreshCw,
@@ -129,7 +137,12 @@ const ServiceAgentList: React.FC = () => {
     if (globalEnvExpanded && !globalEnvFetched && !loadingGlobalEnv) {
       fetchGlobalEnvVars()
     }
-  }, [globalEnvExpanded, globalEnvFetched, loadingGlobalEnv, fetchGlobalEnvVars])
+  }, [
+    globalEnvExpanded,
+    globalEnvFetched,
+    loadingGlobalEnv,
+    fetchGlobalEnvVars,
+  ])
 
   // Handle adding new global env var
   const handleAddGlobalEnvVar = () => {
@@ -289,10 +302,10 @@ const ServiceAgentList: React.FC = () => {
                 isRunning
                   ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                   : isError
-                    ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                    : isStopped
-                      ? "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
-                      : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                  ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                  : isStopped
+                  ? "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+                  : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
               }`}
             >
               <span
@@ -300,10 +313,10 @@ const ServiceAgentList: React.FC = () => {
                   isRunning
                     ? "bg-green-500"
                     : isError
-                      ? "bg-red-500"
-                      : isStopped
-                        ? "bg-gray-400"
-                        : "bg-yellow-500"
+                    ? "bg-red-500"
+                    : isStopped
+                    ? "bg-gray-400"
+                    : "bg-yellow-500"
                 }`}
               />
               {getStatusText(status)}
@@ -463,7 +476,7 @@ const ServiceAgentList: React.FC = () => {
   }
 
   return (
-    <div className="p-6 bg-gray-50 dark:bg-gray-900 h-full min-h-screen overflow-y-auto">
+    <div className="p-6 bg-white dark:bg-gray-900 h-full min-h-screen overflow-y-auto">
       <Card variant="default" className="mb-6">
         <CardHeader>
           <CardHeading>
@@ -477,213 +490,229 @@ const ServiceAgentList: React.FC = () => {
               variant="outline"
               size="sm"
             >
-              <RefreshCw className={`w-4 h-4 mr-1 ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`w-4 h-4 mr-1 ${loading ? "animate-spin" : ""}`}
+              />
               {loading ? t("list.refreshing") : t("list.refresh")}
             </Button>
           </CardToolbar>
         </CardHeader>
         <CardContent className="space-y-6">
-      {/* Model Configuration - Link to Default Models Page */}
-      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-        <button
-          type="button"
-          onClick={() => navigate("/admin/default-models")}
-          className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
-        >
-          <div className="flex items-center space-x-3">
-            <Cpu className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-            <div>
-              <h3 className="font-medium text-gray-900 dark:text-gray-100">
-                {t("list.modelConfig.title")}
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {t("list.modelConfig.subtitle")}
-              </p>
-            </div>
-          </div>
-          <ChevronRight className="w-5 h-5 text-gray-400" />
-        </button>
-      </div>
-
-      {/* Global Environment Variables */}
-      <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow">
-        <button
-          type="button"
-          onClick={() => setGlobalEnvExpanded(!globalEnvExpanded)}
-          className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
-        >
-          <div className="flex items-center space-x-3">
-            <Settings className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-            <div>
-              <h3 className="font-medium text-gray-900 dark:text-gray-100">
-                {t("list.globalEnv.title")}
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {t("list.globalEnv.subtitle")}
-              </p>
-            </div>
-          </div>
-          {globalEnvExpanded ? (
-            <ChevronUp className="w-5 h-5 text-gray-400" />
-          ) : (
-            <ChevronDown className="w-5 h-5 text-gray-400" />
-          )}
-        </button>
-
-        {globalEnvExpanded && (
-          <div className="border-t border-gray-200 dark:border-gray-700 p-4">
-            {loadingGlobalEnv ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-                <span className="ml-2 text-gray-600 dark:text-gray-400">
-                  {t("list.globalEnv.loading")}
-                </span>
+          {/* Model Configuration - Link to Default Models Page */}
+          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            <button
+              type="button"
+              onClick={() => navigate("/admin/default-models")}
+              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              <div className="flex items-center space-x-3">
+                <Cpu className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                <div>
+                  <h3 className="font-medium text-gray-900 dark:text-gray-100">
+                    {t("list.modelConfig.title")}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t("list.modelConfig.subtitle")}
+                  </p>
+                </div>
               </div>
-            ) : (
-              <>
-                {/* Add new variable */}
-                <div className="flex items-center space-x-2 mb-4">
-                  <input
-                    type="text"
-                    placeholder={t("list.globalEnv.variableName")}
-                    value={newGlobalEnvName}
-                    onChange={(e) => setNewGlobalEnvName(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <input
-                    type="text"
-                    placeholder={t("list.globalEnv.value")}
-                    value={newGlobalEnvValue}
-                    onChange={(e) => setNewGlobalEnvValue(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAddGlobalEnvVar}
-                    className="px-3 py-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
+              <ChevronRight className="w-5 h-5 text-gray-400" />
+            </button>
+          </div>
+
+          {/* Global Environment Variables */}
+          <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+            <button
+              type="button"
+              onClick={() => setGlobalEnvExpanded(!globalEnvExpanded)}
+              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              <div className="flex items-center space-x-3">
+                <Settings className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                <div>
+                  <h3 className="font-medium text-gray-900 dark:text-gray-100">
+                    {t("list.globalEnv.title")}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t("list.globalEnv.subtitle")}
+                  </p>
                 </div>
+              </div>
+              {globalEnvExpanded ? (
+                <ChevronUp className="w-5 h-5 text-gray-400" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-gray-400" />
+              )}
+            </button>
 
-                {/* Variable list */}
-                <div className="space-y-2">
-                  {Object.keys(globalEnvVars).length === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-                      {t("list.globalEnv.empty")}
-                    </p>
-                  ) : (
-                    Object.entries(globalEnvVars).map(([name, value]) => {
-                      const isSensitive = isSensitiveVariable(name)
-                      const isVisible = visibleSensitiveVars.has(name)
-                      const displayValue =
-                        isSensitive && !isVisible ? maskValue(value) : value
-
-                      return (
-                        <div key={name} className="flex items-center space-x-2">
-                          <input
-                            type="text"
-                            value={name}
-                            disabled
-                            className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm"
-                          />
-                          <div className="flex-1 relative">
-                            <input
-                              type={
-                                isSensitive && !isVisible ? "password" : "text"
-                              }
-                              value={isSensitive && !isVisible ? value : value}
-                              onChange={(e) =>
-                                handleUpdateGlobalEnvVar(name, e.target.value)
-                              }
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
-                              placeholder={
-                                isSensitive && !isVisible ? displayValue : ""
-                              }
-                            />
-                            {isSensitive && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  toggleSensitiveVarVisibility(name)
-                                }
-                                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                              >
-                                {isVisible ? (
-                                  <EyeOff className="w-4 h-4" />
-                                ) : (
-                                  <Eye className="w-4 h-4" />
-                                )}
-                              </button>
-                            )}
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteGlobalEnvVar(name)}
-                            className="px-2 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-
-                {/* Save button */}
-                {hasGlobalEnvChanges && (
-                  <div className="mt-4 flex justify-end">
-                    <Button
-                      type="button"
-                      variant="primary"
-                      size="sm"
-                      onClick={handleSaveGlobalEnvVars}
-                      disabled={savingGlobalEnv}
-                      className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
-                    >
-                      {savingGlobalEnv ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          {t("list.globalEnv.saving")}
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4 mr-2" />
-                          {t("list.globalEnv.saveChanges")}
-                        </>
-                      )}
-                    </Button>
+            {globalEnvExpanded && (
+              <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+                {loadingGlobalEnv ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                    <span className="ml-2 text-gray-600 dark:text-gray-400">
+                      {t("list.globalEnv.loading")}
+                    </span>
                   </div>
-                )}
+                ) : (
+                  <>
+                    {/* Add new variable */}
+                    <div className="flex items-center space-x-2 mb-4">
+                      <input
+                        type="text"
+                        placeholder={t("list.globalEnv.variableName")}
+                        value={newGlobalEnvName}
+                        onChange={(e) => setNewGlobalEnvName(e.target.value)}
+                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder={t("list.globalEnv.value")}
+                        value={newGlobalEnvValue}
+                        onChange={(e) => setNewGlobalEnvValue(e.target.value)}
+                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleAddGlobalEnvVar}
+                        className="px-3 py-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
 
-                {/* Note about restart */}
-                <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-                  {t("list.globalEnv.note")}
-                </p>
-              </>
+                    {/* Variable list */}
+                    <div className="space-y-2">
+                      {Object.keys(globalEnvVars).length === 0 ? (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                          {t("list.globalEnv.empty")}
+                        </p>
+                      ) : (
+                        Object.entries(globalEnvVars).map(([name, value]) => {
+                          const isSensitive = isSensitiveVariable(name)
+                          const isVisible = visibleSensitiveVars.has(name)
+                          const displayValue =
+                            isSensitive && !isVisible ? maskValue(value) : value
+
+                          return (
+                            <div
+                              key={name}
+                              className="flex items-center space-x-2"
+                            >
+                              <input
+                                type="text"
+                                value={name}
+                                disabled
+                                className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm"
+                              />
+                              <div className="flex-1 relative">
+                                <input
+                                  type={
+                                    isSensitive && !isVisible
+                                      ? "password"
+                                      : "text"
+                                  }
+                                  value={
+                                    isSensitive && !isVisible ? value : value
+                                  }
+                                  onChange={(e) =>
+                                    handleUpdateGlobalEnvVar(
+                                      name,
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+                                  placeholder={
+                                    isSensitive && !isVisible
+                                      ? displayValue
+                                      : ""
+                                  }
+                                />
+                                {isSensitive && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      toggleSensitiveVarVisibility(name)
+                                    }
+                                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                  >
+                                    {isVisible ? (
+                                      <EyeOff className="w-4 h-4" />
+                                    ) : (
+                                      <Eye className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteGlobalEnvVar(name)}
+                                className="px-2 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          )
+                        })
+                      )}
+                    </div>
+
+                    {/* Save button */}
+                    {hasGlobalEnvChanges && (
+                      <div className="mt-4 flex justify-end">
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="sm"
+                          onClick={handleSaveGlobalEnvVars}
+                          disabled={savingGlobalEnv}
+                          className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+                        >
+                          {savingGlobalEnv ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              {t("list.globalEnv.saving")}
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-4 h-4 mr-2" />
+                              {t("list.globalEnv.saveChanges")}
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Note about restart */}
+                    <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                      {t("list.globalEnv.note")}
+                    </p>
+                  </>
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
 
-      {/* Agents Table */}
-      <DataTable
-        columns={columns}
-        data={agents}
-        loading={loading && agents.length === 0}
-        searchable={true}
-        searchPlaceholder={t("list.searchPlaceholder")}
-        searchColumn="agent_id"
-        pagination={true}
-        pageSize={10}
-        emptyMessage={t("list.noAgents")}
-        emptyIcon={<FileText className="w-12 h-12 text-gray-400" />}
-        onRowClick={(row) => navigate(`/admin/service-agents/${row.agent_id}`)}
-      />
+          {/* Agents Table */}
+          <DataTable
+            columns={columns}
+            data={agents}
+            loading={loading && agents.length === 0}
+            searchable={true}
+            searchPlaceholder={t("list.searchPlaceholder")}
+            searchColumn="agent_id"
+            pagination={true}
+            pageSize={10}
+            emptyMessage={t("list.noAgents")}
+            emptyIcon={<FileText className="w-12 h-12 text-gray-400" />}
+            onRowClick={(row) =>
+              navigate(`/admin/service-agents/${row.agent_id}`)
+            }
+          />
         </CardContent>
       </Card>
     </div>

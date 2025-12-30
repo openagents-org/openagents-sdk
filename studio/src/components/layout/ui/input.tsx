@@ -22,7 +22,7 @@ const inputVariants = cva(
       },
     },
     defaultVariants: {
-      variant: 'md',
+      variant: 'lg',
     },
   },
 );
@@ -42,7 +42,7 @@ const inputAddonVariants = cva(
       },
     },
     defaultVariants: {
-      variant: 'md',
+      variant: 'lg',
       mode: 'default',
     },
   },
@@ -111,7 +111,7 @@ const inputWrapperVariants = cva(
       },
     },
     defaultVariants: {
-      variant: 'md',
+      variant: 'lg',
     },
   },
 );

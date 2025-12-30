@@ -4,12 +4,13 @@ import { useLocation } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { Menu, FileText } from "lucide-react";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { useOpenAgents } from "@/context/OpenAgentsProvider";
 import { useReadmeStore } from "@/stores/readmeStore";
 import ReadmeSidebar from "./ReadmeSidebar";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
+import { EmptyState } from "@/components/layout/ui/empty-state";
 
 /**
  * README Main Page - Displays README content fetched from /api/health
@@ -127,19 +128,14 @@ const ReadmeMainPage: React.FC = () => {
   );
 
   // Empty content state component
-  const EmptyState = () => (
-    <div className="h-full flex items-center justify-center dark:bg-gray-800">
-      <div className="text-center">
-        <div className="text-6xl mb-4 text-gray-400 dark:text-gray-600">
-          📄
-        </div>
-        <h3 className="text-lg font-medium mb-2 text-gray-800 dark:text-gray-200">
-          {t('empty.title')}
-        </h3>
-        <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-md mx-auto">
-          {t('empty.description')}
-        </p>
-      </div>
+  const ReadmeEmptyState = () => (
+    <div className="h-full flex items-center justify-center dark:bg-gray-800 p-6">
+      <EmptyState
+        variant="minimal"
+        icon={<FileText className="w-12 h-12" />}
+        title={t('empty.title')}
+        description={t('empty.description')}
+      />
     </div>
   );
 
@@ -154,7 +150,7 @@ const ReadmeMainPage: React.FC = () => {
     }
 
     if (!readmeContent) {
-      return <EmptyState />;
+      return <ReadmeEmptyState />;
     }
 
     return (

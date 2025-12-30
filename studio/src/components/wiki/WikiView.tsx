@@ -10,7 +10,8 @@ import {
   CardTitle,
   CardToolbar,
 } from '@/components/layout/ui/card';
-import { Plus, RefreshCw, Clock } from 'lucide-react';
+import { EmptyState } from '@/components/layout/ui/empty-state';
+import { Plus, RefreshCw, Clock, FileText } from 'lucide-react';
 
 interface WikiPage {
   page_path: string;
@@ -647,11 +648,12 @@ const WikiView: React.FC<WikiViewProps> = ({
               </div>
             ))}
             {pages.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-gray-600 dark:text-gray-400">
-                  {searchQuery ? 'No pages found matching your search' : 'No wiki pages yet'}
-                </p>
-              </div>
+              <EmptyState
+                variant="minimal"
+                icon={<FileText className="w-12 h-12" />}
+                title={searchQuery ? 'No pages found matching your search' : 'No wiki pages yet'}
+                description={searchQuery ? 'Try adjusting your search terms' : 'Create your first wiki page to get started'}
+              />
             )}
           </div>
         </CardContent>

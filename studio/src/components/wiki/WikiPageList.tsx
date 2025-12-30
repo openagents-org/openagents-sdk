@@ -17,7 +17,8 @@ import {
   CardTitle,
   CardToolbar,
 } from "@/components/layout/ui/card"
-import { Plus, RefreshCw, Clock, Search } from "lucide-react"
+import { EmptyState } from "@/components/layout/ui/empty-state"
+import { Plus, RefreshCw, Clock, Search, FileText } from "lucide-react"
 import { Input } from "@/components/layout/ui/input"
 
 const WikiPageList: React.FC = () => {
@@ -159,9 +160,8 @@ const WikiPageList: React.FC = () => {
             {proposals.filter((p) => p.status === "pending").length > 0 && (
               <Button
                 onClick={() => navigate("/wiki/proposals")}
-                variant="outline"
                 size="sm"
-                className="bg-yellow-500 text-white hover:bg-yellow-600"
+                className="bg-yellow-500 text-white hover:bg-yellow-600 shadow-xs shadow-black/5"
               >
                 <Clock className="w-4 h-4 mr-1" />
                 {t("list.proposals", {
@@ -169,15 +169,14 @@ const WikiPageList: React.FC = () => {
                 })}
               </Button>
             )}
-            <Button onClick={loadPages} variant="outline" size="sm">
+            <Button onClick={loadPages} variant="outline" size="md">
               <RefreshCw className="w-4 h-4 mr-1" />
               {t("list.refresh")}
             </Button>
             <Button
               onClick={() => setShowCreateModal(true)}
-              variant="outline"
-              size="sm"
               className="bg-blue-500 text-white"
+              size="md"
             >
               <Plus className="w-4 h-4 mr-1" />
               {t("list.newPage")}
@@ -200,39 +199,26 @@ const WikiPageList: React.FC = () => {
 
           {/* Page list */}
           {pages.length === 0 ? (
-            <div className="text-center py-12 h-full flex flex-col items-center justify-center">
-              <div className="mb-4 text-gray-500 dark:text-gray-400">
-                <svg
-                  className="w-16 h-16 mx-auto"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium mb-2 text-gray-700 dark:text-gray-300">
-                {searchQuery ? t("list.noPagesFound") : t("list.noPages")}
-              </h3>
-              <p className="mb-4 text-gray-600 dark:text-gray-400">
-                {searchQuery
+            <EmptyState
+              icon={<FileText className="w-16 h-16" />}
+              title={searchQuery ? t("list.noPagesFound") : t("list.noPages")}
+              description={
+                searchQuery
                   ? t("list.noPagesFoundSearch")
-                  : t("list.createFirst")}
-              </p>
-              {!searchQuery && (
-                <Button
-                  onClick={() => setShowCreateModal(true)}
-                  variant="primary"
-                >
-                  {t("list.createFirstButton")}
-                </Button>
-              )}
-            </div>
+                  : t("list.createFirst")
+              }
+              action={
+                !searchQuery ? (
+                  <Button
+                    onClick={() => setShowCreateModal(true)}
+                    size="lg"
+                    className="bg-blue-500 text-white"
+                  >
+                    {t("list.createFirstButton")}
+                  </Button>
+                ) : undefined
+              }
+            />
           ) : (
             <div className="space-y-4">
               {pages.map((page) => (
