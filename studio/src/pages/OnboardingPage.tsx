@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import OnboardingStep1 from "@/components/onboarding/OnboardingStep1";
 import OnboardingStep2 from "@/components/onboarding/OnboardingStep2";
@@ -25,6 +26,7 @@ export interface Template {
 }
 
 const OnboardingPage: React.FC = () => {
+  const navigate = useNavigate();
   const { selectedNetwork } = useAuthStore();
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
@@ -133,6 +135,10 @@ const OnboardingPage: React.FC = () => {
 
       setIsDeploying(false);
       setIsComplete(true);
+
+      // Auto-redirect to admin dashboard after a brief moment
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      navigate("/admin/dashboard", { replace: true });
     } catch (error) {
       console.error("Deployment failed:", error);
       setIsDeploying(false);
@@ -185,4 +191,3 @@ const OnboardingPage: React.FC = () => {
 };
 
 export default OnboardingPage;
-

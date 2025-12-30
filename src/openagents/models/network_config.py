@@ -164,7 +164,7 @@ class NetworkConfig(BaseModel):
 
     # Network initialization state
     initialized: bool = Field(
-        default=True,
+        default=False,
         description="Whether the network has been initialized. When False, initialization APIs are available.",
     )
 
