@@ -174,11 +174,13 @@ def initialize_workspace(workspace_path: Path) -> Path:
         from openagents import __version__
         config_dict = yaml.safe_load(network_yaml_content)
         if 'network' in config_dict:
-            config_dict['network']['created_by_version'] = __version__
+            # Only set created_by_version if not already present
+            if 'created_by_version' not in config_dict['network']:
+                config_dict['network']['created_by_version'] = __version__
 
         with open(config_path, 'w') as f:
             yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
-        logging.info(f"Created network.yaml in workspace with version {__version__}")
+        logging.info(f"Created network.yaml in workspace")
 
         # Copy README.md if it exists
         try:
@@ -233,10 +235,12 @@ def initialize_workspace(workspace_path: Path) -> Path:
             with open(template_path, 'r') as f:
                 config_dict = yaml.safe_load(f)
             if 'network' in config_dict:
-                config_dict['network']['created_by_version'] = __version__
+                # Only set created_by_version if not already present
+                if 'created_by_version' not in config_dict['network']:
+                    config_dict['network']['created_by_version'] = __version__
             with open(config_path, 'w') as f:
                 yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
-            logging.info(f"Copied network.yaml from templates to workspace with version {__version__}")
+            logging.info(f"Copied network.yaml from templates to workspace")
 
             # Copy README.md if it exists
             readme_path = script_dir / "templates" / "default_network" / "README.md"
@@ -292,10 +296,12 @@ def initialize_workspace(workspace_path: Path) -> Path:
                         with open(item, 'r') as f:
                             config_dict = yaml.safe_load(f)
                         if 'network' in config_dict:
-                            config_dict['network']['created_by_version'] = __version__
+                            # Only set created_by_version if not already present
+                            if 'created_by_version' not in config_dict['network']:
+                                config_dict['network']['created_by_version'] = __version__
                         with open(dest_path, 'w') as f:
                             yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
-                        logging.info(f"Copied network.yaml to workspace with version {__version__}")
+                        logging.info(f"Copied network.yaml to workspace")
                     else:
                         shutil.copy2(item, dest_path)
                         logging.info(f"Copied {item.name} to workspace")
