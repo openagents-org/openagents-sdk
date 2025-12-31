@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useOpenAgents } from '@/context/OpenAgentsProvider';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -19,11 +19,18 @@ export const useIsAdmin = (): UseIsAdminResult => {
   const { connector } = useOpenAgents();
   const { agentName } = useAuthStore();
 
+  // Track if we've ever successfully checked admin status
+  const hasCheckedRef = useRef<boolean>(false);
+
   useEffect(() => {
     const checkAdminStatus = async () => {
+      // Keep loading state true until we have both connector and agentName
       if (!connector || !agentName) {
-        setIsAdmin(false);
-        setIsLoading(false);
+        // Only set loading to false if we've never successfully checked
+        // This prevents the menu from flickering
+        if (!hasCheckedRef.current) {
+          setIsLoading(true);
+        }
         return;
       }
 
@@ -38,15 +45,20 @@ export const useIsAdmin = (): UseIsAdminResult => {
           const adminAgents = healthData.groups.admin;
           const isUserAdmin = Array.isArray(adminAgents) && adminAgents.includes(agentName);
           setIsAdmin(isUserAdmin);
+          hasCheckedRef.current = true;
 
           console.log(`🔐 Admin check: agentName=${agentName}, isAdmin=${isUserAdmin}`);
         } else {
           setIsAdmin(false);
+          hasCheckedRef.current = true;
         }
       } catch (err) {
         console.error('Failed to check admin status:', err);
         setError(err instanceof Error ? err : new Error('Unknown error'));
-        setIsAdmin(false);
+        // Don't set isAdmin to false on error if we've previously confirmed admin status
+        if (!hasCheckedRef.current) {
+          setIsAdmin(false);
+        }
       } finally {
         setIsLoading(false);
       }
