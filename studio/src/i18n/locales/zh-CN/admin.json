@@ -6,6 +6,9 @@
     "refresh": "刷新",
     "refreshing": "刷新中...",
     "networkInfo": "网络",
+    "networkStatus": {
+      "title": "网络状态"
+    },
     "stats": {
       "agents": "代理",
       "online": "在线",
@@ -51,16 +54,24 @@
       "eventExplorerDesc": "搜索和浏览事件",
       "llmLogsDesc": "查看 LLM 请求日志"
     },
+    "defaultLLM": {
+      "title": "默认 LLM",
+      "configure": "配置",
+      "notConfigured": "未配置",
+      "apiKeySet": "API Key 已设置"
+    },
     "serviceAgents": {
       "title": "服务代理",
       "viewAll": "查看全部",
       "startAll": "全部启动",
       "stopAll": "全部停止",
+      "noAgents": "暂无服务代理",
       "allRunning": "所有代理已在运行中",
       "allStopped": "所有代理已停止",
       "startAllSuccess": "成功启动 {{count}} 个代理",
       "stopAllSuccess": "成功停止 {{count}} 个代理",
       "startAllPartial": "已启动 {{success}} 个代理，{{failed}} 个失败",
+      "startAllModelConfigError": "已启动 {{success}} 个代理，{{failed}} 个失败。请先配置默认模型。",
       "stopAllPartial": "已停止 {{success}} 个代理，{{failed}} 个失败"
     },
     "recentActivity": {
@@ -462,7 +473,28 @@
     "response": "响应",
     "timestamp": "时间戳",
     "previous": "上一页",
-    "next": "下一页"
+    "next": "下一页",
+    "columns": {
+      "direction": "方向",
+      "eventName": "事件名称",
+      "source": "来源",
+      "destination": "目标",
+      "time": "时间",
+      "status": "状态",
+      "sent": "发送",
+      "received": "接收",
+      "success": "成功",
+      "failed": "失败",
+      "method": "方法",
+      "endpoint": "端点",
+      "statusCode": "状态码",
+      "host": "主机",
+      "duration": "耗时",
+      "actions": "操作"
+    },
+    "eventDetail": "事件详情",
+    "httpDetail": "HTTP 请求详情",
+    "close": "关闭"
   },
   "eventDebugger": {
     "title": "事件调试器",

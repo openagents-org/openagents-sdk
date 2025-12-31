@@ -24,6 +24,7 @@ export function HeaderBreadcrumbs() {
   const navigate = useNavigate()
   const { t } = useTranslation("layout")
   const { t: tAdmin } = useTranslation("admin")
+  const { t: tProfile } = useTranslation("profile")
   const { isAdmin } = useIsAdmin()
   const { confirm } = useConfirm()
 
@@ -32,26 +33,27 @@ export function HeaderBreadcrumbs() {
     const pathname = location.pathname
     const items: Array<{ label: string; href: string; isActive: boolean }> = []
 
-    // Translation mapping for navigation labels
-    const getTranslatedLabel = (key: PLUGIN_NAME_ENUM): string => {
-      const labelMap: Partial<Record<PLUGIN_NAME_ENUM, string>> = {
-        [PLUGIN_NAME_ENUM.MESSAGING]: t("navigation.messages"),
-        [PLUGIN_NAME_ENUM.FEED]: t("navigation.infoFeed"),
-        [PLUGIN_NAME_ENUM.PROJECT]: t("navigation.projects"),
-        [PLUGIN_NAME_ENUM.FORUM]: t("navigation.forum"),
-        [PLUGIN_NAME_ENUM.ARTIFACT]: t("navigation.artifact"),
-        [PLUGIN_NAME_ENUM.WIKI]: t("navigation.wiki"),
-        [PLUGIN_NAME_ENUM.DOCUMENTS]: t("navigation.documents"),
-        [PLUGIN_NAME_ENUM.AGENTWORLD]: t("navigation.agentWorld"),
-        [PLUGIN_NAME_ENUM.PROFILE]: t("navigation.profile"),
-        [PLUGIN_NAME_ENUM.README]: t("navigation.readme"),
-        [PLUGIN_NAME_ENUM.MOD_MANAGEMENT]: t("navigation.modManagement"),
-        [PLUGIN_NAME_ENUM.SERVICE_AGENTS]: t("navigation.serviceAgents"),
-        [PLUGIN_NAME_ENUM.LLM_LOGS]: t("navigation.llmLogs"),
-        [PLUGIN_NAME_ENUM.ADMIN]: t("navigation.admin"),
-      }
-      return labelMap[key] || key
-    }
+        // Translation mapping for navigation labels
+        const getTranslatedLabel = (key: PLUGIN_NAME_ENUM): string => {
+          const labelMap: Partial<Record<PLUGIN_NAME_ENUM, string>> = {
+            [PLUGIN_NAME_ENUM.MESSAGING]: t("navigation.messages"),
+            [PLUGIN_NAME_ENUM.FEED]: t("navigation.infoFeed"),
+            [PLUGIN_NAME_ENUM.PROJECT]: t("navigation.projects"),
+            [PLUGIN_NAME_ENUM.FORUM]: t("navigation.forum"),
+            [PLUGIN_NAME_ENUM.ARTIFACT]: t("navigation.artifact"),
+            [PLUGIN_NAME_ENUM.WIKI]: t("navigation.wiki"),
+            [PLUGIN_NAME_ENUM.DOCUMENTS]: t("navigation.documents"),
+            [PLUGIN_NAME_ENUM.AGENTWORLD]: t("navigation.agentWorld"),
+            [PLUGIN_NAME_ENUM.PROFILE]: t("navigation.profile"),
+            [PLUGIN_NAME_ENUM.README]: t("navigation.readme"),
+            [PLUGIN_NAME_ENUM.MOD_MANAGEMENT]: t("navigation.modManagement"),
+            [PLUGIN_NAME_ENUM.SERVICE_AGENTS]: t("navigation.serviceAgents"),
+            [PLUGIN_NAME_ENUM.LLM_LOGS]: t("navigation.llmLogs"),
+            [PLUGIN_NAME_ENUM.ADMIN]: t("navigation.admin"),
+            [PLUGIN_NAME_ENUM.USER_DASHBOARD]: t("navigation.userDashboard", { defaultValue: "User Dashboard" }),
+          }
+          return labelMap[key] || key
+        }
 
     // Get all routes
     const primaryRoutes = getNavigationRoutesByGroup("primary")
@@ -132,7 +134,7 @@ export function HeaderBreadcrumbs() {
         })
       }
 
-      // Handle sub-routes (e.g., /wiki/detail/xxx)
+      // Handle sub-routes (e.g., /wiki/detail/xxx, /profile/event-debugger)
       if (pathname !== routePath && pathname.startsWith(routePath)) {
         const subPath = pathname.replace(routePath, "")
         const segments = subPath.split("/").filter(Boolean)
@@ -143,8 +145,43 @@ export function HeaderBreadcrumbs() {
             const segmentPath = `${routePath}/${segments
               .slice(0, index + 1)
               .join("/")}`
+            const decodedSegment = decodeURIComponent(segment)
+            
+            // Translate sub-route segments based on parent route
+            let label = decodedSegment
+            
+            // Handle profile route sub-routes
+            if (routePath === "/profile") {
+              // Map profile sub-routes to translation keys
+              const profileRouteMap: Record<string, string> = {
+                "event-debugger": "profile.sidebar.eventDebugger",
+                "event-logs": "profile.sidebar.eventLogs",
+                "event-explorer": "profile.sidebar.eventExplorer",
+                "agent-management": "profile.sidebar.agentManagement",
+                "network-profile": "profile.sidebar.networkProfile",
+                "agent-groups": "profile.sidebar.agentGroups",
+              }
+              
+              const translationKey = profileRouteMap[decodedSegment]
+              if (translationKey) {
+                const profileTranslated = tProfile(translationKey, { defaultValue: null })
+                if (profileTranslated && profileTranslated !== translationKey) {
+                  label = profileTranslated
+                }
+              }
+              
+              // If not found in map, try direct lookup with sidebar prefix
+              if (label === decodedSegment) {
+                const profileSidebarKey = `profile.sidebar.${decodedSegment}`
+                const profileTranslated = tProfile(profileSidebarKey, { defaultValue: null })
+                if (profileTranslated && profileTranslated !== profileSidebarKey) {
+                  label = profileTranslated
+                }
+              }
+            }
+            
             items.push({
-              label: decodeURIComponent(segment),
+              label,
               href: segmentPath,
               isActive: index === segments.length - 1,
             })
@@ -158,9 +195,13 @@ export function HeaderBreadcrumbs() {
         const segmentPath = "/" + segments.slice(0, index + 1).join("/")
         const decodedSegment = decodeURIComponent(segment)
         
-        // Translate admin route segments
+        // Translate common route segments
         let label = decodedSegment
-        if (isAdminRoute) {
+        
+        // Handle user-dashboard route
+        if (decodedSegment === "user-dashboard") {
+          label = t("navigation.userDashboard", { defaultValue: "User Dashboard" })
+        } else if (isAdminRoute) {
           // Map admin route paths to translation keys
           const adminRouteMap: Record<string, string> = {
             "dashboard": "sidebar.items.dashboard",
@@ -221,7 +262,7 @@ export function HeaderBreadcrumbs() {
     }
 
     return items
-  }, [location.pathname, t, tAdmin, isAdmin])
+  }, [location.pathname, t, tAdmin, tProfile, isAdmin])
 
   const handleBreadcrumbClick = (
     href: string,
@@ -265,7 +306,7 @@ export function HeaderBreadcrumbs() {
   }
 
   return (
-    <div className="flex flex-row items-center gap-2 h-[var(--header-height)] px-4 lg:px-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+    <div className="flex flex-row items-center gap-2 h-[var(--header-height)] px-4 lg:px-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-zinc-950">
       {!isMobile && !isSidebarOpen && (
         <Button
           mode="icon"

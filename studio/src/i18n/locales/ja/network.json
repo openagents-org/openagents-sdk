@@ -54,9 +54,12 @@
         "kicking": "キック中...",
         "table": {
             "id": "エージェント ID",
+            "group": "グループ",
             "status": "ステータス",
             "actions": "操作"
         },
+        "statusOnline": "オンライン",
+        "statusOffline": "オフライン",
         "kickConfirm": {
             "title": "エージェントをキック",
             "message": "エージェント \"{{name}}\" をキックしてもよろしいですか？これにより、ネットワークから切断されます。",

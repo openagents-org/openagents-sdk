@@ -386,6 +386,8 @@
     "subtitle": "최근 전송 또는 수신한 이벤트 보기",
     "clearLogs": "로그 지우기",
     "clearConfirm": "모든 이벤트 로그를 지우시겠습니까?",
+    "refresh": "새로고침",
+    "refreshing": "새로고침 중...",
     "tabs": {
       "events": "이벤트",
       "httpRequests": "HTTP 요청"
@@ -404,7 +406,28 @@
     "destination": "대상",
     "payload": "페이로드",
     "response": "응답",
-    "timestamp": "타임스탬프"
+    "timestamp": "타임스탬프",
+    "columns": {
+      "direction": "방향",
+      "eventName": "이벤트 이름",
+      "source": "소스",
+      "destination": "대상",
+      "time": "시간",
+      "status": "상태",
+      "sent": "전송",
+      "received": "수신",
+      "success": "성공",
+      "failed": "실패",
+      "method": "메서드",
+      "endpoint": "엔드포인트",
+      "statusCode": "상태",
+      "host": "호스트",
+      "duration": "소요시간",
+      "actions": "작업"
+    },
+    "eventDetail": "이벤트 상세",
+    "httpDetail": "HTTP 요청 상세",
+    "close": "닫기"
   },
   "eventDebugger": {
     "title": "이벤트 디버거",

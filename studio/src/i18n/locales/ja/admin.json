@@ -386,6 +386,8 @@
     "subtitle": "最近送信または受信したイベントを表示",
     "clearLogs": "ログをクリア",
     "clearConfirm": "すべてのイベントログをクリアしてもよろしいですか？",
+    "refresh": "更新",
+    "refreshing": "更新中...",
     "tabs": {
       "events": "イベント",
       "httpRequests": "HTTPリクエスト"
@@ -404,7 +406,28 @@
     "destination": "宛先",
     "payload": "ペイロード",
     "response": "レスポンス",
-    "timestamp": "タイムスタンプ"
+    "timestamp": "タイムスタンプ",
+    "columns": {
+      "direction": "方向",
+      "eventName": "イベント名",
+      "source": "ソース",
+      "destination": "宛先",
+      "time": "時間",
+      "status": "ステータス",
+      "sent": "送信",
+      "received": "受信",
+      "success": "成功",
+      "failed": "失敗",
+      "method": "メソッド",
+      "endpoint": "エンドポイント",
+      "statusCode": "ステータス",
+      "host": "ホスト",
+      "duration": "所要時間",
+      "actions": "操作"
+    },
+    "eventDetail": "イベント詳細",
+    "httpDetail": "HTTPリクエスト詳細",
+    "close": "閉じる"
   },
   "eventDebugger": {
     "title": "イベントデバッガー",

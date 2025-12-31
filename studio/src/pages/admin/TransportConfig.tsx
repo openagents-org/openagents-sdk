@@ -348,7 +348,7 @@ const TransportConfigPage: React.FC = () => {
             <Badge
               variant="info"
               appearance="light"
-              size="md"
+              size="sm"
               className="gap-1.5"
             >
               <Server className="w-3.5 h-3.5" />
