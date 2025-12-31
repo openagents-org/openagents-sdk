@@ -1,7 +1,6 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Button } from "@/components/layout/ui/button";
 import {
   LayoutDashboard,
@@ -25,11 +24,10 @@ const AdminSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation("admin");
-  const { isAdmin, isLoading } = useIsAdmin();
 
-  // Show admin-only items while loading (user reached admin page, likely is admin)
-  // or when confirmed as admin
-  const showAdminItems = isLoading || isAdmin;
+  // Always show all admin items in admin sidebar
+  // Since user has already accessed admin area, they should have admin privileges
+  // This prevents menu flickering during loading states
 
   const isActive = (path: string) => {
     const currentPath = location.pathname;
@@ -115,22 +113,18 @@ const AdminSidebar: React.FC = () => {
     {
       title: t("sidebar.sections.agents"),
       items: [
-        ...(showAdminItems
-          ? [
-              {
-                id: "service-agents",
-                label: t("sidebar.items.serviceAgents"),
-                path: "/admin/service-agents",
-                icon: Server,
-              },
-              {
-                id: "default-models",
-                label: t("sidebar.items.defaultModels"),
-                path: "/admin/default-models",
-                icon: Cpu,
-              },
-            ]
-          : []),
+        {
+          id: "service-agents",
+          label: t("sidebar.items.serviceAgents"),
+          path: "/admin/service-agents",
+          icon: Server,
+        },
+        {
+          id: "default-models",
+          label: t("sidebar.items.defaultModels"),
+          path: "/admin/default-models",
+          icon: Cpu,
+        },
         {
           id: "agents",
           label: t("sidebar.items.connectedAgents"),
@@ -177,16 +171,12 @@ const AdminSidebar: React.FC = () => {
           path: "/admin/event-explorer",
           icon: Search,
         },
-        ...(showAdminItems
-          ? [
-              {
-                id: "llm-logs",
-                label: t("sidebar.items.llmLogs"),
-                path: "/admin/llm-logs",
-                icon: Monitor,
-              },
-            ]
-          : []),
+        {
+          id: "llm-logs",
+          label: t("sidebar.items.llmLogs"),
+          path: "/admin/llm-logs",
+          icon: Monitor,
+        },
         {
           id: "debugger",
           label: t("sidebar.items.eventDebugger"),
