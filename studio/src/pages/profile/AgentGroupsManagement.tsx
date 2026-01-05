@@ -233,29 +233,36 @@ const AgentGroupsManagement: React.FC = () => {
   // Handle create group
   const handleCreateGroup = async () => {
     if (!formData.name.trim()) {
-      setError("Group name is required")
+      setError(t("groups.modal.errors.nameRequired"))
       return
     }
 
     if (!/^[a-zA-Z0-9_]+$/.test(formData.name)) {
-      setError(
-        "Group name must contain only alphanumeric characters and underscores"
-      )
+      setError(t("groups.modal.errors.nameInvalid"))
       return
     }
 
     if (formData.name.length > 64) {
-      setError("Group name must be 64 characters or less")
+      setError(t("groups.modal.errors.nameTooLong"))
       return
     }
 
     if (formData.description.length > 512) {
-      setError("Description must be 512 characters or less")
+      setError(t("groups.modal.errors.descriptionTooLong"))
+      return
+    }
+
+    // 除了guests角色，其他所有角色都需要必填密码
+    const groupNameLower = formData.name.trim().toLowerCase()
+    const isGuestGroup = groupNameLower === "guest" || groupNameLower === "guests"
+    
+    if (!isGuestGroup && !formData.password.trim()) {
+      setError(t("groups.modal.errors.passwordRequired"))
       return
     }
 
     if (formData.password && formData.password.length < 4) {
-      setError("Password must be at least 4 characters")
+      setError(t("groups.modal.errors.passwordMinLength"))
       return
     }
 
@@ -279,6 +286,7 @@ const AgentGroupsManagement: React.FC = () => {
 
     if (result.success) {
       setSuccess(t("groups.messages.createSuccess"))
+      setError(null)
       setShowCreateModal(false)
       setFormData({
         name: "",
@@ -460,6 +468,8 @@ const AgentGroupsManagement: React.FC = () => {
 
   // Open create modal
   const openCreateModal = () => {
+    setError(null)
+    setSuccess(null)
     setFormData({
       name: "",
       description: "",
@@ -841,6 +851,16 @@ const AgentGroupsManagement: React.FC = () => {
             <DialogTitle>{t("groups.modal.createTitle")}</DialogTitle>
           </DialogHeader>
           <DialogBody>
+            {error && (
+              <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                <div className="flex items-center">
+                  <AlertCircle className="h-4 w-4 text-red-400 mr-2 flex-shrink-0" />
+                  <span className="text-sm text-red-800 dark:text-red-200">
+                    {error}
+                  </span>
+                </div>
+              </div>
+            )}
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="group-name">{t("groups.modal.name")} *</Label>
@@ -875,7 +895,12 @@ const AgentGroupsManagement: React.FC = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="group-password">
-                  {t("groups.modal.password")}
+                  {(() => {
+                    const groupNameLower = formData.name.trim().toLowerCase()
+                    const isGuestGroup = groupNameLower === "guest" || groupNameLower === "guests"
+                    const passwordLabel = t("groups.modal.password")
+                    return isGuestGroup ? passwordLabel : `${passwordLabel} *`
+                  })()}
                 </Label>
                 <InputGroup>
                   <InputAddon mode="icon">
@@ -889,8 +914,22 @@ const AgentGroupsManagement: React.FC = () => {
                       setFormData({ ...formData, password: e.target.value })
                     }
                     placeholder="••••••••"
+                    required={(() => {
+                      const groupNameLower = formData.name.trim().toLowerCase()
+                      const isGuestGroup = groupNameLower === "guest" || groupNameLower === "guests"
+                      return !isGuestGroup
+                    })()}
                   />
                 </InputGroup>
+                {(() => {
+                  const groupNameLower = formData.name.trim().toLowerCase()
+                  const isGuestGroup = groupNameLower === "guest" || groupNameLower === "guests"
+                  return !isGuestGroup ? (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {t("groups.modal.passwordRequiredHint")}
+                    </p>
+                  ) : null
+                })()}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="group-permissions">

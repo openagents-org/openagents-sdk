@@ -134,14 +134,23 @@
             "nameCannotChange": "组名创建后无法修改",
             "description": "描述",
             "descriptionPlaceholder": "例如: 具有内容管理权限的管理员组",
-            "password": "密码 (可选)",
+            "password": "密码",
+            "passwordRequiredHint": "此角色需要设置密码",
             "clearPassword": "清除现有密码",
             "permissions": "权限 (逗号分隔)",
             "permissionsPlaceholder": "例如: moderate_content, ban_users, view_reports",
             "cancel": "取消",
             "create": "创建组",
             "update": "更新组",
-            "save": "保存更改"
+            "save": "保存更改",
+            "errors": {
+                "nameRequired": "组名称是必需的",
+                "nameInvalid": "组名称只能包含字母、数字和下划线",
+                "nameTooLong": "组名称不能超过64个字符",
+                "descriptionTooLong": "描述不能超过512个字符",
+                "passwordRequired": "除guests角色外，其他所有角色都需要设置密码",
+                "passwordMinLength": "密码长度至少为4个字符"
+            }
         },
         "messages": {
             "createSuccess": "组创建成功",
