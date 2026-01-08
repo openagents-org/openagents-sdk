@@ -318,31 +318,43 @@ export function HeaderBreadcrumbs() {
         </Button>
       )}
       <Breadcrumb className="flex-1 min-w-0 overflow-hidden">
-        <BreadcrumbList className="gap-1.5 items-center flex-wrap min-w-0">
-          {breadcrumbItems.map((item, index) => (
-            <Fragment key={`${item.href}-${index}`}>
-              <BreadcrumbItem>
-                {item.isActive ? (
-                  <BreadcrumbPage className="text-sm font-normal text-gray-700 dark:text-gray-200">
-                    {item.label}
-                  </BreadcrumbPage>
-                ) : (
-                  <BreadcrumbLink
-                    href={item.href}
-                    onClick={(e) => handleBreadcrumbClick(item.href, e)}
-                    className="text-sm font-normal text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors duration-200 cursor-pointer"
-                  >
-                    {item.label}
-                  </BreadcrumbLink>
+        <BreadcrumbList className="gap-1.5 items-center flex-nowrap min-w-0">
+          {breadcrumbItems.map((item, index) => {
+            // Truncate long labels (e.g., UUIDs) for display but show full in tooltip
+            const isLongLabel = item.label.length > 20
+            const displayLabel = isLongLabel
+              ? `${item.label.slice(0, 8)}...${item.label.slice(-4)}`
+              : item.label
+
+            return (
+              <Fragment key={`${item.href}-${index}`}>
+                <BreadcrumbItem className="min-w-0 flex-shrink-0 last:flex-shrink last:min-w-0">
+                  {item.isActive ? (
+                    <BreadcrumbPage
+                      className="text-sm font-normal text-gray-700 dark:text-gray-200 truncate max-w-[200px]"
+                      title={isLongLabel ? item.label : undefined}
+                    >
+                      {displayLabel}
+                    </BreadcrumbPage>
+                  ) : (
+                    <BreadcrumbLink
+                      href={item.href}
+                      onClick={(e) => handleBreadcrumbClick(item.href, e)}
+                      className="text-sm font-normal text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors duration-200 cursor-pointer truncate max-w-[200px]"
+                      title={isLongLabel ? item.label : undefined}
+                    >
+                      {displayLabel}
+                    </BreadcrumbLink>
+                  )}
+                </BreadcrumbItem>
+                {index < breadcrumbItems.length - 1 && (
+                  <BreadcrumbSeparator className="text-gray-400 dark:text-gray-500 text-sm flex-shrink-0">
+                    /
+                  </BreadcrumbSeparator>
                 )}
-              </BreadcrumbItem>
-              {index < breadcrumbItems.length - 1 && (
-                <BreadcrumbSeparator className="text-gray-400 dark:text-gray-500 text-sm">
-                  /
-                </BreadcrumbSeparator>
-              )}
-            </Fragment>
-          ))}
+              </Fragment>
+            )
+          })}
         </BreadcrumbList>
       </Breadcrumb>
 

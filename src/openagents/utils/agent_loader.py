@@ -203,32 +203,22 @@ def _create_agent_config_from_yaml(
 
 def _process_mods_config(
     mods_data: List[Dict[str, Any]], agent_class: Type[AgentRunner]
-) -> List[str]:
+) -> List:
     """
-    Process mods configuration and return list of enabled mod names.
+    Process mods configuration and return list of enabled mod configs.
 
     Args:
         mods_data: List of mod configuration dictionaries
         agent_class: The agent class being loaded
 
     Returns:
-        List of enabled mod names
+        List of enabled mod names (strings) or mod configs (dicts with 'name' and 'config')
     """
-    # Check if this is a WorkerAgent or CollaboratorAgent (avoid direct import to prevent circular dependency)
-    is_worker_agent = "WorkerAgent" in str(agent_class)
-    is_collaborator_agent = "CollaboratorAgent" in str(agent_class)
-    needs_messaging = is_worker_agent or is_collaborator_agent
-
     if not mods_data:
-        # Auto-include workspace messaging for agents that need messaging capabilities
-        if needs_messaging:
-            logger.debug(f"Auto-adding workspace messaging for {agent_class.__name__}")
-            return ["openagents.mods.workspace.messaging"]
-        else:
-            # Return empty list for other agent types
-            return []
+        # Return empty list if no mods specified
+        return []
 
-    mod_names = []
+    mod_configs = []
     explicitly_disabled_mods = set()
 
     for mod_config in mods_data:
@@ -244,23 +234,22 @@ def _process_mods_config(
             continue
 
         if enabled:
-            mod_names.append(mod_name)
-            logger.debug(f"Added enabled mod: {mod_name}")
+            # Include config if present, otherwise just the name
+            if "config" in mod_config:
+                mod_configs.append({
+                    "name": mod_name,
+                    "config": mod_config["config"]
+                })
+                logger.debug(f"Added enabled mod with config: {mod_name}")
+            else:
+                mod_configs.append(mod_name)
+                logger.debug(f"Added enabled mod: {mod_name}")
         else:
             explicitly_disabled_mods.add(mod_name)
             logger.debug(f"Skipped disabled mod: {mod_name}")
 
-    # Auto-include workspace messaging for agents that need messaging if not already present and not explicitly disabled
-    if needs_messaging:
-        workspace_messaging = "openagents.mods.workspace.messaging"
-        if workspace_messaging not in mod_names and workspace_messaging not in explicitly_disabled_mods:
-            mod_names.append(workspace_messaging)
-            logger.debug(
-                f"Auto-added required mod for {agent_class.__name__}: {workspace_messaging}"
-            )
-
-    logger.info(f"Processed {len(mod_names)} enabled mods: {mod_names}")
-    return mod_names
+    logger.info(f"Processed {len(mod_configs)} enabled mods: {[m if isinstance(m, str) else m.get('name') for m in mod_configs]}")
+    return mod_configs
 
 
 def _load_agent_class(agent_type: str) -> Type[AgentRunner]:

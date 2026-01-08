@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import Editor from "@monaco-editor/react";
+import LazyMonacoEditor from "@/components/editors/LazyMonacoEditor";
 import {
   Select,
   SelectContent,
@@ -996,7 +996,7 @@ const ServiceAgentDetail: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <Editor
+                  <LazyMonacoEditor
                     height="100%"
                     language={sourceInfo?.file_type === "yaml" ? "yaml" : "python"}
                     theme={document.documentElement.classList.contains("dark") ? "vs-dark" : "light"}

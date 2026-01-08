@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
-import { useIsMobile } from "@/hooks/useMediaQuery"
+import { useMediaQuery } from "@/hooks/useMediaQuery"
 import ProjectSidebar from "./ProjectSidebar"
 import ProjectChatRoom from "@/pages/messaging/components/ProjectChatRoom"
 
@@ -18,16 +18,18 @@ import ProjectChatRoom from "@/pages/messaging/components/ProjectChatRoom"
  * Contains sidebar and main content area
  */
 const ProjectMainPage: React.FC = () => {
-  const isMobile = useIsMobile()
+  // Use 1024px breakpoint for this page since sidebar is 400px wide
+  // This ensures tablet-sized screens (768px-1024px) use the drawer layout
+  const isMobileOrTablet = useMediaQuery("(max-width: 1024px)")
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const location = useLocation()
 
-  // Close drawer when route changes on mobile
+  // Close drawer when route changes on mobile/tablet
   React.useEffect(() => {
-    if (isMobile) {
+    if (isMobileOrTablet) {
       setIsDrawerOpen(false)
     }
-  }, [location.pathname, isMobile])
+  }, [location.pathname, isMobileOrTablet])
 
   // Sidebar content component
   const SidebarContent = () => (
@@ -42,14 +44,14 @@ const ProjectMainPage: React.FC = () => {
 
   return (
     <div className="h-full flex overflow-hidden dark:bg-gray-800 relative">
-      {/* Mobile menu button */}
-      {isMobile && (
+      {/* Mobile/Tablet menu button and drawer */}
+      {isMobileOrTablet && (
         <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
           <SheetTrigger asChild>
             <Button
               variant="outline"
               size="sm"
-              className="fixed top-4 left-4 z-30 md:hidden"
+              className="fixed top-4 left-4 z-30 lg:hidden"
               aria-label="Open menu"
             >
               <Menu className="w-6 h-6" />
@@ -61,10 +63,10 @@ const ProjectMainPage: React.FC = () => {
         </Sheet>
       )}
 
-      {/* Desktop Sidebar */}
-      {!isMobile && (
-        <div 
-          className="hidden md:block flex-shrink-0"
+      {/* Desktop Sidebar (only shown on lg screens and above) */}
+      {!isMobileOrTablet && (
+        <div
+          className="hidden lg:block flex-shrink-0"
           style={{
             width: "calc(var(--sidebar-width) - var(--sidebar-collapsed-width))",
           }}

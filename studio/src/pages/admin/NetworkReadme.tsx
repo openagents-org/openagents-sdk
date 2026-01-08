@@ -4,7 +4,7 @@ import { Save, Check, AlertCircle, FileText } from "lucide-react"
 import { useOpenAgents } from "@/context/OpenAgentsProvider"
 import { useAuthStore } from "@/stores/authStore"
 import { useThemeStore } from "@/stores/themeStore"
-import Editor from "@monaco-editor/react"
+import LazyMonacoEditor from "@/components/editors/LazyMonacoEditor"
 
 interface NetworkProfileData {
   name?: string
@@ -175,7 +175,7 @@ const NetworkReadme: React.FC = () => {
 
         {/* Monaco Editor */}
         <div className="flex-1 min-h-0">
-          <Editor
+          <LazyMonacoEditor
             height="100%"
             language="markdown"
             theme={monacoTheme}
