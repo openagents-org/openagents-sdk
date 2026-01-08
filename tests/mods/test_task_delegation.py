@@ -17,14 +17,14 @@ import time
 import uuid
 from unittest.mock import AsyncMock, MagicMock
 
-from openagents.mods.coordination.task_delegation.mod import (
-    TaskDelegationMod,
-    Task,
-    STATUS_IN_PROGRESS,
-    STATUS_COMPLETED,
-    STATUS_FAILED,
-    STATUS_TIMED_OUT,
-)
+from openagents.mods.coordination.task_delegation.mod import TaskDelegationMod
+from openagents.models.task import Task, TaskState
+
+# Compatibility aliases for old constant names
+STATUS_IN_PROGRESS = TaskState.WORKING.value
+STATUS_COMPLETED = TaskState.COMPLETED.value
+STATUS_FAILED = TaskState.FAILED.value
+STATUS_TIMED_OUT = "timed_out"  # This may need to be mapped to FAILED
 from openagents.mods.coordination.task_delegation.adapter import TaskDelegationAdapter
 from openagents.models.event import Event
 

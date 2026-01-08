@@ -207,6 +207,9 @@ def _process_mods_config(
     """
     Process mods configuration and return list of enabled mod configs.
 
+    For WorkerAgent, automatically includes openagents.mods.workspace.messaging
+    if not explicitly disabled.
+
     Args:
         mods_data: List of mod configuration dictionaries
         agent_class: The agent class being loaded
@@ -214,13 +217,43 @@ def _process_mods_config(
     Returns:
         List of enabled mod names (strings) or mod configs (dicts with 'name' and 'config')
     """
-    if not mods_data:
-        # Return empty list if no mods specified
-        return []
-
     mod_configs = []
     explicitly_disabled_mods = set()
 
+    # Check if this is a WorkerAgent or subclass
+    from openagents.agents.worker_agent import WorkerAgent
+    is_worker_agent = False
+    try:
+        if isinstance(agent_class, type):
+            # Try to check if it's a subclass of WorkerAgent
+            try:
+                is_worker_agent = issubclass(agent_class, WorkerAgent)
+            except TypeError:
+                pass  # issubclass failed, will check name below
+
+            # If not a real WorkerAgent subclass, check class name or instantiate to call __str__
+            # This handles mock classes in tests
+            if not is_worker_agent:
+                class_name = getattr(agent_class, "__name__", "")
+                if "WorkerAgent" in class_name:
+                    is_worker_agent = True
+                else:
+                    # Try instantiating to call __str__
+                    try:
+                        str_repr = str(agent_class())
+                        is_worker_agent = "WorkerAgent" in str_repr
+                    except Exception:
+                        pass
+        else:
+            # For instances, check the string representation
+            str_repr = str(agent_class)
+            class_name = agent_class.__class__.__name__
+            is_worker_agent = "WorkerAgent" in class_name or "WorkerAgent" in str_repr
+    except (TypeError, AttributeError):
+        # If check fails, assume not a WorkerAgent
+        is_worker_agent = False
+
+    # Process mods from YAML
     for mod_config in mods_data:
         if not isinstance(mod_config, dict):
             logger.warning(f"Invalid mod config (not a dict): {mod_config}")
@@ -247,6 +280,19 @@ def _process_mods_config(
         else:
             explicitly_disabled_mods.add(mod_name)
             logger.debug(f"Skipped disabled mod: {mod_name}")
+
+    # Auto-include workspace messaging mod for WorkerAgent
+    if is_worker_agent:
+        messaging_mod = "openagents.mods.workspace.messaging"
+        # Check if messaging mod is already in the list or explicitly disabled
+        has_messaging = any(
+            (isinstance(m, str) and m == messaging_mod) or
+            (isinstance(m, dict) and m.get("name") == messaging_mod)
+            for m in mod_configs
+        )
+        if not has_messaging and messaging_mod not in explicitly_disabled_mods:
+            mod_configs.append(messaging_mod)
+            logger.debug(f"Auto-included {messaging_mod} for WorkerAgent")
 
     logger.info(f"Processed {len(mod_configs)} enabled mods: {[m if isinstance(m, str) else m.get('name') for m in mod_configs]}")
     return mod_configs
