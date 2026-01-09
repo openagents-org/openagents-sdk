@@ -91,6 +91,38 @@ class A2ATaskEventNames:
     TRANSPORT_ERROR = "agent.task.transport.error"
 
 
+class A2ADelegationEventNames:
+    """A2A delegation event name constants for OpenAgents.
+
+    Event naming convention: agent.delegation.{action}
+    These events are used for inter-agent task delegation via A2A protocol.
+    """
+
+    # === DELEGATION LIFECYCLE ===
+    DELEGATED = "agent.delegation.delegated"
+    ACCEPTED = "agent.delegation.accepted"
+    REJECTED = "agent.delegation.rejected"
+    PROGRESS = "agent.delegation.progress"
+    COMPLETED = "agent.delegation.completed"
+    FAILED = "agent.delegation.failed"
+    CANCELED = "agent.delegation.canceled"
+    TIMEOUT = "agent.delegation.timeout"
+
+    # === DELEGATION OPERATIONS ===
+    GET = "agent.delegation.get"
+    LIST = "agent.delegation.list"
+
+    # === DELEGATION NOTIFICATIONS ===
+    NOTIFICATION_ASSIGNED = "task.notification.assigned"
+    NOTIFICATION_ACCEPTED = "task.notification.accepted"
+    NOTIFICATION_REJECTED = "task.notification.rejected"
+    NOTIFICATION_PROGRESS = "task.notification.progress"
+    NOTIFICATION_COMPLETED = "task.notification.completed"
+    NOTIFICATION_FAILED = "task.notification.failed"
+    NOTIFICATION_CANCELED = "task.notification.canceled"
+    NOTIFICATION_TIMEOUT = "task.notification.timeout"
+
+
 # Mapping from TaskState to event name
 TASK_STATE_TO_EVENT: Dict[TaskState, str] = {
     TaskState.SUBMITTED: A2ATaskEventNames.SUBMITTED,

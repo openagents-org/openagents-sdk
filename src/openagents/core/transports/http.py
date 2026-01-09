@@ -58,6 +58,7 @@ from openagents.models.a2a import (
     create_text_message,
 )
 from openagents.core.a2a_task_store import TaskStore, InMemoryTaskStore
+from openagents.models.external_access import ExternalAccessConfig
 from openagents.utils.a2a_converters import (
     A2ATaskEventNames,
     a2a_message_to_event,
@@ -2652,17 +2653,24 @@ class HttpTransport(Transport):
             return web.Response(status=200, text="Session terminated")
         return web.Response(status=404, text="Session not found")
 
-    def _get_external_access_config(self):
+    def _get_external_access_config(self) -> Optional[ExternalAccessConfig]:
         """Get external_access configuration for tool filtering."""
+        external_access = None
+
         # Try network_context first
         if self.network_context:
-            return getattr(self.network_context, 'external_access', None)
+            external_access = getattr(self.network_context, 'external_access', None)
         # Fallback to network_instance.config
-        if self.network_instance:
+        elif self.network_instance:
             config = getattr(self.network_instance, 'config', None)
             if config:
-                return getattr(config, 'external_access', None)
-        return None
+                external_access = getattr(config, 'external_access', None)
+
+        # Convert dict to ExternalAccessConfig if needed
+        if external_access is not None and isinstance(external_access, dict):
+            return ExternalAccessConfig(**external_access)
+
+        return external_access
 
     async def _handle_mcp_tools_list(self, request: web.Request) -> web.Response:
         """Handle tools list request (admin UI endpoint).

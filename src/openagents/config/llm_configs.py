@@ -401,6 +401,9 @@ def create_model_provider(
         SimpleGenericProvider,
     )
 
+    # Check for API key: first DEFAULT_LLM_API_KEY, then provider-specific env var
+    if not api_key:
+        api_key = os.getenv("DEFAULT_LLM_API_KEY")
     if not api_key and MODEL_CONFIGS[provider].get("API_KEY_ENV_VAR"):
         api_key = os.getenv(MODEL_CONFIGS[provider].get("API_KEY_ENV_VAR"))
 

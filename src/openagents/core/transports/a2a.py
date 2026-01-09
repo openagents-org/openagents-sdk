@@ -370,6 +370,16 @@ class A2ATransport(Transport):
             "agents/withdraw": self._handle_withdraw_agent,
             "agents/list": self._handle_list_agents,
             "events/send": self._handle_send_event,
+            # Delegation methods (A2A-compatible task delegation)
+            "delegation/delegate": self._handle_delegation_delegate,
+            "delegation/accept": self._handle_delegation_accept,
+            "delegation/reject": self._handle_delegation_reject,
+            "delegation/report": self._handle_delegation_report,
+            "delegation/complete": self._handle_delegation_complete,
+            "delegation/fail": self._handle_delegation_fail,
+            "delegation/cancel": self._handle_delegation_cancel,
+            "delegation/get": self._handle_delegation_get,
+            "delegation/list": self._handle_delegation_list,
         }
 
         handler = method_handlers.get(rpc_request.method)
@@ -1136,6 +1146,375 @@ class A2ATransport(Transport):
             True if listening
         """
         return self.is_listening
+
+    # =========================================================================
+    # Delegation Methods - A2A-compatible task delegation via JSON-RPC
+    # =========================================================================
+
+    async def _handle_delegation_delegate(
+        self, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle delegation/delegate - external agent delegates task to local agent.
+
+        Args:
+            params: Request parameters containing:
+                - assignee_id: Agent ID to assign the task to (required)
+                - description: Task description (required)
+                - payload: Task data/parameters (optional)
+                - timeout_seconds: Timeout in seconds (optional, default 300)
+                - context_id: Context ID for multi-turn (optional)
+
+        Returns:
+            A2A Task data as dictionary
+        """
+        assignee_id = params.get("assignee_id") or params.get("assigneeId")
+        description = params.get("description")
+        payload = params.get("payload", {})
+        timeout_seconds = params.get("timeout_seconds", params.get("timeoutSeconds", 300))
+        context_id = params.get("context_id") or params.get("contextId")
+        delegator_id = params.get("delegator_id") or params.get("delegatorId", "a2a:external")
+
+        if not assignee_id:
+            raise ValueError("assignee_id is required")
+        if not description:
+            raise ValueError("description is required")
+
+        # Create event and route through network
+        event = Event(
+            event_name="task.delegate",
+            source_id=delegator_id,
+            payload={
+                "assignee_id": assignee_id,
+                "description": description,
+                "payload": payload,
+                "timeout_seconds": timeout_seconds,
+                "context_id": context_id,
+            },
+            metadata={
+                "a2a_external_delegator": True,
+                "context_id": context_id,
+            },
+        )
+
+        if self._network:
+            response = await self._network.process_event(event)
+            if response and response.success:
+                task_id = response.data.get("task_id")
+                if task_id:
+                    task = await self.task_store.get_task(task_id)
+                    if task:
+                        return task.model_dump(by_alias=True, exclude_none=True)
+                return response.data
+            elif response:
+                raise ValueError(response.message)
+
+        raise ValueError("Network not available")
+
+    async def _handle_delegation_accept(
+        self, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle delegation/accept - assignee accepts a delegated task.
+
+        Args:
+            params: Request parameters containing task_id
+
+        Returns:
+            Updated A2A Task data
+        """
+        task_id = params.get("task_id") or params.get("id")
+        acceptor_id = params.get("acceptor_id") or params.get("acceptorId", "a2a:external")
+
+        if not task_id:
+            raise ValueError("task_id is required")
+
+        event = Event(
+            event_name="task.accept",
+            source_id=acceptor_id,
+            payload={"task_id": task_id},
+        )
+
+        if self._network:
+            response = await self._network.process_event(event)
+            if response and response.success:
+                task = await self.task_store.get_task(task_id)
+                if task:
+                    return task.model_dump(by_alias=True, exclude_none=True)
+                return response.data
+            elif response:
+                raise ValueError(response.message)
+
+        raise ValueError("Network not available")
+
+    async def _handle_delegation_reject(
+        self, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle delegation/reject - assignee rejects a delegated task.
+
+        Args:
+            params: Request parameters containing task_id and optional reason
+
+        Returns:
+            Updated A2A Task data
+        """
+        task_id = params.get("task_id") or params.get("id")
+        reason = params.get("reason", "Task rejected")
+        rejector_id = params.get("rejector_id") or params.get("rejectorId", "a2a:external")
+
+        if not task_id:
+            raise ValueError("task_id is required")
+
+        event = Event(
+            event_name="task.reject",
+            source_id=rejector_id,
+            payload={
+                "task_id": task_id,
+                "reason": reason,
+            },
+        )
+
+        if self._network:
+            response = await self._network.process_event(event)
+            if response and response.success:
+                task = await self.task_store.get_task(task_id)
+                if task:
+                    return task.model_dump(by_alias=True, exclude_none=True)
+                return response.data
+            elif response:
+                raise ValueError(response.message)
+
+        raise ValueError("Network not available")
+
+    async def _handle_delegation_report(
+        self, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle delegation/report - report progress on a task.
+
+        Args:
+            params: Request parameters containing task_id, message, and optional data
+
+        Returns:
+            Updated A2A Task data
+        """
+        task_id = params.get("task_id") or params.get("id")
+        message = params.get("message", "")
+        data = params.get("data", {})
+        reporter_id = params.get("reporter_id") or params.get("reporterId", "a2a:external")
+
+        if not task_id:
+            raise ValueError("task_id is required")
+
+        event = Event(
+            event_name="task.report",
+            source_id=reporter_id,
+            payload={
+                "task_id": task_id,
+                "progress": {
+                    "message": message,
+                    "data": data,
+                },
+            },
+        )
+
+        if self._network:
+            response = await self._network.process_event(event)
+            if response and response.success:
+                task = await self.task_store.get_task(task_id)
+                if task:
+                    return task.model_dump(by_alias=True, exclude_none=True)
+                return response.data
+            elif response:
+                raise ValueError(response.message)
+
+        raise ValueError("Network not available")
+
+    async def _handle_delegation_complete(
+        self, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle delegation/complete - mark task as completed.
+
+        Args:
+            params: Request parameters containing task_id and optional result
+
+        Returns:
+            Updated A2A Task data
+        """
+        task_id = params.get("task_id") or params.get("id")
+        result = params.get("result", {})
+        completer_id = params.get("completer_id") or params.get("completerId", "a2a:external")
+
+        if not task_id:
+            raise ValueError("task_id is required")
+
+        event = Event(
+            event_name="task.complete",
+            source_id=completer_id,
+            payload={
+                "task_id": task_id,
+                "result": result,
+            },
+        )
+
+        if self._network:
+            response = await self._network.process_event(event)
+            if response and response.success:
+                task = await self.task_store.get_task(task_id)
+                if task:
+                    return task.model_dump(by_alias=True, exclude_none=True)
+                return response.data
+            elif response:
+                raise ValueError(response.message)
+
+        raise ValueError("Network not available")
+
+    async def _handle_delegation_fail(
+        self, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle delegation/fail - mark task as failed.
+
+        Args:
+            params: Request parameters containing task_id and error message
+
+        Returns:
+            Updated A2A Task data
+        """
+        task_id = params.get("task_id") or params.get("id")
+        error = params.get("error", "Unknown error")
+        failer_id = params.get("failer_id") or params.get("failerId", "a2a:external")
+
+        if not task_id:
+            raise ValueError("task_id is required")
+
+        event = Event(
+            event_name="task.fail",
+            source_id=failer_id,
+            payload={
+                "task_id": task_id,
+                "error": error,
+            },
+        )
+
+        if self._network:
+            response = await self._network.process_event(event)
+            if response and response.success:
+                task = await self.task_store.get_task(task_id)
+                if task:
+                    return task.model_dump(by_alias=True, exclude_none=True)
+                return response.data
+            elif response:
+                raise ValueError(response.message)
+
+        raise ValueError("Network not available")
+
+    async def _handle_delegation_cancel(
+        self, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle delegation/cancel - delegator cancels a task.
+
+        Args:
+            params: Request parameters containing task_id
+
+        Returns:
+            Updated A2A Task data
+        """
+        task_id = params.get("task_id") or params.get("id")
+        canceler_id = params.get("canceler_id") or params.get("cancelerId", "a2a:external")
+
+        if not task_id:
+            raise ValueError("task_id is required")
+
+        event = Event(
+            event_name="task.cancel",
+            source_id=canceler_id,
+            payload={"task_id": task_id},
+        )
+
+        if self._network:
+            response = await self._network.process_event(event)
+            if response and response.success:
+                task = await self.task_store.get_task(task_id)
+                if task:
+                    return task.model_dump(by_alias=True, exclude_none=True)
+                return response.data
+            elif response:
+                raise ValueError(response.message)
+
+        raise ValueError("Network not available")
+
+    async def _handle_delegation_get(
+        self, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle delegation/get - get task with delegation metadata.
+
+        Args:
+            params: Request parameters containing task_id
+
+        Returns:
+            A2A Task data with delegation metadata
+        """
+        task_id = params.get("task_id") or params.get("id")
+        requester_id = params.get("requester_id") or params.get("requesterId", "a2a:external")
+
+        if not task_id:
+            raise ValueError("task_id is required")
+
+        event = Event(
+            event_name="task.get",
+            source_id=requester_id,
+            payload={"task_id": task_id},
+        )
+
+        if self._network:
+            response = await self._network.process_event(event)
+            if response and response.success:
+                # Return full task data including a2a_task
+                return response.data
+            elif response:
+                raise ValueError(response.message)
+
+        raise ValueError("Network not available")
+
+    async def _handle_delegation_list(
+        self, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle delegation/list - list delegated tasks.
+
+        Args:
+            params: Request parameters containing:
+                - role: "delegated_by_me" or "assigned_to_me"
+                - status: Optional list of status filters
+                - limit: Max tasks to return (default 20)
+                - offset: Pagination offset (default 0)
+
+        Returns:
+            List of tasks with pagination info
+        """
+        role = params.get("role", "delegated_by_me")
+        status = params.get("status", [])
+        limit = params.get("limit", 20)
+        offset = params.get("offset", 0)
+        requester_id = params.get("requester_id") or params.get("requesterId", "a2a:external")
+
+        event = Event(
+            event_name="task.list",
+            source_id=requester_id,
+            payload={
+                "filter": {
+                    "role": role,
+                    "status": status,
+                },
+                "limit": limit,
+                "offset": offset,
+            },
+        )
+
+        if self._network:
+            response = await self._network.process_event(event)
+            if response and response.success:
+                return response.data
+            elif response:
+                raise ValueError(response.message)
+
+        raise ValueError("Network not available")
 
     async def send(self, event: Event) -> bool:
         """Send an event.

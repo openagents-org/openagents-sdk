@@ -2237,6 +2237,19 @@ def agent_start(
             config_dir = Path(config).parent.resolve()
             configure_workspace_logging(config_dir)
 
+            # Load .env file from workspace root (parent of config directory)
+            workspace_root = config_dir.parent
+            env_file = workspace_root / ".env"
+            if env_file.exists():
+                try:
+                    from dotenv import load_dotenv
+                    load_dotenv(env_file)
+                    progress.update(task, description=f"[green]✅ Loaded environment from {env_file}")
+                except ImportError:
+                    console.print("[yellow]⚠️  python-dotenv not installed, skipping .env file loading[/yellow]")
+                except Exception as e:
+                    console.print(f"[yellow]⚠️  Could not load .env file: {e}[/yellow]")
+
             # Load agent using AgentRunner.from_yaml with overrides
             agent = AgentRunner.from_yaml(config, agent_id_override=agent_id, connection_override=connection_override if connection_override else None)
             progress.update(task, description=f"[green]✅ Loaded agent '{agent.agent_id}'")

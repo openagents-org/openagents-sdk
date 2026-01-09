@@ -1,9 +1,11 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, Suspense, lazy } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useThemeStore } from "@/stores/themeStore";
-import YjsCollaborativeEditor from "./YjsCollaborativeEditor";
+
+// Lazy load the collaborative editor (includes Monaco)
+const YjsCollaborativeEditor = lazy(() => import("./YjsCollaborativeEditor"));
 
 const DocumentEditor: React.FC = () => {
   const { t } = useTranslation('documents');
@@ -271,12 +273,25 @@ const DocumentEditor: React.FC = () => {
 
       {/* Yjs Collaborative Editor */}
       <div className="flex-1 overflow-hidden">
-        <YjsCollaborativeEditor
-          documentId={documentId!}
-          initialContent={document?.content || ""}
-          language="typescript"
-          onSave={handleSave}
-        />
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
+                <p className="text-gray-500 dark:text-gray-400 mt-3 text-sm">
+                  Loading editor...
+                </p>
+              </div>
+            </div>
+          }
+        >
+          <YjsCollaborativeEditor
+            documentId={documentId!}
+            initialContent={document?.content || ""}
+            language="typescript"
+            onSave={handleSave}
+          />
+        </Suspense>
       </div>
     </div>
   );

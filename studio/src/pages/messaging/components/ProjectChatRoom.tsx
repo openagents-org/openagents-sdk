@@ -678,15 +678,19 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
   return (
     <div className="project-chat-room h-full flex flex-col bg-white dark:bg-gray-800">
       {/* Header */}
-      <div className="thread-header flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-        <div className="flex items-center space-x-3">
+      <div className="thread-header flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 min-h-[60px]">
+        <div className="flex items-center space-x-3 min-w-0 flex-1">
           <div
-            className="w-3 h-3 rounded-full"
+            className="w-3 h-3 rounded-full flex-shrink-0"
             style={{ backgroundColor: getConnectionStatusColor }}
             title={t('chat.header.connection', { status: connectionStatus.state })}
           />
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate min-w-0" title={
+              isPendingProject
+                ? pendingTemplate?.name || t('chat.header.pending')
+                : channelName || projectId || ""
+            }>
               {isPendingProject
                 ? t('chat.header.newProject', { name: pendingTemplate?.name || t('chat.header.pending') })
                 : channelName
@@ -697,7 +701,7 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
                   : t('chat.header.projectPrefix', { id: projectId?.slice(0, 8) })}
             </span>
             <span
-              className={`px-2 py-1 text-xs font-medium rounded-full ${isPendingProject
+              className={`px-2 py-1 text-xs font-medium rounded-full flex-shrink-0 whitespace-nowrap ${isPendingProject
                 ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
                 : isProjectCompleted
                   ? projectInfo?.status === "completed"
