@@ -223,35 +223,29 @@ def _process_mods_config(
     # Check if this is a WorkerAgent or subclass
     from openagents.agents.worker_agent import WorkerAgent
     is_worker_agent = False
-    try:
-        if isinstance(agent_class, type):
-            # Try to check if it's a subclass of WorkerAgent
-            try:
-                is_worker_agent = issubclass(agent_class, WorkerAgent)
-            except TypeError:
-                pass  # issubclass failed, will check name below
 
-            # If not a real WorkerAgent subclass, check class name or instantiate to call __str__
-            # This handles mock classes in tests
-            if not is_worker_agent:
-                class_name = getattr(agent_class, "__name__", "")
-                if "WorkerAgent" in class_name:
-                    is_worker_agent = True
-                else:
-                    # Try instantiating to call __str__
-                    try:
-                        str_repr = str(agent_class())
-                        is_worker_agent = "WorkerAgent" in str_repr
-                    except Exception:
-                        pass
-        else:
-            # For instances, check the string representation
-            str_repr = str(agent_class)
-            class_name = agent_class.__class__.__name__
-            is_worker_agent = "WorkerAgent" in class_name or "WorkerAgent" in str_repr
-    except (TypeError, AttributeError):
-        # If check fails, assume not a WorkerAgent
-        is_worker_agent = False
+    # First, try direct subclass check for real WorkerAgent classes
+    if isinstance(agent_class, type):
+        try:
+            if issubclass(agent_class, WorkerAgent):
+                is_worker_agent = True
+        except TypeError:
+            pass
+
+    # If not a real subclass, check class name for "WorkerAgent" (handles mock classes in tests)
+    if not is_worker_agent:
+        class_name = getattr(agent_class, "__name__", "")
+        if "WorkerAgent" in class_name:
+            is_worker_agent = True
+
+    # If still not detected, try str representation of an instance
+    if not is_worker_agent and isinstance(agent_class, type):
+        try:
+            instance = agent_class()
+            if "WorkerAgent" in str(instance):
+                is_worker_agent = True
+        except Exception:
+            pass
 
     # Process mods from YAML
     for mod_config in mods_data:
