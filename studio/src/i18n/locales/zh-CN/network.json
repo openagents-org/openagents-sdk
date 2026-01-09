@@ -69,7 +69,7 @@
         "error": "更新网络配置文件失败"
     },
     "agents": {
-        "title": "已连接代理",
+        "title": "已连接智能体",
         "subtitle": "管理网络中连接的智能体",
         "loading": "加载智能体中...",
         "refresh": "刷新",
@@ -210,7 +210,7 @@
             "networkName": "网络名称",
             "networkMode": "网络模式",
             "modules": "模块 ({{count}})",
-            "agentGroups": "代理组 ({{count}})",
+            "agentGroups": "智能体组 ({{count}})",
             "transports": "传输协议 ({{count}})",
             "exportTime": "导出时间",
             "exportNotes": "导出备注",
@@ -226,7 +226,7 @@
         "exportOptions": {
             "title": "导出选项",
             "includePasswordHashes": "包含密码哈希",
-            "includePasswordHashesDesc": "导出代理组密码哈希值（用于恢复密码）",
+            "includePasswordHashesDesc": "导出智能体组密码哈希值（用于恢复密码）",
             "includeSensitiveConfig": "包含敏感配置",
             "includeSensitiveConfigDesc": "导出 API 密钥、密钥等敏感配置信息",
             "notes": "备注（可选）",
