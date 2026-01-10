@@ -496,12 +496,18 @@ class DefaultProjectAgentAdapter(BaseModAdapter):
         goal: str,
         name: Optional[str] = None,
         collaborators: Optional[List[str]] = None,
-        custom_params: Optional[Dict[str, Any]] = None
+        custom_params: Optional[Dict[str, Any]] = None,
+        wait_for_completion: bool = True,
+        timeout: float = 300.0,
+        poll_interval: float = 2.0
     ) -> Dict[str, Any]:
         """Start a project from a template with custom parameters.
 
         This is called by template-specific tools to start projects
         with additional custom parameters defined in the template's input schema.
+
+        When called via MCP (external tools), this method will wait for the project
+        to complete and return the final results including all messages.
 
         Args:
             template_id: The template to use
@@ -509,9 +515,13 @@ class DefaultProjectAgentAdapter(BaseModAdapter):
             name: Optional project name
             collaborators: Optional list of collaborator agent IDs
             custom_params: Additional custom parameters from the template tool
+            wait_for_completion: Whether to wait for project completion (default: True)
+            timeout: Maximum time to wait for completion in seconds (default: 300s / 5 min)
+            poll_interval: Time between status checks in seconds (default: 2s)
 
         Returns:
-            The project creation response
+            The project data with final results if wait_for_completion is True,
+            otherwise just the project creation response
         """
         # Enhance goal with custom params if provided
         enhanced_goal = goal
@@ -520,13 +530,115 @@ class DefaultProjectAgentAdapter(BaseModAdapter):
             param_str = "\n".join(param_lines)
             enhanced_goal = f"{goal}\n\nAdditional Parameters:\n{param_str}"
 
-        # Use the standard start_project method
-        return await self.start_project(
+        # Start the project
+        start_response = await self.start_project(
             template_id=template_id,
             goal=enhanced_goal,
             name=name,
             collaborators=collaborators
         )
+
+        # If start failed or not waiting for completion, return immediately
+        if not start_response.get("success") or not wait_for_completion:
+            return start_response
+
+        project_id = start_response.get("data", {}).get("project_id")
+        if not project_id:
+            return start_response
+
+        # Poll for project completion
+        terminal_statuses = {"completed", "failed", "stopped"}
+        elapsed = 0.0
+
+        logger.info(f"Waiting for project {project_id} to complete (timeout: {timeout}s)")
+
+        while elapsed < timeout:
+            await asyncio.sleep(poll_interval)
+            elapsed += poll_interval
+
+            # Check project status
+            project_response = await self.get_project(project_id)
+            if not project_response.get("success"):
+                logger.warning(f"Failed to get project status: {project_response.get('message')}")
+                continue
+
+            project_data = project_response.get("data", {}).get("project", {})
+            status = project_data.get("status", "")
+
+            if status in terminal_statuses:
+                logger.info(f"Project {project_id} reached terminal status: {status}")
+
+                # Extract the final result from messages or artifacts
+                messages = project_data.get("messages", [])
+                artifacts = project_data.get("artifacts", {})
+
+                # Build the final result
+                result = {
+                    "success": True,
+                    "message": f"Project {status}",
+                    "data": {
+                        "project_id": project_id,
+                        "status": status,
+                        "goal": project_data.get("goal"),
+                        "summary": project_data.get("summary"),
+                        "messages": messages,
+                        "artifacts": artifacts,
+                        # Include the last message content as the primary result
+                        "result": self._extract_final_result(messages, artifacts)
+                    }
+                }
+                return result
+
+        # Timeout reached
+        logger.warning(f"Project {project_id} did not complete within {timeout}s timeout")
+        return {
+            "success": False,
+            "message": f"Project did not complete within {timeout}s timeout",
+            "data": {
+                "project_id": project_id,
+                "status": "timeout"
+            }
+        }
+
+    def _extract_final_result(self, messages: List[Dict[str, Any]], artifacts: Dict[str, Any]) -> str:
+        """Extract the final result from project messages or artifacts.
+
+        Looks for the final comparison/result message from the project workflow.
+
+        Args:
+            messages: List of project messages
+            artifacts: Dictionary of project artifacts
+
+        Returns:
+            The final result text
+        """
+        # First, check for a 'final_result' or 'comparison' artifact
+        for key in ["final_result", "comparison", "result", "output"]:
+            if key in artifacts:
+                return artifacts[key]
+
+        # Otherwise, look for the last substantive message
+        # Skip system messages and look for content from agents
+        for msg in reversed(messages):
+            content = msg.get("content", {})
+            text = content.get("text", "")
+            sender = msg.get("sender_id", "")
+
+            # Skip messages from mcp_client (the caller) or system
+            if sender in ["mcp_client", "system", "mod:openagents.mods.workspace.project"]:
+                continue
+
+            # Return the first non-trivial message found
+            if text and len(text) > 50:  # Skip very short messages
+                return text
+
+        # Fallback: return the last message if any
+        if messages:
+            last_msg = messages[-1]
+            content = last_msg.get("content", {})
+            return content.get("text", "No result available")
+
+        return "No result available"
 
     async def stop_project(self, project_id: str, reason: Optional[str] = None) -> Dict[str, Any]:
         """Stop a project."""

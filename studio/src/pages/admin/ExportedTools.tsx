@@ -111,8 +111,6 @@ const ExportedTools: React.FC = () => {
       // Get external_access config
       const extAccess =
         healthData?.external_access || healthData?.config?.external_access
-      console.log("[ExportedTools] healthData:", healthData)
-      console.log("[ExportedTools] extAccess:", extAccess)
       setExternalAccess(extAccess || null)
 
       // Fetch tools from /mcp/tools endpoint
