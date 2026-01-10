@@ -451,11 +451,13 @@ class DefaultProjectAgentAdapter(BaseModAdapter):
                 # Log template details
                 for tid, template in templates_dict.items():
                     expose = getattr(template, 'expose_as_tool', False)
-                    logger.info(f"  Template '{tid}': expose_as_tool={expose}")
+                    mode = getattr(template, 'tool_mode', 'sync')
+                    logger.info(f"  Template '{tid}': expose_as_tool={expose}, tool_mode={mode}")
 
                 template_tools = generate_template_tools(
                     templates=templates_dict,
-                    start_project_handler=self._start_project_from_template
+                    start_project_handler=self._start_project_from_template,
+                    get_project_handler=self.get_project
                 )
                 tools.extend(template_tools)
                 logger.info(f"Added {len(template_tools)} template tools from {templates_count} templates")

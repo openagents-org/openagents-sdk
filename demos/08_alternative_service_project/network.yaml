@@ -73,6 +73,7 @@ network:
           expose_as_tool: true
           tool_name: find_service_alternatives
           tool_description: Find and compare alternative services to a given web service or SaaS tool. Provide the service name as the task.
+          tool_mode: async
           agent_groups:
           - coordinators
           - workers
@@ -140,5 +141,6 @@ external_access:
   auth_token_env: null
   instruction: null
   exposed_tools:
-  - find_service_alternatives
+  - start_find_service_alternatives
+  - get_result_find_service_alternatives
   excluded_tools: []
