@@ -6,12 +6,12 @@ network:
   transports:
   - type: http
     config:
-      port: 8703
+      port: 8700
       serve_studio: true
-      serve_mcp: false
+      serve_mcp: true
   - type: grpc
     config:
-      port: 8603
+      port: 8600
       max_message_size: 104857600
       compression: gzip
       keepalive_time: 60000
@@ -70,23 +70,36 @@ network:
         find_alternatives:
           name: Find Service Alternatives
           description: Find and compare alternative web services
+          expose_as_tool: true
+          tool_name: find_service_alternatives
+          tool_description: Find and compare alternative services to a given web service or SaaS tool. Provide the service name as the task.
           agent_groups:
           - coordinators
           - workers
-          context: |
-            Alternative Service Finder Workflow
+          context: 'Alternative Service Finder Workflow
+
 
             This project helps you find alternatives to web services and SaaS tools.
 
+
             Workflow:
+
             1. Coordinator receives project and sends message to Searcher
+
             2. Searcher finds 2-3 alternatives and responds to Coordinator
+
             3. Coordinator sends message to project channel
+
             4. Coordinator delegates to Comparer for detailed comparison
+
             5. Comparer completes task with comparison
+
             6. Coordinator sends final comparison and completes project
 
+
             Example: "Find alternatives to Mailchimp"
+
+            '
   - name: openagents.mods.discovery.agent_discovery
     enabled: true
     config:
@@ -116,8 +129,16 @@ network_profile:
   authentication:
     type: none
   host: 0.0.0.0
-  port: 8703
+  port: 8700
 log_level: INFO
 data_dir: ./data/service-alternatives
 runtime_limit: null
 shutdown_timeout: 30
+external_access:
+  default_agent_group: guest
+  auth_token: null
+  auth_token_env: null
+  instruction: null
+  exposed_tools:
+  - find_service_alternatives
+  excluded_tools: []

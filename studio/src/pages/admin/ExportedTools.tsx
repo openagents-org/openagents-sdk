@@ -111,6 +111,8 @@ const ExportedTools: React.FC = () => {
       // Get external_access config
       const extAccess =
         healthData?.external_access || healthData?.config?.external_access
+      console.log("[ExportedTools] healthData:", healthData)
+      console.log("[ExportedTools] extAccess:", extAccess)
       setExternalAccess(extAccess || null)
 
       // Fetch tools from /mcp/tools endpoint
@@ -129,13 +131,31 @@ const ExportedTools: React.FC = () => {
 
           if (response.ok) {
             const data = await response.json()
-            const toolsList: Tool[] = (data.tools || []).map((tool: any) => ({
-              name: tool.name,
-              description: tool.description || "",
-              inputSchema: tool.inputSchema,
-              source: tool.source || inferToolSource(tool.name, healthData),
-              enabled: true, // All returned tools are enabled
-            }))
+            const toolsList: Tool[] = (data.tools || []).map((tool: any) => {
+              // Determine enabled based on external_access config
+              let isEnabled = true
+              if (extAccess) {
+                const exposedTools = extAccess.exposed_tools
+                const excludedTools = extAccess.excluded_tools || []
+
+                // If exposed_tools is set, tool must be in the whitelist
+                if (exposedTools && exposedTools.length > 0) {
+                  isEnabled = exposedTools.includes(tool.name)
+                }
+                // Check blacklist
+                if (excludedTools.includes(tool.name)) {
+                  isEnabled = false
+                }
+              }
+
+              return {
+                name: tool.name,
+                description: tool.description || "",
+                inputSchema: tool.inputSchema,
+                source: tool.source || inferToolSource(tool.name, healthData),
+                enabled: isEnabled,
+              }
+            })
             setTools(toolsList)
             setFilteredTools(toolsList)
           }
@@ -310,7 +330,7 @@ const ExportedTools: React.FC = () => {
   }
 
   return (
-    <div className="p-6 h-full flex flex-col">
+    <div className="p-6 h-full flex flex-col max-w-5xl">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">

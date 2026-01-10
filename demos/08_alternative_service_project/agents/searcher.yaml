@@ -75,6 +75,6 @@ mods:
 
 connection:
   host: "localhost"
-  port: 8703
+  port: 8700
   transport: "http"
   password_hash: "3588bb7219b1faa3d01f132a0c60a394258ccc3049d8e4a243b737e62524d147"

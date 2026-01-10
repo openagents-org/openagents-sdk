@@ -212,7 +212,7 @@ async def main():
         # Use password_hash to authenticate as coordinators group
         await coordinator.async_start(
             network_host="localhost",
-            network_port=8703,
+            network_port=8700,
             password_hash="bf24385098410391a81d92b2de72d3a2946d24f42ee387e51004a868281a2408",  # coordinators group
         )
         print("Python Coordinator running (no LLM)")

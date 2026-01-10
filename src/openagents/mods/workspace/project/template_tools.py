@@ -16,9 +16,9 @@ from openagents.workspace.project import ProjectTemplate
 DEFAULT_INPUT_SCHEMA: Dict[str, Any] = {
     "type": "object",
     "properties": {
-        "goal": {
+        "task": {
             "type": "string",
-            "description": "The project goal or objective"
+            "description": "The project task or objective"
         },
         "name": {
             "type": "string",
@@ -30,7 +30,7 @@ DEFAULT_INPUT_SCHEMA: Dict[str, Any] = {
             "description": "List of additional agent IDs to collaborate"
         }
     },
-    "required": ["goal"]
+    "required": ["task"]
 }
 
 
@@ -98,19 +98,19 @@ def merge_input_schemas(
     if "properties" not in merged:
         merged["properties"] = {}
 
-    # Ensure goal property exists (it's always required)
-    if "goal" not in merged["properties"]:
-        merged["properties"]["goal"] = {
+    # Ensure task property exists (it's always required)
+    if "task" not in merged["properties"]:
+        merged["properties"]["task"] = {
             "type": "string",
-            "description": "The project goal or objective"
+            "description": "The project task or objective"
         }
 
-    # Always require 'goal' at minimum
+    # Always require 'task' at minimum
     if "required" not in merged:
-        merged["required"] = ["goal"]
-    elif "goal" not in merged["required"]:
+        merged["required"] = ["task"]
+    elif "task" not in merged["required"]:
         merged["required"] = list(merged["required"])
-        merged["required"].append("goal")
+        merged["required"].append("task")
 
     return merged
 
@@ -139,17 +139,17 @@ def create_template_tool(
     async def tool_func(**kwargs: Any) -> Dict[str, Any]:
         """Execute template-specific project start."""
         # Extract standard parameters
-        goal = kwargs.get("goal")
+        task = kwargs.get("task")
         name = kwargs.get("name") or kwargs.get("project_name")
         collaborators = kwargs.get("collaborators", [])
 
         # Store custom parameters in project metadata/context
-        standard_params = {"goal", "name", "project_name", "collaborators"}
+        standard_params = {"task", "name", "project_name", "collaborators"}
         custom_params = {k: v for k, v in kwargs.items() if k not in standard_params}
 
         return await start_project_handler(
             template_id=captured_template_id,
-            goal=goal,
+            goal=task,
             name=name,
             collaborators=collaborators,
             custom_params=custom_params

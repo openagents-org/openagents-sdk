@@ -18,7 +18,7 @@ async def test_workflow():
         print("🔌 Connecting to network...")
         success = await client.connect(
             network_host="localhost",
-            network_port=8703,
+            network_port=8700,
             skip_detection=True,
             enforce_transport_type="http"
         )

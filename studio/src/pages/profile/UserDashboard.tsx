@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { useAuthStore } from "@/stores/authStore"
 import { dynamicRouteConfig, NavigationIcons } from "@/config/routeConfig"
 import { PLUGIN_NAME_ENUM } from "@/types/plugins"
+import { useDynamicRoutes } from "@/hooks/useDynamicRoutes"
 import {
   Card,
   CardContent,
@@ -21,17 +22,27 @@ import { RefreshCw, Users, Package } from "lucide-react"
 import { useProfileData } from "./hooks/useProfileData"
 
 // Module name to plugin enum mapping (same as in moduleUtils)
+// Supports both short names and full qualified names from dynamic mods
 const MODULE_PLUGIN_MAP: Record<string, PLUGIN_NAME_ENUM> = {
+  // Short names
   messaging: PLUGIN_NAME_ENUM.MESSAGING,
   feed: PLUGIN_NAME_ENUM.FEED,
   project: PLUGIN_NAME_ENUM.PROJECT,
-  "openagents.mods.workspace.project": PLUGIN_NAME_ENUM.PROJECT,
   documents: PLUGIN_NAME_ENUM.DOCUMENTS,
   forum: PLUGIN_NAME_ENUM.FORUM,
   wiki: PLUGIN_NAME_ENUM.WIKI,
   agentworld: PLUGIN_NAME_ENUM.AGENTWORLD,
-  "openagents.mods.games.agentworld": PLUGIN_NAME_ENUM.AGENTWORLD,
   artifact: PLUGIN_NAME_ENUM.ARTIFACT,
+  shared_artifact: PLUGIN_NAME_ENUM.ARTIFACT,
+  // Full qualified names (dynamic mods)
+  "openagents.mods.workspace.messaging": PLUGIN_NAME_ENUM.MESSAGING,
+  "openagents.mods.workspace.feed": PLUGIN_NAME_ENUM.FEED,
+  "openagents.mods.workspace.project": PLUGIN_NAME_ENUM.PROJECT,
+  "openagents.mods.workspace.documents": PLUGIN_NAME_ENUM.DOCUMENTS,
+  "openagents.mods.workspace.forum": PLUGIN_NAME_ENUM.FORUM,
+  "openagents.mods.workspace.wiki": PLUGIN_NAME_ENUM.WIKI,
+  "openagents.mods.workspace.shared_artifact": PLUGIN_NAME_ENUM.ARTIFACT,
+  "openagents.mods.games.agentworld": PLUGIN_NAME_ENUM.AGENTWORLD,
 }
 
 const UserDashboard: React.FC = () => {
@@ -43,14 +54,23 @@ const UserDashboard: React.FC = () => {
   )
   const { selectedNetwork } = useAuthStore()
 
+  // Get module reload function from useDynamicRoutes
+  const { reloadModules } = useDynamicRoutes()
+
   const {
     loading,
     isConnected,
     formattedLastUpdated,
     formattedLatency,
     enabledModulesCount,
-    refresh,
+    refresh: refreshProfile,
   } = useProfileData()
+
+  // Combined refresh function that reloads both modules and profile data
+  const refresh = React.useCallback(async () => {
+    await reloadModules()
+    await refreshProfile()
+  }, [reloadModules, refreshProfile])
 
   // Debug logging
   React.useEffect(() => {

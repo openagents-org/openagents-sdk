@@ -38,7 +38,7 @@ class DefaultProjectAgentAdapter(BaseModAdapter):
 
     def get_tools(self) -> List[AgentTool]:
         """Get the tools provided by this adapter."""
-        return [
+        tools = [
             # Template Management
             AgentTool(
                 name="list_project_templates",
@@ -441,13 +441,26 @@ class DefaultProjectAgentAdapter(BaseModAdapter):
         ]
 
         # Add template-specific tools if mod is bound and has templates
-        if self._mod and hasattr(self._mod, 'templates') and self._mod.templates:
-            template_tools = generate_template_tools(
-                templates=self._mod.templates,
-                start_project_handler=self._start_project_from_template
-            )
-            tools.extend(template_tools)
-            logger.debug(f"Added {len(template_tools)} template tools")
+        if self._mod:
+            has_templates_attr = hasattr(self._mod, 'templates')
+            templates_dict = getattr(self._mod, 'templates', {})
+            templates_count = len(templates_dict) if templates_dict else 0
+            logger.info(f"Project adapter: mod bound, has_templates={has_templates_attr}, templates_count={templates_count}")
+
+            if templates_dict:
+                # Log template details
+                for tid, template in templates_dict.items():
+                    expose = getattr(template, 'expose_as_tool', False)
+                    logger.info(f"  Template '{tid}': expose_as_tool={expose}")
+
+                template_tools = generate_template_tools(
+                    templates=templates_dict,
+                    start_project_handler=self._start_project_from_template
+                )
+                tools.extend(template_tools)
+                logger.info(f"Added {len(template_tools)} template tools from {templates_count} templates")
+        else:
+            logger.warning(f"Project adapter: mod NOT bound - no template tools will be generated")
 
         return tools
 
