@@ -118,10 +118,30 @@ const RootLayoutContent: React.FC<RootLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
+  // Routes that should hide the secondary sidebar (mod pages)
+  const HIDE_SECONDARY_SIDEBAR_ROUTES = [
+    "/user-dashboard",
+    "/readme",
+    "/messaging",
+    "/feed",
+    "/project",
+    "/forum",
+    "/artifact",
+    "/wiki",
+    "/documents",
+    "/agentworld",
+    "/profile",
+    "/mod-management",
+    "/service-agents",
+    "/llm-logs",
+    "/admin",
+  ]
+
   // Determine if current route should hide the secondary sidebar (content sidebar)
-  const shouldHideSecondarySidebar =
-    location.pathname.startsWith("/agentworld") ||
-    location.pathname.startsWith("/admin")
+  const pathname = location.pathname.replace(/\/$/, "") // Remove trailing slash
+  const shouldHideSecondarySidebar = HIDE_SECONDARY_SIDEBAR_ROUTES.some(
+    route => pathname === route || pathname.startsWith(route + "/")
+  )
 
   // Determine if breadcrumbs should be hidden (only for agentworld)
   const shouldHideBreadcrumbs = location.pathname.startsWith("/agentworld")

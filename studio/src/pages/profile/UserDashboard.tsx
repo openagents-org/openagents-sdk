@@ -244,11 +244,11 @@ const UserDashboard: React.FC = () => {
           <CardHeader>
             <CardHeading>
               <CardTitle className="flex items-center gap-2">
-                {t("dashboard.title", { defaultValue: "用户面板" })}
+                {t("dashboard.title", { defaultValue: "User Panel" })}
                 <Badge variant="info" appearance="light" size="sm">
                   <Users className="w-3 h-3 mr-1" />
                   {enabledModulesCount}{" "}
-                  {t("dashboard.modules.enabled", { defaultValue: "模块" })}
+                  {t("dashboard.modules.enabled", { defaultValue: "Enabled" })}
                 </Badge>
                 <Badge
                   variant={isConnected ? "success" : "destructive"}
@@ -294,7 +294,7 @@ const UserDashboard: React.FC = () => {
               <CardHeading>
                 <CardTitle>
                   {t("dashboard.networkStatus.title", {
-                    defaultValue: "网络状态",
+                    defaultValue: "Network Status",
                   })}
                 </CardTitle>
               </CardHeading>
@@ -343,63 +343,90 @@ const UserDashboard: React.FC = () => {
           </Card>
         )}
 
-        {/* Enabled Modules - Primary Group - matching AdminDashboard card style */}
-        {primaryRoutes.length > 0 && (
-          <div className="mb-4">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-              {t("dashboard.modules.primaryModules", {
-                defaultValue: "主要功能",
-              })}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-              {primaryRoutes.map((route, index) => {
-                const navConfig = route.navigationConfig
-                if (!navConfig) return null
+        {/* Apps Section - README + Primary Modules */}
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            {t("dashboard.modules.apps", {
+              defaultValue: "APPS",
+            })}
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* README Card - Always show */}
+            <Card
+              className="cursor-pointer hover:bg-accent transition-colors border-gray-200 dark:border-gray-700"
+              onClick={() => navigate("/readme")}
+            >
+              <CardContent className="flex items-center space-x-3 p-4">
+                <div
+                  className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0"
+                >
+                  <div className="text-blue-600 dark:text-blue-400">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium">
+                    {tLayout("navigation.readme", { defaultValue: "README" })}
+                  </div>
+                  <CardDescription className="text-xs mt-0.5">
+                    {t("dashboard.modules.readme.desc", {
+                      defaultValue: "View README documentation",
+                    })}
+                  </CardDescription>
+                </div>
+              </CardContent>
+            </Card>
 
-                const IconComponent = getIconComponent(navConfig.icon)
-                const colorScheme = getModuleColorScheme(index)
-                const routePath = route.path.replace("/*", "")
+            {/* Primary Routes */}
+            {primaryRoutes.map((route, index) => {
+              const navConfig = route.navigationConfig
+              if (!navConfig) return null
 
-                return (
-                  <Card
-                    key={navConfig.key}
-                    className="cursor-pointer hover:bg-accent transition-colors border-gray-200 dark:border-gray-700"
-                    onClick={() => navigate(routePath)}
-                  >
-                    <CardContent className="flex items-center space-x-3 p-4">
-                      <div
-                        className={`w-10 h-10 rounded-full ${colorScheme.bg} flex items-center justify-center flex-shrink-0`}
-                      >
-                        {IconComponent && (
-                          <div className={colorScheme.icon}>
-                            {IconComponent}
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium">
-                          {getTranslatedLabel(navConfig.key)}
+              const IconComponent = getIconComponent(navConfig.icon)
+              const colorScheme = getModuleColorScheme(index + 1)
+              const routePath = route.path.replace("/*", "")
+
+              return (
+                <Card
+                  key={navConfig.key}
+                  className="cursor-pointer hover:bg-accent transition-colors border-gray-200 dark:border-gray-700"
+                  onClick={() => navigate(routePath)}
+                >
+                  <CardContent className="flex items-center space-x-3 p-4">
+                    <div
+                      className={`w-10 h-10 rounded-full ${colorScheme.bg} flex items-center justify-center flex-shrink-0`}
+                    >
+                      {IconComponent && (
+                        <div className={colorScheme.icon}>
+                          {IconComponent}
                         </div>
-                        <CardDescription className="text-xs mt-0.5">
-                          {t(`dashboard.modules.${navConfig.key}.desc`, {
-                            defaultValue: "",
-                          })}
-                        </CardDescription>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium">
+                        {getTranslatedLabel(navConfig.key)}
                       </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
+                      <CardDescription className="text-xs mt-0.5">
+                        {t(`dashboard.modules.${navConfig.key}.desc`, {
+                          defaultValue: "",
+                        })}
+                      </CardDescription>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
-        )}
+        </div>
 
         {/* Enabled Modules - Secondary Group - matching AdminDashboard card style */}
         {secondaryRoutes.length > 0 && (
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
               {t("dashboard.modules.secondaryModules", {
-                defaultValue: "设置与工具",
+                defaultValue: "SETTINGS & TOOLS",
               })}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -452,10 +479,10 @@ const UserDashboard: React.FC = () => {
           <EmptyState
             icon={<Package className="w-12 h-12" />}
             title={t("dashboard.modules.noModulesAvailable", {
-              defaultValue: "暂无可用模块",
+              defaultValue: "No modules available",
             })}
-            description={`启用的模块: ${
-              enabledModules.length > 0 ? enabledModules.join(", ") : "无"
+            description={`Enabled modules: ${
+              enabledModules.length > 0 ? enabledModules.join(", ") : "None"
             }`}
           />
         )}

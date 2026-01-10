@@ -228,34 +228,27 @@ export function SidebarPrimary() {
       return items;
     }
 
-    // Normal mode: Add User Dashboard at the top for non-admin users
-    if (!isAdmin) {
-      items.push({
-        icon: NavigationIcons.Dashboard as React.ComponentType,
-        label: getTranslatedLabel(PLUGIN_NAME_ENUM.USER_DASHBOARD),
-        href: "/user-dashboard",
-        active: isRouteActive("/user-dashboard"),
-        className:
-          "border-white bg-amber-500 hover:bg-amber-600 text-white hover:text-white",
-        index: currentIndex++,
-      });
-    }
+    // Normal mode: Add User Dashboard at the top for all users
+    items.push({
+      icon: NavigationIcons.Dashboard as React.ComponentType,
+      label: getTranslatedLabel(PLUGIN_NAME_ENUM.USER_DASHBOARD),
+      href: "/user-dashboard",
+      active: isRouteActive("/user-dashboard"),
+      className:
+        "border-white bg-amber-500 hover:bg-amber-600 text-white hover:text-white",
+      index: currentIndex++,
+    });
 
-    // Normal mode: Add README icon at the top if exists
-    if (readmeRoute) {
-      const route = readmeRoute.path.replace("/*", "");
-      items.push({
-        icon: NavigationIcons[
-          readmeRoute.navigationConfig!.icon
-        ] as React.ComponentType,
-        label: getTranslatedLabel(readmeRoute.navigationConfig!.key),
-        href: route,
-        active: isRouteActive(route),
-        className:
-          "border-white bg-blue-500 hover:bg-blue-600 text-white hover:text-white",
-        index: currentIndex++,
-      });
-    }
+    // Normal mode: Add README icon at the top (always show)
+    items.push({
+      icon: NavigationIcons.Readme as React.ComponentType,
+      label: getTranslatedLabel(PLUGIN_NAME_ENUM.README),
+      href: "/readme",
+      active: isRouteActive("/readme"),
+      className:
+        "border-white bg-blue-500 hover:bg-blue-600 text-white hover:text-white",
+      index: currentIndex++,
+    });
 
     // Add primary routes (excluding README)
     otherPrimaryRoutes.forEach((route) => {

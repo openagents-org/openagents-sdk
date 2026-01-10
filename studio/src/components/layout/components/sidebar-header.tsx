@@ -153,32 +153,25 @@ export function SidebarHeader() {
 
     let currentIndex = 0;
 
-    // Add User Dashboard at the top for non-admin users (same as SidebarPrimary)
-    if (!isAdmin) {
-      items.push({
-        icon: NavigationIcons.Dashboard as React.ComponentType,
-        name: getTranslatedLabel(PLUGIN_NAME_ENUM.USER_DASHBOARD),
-        color: "bg-amber-500 text-white",
-        route: "/user-dashboard",
-        active: isRouteActive("/user-dashboard"),
-      });
-      currentIndex++;
-    }
+    // Add User Dashboard at the top for all users (same as SidebarPrimary)
+    items.push({
+      icon: NavigationIcons.Dashboard as React.ComponentType,
+      name: getTranslatedLabel(PLUGIN_NAME_ENUM.USER_DASHBOARD),
+      color: "bg-amber-500 text-white",
+      route: "/user-dashboard",
+      active: isRouteActive("/user-dashboard"),
+    });
+    currentIndex++;
 
-    // Add README icon at the top if exists (same as SidebarPrimary)
-    if (readmeRoute) {
-      const route = readmeRoute.path.replace("/*", "");
-      items.push({
-        icon: NavigationIcons[
-          readmeRoute.navigationConfig!.icon
-        ] as React.ComponentType,
-        name: getTranslatedLabel(readmeRoute.navigationConfig!.key),
-        color: "bg-blue-500 text-white",
-        route: route,
-        active: isRouteActive(route),
-      });
-      currentIndex++;
-    }
+    // Add README icon at the top (always show, same as SidebarPrimary)
+    items.push({
+      icon: NavigationIcons.Readme as React.ComponentType,
+      name: getTranslatedLabel(PLUGIN_NAME_ENUM.README),
+      color: "bg-blue-500 text-white",
+      route: "/readme",
+      active: isRouteActive("/readme"),
+    });
+    currentIndex++;
 
     // Add primary routes (excluding README) - same colors as SidebarPrimary
     otherPrimaryRoutes.forEach((route) => {

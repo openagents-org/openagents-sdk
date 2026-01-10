@@ -16,7 +16,6 @@ import { useTranslation } from "react-i18next"
 import { getNavigationRoutesByGroup } from "@/config/routeConfig"
 import { PLUGIN_NAME_ENUM } from "@/types/plugins"
 import { useIsAdmin } from "@/hooks/useIsAdmin"
-import { useConfirm } from "@/context/ConfirmContext"
 
 export function HeaderBreadcrumbs() {
   const { isMobile, sidebarToggle, isSidebarOpen } = useLayout()
@@ -26,7 +25,6 @@ export function HeaderBreadcrumbs() {
   const { t: tAdmin } = useTranslation("admin")
   const { t: tProfile } = useTranslation("profile")
   const { isAdmin } = useIsAdmin()
-  const { confirm } = useConfirm()
 
   // Generate breadcrumb items based on current route
   const breadcrumbItems = useMemo(() => {
@@ -275,34 +273,12 @@ export function HeaderBreadcrumbs() {
   // Check if this is an admin route
   const isAdminRoute = location.pathname.startsWith("/admin")
 
-  const handleSwitchToAdmin = async () => {
-    const confirmed = await confirm(
-      t("navigation.switchToAdmin.title"),
-      t("navigation.switchToAdmin.confirm"),
-      {
-        type: "info",
-        confirmText: t("navigation.switchToAdmin.confirmButton"),
-        cancelText: t("navigation.switchToAdmin.cancel"),
-      }
-    )
-    if (confirmed) {
-      navigate("/admin/dashboard")
-    }
+  const handleSwitchToAdmin = () => {
+    navigate("/admin/dashboard")
   }
 
-  const handleSwitchToUser = async () => {
-    const confirmed = await confirm(
-      t("navigation.switchToUser.title"),
-      t("navigation.switchToUser.confirm"),
-      {
-        type: "info",
-        confirmText: t("navigation.switchToUser.confirmButton"),
-        cancelText: t("navigation.switchToUser.cancel"),
-      }
-    )
-    if (confirmed) {
-      navigate("/")
-    }
+  const handleSwitchToUser = () => {
+    navigate("/")
   }
 
   return (

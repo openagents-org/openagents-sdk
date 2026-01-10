@@ -96,7 +96,7 @@ const SidebarContent: React.FC = () => {
     }
 
     if (pathname.startsWith("/user-dashboard")) {
-      return <UserDashboardSidebar />
+      return null
     }
 
     // Profile sidebar is now handled in ProfileMainPage, not here
