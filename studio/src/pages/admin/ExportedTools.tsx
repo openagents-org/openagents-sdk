@@ -497,9 +497,8 @@ const ExportedTools: React.FC = () => {
           <div className="flex-1 overflow-auto space-y-2">
             {filteredTools.map((tool) => {
               const isExpanded = expandedTools.has(tool.name)
-              const isExcluded = externalAccess?.excluded_tools?.includes(
-                tool.name
-              )
+              // Use the enabled property which accounts for both exposed_tools whitelist and excluded_tools blacklist
+              const isExcluded = !tool.enabled
 
               return (
                 <div
