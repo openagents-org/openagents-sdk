@@ -85,6 +85,7 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
   const [sendingMessage, setSendingMessage] = useState<boolean>(false)
   const [messagesError, setMessagesError] = useState<string | null>(null)
   const [isStartingProject, setIsStartingProject] = useState<boolean>(false)
+  const [isLoadingProject, setIsLoadingProject] = useState<boolean>(false)
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -98,6 +99,12 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
     // Clear messages immediately when switching projects or creating new project
     // This handles both switching between projects and clicking "new project"
     // location.key ensures we catch navigation even when pathname stays the same (e.g., selecting different template)
+    
+    // Set loading state for existing projects (not for pending/new projects)
+    if (routeProjectId && routeProjectId !== 'new') {
+      setIsLoadingProject(true)
+    }
+    
     setMessages([])
     setProjectInfo(null)
   }, [routeProjectId, propProjectId, location.pathname, location.key])
@@ -219,12 +226,18 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
             channelName: `project-${projectId}`,
           })
         }
+      } finally {
+        // Clear loading state after project info is loaded (or fails)
+        setIsLoadingProject(false)
       }
     }
 
     // Load project info when projectId changes or connection is established
     if (projectId) {
       loadProjectInfo()
+    } else {
+      // If no projectId (e.g., pending project), clear loading state
+      setIsLoadingProject(false)
     }
   }, [
     projectId,
@@ -751,7 +764,12 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
       <div className="flex-1 flex flex-col min-h-0">
         {/* Messages */}
         <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4">
-          {sortedMessages.length === 0 ? (
+          {isLoadingProject ? (
+            <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+              <p className="text-sm">Loading messages...</p>
+            </div>
+          ) : sortedMessages.length === 0 ? (
             <div className="text-center text-gray-500 dark:text-gray-400 py-8">
               {isPendingProject ? (
                 <>
