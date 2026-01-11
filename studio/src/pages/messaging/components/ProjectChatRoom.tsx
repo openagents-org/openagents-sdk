@@ -92,6 +92,16 @@ const ProjectChatRoom: React.FC<ProjectChatRoomProps> = ({
   const prevMessagesLength = useRef<number>(0)
   const prevScrollHeight = useRef<number>(0)
 
+  // Reset messages and project info when route projectId changes (including "new")
+  // Listen to routeProjectId, propProjectId, and location to catch all navigation scenarios
+  useEffect(() => {
+    // Clear messages immediately when switching projects or creating new project
+    // This handles both switching between projects and clicking "new project"
+    // location.key ensures we catch navigation even when pathname stays the same (e.g., selecting different template)
+    setMessages([])
+    setProjectInfo(null)
+  }, [routeProjectId, propProjectId, location.pathname, location.key])
+
   // Load project info and message history from backend
   useEffect(() => {
     const loadProjectInfo = async () => {
