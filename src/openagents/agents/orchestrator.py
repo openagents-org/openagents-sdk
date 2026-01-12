@@ -352,7 +352,11 @@ async def orchestrate_agent(
                         actions.append(completion_action)
 
                         messages.append(
-                            {"role": "tool", "content": "Action chain completed."}
+                            {
+                                "role": "tool",
+                                "tool_call_id": tool_call["id"],
+                                "content": "Action chain completed.",
+                            }
                         )
                         break
 
