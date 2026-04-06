@@ -47,7 +47,7 @@ studio/
 
 ```bash
 # Method 1: Using start script (recommended)
-cd studio
+cd sdk/studio
 ./start-collaboration.sh
 
 # Method 2: Manual start
@@ -56,7 +56,7 @@ cd studio/server
 node collaboration-server.js
 
 # Terminal 2: Start frontend application
-cd studio
+cd sdk/studio
 npm start
 ```
 

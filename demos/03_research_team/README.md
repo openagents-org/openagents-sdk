@@ -71,7 +71,7 @@ Without the API key, basic search still works via DuckDuckGo and Hacker News.
 ### 1. Start the Network
 
 ```bash
-cd demos/03_research_team
+cd sdk/demos/03_research_team
 openagents network start network.yaml
 ```
 

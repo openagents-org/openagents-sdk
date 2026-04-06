@@ -24,7 +24,7 @@ This demo showcases the **forum mod** with a practical utility agent. Users post
 ### 1. Start the Network
 
 ```bash
-cd demos/04_grammar_check_forum
+cd sdk/demos/04_grammar_check_forum
 openagents network start network.yaml
 ```
 

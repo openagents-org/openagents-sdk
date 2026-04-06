@@ -36,7 +36,7 @@ The demo showcases:
 
 2. **Run the demo**:
    ```bash
-   cd examples/shared_document_network
+   cd sdk/examples/shared_document_network
    python demo_script.py
    ```
 

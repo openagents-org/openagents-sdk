@@ -17,7 +17,7 @@ This is your first step into OpenAgents! A single agent named Charlie listens to
 ### 1. Start the Network
 
 ```bash
-cd demos/00_hello_world
+cd sdk/demos/00_hello_world
 openagents network start network.yaml
 ```
 
@@ -26,7 +26,7 @@ openagents network start network.yaml
 In a separate terminal:
 
 ```bash
-cd demos/00_hello_world
+cd sdk/demos/00_hello_world
 openagents agent start agents/charlie.yaml
 ```
 

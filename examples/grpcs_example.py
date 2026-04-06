@@ -55,7 +55,7 @@ async def example_grpcs_connection():
     print()
     print("📝 Instructions:")
     print("1. Start the network with TLS enabled:")
-    print("   $ openagents network start examples/grpcs_network.yaml")
+    print("   $ openagents network start sdk/examples/grpcs_network.yaml")
     print()
     print("2. This script will connect an agent using TLS")
     print()
@@ -114,7 +114,7 @@ async def example_grpcs_connection():
         print(f"❌ Error: {e}")
         print()
         print("Make sure the network is running with:")
-        print("   $ openagents network start examples/grpcs_network.yaml")
+        print("   $ openagents network start sdk/examples/grpcs_network.yaml")
 
 
 async def example_with_mtls():

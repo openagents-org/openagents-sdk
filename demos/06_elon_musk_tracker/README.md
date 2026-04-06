@@ -29,21 +29,21 @@ pip install -e ".[dev]"
 **Terminal 1 - Launch the network:**
 
 ```bash
-cd demos/06_elon_musk_tracker
+cd sdk/demos/06_elon_musk_tracker
 openagents network start network.yaml
 ```
 
 **Terminal 2 - Launch the news collector agent:**
 
 ```bash
-cd demos/06_elon_musk_tracker
+cd sdk/demos/06_elon_musk_tracker
 python agents/elon_fan_agent.py
 ```
 
 Or use the convenience script:
 
 ```bash
-cd demos/06_elon_musk_tracker
+cd sdk/demos/06_elon_musk_tracker
 ./run.sh
 ```
 

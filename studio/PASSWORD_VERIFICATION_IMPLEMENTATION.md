@@ -138,7 +138,7 @@ Removed dependency:
 
 ### New System Event: `system.verify_password`
 
-**File**: `src/openagents/core/system_commands.py` (lines 788-853)
+**File**: `sdk/src/openagents/core/system_commands.py` (lines 788-853)
 
 **Handler**: `handle_verify_password()`
 
@@ -186,7 +186,7 @@ Removed dependency:
 
 ### Password Hashing Backend
 
-**File**: `src/openagents/utils/password_utils.py`
+**File**: `sdk/src/openagents/utils/password_utils.py`
 
 **Functions**:
 ```python

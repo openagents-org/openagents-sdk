@@ -269,7 +269,7 @@ class AgentNetwork:
 
         Examples:
             # Load from YAML file path
-            network = AgentNetwork.load("examples/centralized_network_config.yaml")
+            network = AgentNetwork.load("sdk/examples/centralized_network_config.yaml")
             network = AgentNetwork.load(Path("config/network.yaml"))
 
             # Auto-discover network.yaml in workspace directory
@@ -1359,7 +1359,7 @@ def create_network(config: Union[NetworkConfig, str, Path]) -> AgentNetwork:
         network = create_network(NetworkConfig(name="MyNetwork"))
 
         # From YAML file path
-        network = create_network("examples/centralized_network_config.yaml")
+        network = create_network("sdk/examples/centralized_network_config.yaml")
         network = create_network(Path("config/network.yaml"))
     """
     if isinstance(config, NetworkConfig) or (

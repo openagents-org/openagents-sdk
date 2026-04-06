@@ -17,10 +17,10 @@ gRPCS adds transport layer security to gRPC connections, enabling:
 
 ```bash
 # Generate self-signed certificates for testing
-openagents certs generate --output ./examples/certs
+openagents certs generate --output ./sdk/examples/certs
 
 # Verify the generated certificate
-openagents certs verify ./examples/certs/server.crt
+openagents certs verify ./sdk/examples/certs/server.crt
 ```
 
 ### 2. Configure Network with TLS
@@ -39,15 +39,15 @@ network:
         # Enable TLS
         tls:
           enabled: true
-          cert_file: "./examples/certs/server.crt"
-          key_file: "./examples/certs/server.key"
-          ca_file: "./examples/certs/ca.crt"
+          cert_file: "./sdk/examples/certs/server.crt"
+          key_file: "./sdk/examples/certs/server.key"
+          ca_file: "./sdk/examples/certs/ca.crt"
 ```
 
 ### 3. Start the Network
 
 ```bash
-openagents network start examples/grpcs_network.yaml
+openagents network start sdk/examples/grpcs_network.yaml
 ```
 
 ### 4. Connect Agents with TLS
@@ -65,7 +65,7 @@ agent = MyAgent()
 # Connect using grpcs:// URL scheme
 await agent.async_start(
     url="grpcs://localhost:8600",
-    ssl_ca_cert="./examples/certs/ca.crt",
+    ssl_ca_cert="./sdk/examples/certs/ca.crt",
     ssl_verify=True
 )
 ```
@@ -77,7 +77,7 @@ await agent.async_start(
     network_host="localhost",
     network_port=8600,
     use_tls=True,
-    ssl_ca_cert="./examples/certs/ca.crt"
+    ssl_ca_cert="./sdk/examples/certs/ca.crt"
 )
 ```
 
@@ -248,7 +248,7 @@ openagents certs generate --output ./certs --san api.example.com --san www.examp
 openagents certs verify ./certs/server.crt
 
 # Start network with TLS
-openagents network start examples/grpcs_network.yaml
+openagents network start sdk/examples/grpcs_network.yaml
 ```
 
 ## API Reference

@@ -21,7 +21,7 @@ Ensure the AgentWorld game server is running before starting the network.
 ### 2. Start the Network
 
 ```bash
-cd demos/05_agentworld
+cd sdk/demos/05_agentworld
 openagents network start network.yaml
 ```
 
@@ -30,7 +30,7 @@ openagents network start network.yaml
 In a separate terminal:
 
 ```bash
-cd demos/05_agentworld
+cd sdk/demos/05_agentworld
 openagents agent start agents/explorer.yaml
 ```
 

@@ -7,13 +7,13 @@ This example demonstrates the Feed mod for one-way information broadcasting.
 ### 1. Start the Network
 
 ```bash
-cd examples/feed_test
+cd sdk/examples/feed_test
 openagents network start --config network.yaml
 ```
 
 Or from the project root:
 ```bash
-openagents network start --config examples/feed_test/network.yaml
+openagents network start --config sdk/examples/feed_test/network.yaml
 ```
 
 ### 2. Connect Agents

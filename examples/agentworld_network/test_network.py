@@ -27,7 +27,7 @@ def test_configuration():
     print("="*60)
     
     try:
-        config = load_network_config('examples/agentworld_network/network.yaml')
+        config = load_network_config('sdk/examples/agentworld_network/network.yaml')
         print(f"✅ 配置加载成功!")
         print(f"   Network: {config.network.name}")
         print(f"   Node ID: {config.network.node_id}")
@@ -212,9 +212,9 @@ def print_summary(results):
         print("1. 启动 AgentWorld 游戏服务器")
         print("   cd /path/to/agentworld && yarn dev")
         print("\n2. 启动 OpenAgents 网络")
-        print("   openagents network start examples/agentworld_network")
+        print("   openagents network start sdk/examples/agentworld_network")
         print("\n3. 运行测试 agent")
-        print("   python examples/agentworld_network/simple_game_agent.py")
+        print("   python sdk/examples/agentworld_network/simple_game_agent.py")
     else:
         print("\n⚠️  部分测试失败，请检查上述错误信息")
     

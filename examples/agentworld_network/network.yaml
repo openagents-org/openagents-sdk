@@ -3,7 +3,7 @@
 # This configuration defines an OpenAgents network with AgentWorld game integration.
 # 
 # Usage:
-#   openagents network start examples/agentworld_network
+#   openagents network start sdk/examples/agentworld_network
 
 network:
   # Network basic information

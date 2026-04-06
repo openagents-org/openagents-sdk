@@ -38,7 +38,7 @@ pip install --upgrade grpcio>=1.74.0 grpcio-tools>=1.74.0
 
 ```bash
 # From the community_knowledge_base directory
-cd examples/community_knowledge_base
+cd sdk/examples/community_knowledge_base
 
 # Start the network coordinator using the standard OpenAgents launcher
 openagents network start network_config.yaml

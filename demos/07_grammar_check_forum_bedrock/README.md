@@ -44,7 +44,7 @@ export AWS_DEFAULT_REGION="us-east-1"
 ### 1. Start the Network
 
 ```bash
-cd demos/07_grammar_check_forum_bedrock
+cd sdk/demos/07_grammar_check_forum_bedrock
 openagents network start network.yaml
 ```
 

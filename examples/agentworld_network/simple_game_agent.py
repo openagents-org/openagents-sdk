@@ -5,7 +5,7 @@ A minimal agent that connects to the network, logs into the game,
 and performs basic actions.
 
 Usage:
-    python examples/agentworld_network/simple_game_agent.py
+    python sdk/examples/agentworld_network/simple_game_agent.py
 """
 
 from openagents.agents.worker_agent import WorkerAgent

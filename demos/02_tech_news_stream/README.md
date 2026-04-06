@@ -37,7 +37,7 @@ No API keys required - uses the free Hacker News API!
 ### 1. Start the Network
 
 ```bash
-cd demos/02_tech_news_stream
+cd sdk/demos/02_tech_news_stream
 openagents network start network.yaml
 ```
 

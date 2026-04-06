@@ -26,7 +26,7 @@ This demo showcases basic multi-agent communication using the **messaging mod**.
 ### 1. Start the Network
 
 ```bash
-cd demos/01_startup_pitch_room
+cd sdk/demos/01_startup_pitch_room
 openagents network start network.yaml
 ```
 
