@@ -13,7 +13,12 @@ const http = require("http");
 // ---------------------------------------------------------------------------
 
 const POLL_INTERVAL_MS = 5000;
-const POLL_TIMEOUT_MS = 120_000;
+// A cold hermes reply can be slow: first message spins up the Python runtime,
+// loads the agent, builds a large context prompt, and runs an agentic loop
+// (--max-turns) against a possibly-slow custom LLM endpoint. 120s was too tight
+// and produced false-negative timeouts; 240s gives cold start room while still
+// fitting comfortably under the job's timeout-minutes budget.
+const POLL_TIMEOUT_MS = 240_000;
 const INSTALL_TIMEOUT_MS = 600_000;
 const DAEMON_SETTLE_MS = 5000;
 const AGENT_READY_MS = 15000;
@@ -26,23 +31,39 @@ const AGENTS = {
     create: (name) => ["agn", "create", name, "--type", "hermes"],
     update: ["agn", "update"],
   },
+  claude: {
+    type: "claude",
+    install: ["agn", "install", "claude"],
+    create: (name) => ["agn", "create", name, "--type", "claude"],
+    update: ["agn", "update"],
+  },
 };
 
 // ---------------------------------------------------------------------------
 // Environment
 // ---------------------------------------------------------------------------
 
-const AGENT_TYPE = process.env.AGENT_TYPE || "hermes";
+const AGENT_TYPE = process.env.AGENT_TYPE || "claude";
 const LLM_API_KEY = process.env.LLM_API_KEY;
 const LLM_BASE_URL = process.env.LLM_BASE_URL || "";
 const LLM_MODEL = process.env.LLM_MODEL || "";
+// Claude (dual-auth) uses ANTHROPIC_* rather than the generic LLM_* vars.
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL || "";
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "";
 const E2E_WS_TOKEN = process.env.E2E_WS_TOKEN;
 const E2E_WS_SLUG = process.env.E2E_WS_SLUG;
 const WORKSPACE_API_BASE_URL =
   process.env.WORKSPACE_API_BASE_URL ||
   "https://workspace-endpoint.openagents.org";
 
-const SECRETS = [LLM_API_KEY, E2E_WS_TOKEN].filter(Boolean);
+// Redacted from all console/file output. Base URLs/models are included because
+// dumpDaemonLogs() echoes the daemon log, which can contain endpoint/model.
+const SECRETS = [
+  LLM_API_KEY, LLM_BASE_URL, LLM_MODEL,
+  ANTHROPIC_API_KEY, ANTHROPIC_BASE_URL,
+  E2E_WS_TOKEN,
+].filter(Boolean);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -78,6 +99,36 @@ function fatal(msg) {
   logRun(`FATAL: ${msg}`);
   process.exitCode = 1;
   throw new Error(msg);
+}
+
+// Dump the daemon-side logs to the console. The daemon writes to
+// ~/.openagents/daemon.log (NOT to the piped stdout we capture, since its
+// _log() only echoes to a TTY), so on CI those lines never reach the job
+// console — they only land in the uploaded artifact. When that artifact is
+// hard to fetch, this surfaces the adapter join/poll/hermes-subprocess output
+// (the only place that explains *why* an agent didn't reply) directly in the
+// job log so a failure is diagnosable from the console alone.
+function dumpDaemonLogs() {
+  const candidates = [
+    path.join(os.homedir(), ".openagents", "daemon.log"),
+    path.join(os.homedir(), ".openagents", "daemon.status.json"),
+    path.join(LOG_DIR, "agent.log"),
+  ];
+  for (const file of candidates) {
+    try {
+      if (!fs.existsSync(file)) continue;
+      const raw = fs.readFileSync(file, "utf-8");
+      const lines = raw.split("\n");
+      const tail = lines.slice(-200).join("\n");
+      logRun(`===== BEGIN ${file} (last ${Math.min(lines.length, 200)} lines) =====`);
+      // Write directly so the daemon lines aren't prefixed/duplicated oddly.
+      console.log(sanitize(tail));
+      if (runLogStream) runLogStream.write(sanitize(tail) + "\n");
+      logRun(`===== END ${file} =====`);
+    } catch (e) {
+      logRun(`Could not read ${file}: ${e.message}`);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -300,9 +351,26 @@ function configureHermes() {
 // Agent-type dispatch
 // ---------------------------------------------------------------------------
 
+// Claude authenticates via ANTHROPIC_* env, saved as the agent type's env. The
+// claude adapter promotes the key to ANTHROPIC_AUTH_TOKEN when a relay base URL
+// is set, so ANTHROPIC_API_KEY + ANTHROPIC_BASE_URL is enough.
+function configureClaude() {
+  if (!ANTHROPIC_API_KEY) fatal("ANTHROPIC_API_KEY not set for claude");
+  runCommand(["agn", "env", "claude", "--set", `ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}`]);
+  if (ANTHROPIC_BASE_URL) {
+    runCommand(["agn", "env", "claude", "--set", `ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL}`]);
+  }
+  if (ANTHROPIC_MODEL) {
+    runCommand(["agn", "env", "claude", "--set", `ANTHROPIC_MODEL=${ANTHROPIC_MODEL}`]);
+  }
+  logRun("Configured claude env (ANTHROPIC_API_KEY/BASE_URL/MODEL)");
+}
+
 function configureLLM() {
   if (AGENT_TYPE === "hermes") {
     configureHermes();
+  } else if (AGENT_TYPE === "claude") {
+    configureClaude();
   } else {
     fatal(`No LLM configuration handler for agent type: ${AGENT_TYPE}`);
   }
@@ -314,9 +382,16 @@ function configureLLM() {
 
 async function main() {
   // -- 1. Validate env -------------------------------------------------------
-  const required = { AGENT_TYPE, LLM_API_KEY, E2E_WS_TOKEN, E2E_WS_SLUG };
+  const required = { AGENT_TYPE, E2E_WS_TOKEN, E2E_WS_SLUG };
   for (const [k, v] of Object.entries(required)) {
     if (!v) fatal(`Missing required env: ${k}`);
+  }
+  // Credential requirement is agent-specific: claude → ANTHROPIC_API_KEY,
+  // everything else → LLM_API_KEY.
+  if (AGENT_TYPE === "claude") {
+    if (!ANTHROPIC_API_KEY) fatal("Missing required env: ANTHROPIC_API_KEY (claude)");
+  } else if (!LLM_API_KEY) {
+    fatal(`Missing required env: LLM_API_KEY (${AGENT_TYPE})`);
   }
   const agentDef = AGENTS[AGENT_TYPE];
   if (!agentDef) fatal(`Unknown AGENT_TYPE: ${AGENT_TYPE}`);
@@ -511,6 +586,12 @@ async function main() {
 
     logRun("=== ALL CHECKS PASSED ===");
   } finally {
+    // Surface the daemon-side logs to the console BEFORE we tear the daemon
+    // down — this is the only record of whether the agent joined, polled, and
+    // what the hermes subprocess actually did (or why it never replied).
+    logRun("--- Step: dump daemon logs ---");
+    dumpDaemonLogs();
+
     // -- Cleanup ---------------------------------------------------------------
     logRun("--- Step: cleanup ---");
     const cleanupCmds = [
