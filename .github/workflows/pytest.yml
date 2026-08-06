@@ -127,15 +127,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest pytest-asyncio pytest-aiohttp pytest-mock
         pip install -e .
-        pip install -r workspace/backend/requirements.txt
 
     - name: Test ONM primitives
       run: pytest --tb=short -v tests/test_onm_addressing.py tests/test_onm_events.py tests/test_onm_pipeline.py
-
-    - name: Test workspace backend
-      env:
-        PYTHONPATH: workspace/backend:sdk/src
-      run: pytest --tb=short -v workspace/backend/tests/
 
   # -----------------------------------------------------------------------
   # Full SDK tests — includes gRPC, crypto, MCP, OpenAI deps

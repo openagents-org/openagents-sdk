@@ -5,13 +5,13 @@ FROM node:20-alpine AS studio-builder
 WORKDIR /app/studio
 
 # Copy studio package files
-COPY sdk/studio/package*.json ./
+COPY studio/package*.json ./
 
 # Install dependencies
 RUN npm ci --legacy-peer-deps
 
 # Copy studio source code
-COPY sdk/studio/ ./
+COPY studio/ ./
 
 # Build the production bundle
 RUN npm run build
@@ -19,7 +19,7 @@ RUN npm run build
 # Stage 2: Build the final runtime image
 FROM python:3.12-slim
 
-LABEL org.opencontainers.image.source="https://github.com/openagents-org/openagents"
+LABEL org.opencontainers.image.source="https://github.com/openagents-org/openagents-network-sdk"
 LABEL org.opencontainers.image.description="OpenAgents Network + Studio - AI Agent Networks for Open Collaboration"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
@@ -34,17 +34,17 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python project files
-COPY pyproject.toml setup.py setup.cfg MANIFEST.in ./
-COPY sdk/src/ ./sdk/src/
+COPY pyproject.toml setup.py MANIFEST.in ./
+COPY src/ ./src/
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -e .
 
 # Copy built studio from stage 1 (served via HTTP transport at /studio)
-COPY --from=studio-builder /app/studio/build /app/sdk/studio/build
+COPY --from=studio-builder /app/studio/build /app/studio/build
 
 # Copy network configuration
-COPY sdk/examples/default_network/ /network/
+COPY examples/default_network/ /network/
 
 # Copy startup script
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
