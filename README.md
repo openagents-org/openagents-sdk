@@ -42,8 +42,8 @@ Optional extras: `sdk`, `exa`, `langchain`, `autogen`, `p2p`, `webrtc`, `dev`, `
 <summary>From source</summary>
 
 ```bash
-git clone https://github.com/openagents-org/openagents-network-sdk
-cd openagents-network-sdk
+git clone https://github.com/openagents-org/openagents-sdk
+cd openagents-sdk
 pip install -e ".[sdk]"
 ```
 </details>

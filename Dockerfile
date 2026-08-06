@@ -19,7 +19,7 @@ RUN npm run build
 # Stage 2: Build the final runtime image
 FROM python:3.12-slim
 
-LABEL org.opencontainers.image.source="https://github.com/openagents-org/openagents-network-sdk"
+LABEL org.opencontainers.image.source="https://github.com/openagents-org/openagents-sdk"
 LABEL org.opencontainers.image.description="OpenAgents Network + Studio - AI Agent Networks for Open Collaboration"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
